@@ -38,6 +38,8 @@ body {
   background: radial-gradient(circle at 50% 0%, #1e3f2d 0%, #080f0b 70%);
   background-attachment: fixed;
   overflow-x: hidden;
+   font-family: 'Montserrat', sans-serif;
+
 }
 
 h1, h2, h3, h4, h5, h6 {

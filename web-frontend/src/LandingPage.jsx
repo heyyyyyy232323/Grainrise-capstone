@@ -1,3 +1,4 @@
+import { useNavigate  } from "react-router-dom";
 import React, { useState, useEffect, useRef } from 'react';
 import './LandingPage.css';
 
@@ -83,6 +84,7 @@ const GrainRiseLogo = () => (
   <img src={logoImg} alt="GrainRise Logo" className="lp-logo-img" />
 );
 
+
 // ─── Animated counter ─────────────────────────────────────────────────────────
 function useCounter(target, duration, trigger) {
   const [count, setCount] = useState(0);
@@ -119,7 +121,7 @@ export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
-
+const navigate = useNavigate();
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener('scroll', onScroll);
@@ -203,9 +205,10 @@ export default function LandingPage() {
           </ul>
 
           <div className="lp-nav__actions">
-            <button
+                  <button
               className="lp-btn lp-btn--primary"
               id="nav-login-btn"
+            onClick={() => navigate("/login")}
             >
               Log In
             </button>
