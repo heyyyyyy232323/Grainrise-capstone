@@ -64,6 +64,18 @@ npm install
 
 # Start Expo
 npx expo start
+
+
+# to fix this 
+
+Run:
+npx expo install expo@~54.0.0
+
+then:
+npx expo install --fix
+
+Then, clear  cache:
+npx expo start -c
 ```
 
 > Scan the QR code with the **Expo Go** app on your phone,
