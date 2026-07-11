@@ -8,7 +8,7 @@ import CustomGreenButton from "../Components/Minor-Components/CustomGreenButton"
 import CustomWhiteButton from "../Components/Minor-Components/CustomWhiteButton";
 import Footer from "../Components/Minor-Components/CustomFooter";
 import Logo from "../assets/Logo.png";
-import backgroundImage from "../assets/adminloginbg.png";
+import backgroundImage from "../assets/adminloginBG.png";
 
 const AdminLogin = () => {
   const [email, setEmail] = useState("");
