@@ -1,8 +1,29 @@
-import { useNavigate  } from "react-router-dom";
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './LandingPage.css';
 
-// ── Actual project images ─────────────────────────────────────
+// Reusable Components
+import LandingHeader from './Components/Major-Components/LandingHeader';
+import LandingFooter from './Components/Major-Components/LandingFooter';
+
+// Icons
+import {
+  Store,
+  Truck,
+  Globe,
+  Warehouse,
+  Package,
+  FileText,
+  Check,
+  ChevronRight,
+  ArrowRight,
+  ChevronLeft,
+  BarChart3,
+  TrendingUp,
+  Wrench
+} from 'lucide-react';
+
+// Images
 import dashboardMockup from './assets/lapisIStop.png';
 import grainHands from './assets/handss.png';
 import groceryImg from './assets/Grocery.png';
@@ -10,80 +31,6 @@ import bluescreenImg from './assets/bluescreen.jpg';
 import talkieImg from './assets/talkie.jpg';
 import pinkscreenImg from './assets/pinkscreen.jpg';
 import stockImg from './assets/stock.jpg';
-import logoImg from './assets/Logo.png';
-
-// ─── SVG Icon Components ──────────────────────────────────────────────────────
-const IconRetailer = () => (
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-    <polyline points="9 22 9 12 15 12 15 22"/>
-  </svg>
-);
-const IconSupplier = () => (
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="1" y="3" width="15" height="13"/>
-    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
-    <circle cx="5.5" cy="18.5" r="2.5"/>
-    <circle cx="18.5" cy="18.5" r="2.5"/>
-  </svg>
-);
-const IconDistributor = () => (
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/>
-    <line x1="2" y1="12" x2="22" y2="12"/>
-    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-  </svg>
-);
-const IconWarehouse = () => (
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M2 20V8l10-6 10 6v12H2z"/>
-    <rect x="8" y="14" width="8" height="6"/>
-  </svg>
-);
-const IconInventory = () => (
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-    <line x1="12" y1="22.08" x2="12" y2="12"/>
-  </svg>
-);
-const IconOrder = () => (
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-    <polyline points="14 2 14 8 20 8"/>
-    <line x1="16" y1="13" x2="8" y2="13"/>
-    <line x1="16" y1="17" x2="8" y2="17"/>
-    <polyline points="10 9 9 9 8 9"/>
-  </svg>
-);
-const IconTransport = () => (
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="1" y="3" width="15" height="13"/>
-    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
-    <circle cx="5.5" cy="18.5" r="2.5"/>
-    <circle cx="18.5" cy="18.5" r="2.5"/>
-  </svg>
-);
-const IconCheck = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2d6a35" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12"/>
-  </svg>
-);
-const IconChevronRight = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2d6a35" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="9 18 15 12 9 6"/>
-  </svg>
-);
-const IconArrow = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#aac8aa" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="5" y1="12" x2="19" y2="12"/>
-    <polyline points="12 5 19 12 12 19"/>
-  </svg>
-);
-const GrainRiseLogo = () => (
-  <img src={logoImg} alt="GrainRise Logo" className="lp-logo-img" />
-);
-
 
 // ─── Animated counter ─────────────────────────────────────────────────────────
 function useCounter(target, duration, trigger) {
@@ -94,8 +41,12 @@ function useCounter(target, duration, trigger) {
     const step = target / (duration / 16);
     const timer = setInterval(() => {
       current += step;
-      if (current >= target) { setCount(target); clearInterval(timer); }
-      else setCount(Math.floor(current));
+      if (current >= target) {
+        setCount(target);
+        clearInterval(timer);
+      } else {
+        setCount(Math.floor(current));
+      }
     }, 16);
     return () => clearInterval(timer);
   }, [trigger, target, duration]);
@@ -118,15 +69,22 @@ function useInView(threshold = 0.2) {
 
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 export default function LandingPage() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
-const navigate = useNavigate();
+  const navigate = useNavigate();
+  const { hash } = useLocation();
+
+  // Scroll to hash element on load or hash change (e.g. when navigating from /login)
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+    if (hash) {
+      const id = hash.replace('#', '');
+      const element = document.getElementById(id);
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, [hash]);
 
   const [statsRef, statsInView] = useInView(0.3);
   const c500 = useCounter(500, 2000, statsInView);
@@ -134,17 +92,16 @@ const navigate = useNavigate();
   const c98  = useCounter(98,  1800, statsInView);
 
   const scrollTo = (id) => {
-    setMenuOpen(false);
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const ECOSYSTEM_STEPS = [
-    { icon: <IconSupplier />,    label: 'Suppliers'  },
-    { icon: <IconWarehouse />,   label: 'Warehouse'  },
-    { icon: <IconInventory />,   label: 'Inventory'  },
-    { icon: <IconOrder />,       label: 'Orders'     },
-    { icon: <IconTransport />,   label: 'Transport'  },
-    { icon: <IconRetailer />,    label: 'Retailers'  },
+    { icon: <Truck size={26} strokeWidth={1.8} />,       label: 'Suppliers'  },
+    { icon: <Warehouse size={26} strokeWidth={1.8} />,   label: 'Warehouse'  },
+    { icon: <Package size={26} strokeWidth={1.8} />,     label: 'Inventory'  },
+    { icon: <FileText size={26} strokeWidth={1.8} />,    label: 'Orders'     },
+    { icon: <Truck size={26} strokeWidth={1.8} />,       label: 'Transport'  },
+    { icon: <Store size={26} strokeWidth={1.8} />,       label: 'Retailers'  },
   ];
 
   const TESTIMONIALS = [
@@ -172,11 +129,11 @@ const navigate = useNavigate();
   ];
 
   const SERVICES = [
-    { emoji: '📊', name: 'Stock Awareness',     desc: 'See current stock levels instantly to prevent shortages and overstocking.' },
-    { emoji: '📦', name: 'Inventory Control',   desc: 'Track inflow and outflow with accurate inventory records.' },
-    { emoji: '📈', name: 'Demand Forecasting',  desc: 'Predict demand using historical data for smarter restocking.' },
-    { emoji: '🚚', name: 'Delivery Tracking',   desc: 'Monitor deliveries in real time with clear route visibility.' },
-    { emoji: '🔧', name: 'Operation Tools',     desc: 'Built-in tools for smoother workflows and coordination.' },
+    { icon: <BarChart3 size={20} strokeWidth={1.8} />, name: 'Stock Awareness',    desc: 'See current stock levels instantly to prevent shortages and overstocking.' },
+    { icon: <Package  size={20} strokeWidth={1.8} />, name: 'Inventory Control',  desc: 'Track inflow and outflow with accurate inventory records.' },
+    { icon: <TrendingUp size={20} strokeWidth={1.8} />, name: 'Demand Forecasting', desc: 'Predict demand using historical data for smarter restocking.' },
+    { icon: <Truck    size={20} strokeWidth={1.8} />, name: 'Delivery Tracking',  desc: 'Monitor deliveries in real time with clear route visibility.' },
+    { icon: <Wrench   size={20} strokeWidth={1.8} />, name: 'Operation Tools',    desc: 'Built-in tools for smoother workflows and coordination.' },
   ];
 
   useEffect(() => {
@@ -188,40 +145,9 @@ const navigate = useNavigate();
 
   return (
     <div className="lp-root">
-
-      {/* ── NAVBAR ─── */}
-      <nav className={`lp-nav ${scrolled ? 'lp-nav--scrolled' : ''}`}>
-        <div className="lp-nav__inner">
-          <div className="lp-nav__brand">
-            <GrainRiseLogo />
-          </div>
-
-          <ul className={`lp-nav__links ${menuOpen ? 'lp-nav__links--open' : ''}`}>
-            <li><button onClick={() => scrollTo('hero')}>Home</button></li>
-            <li><button onClick={() => scrollTo('about')}>About</button></li>
-            <li><button onClick={() => scrollTo('services')}>Services</button></li>
-            <li><button onClick={() => scrollTo('ecosystem')}>Features</button></li>
-            <li><button onClick={() => scrollTo('footer')}>Contact</button></li>
-          </ul>
-
-          <div className="lp-nav__actions">
-                  <button
-              className="lp-btn lp-btn--primary"
-              id="nav-login-btn"
-            onClick={() => navigate("/login")}
-            >
-              Log In
-            </button>
-            <button
-              className="lp-hamburger"
-              onClick={() => setMenuOpen(o => !o)}
-              aria-label="Toggle menu"
-            >
-              <span /><span /><span />
-            </button>
-          </div>
-        </div>
-      </nav>
+      
+      {/* Reusable Landing Page Header */}
+      <LandingHeader />
 
       {/* ── HERO ─── */}
       <section className="lp-hero" id="hero">
@@ -255,10 +181,10 @@ const navigate = useNavigate();
         <div className="lp-hero__ticker">
           <span className="lp-ticker__label">Built for Rice Supply Chain Stakeholders</span>
           <div className="lp-ticker__items">
-            <div className="lp-ticker__item"><IconRetailer /><span>Retailers</span></div>
-            <div className="lp-ticker__item"><IconSupplier /><span>Suppliers</span></div>
-            <div className="lp-ticker__item"><IconDistributor /><span>Distributors</span></div>
-            <div className="lp-ticker__item"><IconWarehouse /><span>Warehouses</span></div>
+            <div className="lp-ticker__item"><Store size={26} strokeWidth={1.8} /><span>Retailers</span></div>
+            <div className="lp-ticker__item"><Truck size={26} strokeWidth={1.8} /><span>Suppliers</span></div>
+            <div className="lp-ticker__item"><Globe size={26} strokeWidth={1.8} /><span>Distributors</span></div>
+            <div className="lp-ticker__item"><Warehouse size={26} strokeWidth={1.8} /><span>Warehouses</span></div>
           </div>
         </div>
       </section>
@@ -296,9 +222,9 @@ const navigate = useNavigate();
             Built on innovation and inclusivity, we help businesses reduce waste, improve planning, and increase profitability. With AI-driven insights and forecasting, teams can make smarter decisions with confidence.
           </p>
           <div className="lp-about__checks">
-            <div className="lp-check-item"><IconCheck /><span>Real time visibility</span></div>
-            <div className="lp-check-item"><IconCheck /><span>Smarter restocking</span></div>
-            <div className="lp-check-item"><IconCheck /><span>Cleaner operations</span></div>
+            <div className="lp-check-item"><Check size={16} strokeWidth={2.5} color="#2d6a35" /><span>Real time visibility</span></div>
+            <div className="lp-check-item"><Check size={16} strokeWidth={2.5} color="#2d6a35" /><span>Smarter restocking</span></div>
+            <div className="lp-check-item"><Check size={16} strokeWidth={2.5} color="#2d6a35" /><span>Cleaner operations</span></div>
           </div>
         </div>
 
@@ -326,7 +252,7 @@ const navigate = useNavigate();
                 <span className="lp-flow-label">{step.label}</span>
               </div>
               {i < ECOSYSTEM_STEPS.length - 1 && (
-                <div className="lp-flow-arrow"><IconArrow /></div>
+                <div className="lp-flow-arrow"><ArrowRight size={20} strokeWidth={1.5} color="#aac8aa" /></div>
               )}
             </React.Fragment>
           ))}
@@ -354,13 +280,13 @@ const navigate = useNavigate();
           {SERVICES.map(svc => (
             <div key={svc.name} className="lp-service-item">
               <div className="lp-service-icon">
-                <span>{svc.emoji}</span>
+                {svc.icon}
               </div>
               <div className="lp-service-text">
                 <div className="lp-service-name">{svc.name}</div>
                 <div className="lp-service-desc">{svc.desc}</div>
               </div>
-              <div className="lp-service-arrow"><IconChevronRight /></div>
+              <div className="lp-service-arrow"><ChevronRight size={18} strokeWidth={2} color="#2d6a35" /></div>
             </div>
           ))}
         </div>
@@ -467,7 +393,7 @@ const navigate = useNavigate();
               onClick={() => setCurrentTestimonial(p => Math.max(0, p - 1))} 
               disabled={currentTestimonial === 0}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              <ChevronLeft size={20} strokeWidth={2.5} />
             </button>
             <div className="lp-tcarousel-dots">
               {TESTIMONIALS.map((_, i) => (
@@ -484,7 +410,7 @@ const navigate = useNavigate();
               onClick={() => setCurrentTestimonial(p => Math.min(TESTIMONIALS.length - 1, p + 1))} 
               disabled={currentTestimonial === TESTIMONIALS.length - 1}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              <ChevronRight size={20} strokeWidth={2.5} />
             </button>
           </div>
         </div>
@@ -508,76 +434,9 @@ const navigate = useNavigate();
         </div>
       </section>
 
-      {/* ── FOOTER ─── */}
-      <footer className="lp-footer" id="footer">
-        <div className="lp-footer__inner">
+      {/* Reusable Landing Page Footer */}
+      <LandingFooter />
 
-          {/* Brand column */}
-          <div className="lp-footer__brand">
-            <div className="lp-footer__brand-logo">
-              <GrainRiseLogo />
-            </div>
-            <p className="lp-footer__tagline">
-              Transforming rice supply chains with intelligent technology and data-driven insights for a sustainable future.
-            </p>
-            <div className="lp-footer__socials">
-              <button className="lp-footer__social-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
-              </button>
-              <button className="lp-footer__social-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-              </button>
-            </div>
-          </div>
-
-          {/* Links columns */}
-          <div className="lp-footer__links">
-            <div className="lp-footer__col">
-              <h4>Resources</h4>
-              <ul>
-                <li><button onClick={() => scrollTo('about')}>Documentation</button></li>
-                <li><button onClick={() => scrollTo('services')}>User Guide</button></li>
-                <li><button onClick={() => scrollTo('ecosystem')}>FAQ</button></li>
-                <li><button>Support</button></li>
-              </ul>
-            </div>
-            <div className="lp-footer__col">
-              <h4>Company</h4>
-              <ul>
-                <li><button onClick={() => scrollTo('about')}>About Us</button></li>
-                <li><button>Privacy Policy</button></li>
-                <li><button>Terms</button></li>
-              </ul>
-            </div>
-            <div className="lp-footer__col">
-              <h4>Get In Touch</h4>
-              <ul className="lp-footer__contact-list">
-                <li>
-                  <span className="lp-footer__contact-icon">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                  </span>
-                  grainriseph@gmail.com
-                </li>
-                <li>
-                  <span className="lp-footer__contact-icon">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.5a16 16 0 0 0 6 6l.86-.86a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                  </span>
-                  +1 (555) 123-4567
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div className="lp-footer__bottom">
-          <p>&copy; 2024 GrainRise. All rights reserved.</p>
-          <div className="lp-footer__bottom-links">
-            <button>Sitemap</button>
-            <span className="lp-footer__separator">|</span>
-            <button>Privacy Policy</button>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

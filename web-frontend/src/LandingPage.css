@@ -38,6 +38,16 @@
   gap: 10px;
   cursor: default;
 }
+.lp-logo-img {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+}
+.lp-footer__brand-logo .lp-logo-img {
+  height: 48px;
+}
 .lp-nav__logo-text {
   font-family: 'Outfit', sans-serif;
   font-size: 22px;
@@ -548,7 +558,7 @@
 
 /* ─── CTA Banner ─────────────────────────────────────────────── */
 .lp-cta-banner {
-  background: linear-gradient(135deg, #1e4d28 0%, #2d6a35 100%);
+  background: linear-gradient(to right, #2d6a35 0%, #c8a020 60%, #d4a017 100%);
   padding: 80px 24px;
 }
 .lp-cta-banner__inner {

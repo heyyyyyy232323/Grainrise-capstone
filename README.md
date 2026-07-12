@@ -40,8 +40,10 @@ Open a **new terminal**, then:
 # Go to the web-frontend folder
 cd web-frontend
 
+npm install react-router-dom
+npm install lucide-react
+
 # Install dependencies
-npm install
 
 # Start the dev server
 npm run dev
