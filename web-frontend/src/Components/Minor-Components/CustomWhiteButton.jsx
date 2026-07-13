@@ -10,7 +10,7 @@ const CustomWhiteButton = ({
         flex items-center justify-center
         p-3
         rounded-full
-        bg-gray-200
+        bg-[#FFFFFF]
         text-gray-700
         hover:bg-gray-300
         active:scale-95
