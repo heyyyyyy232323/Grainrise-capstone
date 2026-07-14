@@ -1071,3 +1071,201 @@
 @media (max-width: 600px) {
   .lp-testimonials { padding: 60px 24px; }
 }
+
+/* ─── Mobile APK Promo Section ───────────────────────────── */
+.lp-mobile-promo {
+  background-color: #0b6623;
+  background-image: radial-gradient(circle at 100% 100%, rgba(255,255,255,0.06) 0%, transparent 40%),
+                    radial-gradient(circle at 0% 0%, rgba(255,255,255,0.04) 0%, transparent 50%);
+  padding: 100px 48px;
+  overflow: hidden;
+  position: relative;
+  border-bottom: 8px solid #c8a020;
+}
+
+.lp-mobile-promo__inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 80px;
+}
+
+/* Overlapping Phones Layout */
+.lp-mobile-promo__images {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  height: 480px;
+  max-width: 500px;
+}
+
+.lp-phone-wrap {
+  width: 250px;
+  height: 440px;
+  border-radius: 36px;
+  border: 10px solid #1a1a1a;
+  background: #333;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+  position: absolute;
+  transition: all 0.4s ease-in-out;
+}
+
+.lp-phone-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Left phone in back */
+.lp-phone-wrap--back {
+  left: 30px;
+  top: 0;
+  z-index: 10;
+  opacity: 0.85;
+}
+
+/* Right phone in front */
+.lp-phone-wrap--front {
+  right: 30px;
+  top: 40px;
+  z-index: 20;
+  border-color: #0d0d0d;
+  box-shadow: 0 30px 60px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.15) inset;
+}
+
+.lp-mobile-promo__images:hover .lp-phone-wrap--back {
+  transform: translate(-15px, -10px) rotate(-3deg);
+  opacity: 0.95;
+}
+
+.lp-mobile-promo__images:hover .lp-phone-wrap--front {
+  transform: translate(15px, 10px) scale(1.02);
+}
+
+/* Mobile Promo Content columns */
+.lp-mobile-promo__content {
+  flex: 1;
+  color: #ffffff;
+  text-align: left;
+}
+
+.lp-mobile-promo__headline {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(32px, 4.5vw, 48px);
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 24px;
+}
+
+.lp-mobile-promo__description {
+  font-size: 15px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.82);
+  margin-bottom: 36px;
+  max-width: 520px;
+}
+
+/* Button & Notice styling */
+.lp-mobile-promo__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background-color: #ffffff;
+  color: #0b6623;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 14px 32px;
+  border-radius: 100px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+  transition: all 0.25s ease;
+}
+
+.lp-mobile-promo__btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(0,0,0,0.22);
+  background-color: #f7faf7;
+}
+
+.lp-mobile-promo__btn:active {
+  transform: translateY(0);
+}
+
+.lp-mobile-promo__notice {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 24px;
+  letter-spacing: 0.5px;
+}
+
+/* Media Queries for Mobile Promo */
+@media (max-width: 900px) {
+  .lp-mobile-promo {
+    padding: 80px 24px;
+  }
+  .lp-mobile-promo__inner {
+    flex-direction: column-reverse;
+    gap: 48px;
+    align-items: center;
+  }
+  .lp-mobile-promo__content {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .lp-mobile-promo__description {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .lp-mobile-promo__images {
+    width: 100%;
+    height: 420px;
+  }
+  .lp-phone-wrap {
+    width: 210px;
+    height: 370px;
+  }
+  .lp-phone-wrap--back {
+    left: calc(50% - 190.5px);
+  }
+  .lp-phone-wrap--front {
+    right: calc(50% - 190.5px);
+    top: 50px;
+  }
+  .lp-mobile-promo__images:hover .lp-phone-wrap--back {
+    transform: translate(-10px, -5px) rotate(-2deg);
+  }
+  .lp-mobile-promo__images:hover .lp-phone-wrap--front {
+    transform: translate(10px, 5px) scale(1.02);
+  }
+}
+
+@media (max-width: 500px) {
+  .lp-mobile-promo__images {
+    height: 360px;
+  }
+  .lp-phone-wrap {
+    width: 170px;
+    height: 300px;
+    border-width: 6px;
+    border-radius: 24px;
+  }
+  .lp-phone-wrap--back {
+    left: calc(50% - 150.5px);
+  }
+  .lp-phone-wrap--front {
+    right: calc(50% - 150.5px);
+    top: 40px;
+  }
+  .lp-phone-wrap--front {
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  }
+}
+

@@ -20,7 +20,8 @@ import {
   ChevronLeft,
   BarChart3,
   TrendingUp,
-  Wrench
+  Wrench,
+  Download
 } from 'lucide-react';
 
 // Images
@@ -31,6 +32,8 @@ import bluescreenImg from './assets/bluescreen.jpg';
 import talkieImg from './assets/talkie.jpg';
 import pinkscreenImg from './assets/pinkscreen.jpg';
 import stockImg from './assets/stock.jpg';
+import phoneImg from './assets/phone.jpg';
+import phone2Img from './assets/phone2.jpg';
 
 // ─── Animated counter ─────────────────────────────────────────────────────────
 function useCounter(target, duration, trigger) {
@@ -163,7 +166,7 @@ export default function LandingPage() {
             Built for smarter inventory, logistics, and supply chain operations.
           </p>
           <div className="lp-hero__ctas">
-            <button className="lp-btn lp-btn--cta" id="hero-register-btn">Register</button>
+            <button className="lp-btn lp-btn--cta" onClick={() => navigate('/register')} id="hero-register-btn">Register</button>
             <button className="lp-btn lp-btn--outline" onClick={() => scrollTo('about')} id="hero-learn-btn">Learn More</button>
           </div>
         </div>
@@ -372,7 +375,7 @@ export default function LandingPage() {
               {TESTIMONIALS.map((t, idx) => (
                 <div className="lp-testimonials__slide" key={idx}>
                   <div className="lp-tcard">
-                    <div className="lp-tcard__quote">“”</div>
+                     <div className="lp-tcard__quote">“”</div>
                     <p className="lp-tcard__body">{t.body}</p>
                     <div className="lp-tcard__author">
                       <div className="lp-tcard__avatar" style={{background: t.color}}>{t.initials}</div>
@@ -416,6 +419,36 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── MOBILE PROMO ─── */}
+      <section className="lp-mobile-promo">
+        <div className="lp-mobile-promo__inner">
+          <div className="lp-mobile-promo__images">
+            <div className="lp-phone-wrap lp-phone-wrap--back">
+              <img src={phoneImg} alt="GrainRise on smartphone back" className="lp-phone-img" />
+            </div>
+            <div className="lp-phone-wrap lp-phone-wrap--front">
+              <img src={phone2Img} alt="GrainRise on smartphone front" className="lp-phone-img" />
+            </div>
+          </div>
+
+          <div className="lp-mobile-promo__content">
+            <h2 className="lp-mobile-promo__headline">
+              Take GrainRise<br />Anywhere
+            </h2>
+            <p className="lp-mobile-promo__description">
+              Stay connected with your operations wherever you are. Download the official GrainRise Android application to monitor inventory, warehouse activities, deliveries, and retailer transactions from your mobile device.
+            </p>
+            <button className="lp-mobile-promo__btn" onClick={() => alert("Downloading GrainRise APK...")}>
+              <Download size={18} />
+              Download APK
+            </button>
+            <p className="lp-mobile-promo__notice">
+              Official Android APK . Secure Download . Optimized for GrainRise Users
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ── CTA BANNER ─── */}
       <section className="lp-cta-banner">
         <div className="lp-cta-banner__inner">
@@ -427,6 +460,7 @@ export default function LandingPage() {
           </p>
           <button
             className="lp-btn lp-btn--cta lp-btn--lg"
+            onClick={() => navigate('/register/supplier-warehouse')}
             id="cta-get-started-btn"
           >
             Register

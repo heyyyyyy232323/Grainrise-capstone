@@ -1,33 +1,32 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Info } from "lucide-react";
 
-// Adjust these import paths to match your project structure
 import CustomGreenButton from "../Components/Minor-Components/CustomGreenButton";
 import CustomWhiteButton from "../Components/Minor-Components/CustomWhiteButton";
 import Footer from "../Components/Minor-Components/CustomFooter";
 import Logo from "../assets/Logo.png";
 import backgroundImage from "../assets/UserloginBG.png";
 
-// Swap these with your real photos
-import supplierImg from "../assets/supplier.png";
-import warehouseManagerImg from "../assets/warehouse-manager.png";
+import retailerImg from "../assets/retailer.jpg";
+import supplierWarehouseImg from "../assets/supplier-warehouse.jpg";
 
 const roles = [
   {
-    key: "supplier",
-    title: "Supplier",
-    description: "Manage deliveries, inventory, and retailer supply operations.",
-    buttonText: "Register as Supplier",
-    image: supplierImg,
-    path: "/register/supplier",
+    key: "retailer",
+    title: "Retailer",
+    description:
+      "Create an account to place orders, manage purchases, and track deliveries.",
+    buttonText: "Register as Retailer",
+    image: retailerImg,
+    path: "/register/retailer",
   },
   {
-    key: "warehouse-manager",
-    title: "Warehouse Manager",
-    description: "Manage warehouse inventory and daily logistics operations.",
-    buttonText: "Register as Warehouse Manager",
-    image: warehouseManagerImg,
-    path: "/register/warehouse-manager",
+    key: "supplier-warehouse",
+    title: "Supplier & Warehouse Manager",
+    description: "Continue to select your role before registering.",
+    buttonText: "Continue",
+    image: supplierWarehouseImg,
+    path: "/register/supplier-warehouse",
   },
 ];
 
@@ -60,7 +59,7 @@ const RegisterGateway = () => {
         style={{ backgroundImage: `url(${backgroundImage})` }}
       />
 
-      {/* Page color overlay at 70% opacity so the background image shows through */}
+      {/* Light overlay */}
       <div className="absolute inset-0 bg-gray-100 opacity-70" />
 
       <div className="relative z-10 flex-1 px-6 py-10">
@@ -68,11 +67,11 @@ const RegisterGateway = () => {
           icon={
             <span className="flex items-center gap-2 px-2 text-sm font-medium whitespace-nowrap">
               <ArrowLeft size={18} />
-              Back to Home
+              Back to Login
             </span>
           }
-          className="!rounded-full w-auto !p-2"
-          onClick={() => navigate("/")}
+          className="absolute top-6 left-8 !rounded-full w-auto !p-2 z-20 shadow-md border border-gray-200"
+          onClick={() => navigate("/login")}
         />
 
         <div className="max-w-3xl mx-auto text-center mt-6">
@@ -81,10 +80,10 @@ const RegisterGateway = () => {
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-2">
-            Register as a Supply Chain Partner
+            Create Your GrainRise Account
           </h1>
           <p className="text-gray-500 mb-10">
-            Choose your role to continue with registration.
+            Choose the registration option that matches your role.
           </p>
         </div>
 
@@ -103,7 +102,7 @@ const RegisterGateway = () => {
 
         <p className="flex items-center justify-center gap-2 text-sm text-gray-500 mt-10">
           <Info size={16} />
-          This registration portal is intended for Suppliers and Warehouse Managers only.
+          Select the registration option that best matches your role in the GrainRise ecosystem.
         </p>
       </div>
 

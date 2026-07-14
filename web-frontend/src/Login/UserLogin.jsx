@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react";
 
@@ -145,12 +145,12 @@ const UserLogin = () => {
 
             <p className="text-center text-sm text-gray-700 mt-6">
               Don't have an account?{" "}
-              <a
-                href="#"
+              <Link
+                to="/register"
                 className="text-green-700 font-semibold hover:underline"
               >
                 Register
-              </a>
+              </Link>
             </p>
 
             <p className="text-center text-xs text-gray-500 mt-4">
