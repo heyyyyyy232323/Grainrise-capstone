@@ -37,13 +37,13 @@ const Dropdown = ({
     if (label.endsWith("*")) {
       const baseLabel = label.slice(0, -1).trim();
       return (
-        <label className="block mb-2 text-sm font-semibold text-gray-700 text-left">
+        <label className="block mb-2 text-sm font-medium text-gray-700 text-left">
           {baseLabel} <span className="text-red-500">*</span>
         </label>
       );
     }
     return (
-      <label className="block mb-2 text-sm font-semibold text-gray-700 text-left">
+      <label className="block mb-2 text-sm font-medium text-gray-700 text-left">
         {label}
       </label>
     );
@@ -62,11 +62,11 @@ const Dropdown = ({
           bg-white text-gray-700
           cursor-pointer
           selection:bg-transparent
-          transition-all duration-200
+          transition
           ${isOpen ? "border-green-600 ring-2 ring-green-100" : error ? "border-red-500" : "border-gray-200 hover:border-gray-300"}
         `}
       >
-        <span className={`truncate ${!value ? "text-gray-400" : "text-gray-900"}`}>
+        <span className={`truncate ${!value ? "text-gray-500" : "text-gray-700"}`}>
           {value || placeholder}
         </span>
         <ChevronDown

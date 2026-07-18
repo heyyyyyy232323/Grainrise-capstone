@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, CheckCircle, Upload, X, FileText, Check, Info } from "lucide-react";
+import CustomTextbox from "../Components/Minor-Components/CustomTextbox";
+import CustomGreenButton from "../Components/Minor-Components/CustomGreenButton";
+import CustomWhiteButton from "../Components/Minor-Components/CustomWhiteButton";
 import Dropdown from "../Components/Minor-Components/Dropdown";
 import Footer from "../Components/Minor-Components/CustomFooter";
 import logo from "../assets/Logo.png";
@@ -16,6 +19,15 @@ const BARANGAYS_MAP = {
 };
 const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "V"];
 const GENDERS = ["Male", "Female", "Others", "Preferred Not To Say"];
+
+// Small helper: wraps CustomTextbox so we can show a field-level error message
+// underneath it, since CustomTextbox itself has no built-in error state.
+const FieldWithError = ({ error, children }) => (
+  <div>
+    {children}
+    {error && <span className="text-xs text-red-500 mt-1 block">{error}</span>}
+  </div>
+);
 
 const RetailerRegister = () => {
   const navigate = useNavigate();
@@ -201,7 +213,7 @@ const RetailerRegister = () => {
       return;
     }
     setValidationMsg("");
-    
+
     // Optional: read as base64 for later submission
     const reader = new FileReader();
     reader.onload = () => {
@@ -216,7 +228,7 @@ const RetailerRegister = () => {
       }));
     };
     reader.readAsDataURL(file);
-    if(errors.files) setErrors((prev) => ({...prev, files: ""}));
+    if (errors.files) setErrors((prev) => ({ ...prev, files: "" }));
   };
 
   const removeFile = (docId) => {
@@ -226,18 +238,17 @@ const RetailerRegister = () => {
   const handleSubmitRegistration = () => {
     if (!files.doc1) {
       setValidationMsg("Required Document 1 is missing.");
-      setErrors({files: "Missing document"});
+      setErrors({ files: "Missing document" });
       return;
     }
     if (!agreeCertify) {
       setValidationMsg("You must certify that the given information is true and accurate.");
-      setErrors({certify: "Required"});
+      setErrors({ certify: "Required" });
       return;
     }
     setValidationMsg("");
     setIsSuccess(true);
   };
-
 
   // --- Sub-components for Stepper ---
   const renderStepper = () => (
@@ -282,14 +293,17 @@ const RetailerRegister = () => {
       <div className="absolute inset-0 bg-white/75 backdrop-blur-[2px]" />
 
       {/* Top Header */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 pt-6 flex items-center justify-between">
-        <button
+      <div className="relative z-10 w-full px-6 sm:px-10 pt-6 flex items-center justify-between">
+        <CustomWhiteButton
           onClick={() => step === 1 ? navigate("/register") : setStep(step - 1)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 text-sm font-semibold text-gray-700 rounded-full transition shadow-sm cursor-pointer"
-        >
-          <ArrowLeft size={16} />
-          {step === 1 ? "Back to Home" : "Previous Step"}
-        </button>
+          className="!rounded-full w-auto !p-2 !px-5 shadow-sm"
+          icon={
+            <span className="flex items-center gap-2 text-sm font-semibold whitespace-nowrap">
+              <ArrowLeft size={16} />
+              {step === 1 ? "Back to Home" : "Previous Step"}
+            </span>
+          }
+        />
         <span className="text-xs md:text-sm font-bold text-emerald-800 tracking-wider uppercase">
           {step === 1 && "Step 1 of 3: Personal Information"}
           {step === 2 && "Step 2 of 3: Account Verification"}
@@ -307,12 +321,11 @@ const RetailerRegister = () => {
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
               Your retailer application has been submitted successfully and is now pending administrator review. You will receive an email once approved.
             </p>
-            <button
+            <CustomGreenButton
+              text="Return Home"
               onClick={() => navigate("/")}
-              className="px-8 py-3 bg-[#018311] hover:bg-[#016b0f] text-white rounded-full font-semibold transition shadow-md"
-            >
-              Return Home
-            </button>
+              className="!rounded-full !px-8 !py-3 shadow-md"
+            />
           </div>
         ) : (
           <div className="w-full max-w-4xl bg-white border border-gray-100 rounded-3xl shadow-2xl p-6 md:p-12">
@@ -346,25 +359,38 @@ const RetailerRegister = () => {
                   <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
                     Personal Information
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-10 gap-x-6 gap-y-4">
-                    <div className="md:col-span-4 text-left">
-                      <label className="block mb-2 text-sm font-semibold text-gray-700">First Name <span className="text-red-500">*</span></label>
-                      <input type="text" placeholder="e.g. Juan" value={form.firstName} onChange={(e) => handleInputChange("firstName", e.target.value)} className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-600 bg-white text-gray-700 text-sm transition-all ${errors.firstName ? "border-red-500" : "border-gray-200"}`} />
-                      {errors.firstName && <span className="text-xs text-red-500 mt-1 block">{errors.firstName}</span>}
-                    </div>
-                    <div className="md:col-span-2 text-left">
-                      <label className="block mb-2 text-sm font-semibold text-gray-500">Middle Initial <span className="text-gray-400 font-normal">(Optional)</span></label>
-                      <input type="text" placeholder="M.I." value={form.middleInitial} onChange={(e) => handleInputChange("middleInitial", e.target.value)} maxLength={3} className="w-full px-4 py-3 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-600 bg-white text-gray-700 text-sm rounded-xl transition" />
-                    </div>
-                    <div className="md:col-span-4 text-left">
-                      <label className="block mb-2 text-sm font-semibold text-gray-700">Last Name <span className="text-red-500">*</span></label>
-                      <input type="text" placeholder="e.g. Dela Cruz" value={form.lastName} onChange={(e) => handleInputChange("lastName", e.target.value)} className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-600 bg-white text-gray-700 text-sm transition-all ${errors.lastName ? "border-red-500" : "border-gray-200"}`} />
-                      {errors.lastName && <span className="text-xs text-red-500 mt-1 block">{errors.lastName}</span>}
-                    </div>
-                    <div className="md:col-span-4 text-left">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+                    <FieldWithError error={errors.firstName}>
+                      <CustomTextbox
+                        label={<>First Name <span className="text-red-500">*</span></>}
+                        placeholder="e.g. Juan"
+                        value={form.firstName}
+                        onChange={(e) => handleInputChange("firstName", e.target.value)}
+                      />
+                    </FieldWithError>
+
+                    <CustomTextbox
+                      label={<>Middle Initial <span className="text-gray-400 font-normal text-xs">(Optional)</span></>}
+                      placeholder="M.I."
+                      value={form.middleInitial}
+                      onChange={(e) => handleInputChange("middleInitial", e.target.value)}
+                    />
+
+                    <FieldWithError error={errors.lastName}>
+                      <CustomTextbox
+                        label={<>Last Name <span className="text-red-500">*</span></>}
+                        placeholder="e.g. Dela Cruz"
+                        value={form.lastName}
+                        onChange={(e) => handleInputChange("lastName", e.target.value)}
+                      />
+                    </FieldWithError>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-1">
                       <Dropdown label="Suffix (Optional)" placeholder="Select suffix" options={SUFFIXES} value={form.suffix} onChange={(val) => handleInputChange("suffix", val)} />
                     </div>
-                    <div className="md:col-span-6 text-left">
+                    <div className="md:col-span-2">
                       <Dropdown label="Gender *" placeholder="Select Gender" options={GENDERS} value={form.gender} onChange={(val) => handleInputChange("gender", val)} error={errors.gender} />
                     </div>
                   </div>
@@ -375,25 +401,34 @@ const RetailerRegister = () => {
                   <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
                     Address Information
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-10 gap-x-6 gap-y-4">
-                    <div className="md:col-span-5 text-left">
-                      <Dropdown label="Province *" placeholder="Select Province" options={PROVINCES} value={form.province} onChange={handleProvinceChange} error={errors.province} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                    <Dropdown label="Province *" placeholder="Select Province" options={PROVINCES} value={form.province} onChange={handleProvinceChange} error={errors.province} />
+                    <Dropdown label="Municipality *" placeholder="Select City" options={activeMunicipalities} value={form.municipality} onChange={handleMunicipalityChange} error={errors.municipality} />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <label className="block mb-2 text-sm font-medium text-gray-700">
+                        Postal Code <span className="text-gray-400 font-normal text-xs">(Auto Generated)</span>
+                      </label>
+                      <input
+                        type="text"
+                        disabled
+                        value={form.postalCode}
+                        className="w-full px-4 py-3 rounded-xl bg-gray-200 text-gray-500 outline-none cursor-not-allowed"
+                      />
                     </div>
-                    <div className="md:col-span-5 text-left">
-                      <Dropdown label="Municipality *" placeholder="Select City" options={activeMunicipalities} value={form.municipality} onChange={handleMunicipalityChange} error={errors.municipality} />
-                    </div>
-                    <div className="md:col-span-3 text-left">
-                      <label className="block mb-2 text-sm font-semibold text-gray-500">Postal Code <span className="text-gray-400 font-normal">(Auto Generated)</span></label>
-                      <input type="text" disabled value={form.postalCode} className="w-full px-4 py-3 border border-gray-200 bg-gray-100 text-gray-500 font-medium text-sm rounded-xl cursor-not-allowed" />
-                    </div>
-                    <div className="md:col-span-3 text-left">
-                      <Dropdown label="Barangay *" placeholder="Select Barangay" options={activeBarangays} value={form.barangay} onChange={(val) => handleInputChange("barangay", val)} error={errors.barangay} />
-                    </div>
-                    <div className="md:col-span-4 text-left">
-                      <label className="block mb-2 text-sm font-semibold text-gray-700">Street Address <span className="text-red-500">*</span></label>
-                      <input type="text" placeholder="Unit/Bldg, Street Name" value={form.streetAddress} onChange={(e) => handleInputChange("streetAddress", e.target.value)} className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-600 bg-white text-gray-700 text-sm transition-all ${errors.streetAddress ? "border-red-500" : "border-gray-200"}`} />
-                      {errors.streetAddress && <span className="text-xs text-red-500 mt-1 block">{errors.streetAddress}</span>}
-                    </div>
+
+                    <Dropdown label="Barangay *" placeholder="Select Barangay" options={activeBarangays} value={form.barangay} onChange={(val) => handleInputChange("barangay", val)} error={errors.barangay} />
+
+                    <FieldWithError error={errors.streetAddress}>
+                      <CustomTextbox
+                        label={<>Street Address <span className="text-red-500">*</span></>}
+                        placeholder="Unit/Bldg, Street Name"
+                        value={form.streetAddress}
+                        onChange={(e) => handleInputChange("streetAddress", e.target.value)}
+                      />
+                    </FieldWithError>
                   </div>
                 </div>
 
@@ -404,38 +439,73 @@ const RetailerRegister = () => {
                   </h3>
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="text-left">
-                        <label className="block mb-2 text-sm font-semibold text-gray-700">Email Address <span className="text-red-500">*</span></label>
-                        <input type="email" placeholder="youremail@example.com" value={form.email} onChange={(e) => handleInputChange("email", e.target.value)} className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-600 bg-white text-gray-700 text-sm transition-all ${errors.email ? "border-red-500" : "border-gray-200"}`} />
-                        {errors.email && <span className="text-xs text-red-500 mt-1 block">{errors.email}</span>}
-                      </div>
-                      <div className="text-left">
-                        <label className="block mb-2 text-sm font-semibold text-gray-700">Contact Number <span className="text-red-500">*</span></label>
-                        <input type="text" placeholder="63+ 9XX XXX XXXX" value={form.contactNumber} onChange={(e) => handleInputChange("contactNumber", e.target.value)} className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-600 bg-white text-gray-700 text-sm transition-all ${errors.contactNumber ? "border-red-500" : "border-gray-200"}`} />
-                        {errors.contactNumber && <span className="text-xs text-red-500 mt-1 block">{errors.contactNumber}</span>}
-                      </div>
-                      <div className="text-left">
-                        <label className="block mb-2 text-sm font-semibold text-gray-500">Username <span className="text-gray-400 font-normal">(Optional)</span></label>
-                        <input type="text" placeholder="yourusername" value={form.username} onChange={(e) => handleInputChange("username", e.target.value)} className="w-full px-4 py-3 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-600 bg-white text-gray-700 text-sm rounded-xl transition" />
-                      </div>
+                      <FieldWithError error={errors.email}>
+                        <CustomTextbox
+                          label={<>Email Address <span className="text-red-500">*</span></>}
+                          placeholder="youremail@example.com"
+                          type="email"
+                          value={form.email}
+                          onChange={(e) => handleInputChange("email", e.target.value)}
+                        />
+                      </FieldWithError>
+
+                      <FieldWithError error={errors.contactNumber}>
+                        <CustomTextbox
+                          label={<>Contact Number <span className="text-red-500">*</span></>}
+                          placeholder="63+ 9XX XXX XXXX"
+                          value={form.contactNumber}
+                          onChange={(e) => handleInputChange("contactNumber", e.target.value)}
+                        />
+                      </FieldWithError>
+
+                      <CustomTextbox
+                        label={<>Username <span className="text-gray-400 font-normal text-xs">(Optional)</span></>}
+                        placeholder="yourusername"
+                        value={form.username}
+                        onChange={(e) => handleInputChange("username", e.target.value)}
+                      />
                     </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                      <div className="relative text-left">
-                        <label className="block mb-2 text-sm font-semibold text-gray-700">Password <span className="text-red-500">*</span></label>
-                        <input type={showPassword ? "text" : "password"} placeholder="••••••••••••" value={form.password} onChange={(e) => handleInputChange("password", e.target.value)} className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-600 bg-white text-gray-700 text-sm transition-all pr-12 ${errors.password ? "border-red-500" : "border-gray-200"}`} />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-[39px] text-gray-400 hover:text-gray-600 transition focus:outline-none">
-                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                        {errors.password && <span className="text-xs text-red-500 mt-1 block">{errors.password}</span>}
-                      </div>
-                      <div className="relative text-left">
-                        <label className="block mb-2 text-sm font-semibold text-gray-700">Confirm Password <span className="text-red-500">*</span></label>
-                        <input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••••••" value={form.confirmPassword} onChange={(e) => handleInputChange("confirmPassword", e.target.value)} className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-600 bg-white text-gray-700 text-sm pr-12 transition-all ${errors.confirmPassword ? "border-red-500" : "border-gray-200"}`} />
-                        <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3.5 top-[39px] text-gray-400 hover:text-gray-600 transition focus:outline-none">
-                          {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                        {errors.confirmPassword && <span className="text-xs text-red-500 mt-1 block">{errors.confirmPassword}</span>}
-                      </div>
+                      <FieldWithError error={errors.password}>
+                        <div className="relative">
+                          <CustomTextbox
+                            label={<>Password <span className="text-red-500">*</span></>}
+                            placeholder="••••••••••••"
+                            type={showPassword ? "text" : "password"}
+                            value={form.password}
+                            onChange={(e) => handleInputChange("password", e.target.value)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-4 top-[42px] text-gray-500 hover:text-gray-700 transition focus:outline-none"
+                            tabIndex={-1}
+                          >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
+                      </FieldWithError>
+
+                      <FieldWithError error={errors.confirmPassword}>
+                        <div className="relative">
+                          <CustomTextbox
+                            label={<>Confirm Password <span className="text-red-500">*</span></>}
+                            placeholder="••••••••••••"
+                            type={showConfirmPassword ? "text" : "password"}
+                            value={form.confirmPassword}
+                            onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-4 top-[42px] text-gray-500 hover:text-gray-700 transition focus:outline-none"
+                            tabIndex={-1}
+                          >
+                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
+                      </FieldWithError>
                     </div>
                   </div>
                 </div>
@@ -446,11 +516,18 @@ const RetailerRegister = () => {
                     I agree to the <span className="text-[#08511f] font-semibold underline">Privacy Policy</span> and <span className="text-[#08511f] font-semibold underline">Terms of Service</span>.
                   </label>
                 </div>
+                {errors.agreeTerms && <span className="text-xs text-red-500 block -mt-6">{errors.agreeTerms}</span>}
 
                 <div className="pt-6 border-t border-gray-100 flex justify-end">
-                  <button type="submit" className="flex items-center gap-2 bg-[#018311] hover:bg-[#016b0f] text-white font-semibold px-8 py-3 rounded-full shadow-lg active:scale-95 transition-all">
-                    Next Step <ArrowRight size={18} />
-                  </button>
+                  <CustomGreenButton
+                    text={
+                      <span className="flex items-center gap-2">
+                        Next Step <ArrowRight size={18} />
+                      </span>
+                    }
+                    type="submit"
+                    className="!rounded-full !px-8 !py-3 shadow-lg"
+                  />
                 </div>
               </form>
             )}
@@ -496,12 +573,20 @@ const RetailerRegister = () => {
                 </div>
 
                 <div className="w-full pt-6 border-t border-gray-100 flex justify-between">
-                  <button onClick={() => setStep(1)} className="flex items-center gap-2 px-6 py-3 border border-gray-200 text-gray-700 font-semibold rounded-full hover:bg-gray-50 transition active:scale-95">
-                    <ArrowLeft size={16} /> Previous
-                  </button>
-                  <button onClick={handleVerifyOtp} className="px-8 py-3 bg-[#018311] hover:bg-[#016b0f] text-white font-semibold rounded-full shadow-lg transition active:scale-95">
-                    Verify OTP
-                  </button>
+                  <CustomWhiteButton
+                    onClick={() => setStep(1)}
+                    className="!rounded-full w-auto !p-2 !px-6"
+                    icon={
+                      <span className="flex items-center gap-2 text-sm font-semibold">
+                        <ArrowLeft size={16} /> Previous
+                      </span>
+                    }
+                  />
+                  <CustomGreenButton
+                    text="Verify OTP"
+                    onClick={handleVerifyOtp}
+                    className="!rounded-full !px-8 !py-3 shadow-lg"
+                  />
                 </div>
               </div>
             )}
@@ -515,7 +600,7 @@ const RetailerRegister = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                   {/* Document 1 (Required) */}
-                  <div 
+                  <div
                     className="border-2 border-dashed border-gray-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-green-50/50 hover:border-green-400 transition-colors relative"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => handleFileDrop(e, 'doc1')}
@@ -523,7 +608,7 @@ const RetailerRegister = () => {
                     <label className="absolute top-[-10px] left-4 bg-white px-2 text-xs font-semibold text-gray-600 z-10">
                       Required Document 1 <span className="text-red-500">*</span>
                     </label>
-                    
+
                     {!files.doc1 ? (
                       <>
                         <div className="w-12 h-12 bg-white rounded-full shadow flex items-center justify-center mb-4 cursor-pointer text-[#08511f]">
@@ -537,7 +622,7 @@ const RetailerRegister = () => {
                       </>
                     ) : (
                       <div className="flex flex-col items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 w-full relative">
-                        <button onClick={() => removeFile('doc1')} className="absolute top-2 right-2 text-gray-400 hover:text-red-500"><X size={16}/></button>
+                        <button onClick={() => removeFile('doc1')} className="absolute top-2 right-2 text-gray-400 hover:text-red-500"><X size={16} /></button>
                         <FileText size={32} className="text-[#08511f] mb-2" />
                         <span className="text-sm font-semibold text-gray-800 truncate w-full px-2" title={files.doc1.name}>{files.doc1.name}</span>
                         <span className="text-xs text-gray-500 mt-1">{files.doc1.size}</span>
@@ -546,7 +631,7 @@ const RetailerRegister = () => {
                   </div>
 
                   {/* Document 2 (Optional) */}
-                  <div 
+                  <div
                     className="border-2 border-dashed border-gray-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-green-50/50 hover:border-green-400 transition-colors relative"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => handleFileDrop(e, 'doc2')}
@@ -568,7 +653,7 @@ const RetailerRegister = () => {
                       </>
                     ) : (
                       <div className="flex flex-col items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 w-full relative">
-                        <button onClick={() => removeFile('doc2')} className="absolute top-2 right-2 text-gray-400 hover:text-red-500"><X size={16}/></button>
+                        <button onClick={() => removeFile('doc2')} className="absolute top-2 right-2 text-gray-400 hover:text-red-500"><X size={16} /></button>
                         <FileText size={32} className="text-[#08511f] mb-2" />
                         <span className="text-sm font-semibold text-gray-800 truncate w-full px-2" title={files.doc2.name}>{files.doc2.name}</span>
                         <span className="text-xs text-gray-500 mt-1">{files.doc2.size}</span>
@@ -588,12 +673,12 @@ const RetailerRegister = () => {
                 </div>
 
                 <div className="flex items-center gap-3 mb-8 pb-6 border-b border-gray-100">
-                  <input 
-                    id="agreeCertify" 
-                    type="checkbox" 
-                    checked={agreeCertify} 
-                    onChange={(e) => setAgreeCertify(e.target.checked)} 
-                    className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer" 
+                  <input
+                    id="agreeCertify"
+                    type="checkbox"
+                    checked={agreeCertify}
+                    onChange={(e) => setAgreeCertify(e.target.checked)}
+                    className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer"
                   />
                   <label htmlFor="agreeCertify" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
                     I certify that the information and uploaded documents provided are true and accurate.
@@ -601,12 +686,20 @@ const RetailerRegister = () => {
                 </div>
 
                 <div className="w-full flex justify-between">
-                  <button onClick={() => setStep(2)} className="flex items-center gap-2 px-6 py-3 border border-gray-200 text-gray-700 font-semibold rounded-full hover:bg-gray-50 transition active:scale-95">
-                    <ArrowLeft size={16} /> Previous
-                  </button>
-                  <button onClick={handleSubmitRegistration} className="px-8 py-3 bg-[#018311] hover:bg-[#016b0f] text-white font-semibold rounded-full shadow-lg transition active:scale-95">
-                    Submit Registration
-                  </button>
+                  <CustomWhiteButton
+                    onClick={() => setStep(2)}
+                    className="!rounded-full w-auto !p-2 !px-6"
+                    icon={
+                      <span className="flex items-center gap-2 text-sm font-semibold">
+                        <ArrowLeft size={16} /> Previous
+                      </span>
+                    }
+                  />
+                  <CustomGreenButton
+                    text="Submit Registration"
+                    onClick={handleSubmitRegistration}
+                    className="!rounded-full !px-8 !py-3 shadow-lg"
+                  />
                 </div>
               </div>
             )}
@@ -614,7 +707,9 @@ const RetailerRegister = () => {
         )}
       </div>
 
-      <Footer />
+      <div className="relative z-10">
+        <Footer />
+      </div>
     </div>
   );
 };

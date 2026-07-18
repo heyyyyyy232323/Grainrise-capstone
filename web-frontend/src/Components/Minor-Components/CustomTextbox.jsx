@@ -1,6 +1,3 @@
-
-
-
 const CustomTextbox = ({
   label,
   placeholder,
@@ -27,11 +24,13 @@ const CustomTextbox = ({
           w-full
           px-4 py-3
           rounded-xl
-          bg-gray-200
+          border
+          border-[#CECECE]
+          bg-white
           text-gray-700
           placeholder-gray-500
           outline-none
-          focus:ring-2 focus:ring-gray-400
+          focus:ring-2 focus:ring-green-100 focus:border-green-600
           transition
         "
       />
