@@ -1,11 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Info } from "lucide-react";
+import { ArrowLeft, Info, Sidebar } from "lucide-react";
 
 import CustomGreenButton from "../Components/Minor-Components/CustomGreenButton";
 import CustomWhiteButton from "../Components/Minor-Components/CustomWhiteButton";
 import Footer from "../Components/Minor-Components/CustomFooter";
 import Logo from "../assets/Logo.png";
 import backgroundImage from "../assets/UserloginBG.png";
+
 
 import retailerImg from "../assets/retailer.jpg";
 import supplierWarehouseImg from "../assets/supplier-warehouse.jpg";
@@ -31,6 +32,7 @@ const roles = [
 ];
 
 const RoleCard = ({ title, description, buttonText, image, onClick }) => (
+  
   <div
     onClick={onClick}
     className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl"
@@ -52,8 +54,12 @@ const RegisterGateway = () => {
   const navigate = useNavigate();
 
   return (
+
     <div className="min-h-screen flex flex-col relative overflow-hidden">
       {/* Background image */}
+      
+
+      
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${backgroundImage})` }}
@@ -108,6 +114,7 @@ const RegisterGateway = () => {
 
       <div className="relative z-10">
         <Footer />
+
       </div>
     </div>
   );
