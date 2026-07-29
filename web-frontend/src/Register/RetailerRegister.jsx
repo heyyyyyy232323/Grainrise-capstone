@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Eye, EyeOff, CheckCircle, Upload, X, FileText, Check, Info } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, CheckCircle, Upload, X, FileText, Check, Info, Clock } from "lucide-react";
 import CustomTextbox from "../Components/Minor-Components/CustomTextbox";
 import CustomGreenButton from "../Components/Minor-Components/CustomGreenButton";
 import CustomWhiteButton from "../Components/Minor-Components/CustomWhiteButton";
@@ -8,6 +8,7 @@ import Dropdown from "../Components/Minor-Components/Dropdown";
 import Footer from "../Components/Minor-Components/CustomFooter";
 import logo from "../assets/Logo.png";
 import backgroundImage from "../assets/UserloginBG.png";
+import useFormValidation from "../Components/hooks/useFormValidation";
 
 const PROVINCES = ["Bulacan", "Metro Manila (NCR)"];
 const MUNICIPALITIES_MAP = {
@@ -68,15 +69,55 @@ const RetailerRegister = () => {
   // UI States
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState({});
+  const { errors, setErrors, validators, validate, getPasswordStrength } = useFormValidation();
   const [validationMsg, setValidationMsg] = useState("");
 
   const activeMunicipalities = form.province ? (MUNICIPALITIES_MAP[form.province] || []) : [];
   const activeBarangays = form.municipality ? (BARANGAYS_MAP[form.municipality] || ["Barangay 1", "Barangay 2", "Barangay 3"]) : [];
 
   const handleInputChange = (field, value) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
+    // Auto-uppercase and cap to 1 char for middle initial
+    const processedValue =
+      field === "middleInitial" ? value.toUpperCase().slice(0, 1) : value;
+    setForm((prev) => ({ ...prev, [field]: processedValue }));
+    validateField(field, processedValue);
+  };
+
+  // Real-time per-field validation — maps each field to its validator
+  const validateField = (field, value) => {
+    let errorMsg = "";
+    switch (field) {
+      case "firstName":       errorMsg = validators.firstName(value);                               break;
+      case "middleInitial":   errorMsg = validators.middleInitial(value);                          break;
+      case "lastName":        errorMsg = validators.lastName(value);                               break;
+      case "streetAddress":   errorMsg = validators.streetAddress(value);                          break;
+      case "email":           errorMsg = validators.email(value);                                  break;
+      case "contactNumber":   errorMsg = validators.contactNumber(value);                          break;
+      case "username":        errorMsg = validators.username(value);                               break;
+      case "confirmPassword": errorMsg = validators.confirmPassword(form.password, value);         break;
+      case "password":
+        errorMsg = validators.password(value);
+        // Also re-check confirm password when password changes
+        if (form.confirmPassword) {
+          setErrors((prev) => ({
+            ...prev,
+            password: errorMsg,
+            confirmPassword: validators.confirmPassword(value, form.confirmPassword),
+          }));
+          return;
+        }
+        break;
+      case "gender":        errorMsg = value ? "" : "Gender is required";         break;
+      case "province":      errorMsg = value ? "" : "Province is required";       break;
+      case "municipality":
+        errorMsg = value ? "" : form.province ? "Municipality is required" : "Please select a province first";
+        break;
+      case "barangay":
+        errorMsg = value ? "" : form.municipality ? "Barangay is required" : "Please select a municipality first";
+        break;
+      default: break;
+    }
+    setErrors((prev) => ({ ...prev, [field]: errorMsg }));
   };
 
   const handleProvinceChange = (provinceValue) => {
@@ -87,50 +128,60 @@ const RetailerRegister = () => {
       barangay: "",
       postalCode: provinceValue === "Bulacan" ? "3006" : "1423",
     }));
-    setErrors((prev) => ({ ...prev, province: "", municipality: "", barangay: "" }));
+    setErrors((prev) => ({
+      ...prev,
+      province: provinceValue ? "" : "Province is required",
+      municipality: "",
+      barangay: "",
+    }));
   };
 
   const handleMunicipalityChange = (municipalityValue) => {
     setForm((prev) => ({ ...prev, municipality: municipalityValue, barangay: "" }));
-    setErrors((prev) => ({ ...prev, municipality: "", barangay: "" }));
+    setErrors((prev) => ({
+      ...prev,
+      municipality: municipalityValue ? "" : "Municipality is required",
+      barangay: "",
+    }));
   };
 
-  // Step 1 Validation
+  // Step 1 Validation — uses useFormValidation hook's validate()
   const validateStep1 = () => {
-    const tempErrors = {};
-    if (!form.firstName.trim()) tempErrors.firstName = "First Name is required";
-    if (!form.lastName.trim()) tempErrors.lastName = "Last Name is required";
-    if (!form.gender) tempErrors.gender = "Gender is required";
-    if (!form.province) tempErrors.province = "Province is required";
-    if (!form.municipality) tempErrors.municipality = "Municipality is required";
-    if (!form.barangay) tempErrors.barangay = "Barangay is required";
-    if (!form.streetAddress.trim()) tempErrors.streetAddress = "Street Address is required";
-    if (!form.email.trim()) {
-      tempErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(form.email)) {
-      tempErrors.email = "Email address is invalid";
-    }
-    if (!form.contactNumber.trim()) tempErrors.contactNumber = "Contact number is required";
-    if (!form.password) {
-      tempErrors.password = "Password is required";
-    } else if (form.password.length < 8) {
-      tempErrors.password = "Password must be at least 8 characters long";
-    }
-    if (!form.confirmPassword) {
-      tempErrors.confirmPassword = "Confirm password is required";
-    } else if (form.password !== form.confirmPassword) {
-      tempErrors.confirmPassword = "Passwords do not match";
-    }
-    if (!form.agreeTerms) tempErrors.agreeTerms = "You must agree to the Privacy Policy and Terms of Service";
+    const passed = validate({
+      firstName:       validators.firstName(form.firstName),
+      middleInitial:   validators.middleInitial(form.middleInitial),
+      lastName:        validators.lastName(form.lastName),
+      gender:          form.gender ? "" : "Gender is required",
+      province:        form.province ? "" : "Province is required",
+      municipality:    form.municipality
+                         ? ""
+                         : form.province
+                         ? "Municipality is required"
+                         : "Please select a province first",
+      barangay:        form.barangay
+                         ? ""
+                         : form.municipality
+                         ? "Barangay is required"
+                         : "Please select a municipality first",
+      streetAddress:   validators.streetAddress(form.streetAddress),
+      email:           validators.email(form.email),
+      contactNumber:   validators.contactNumber(form.contactNumber),
+      username:        validators.username(form.username),
+      password:        validators.password(form.password),
+      confirmPassword: validators.confirmPassword(form.password, form.confirmPassword),
+      agreeTerms:      validators.checkbox(
+                         form.agreeTerms,
+                         "You must agree to the Privacy Policy and Terms of Service"
+                       ),
+    });
 
-    setErrors(tempErrors);
-    if (Object.keys(tempErrors).length > 0) {
+    if (!passed) {
       setValidationMsg("Please correct the errors in the form before proceeding.");
       window.scrollTo({ top: 0, behavior: "smooth" });
-      return false;
+    } else {
+      setValidationMsg("");
     }
-    setValidationMsg("");
-    return true;
+    return passed;
   };
 
   const handleNextStep1 = (e) => {
@@ -313,19 +364,59 @@ const RetailerRegister = () => {
 
       <div className="relative z-10 flex-1 flex items-center justify-center p-4 md:p-10">
         {isSuccess ? (
-          <div className="w-full max-w-2xl bg-white border border-gray-100 rounded-3xl shadow-xl p-10 md:p-16 text-center animate-fade-in-up">
-            <div className="flex justify-center mb-6">
-              <CheckCircle size={72} className="text-green-600 animate-bounce" />
+          <div className="w-full max-w-2xl bg-white border border-gray-100 rounded-[32px] shadow-2xl p-8 md:p-12 text-center animate-fade-in-up flex flex-col items-center">
+            {/* Green Badge Check Icon */}
+            <div className="w-14 h-14 bg-[#08511f] rounded-full flex items-center justify-center text-white mb-5 shadow-sm">
+              <Check size={28} strokeWidth={3.5} />
             </div>
-            <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Registration Submitted!</h2>
-            <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              Your retailer application has been submitted successfully and is now pending administrator review. You will receive an email once approved.
+
+            {/* Title */}
+            <h2 className="text-2xl md:text-3xl font-extrabold text-[#08511f] mb-3">
+              Registration Submitted
+            </h2>
+
+            {/* Subtitle */}
+            <p className="text-gray-500 text-sm md:text-base mt-1 mb-6 max-w-md">
+              Your registration is under review. We'll email you once it's approved.
             </p>
+
+            {/* Application Status Badge / Container */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 bg-[#f8faf7] border border-green-50/50 rounded-2xl p-4 w-full max-w-md mx-auto mb-8 shadow-sm">
+              <div className="flex items-center gap-2 px-3.5 py-1.5 bg-[#eaf5ec] rounded-lg">
+                <span className="text-[#08511f] text-xs font-bold whitespace-nowrap">
+                  Application Status
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-gray-200 rounded-lg shadow-sm">
+                <Clock size={14} className="text-gray-400 shrink-0" />
+                <span className="text-gray-600 text-xs font-semibold whitespace-nowrap">
+                  Pending Administrator Review
+                </span>
+              </div>
+            </div>
+
+            {/* Trust Quote */}
+            <p className="text-[11px] md:text-xs text-gray-500 italic max-w-sm mb-8 leading-relaxed">
+              "Thank you for choosing GrainRise. We appreciate your interest in becoming one of our verified retail partners."
+            </p>
+
+            {/* Button */}
             <CustomGreenButton
-              text="Return Home"
+              text="Return to Home"
               onClick={() => navigate("/")}
-              className="!rounded-full !px-8 !py-3 shadow-md"
+              className="w-full max-w-md !rounded-xl !py-3.5 font-bold shadow-md mb-6"
             />
+
+            {/* Need Help Footer */}
+            <p className="text-xs text-gray-400 font-medium">
+              Need assistance?{" "}
+              <a
+                href="mailto:support@grainrise.com"
+                className="text-[#08511f] hover:underline font-bold"
+              >
+                Contact the GrainRise Support Team.
+              </a>
+            </p>
           </div>
         ) : (
           <div className="w-full max-w-4xl bg-white border border-gray-100 rounded-3xl shadow-2xl p-6 md:p-12">
@@ -467,45 +558,103 @@ const RetailerRegister = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                      <FieldWithError error={errors.password}>
-                        <div className="relative">
-                          <CustomTextbox
-                            label={<>Password <span className="text-red-500">*</span></>}
-                            placeholder="••••••••••••"
-                            type={showPassword ? "text" : "password"}
-                            value={form.password}
-                            onChange={(e) => handleInputChange("password", e.target.value)}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-4 top-[42px] text-gray-500 hover:text-gray-700 transition focus:outline-none"
-                            tabIndex={-1}
-                          >
-                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                      </FieldWithError>
+                      {/* ── Password Column ── */}
+                      <div>
+                        <FieldWithError error={errors.password}>
+                          <div className="relative">
+                            <CustomTextbox
+                              label={<>Password <span className="text-red-500">*</span></>}
+                              placeholder="••••••••••••"
+                              type={showPassword ? "text" : "password"}
+                              value={form.password}
+                              onChange={(e) => handleInputChange("password", e.target.value)}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-4 top-[42px] text-gray-500 hover:text-gray-700 transition focus:outline-none"
+                              tabIndex={-1}
+                            >
+                              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                          </div>
+                        </FieldWithError>
 
-                      <FieldWithError error={errors.confirmPassword}>
-                        <div className="relative">
-                          <CustomTextbox
-                            label={<>Confirm Password <span className="text-red-500">*</span></>}
-                            placeholder="••••••••••••"
-                            type={showConfirmPassword ? "text" : "password"}
-                            value={form.confirmPassword}
-                            onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            className="absolute right-4 top-[42px] text-gray-500 hover:text-gray-700 transition focus:outline-none"
-                            tabIndex={-1}
-                          >
-                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                      </FieldWithError>
+                        {/* Password Strength Bar + Requirements — inside the column, not a grid item */}
+                        {form.password && (() => {
+                          const strength = getPasswordStrength(form.password);
+                          const bar = {
+                            weak:   { width: "33%",  color: "bg-red-400",    text: "text-red-500",    label: "Weak" },
+                            medium: { width: "66%",  color: "bg-yellow-400", text: "text-yellow-600", label: "Medium" },
+                            strong: { width: "100%", color: "bg-green-500",  text: "text-green-600",  label: "Strong" },
+                          }[strength];
+                          const pw = form.password;
+                          const reqs = [
+                            { label: "At least 8 characters",          met: pw.length >= 8 },
+                            { label: "One uppercase letter (A–Z)",      met: /[A-Z]/.test(pw) },
+                            { label: "One lowercase letter (a–z)",      met: /[a-z]/.test(pw) },
+                            { label: "One number (0–9)",                met: /[0-9]/.test(pw) },
+                            { label: "One special character (!@#$%^&*)", met: /[!@#$%^&*(),.?":{}|<>]/.test(pw) },
+                          ];
+                          return (
+                            <div className="mt-2 px-1 space-y-2">
+                              {/* Bar */}
+                              <div className="flex items-center gap-3">
+                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-300 ${bar.color}`}
+                                    style={{ width: bar.width }}
+                                  />
+                                </div>
+                                <span className={`text-xs font-semibold shrink-0 ${bar.text}`}>{bar.label}</span>
+                              </div>
+                              {/* Requirements checklist */}
+                              <ul className="space-y-1 mt-1">
+                                {reqs.map((r) => (
+                                  <li key={r.label} className="flex items-center gap-2">
+                                    <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${r.met ? "bg-green-500" : "bg-gray-200"}`}>
+                                      {r.met && <Check size={10} strokeWidth={3} className="text-white" />}
+                                    </span>
+                                    <span className={`text-xs ${r.met ? "text-green-700 font-medium" : "text-gray-400"}`}>
+                                      {r.label}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          );
+                        })()}
+                      </div>
+
+                      {/* ── Confirm Password Column ── */}
+                      <div>
+                        <FieldWithError error={errors.confirmPassword}>
+                          <div className="relative">
+                            <CustomTextbox
+                              label={<>Confirm Password <span className="text-red-500">*</span></>}
+                              placeholder="••••••••••••"
+                              type={showConfirmPassword ? "text" : "password"}
+                              value={form.confirmPassword}
+                              onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              className="absolute right-4 top-[42px] text-gray-500 hover:text-gray-700 transition focus:outline-none"
+                              tabIndex={-1}
+                            >
+                              {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                          </div>
+                        </FieldWithError>
+
+                        {/* Password Match indicator */}
+                        {form.confirmPassword && !errors.confirmPassword && form.password === form.confirmPassword && (
+                          <p className="mt-2 px-1 text-xs font-semibold text-green-600 flex items-center gap-1">
+                            <Check size={12} strokeWidth={3} /> Password Match
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
