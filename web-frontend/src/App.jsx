@@ -20,6 +20,9 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/register/supplier-warehouse" element={<SupplierWarehouseGateway />} />
         <Route path="/register/retailer" element={<RetailerRegister />} />
+        <Route path="/dashboard-preview" element={<DashboardPreview />} />
+        <Route path="/register/warehouse-manager" element={<WarehouseManagerRegister />} />
+        <Route path="/register/supplier" element={<SupplierRegister />} />
       </Routes>
     </BrowserRouter>
   );
