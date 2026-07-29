@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import UserNavbar from "./Components/Major-Components/UserNavbar";
-import UserSidebar from "./Components/Major-Components/UserSidebar";
-import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package } from "lucide-react";
+import UserNavbar, { getUserNavbarMenuItems } from "./Components/Major-Components/UserNavbar";
+import UserSidebar, { getUserSidebarConfig, userSidebarRoles } from "./Components/Major-Components/UserSidebar";
 import Logo from "./assets/Logo.png";
 
 const DashboardPreview = () => {
@@ -21,84 +20,21 @@ const DashboardPreview = () => {
     }
   };
 
-  // Different menu configs per role
-  const menuConfigs = {
-    admin: {
-      panelLabel: "Admin Panel",
-      sections: [
-        {
-          title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/admin/dashboard" }],
-        },
-        {
-          title: "MANAGEMENT",
-          items: [
-            { label: "Suppliers", icon: Truck, path: "/admin/suppliers" },
-            { label: "Warehouses", icon: Warehouse, path: "/admin/warehouses" },
-            { label: "Retailers", icon: Store, path: "/admin/retailers" },
-            { label: "Users", icon: Users, path: "/admin/users" },
-          ],
-        },
-        {
-          title: "ANALYTICS",
-          items: [{ label: "Reports", icon: FileBarChart, path: "/admin/reports" }],
-        },
-      ],
-    },
-    supplier: {
-      panelLabel: "Supplier Panel",
-      sections: [
-        {
-          title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/supplier/dashboard" }],
-        },
-        {
-          title: "MANAGEMENT",
-          items: [
-            { label: "Products", icon: Package, path: "/supplier/products" },
-            { label: "Orders", icon: ShoppingCart, path: "/supplier/orders" },
-          ],
-        },
-      ],
-    },
-    retailer: {
-      panelLabel: "Retailer Panel",
-      sections: [
-        {
-          title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/retailer/dashboard" }],
-        },
-        {
-          title: "MANAGEMENT",
-          items: [
-            { label: "Orders", icon: ShoppingCart, path: "/retailer/orders" },
-            { label: "Inventory", icon: Package, path: "/retailer/inventory" },
-          ],
-        },
-      ],
-    },
-  };
-
-  const currentConfig = menuConfigs[userRole];
+  const currentConfig = getUserSidebarConfig(userRole);
   const user = {
     name: "Kerbie Hector Abanid",
     email: "abanid1@gmail.com",
     avatarUrl: "",
   };
 
-  const menuItems = [
-    { label: "Profile", onClick: () => alert("Navigate to Profile") },
-    { label: "Settings", onClick: () => alert("Navigate to Settings") },
-    { label: "Log Out", onClick: () => navigate("/login") },
-  ];
+  const menuItems = getUserNavbarMenuItems(navigate);
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar - Always visible on desktop, toggle on mobile */}
       <div className="hidden md:flex">
         <UserSidebar
-          panelLabel={currentConfig.panelLabel}
-          sections={currentConfig.sections}
+          role={userRole}
           logo={Logo}
           isMinimized={sidebarMinimized}
         />
@@ -113,8 +49,7 @@ const DashboardPreview = () => {
           />
           <div className="md:hidden fixed left-0 top-0 h-screen z-30 w-64">
             <UserSidebar
-              panelLabel={currentConfig.panelLabel}
-              sections={currentConfig.sections}
+              role={userRole}
               logo={Logo}
               isMinimized={false}
             />
@@ -143,7 +78,7 @@ const DashboardPreview = () => {
               <div className="mb-8 pb-8 border-b border-gray-200">
                 <h2 className="text-lg font-semibold text-gray-800 mb-4">Switch User Role:</h2>
                 <div className="flex flex-wrap gap-2 sm:gap-4">
-                  {Object.keys(menuConfigs).map((role) => (
+                  {userSidebarRoles.map((role) => (
                     <button
                       key={role}
                       onClick={() => setUserRole(role)}
