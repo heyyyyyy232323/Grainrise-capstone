@@ -1,0 +1,157 @@
+import { Link, useLocation } from "react-router-dom";
+import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package, CornerUpLeft  } from "lucide-react";
+import Logo from "../../assets/Logo.png";
+
+export const getUserSidebarConfig = (role = "admin") => {
+  const menuConfigs = {
+    admin: {
+      panelLabel: "Admin Panel",
+      sections: [
+        {
+          title: "MAIN",
+          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/admin/dashboard" }],
+        },
+        {
+          title: "MANAGEMENT",
+          items: [
+            { label: "Suppliers", icon: Truck, path: "/admin/suppliers" },
+            { label: "Warehouses", icon: Warehouse, path: "/admin/warehouses" },
+            { label: "Retailers", icon: Store, path: "/admin/retailers" },
+            { label: "Users", icon: Users, path: "/admin/users" },
+          ],
+        },
+        {
+          title: "ANALYTICS",
+          items: [{ label: "Reports", icon: FileBarChart, path: "/admin/reports" }],
+        },
+      ],
+    },
+    supplier: {
+      panelLabel: "Supplier Panel",
+      sections: [
+        {
+          title: "MAIN",
+          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/supplier/dashboard" }],
+        },
+        {
+          title: "MANAGEMENT",
+          items: [
+            { label: "Products", icon: Package, path: "/supplier/products" },
+            { label: "Orders", icon: ShoppingCart, path: "/supplier/orders" },
+          ],
+        },
+      ],
+    },
+    retailer: {
+      panelLabel: "Retailer Panel",
+      sections: [
+        {
+          title: "MAIN",
+          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/retailer/dashboard" }],
+        },
+        {
+          title: "MANAGEMENT",
+          items: [
+            { label: "Orders", icon: ShoppingCart, path: "/retailer/orders" },
+            { label: "Inventory", icon: Package, path: "/retailer/inventory" },
+          ],
+        },
+      ],
+    },
+     warehouse_encoder: {
+      panelLabel: "Warehouse Encoder Panel",
+      sections: [
+        {
+          title: "MAIN",
+          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/warehouse-encoder/dashboard" }],
+        },
+        {
+          title: "MANAGEMENT",
+          items: [
+            { label: "Order History", icon: ShoppingCart, path: "/warehouse-encoder/orders" },
+            { label: "Request Order", icon: CornerUpLeft, path: "/warehouse-encoder/inventory" },
+            { label: "Stock Management", icon: Package , path: "/warehouse-encoder/stock" },
+          ],
+        },
+      ],
+    },
+  };
+
+  return menuConfigs[role] || menuConfigs.admin;
+};
+
+export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder"];
+
+const UserSidebar = ({ role = "admin", panelLabel, sections, logo = Logo, isMinimized = false }) => {
+  const location = useLocation();
+  const sidebarConfig = getUserSidebarConfig(role);
+  const resolvedPanelLabel = panelLabel ?? sidebarConfig.panelLabel;
+  const resolvedSections = sections ?? sidebarConfig.sections;
+
+  return (
+    <aside
+      className={`h-screen bg-white border-r border-gray-200 flex flex-col shrink-0 z-30 transition-all duration-300 ease-in-out ${
+        isMinimized ? "w-20" : "w-64"
+      }`}
+    >
+      {/* Logo */}
+      <div className={`h-18.25 flex items-center border-b border-gray-100 transition-all duration-300 ${
+        isMinimized ? "justify-center px-3" : "justify-start px-6"
+      }`}>
+        <img src={logo} alt="GrainRise Logo" className={`object-contain transition-all duration-300 ${
+          isMinimized ? "h-6" : "h-9"
+        }`} />
+      </div>
+
+      {/* Panel label */}
+      <div
+        className={`bg-linear-to-r from-[#0B5D1E] to-[#D6A62D] transition-all duration-300 overflow-hidden ${
+          isMinimized ? "py-0 px-0 h-0" : "py-3 px-6 h-auto"
+        }`}
+      >
+        <span className="text-white font-bold text-sm tracking-wider uppercase">
+          {resolvedPanelLabel}
+        </span>
+      </div>
+
+      {/* Nav sections */}
+      <nav className="flex-1 overflow-y-auto py-4 transition-all duration-300">
+        {resolvedSections.map((section) => (
+          <div key={section.title} className="mb-5">
+            {!isMinimized && (
+              <p className="px-6 mb-2 text-xs font-bold text-amber-500 tracking-wider uppercase transition-all duration-300">
+                {section.title}
+              </p>
+            )}
+            <div className="flex flex-col gap-1 px-3">
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    title={isMinimized ? item.label : ""}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 ${
+                      isMinimized ? "justify-center" : "justify-start"
+                    } ${
+                      isActive
+                        ? "bg-[#0B5D1E] text-white shadow-sm"
+                        : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    {Icon && <Icon size={18} className="shrink-0" />}
+                    {!isMinimized && <span>{item.label}</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </nav>
+    </aside>
+  );
+};
+
+export default UserSidebar;
