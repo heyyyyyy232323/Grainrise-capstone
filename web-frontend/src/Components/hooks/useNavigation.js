@@ -35,6 +35,9 @@ const useNavigation = () => {
 
     /** Go to the supplier/warehouse registration page */
     goSupplierRegister: () => navigate("/register/supplier-warehouse"),
+
+    /** Go to the farmer registration page */
+    goFarmerRegister: () => navigate("/register/farmer"),
   };
 };
 

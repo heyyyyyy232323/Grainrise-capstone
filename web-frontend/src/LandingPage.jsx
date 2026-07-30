@@ -10,18 +10,20 @@ import LandingFooter from './Components/Major-Components/LandingFooter';
 import {
   Store,
   Truck,
-  Globe,
   Warehouse,
   Package,
   FileText,
-  Check,
+  CheckCircle,
   ChevronRight,
   ArrowRight,
   ChevronLeft,
   BarChart3,
   TrendingUp,
   Wrench,
-  Download
+  Download,
+  Tractor,
+  ClipboardCheck,
+  ClipboardList
 } from 'lucide-react';
 
 // Images
@@ -99,12 +101,12 @@ export default function LandingPage() {
   };
 
   const ECOSYSTEM_STEPS = [
-    { icon: <Truck size={26} strokeWidth={1.8} />,       label: 'Suppliers'  },
-    { icon: <Warehouse size={26} strokeWidth={1.8} />,   label: 'Warehouse'  },
-    { icon: <Package size={26} strokeWidth={1.8} />,     label: 'Inventory'  },
-    { icon: <FileText size={26} strokeWidth={1.8} />,    label: 'Orders'     },
-    { icon: <Truck size={26} strokeWidth={1.8} />,       label: 'Transport'  },
-    { icon: <Store size={26} strokeWidth={1.8} />,       label: 'Retailers'  },
+    { icon: <Tractor size={26} strokeWidth={1.8} />,        label: 'Suppliers'  },
+    { icon: <Warehouse size={26} strokeWidth={1.8} />,      label: 'Warehouse'  },
+    { icon: <ClipboardCheck size={26} strokeWidth={1.8} />,  label: 'Inventory'  },
+    { icon: <ClipboardList size={26} strokeWidth={1.8} />,   label: 'Orders'     },
+    { icon: <Truck size={26} strokeWidth={1.8} />,          label: 'Transport'  },
+    { icon: <Store size={26} strokeWidth={1.8} />,          label: 'Retailers'  },
   ];
 
   const TESTIMONIALS = [
@@ -166,7 +168,7 @@ export default function LandingPage() {
             Built for smarter inventory, logistics, and supply chain operations.
           </p>
           <div className="lp-hero__ctas">
-            <button className="lp-btn lp-btn--cta" onClick={() => navigate('/register')} id="hero-register-btn">Register</button>
+            <button className="lp-btn lp-btn--cta" onClick={() => navigate('/register')} id="hero-register-btn">Join Us Now</button>
             <button className="lp-btn lp-btn--outline" onClick={() => scrollTo('about')} id="hero-learn-btn">Learn More</button>
           </div>
         </div>
@@ -186,9 +188,29 @@ export default function LandingPage() {
           <div className="lp-ticker__items">
             <div className="lp-ticker__item"><Store size={26} strokeWidth={1.8} /><span>Retailers</span></div>
             <div className="lp-ticker__item"><Truck size={26} strokeWidth={1.8} /><span>Suppliers</span></div>
-            <div className="lp-ticker__item"><Globe size={26} strokeWidth={1.8} /><span>Distributors</span></div>
             <div className="lp-ticker__item"><Warehouse size={26} strokeWidth={1.8} /><span>Warehouses</span></div>
           </div>
+        </div>
+      </section>
+
+      {/* ── ECOSYSTEM ─── */}
+      <section className="lp-ecosystem" id="ecosystem">
+        <div className="lp-ecosystem__badge">How it works</div>
+        <h2 className="lp-section-headline lp-section-headline--center">
+          Connected Supply Chain Ecosystem
+        </h2>
+        <div className="lp-ecosystem__flow">
+          {ECOSYSTEM_STEPS.map((step, i) => (
+            <React.Fragment key={step.label}>
+              <div className="lp-flow-step">
+                <div className="lp-flow-icon">{step.icon}</div>
+                <span className="lp-flow-label">{step.label}</span>
+              </div>
+              {i < ECOSYSTEM_STEPS.length - 1 && (
+                <div className="lp-flow-arrow"><ArrowRight size={20} strokeWidth={1.5} color="#aac8aa" /></div>
+              )}
+            </React.Fragment>
+          ))}
         </div>
       </section>
 
@@ -225,9 +247,9 @@ export default function LandingPage() {
             Built on innovation and inclusivity, we help businesses reduce waste, improve planning, and increase profitability. With AI-driven insights and forecasting, teams can make smarter decisions with confidence.
           </p>
           <div className="lp-about__checks">
-            <div className="lp-check-item"><Check size={16} strokeWidth={2.5} color="#2d6a35" /><span>Real time visibility</span></div>
-            <div className="lp-check-item"><Check size={16} strokeWidth={2.5} color="#2d6a35" /><span>Smarter restocking</span></div>
-            <div className="lp-check-item"><Check size={16} strokeWidth={2.5} color="#2d6a35" /><span>Cleaner operations</span></div>
+            <div className="lp-check-item"><CheckCircle size={18} strokeWidth={2} /><span>Real-time visibility</span></div>
+            <div className="lp-check-item"><CheckCircle size={18} strokeWidth={2} /><span>Smarter restocking</span></div>
+            <div className="lp-check-item"><CheckCircle size={18} strokeWidth={2} /><span>Cleaner operations</span></div>
           </div>
         </div>
 
@@ -238,27 +260,6 @@ export default function LandingPage() {
             alt="Grocery and rice products"
             className="lp-about__image"
           />
-        </div>
-      </section>
-
-      {/* ── ECOSYSTEM ─── */}
-      <section className="lp-ecosystem" id="ecosystem">
-        <div className="lp-ecosystem__badge">How it works</div>
-        <h2 className="lp-section-headline lp-section-headline--center">
-          Connected Supply Chain Ecosystem
-        </h2>
-        <div className="lp-ecosystem__flow">
-          {ECOSYSTEM_STEPS.map((step, i) => (
-            <React.Fragment key={step.label}>
-              <div className="lp-flow-step">
-                <div className="lp-flow-icon">{step.icon}</div>
-                <span className="lp-flow-label">{step.label}</span>
-              </div>
-              {i < ECOSYSTEM_STEPS.length - 1 && (
-                <div className="lp-flow-arrow"><ArrowRight size={20} strokeWidth={1.5} color="#aac8aa" /></div>
-              )}
-            </React.Fragment>
-          ))}
         </div>
       </section>
 
@@ -463,7 +464,7 @@ export default function LandingPage() {
             onClick={() => navigate('/register/supplier-warehouse')}
             id="cta-get-started-btn"
           >
-            Register
+            Join Us Now
           </button>
         </div>
       </section>

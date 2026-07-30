@@ -793,8 +793,8 @@ const WarehouseManagerRegister = () => {
 
             {/* STEP 3 FORM */}
             {step === 3 && (
-              <div className="animate-fade-in flex flex-col">
-                <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase mb-5 text-left">
+              <div className="animate-fade-in flex flex-col text-left">
+                <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-6 text-left">
                   Required Documents
                 </h3>
 

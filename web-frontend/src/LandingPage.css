@@ -13,9 +13,7 @@
   position: fixed;
   top: 0; left: 0; right: 0;
   z-index: 100;
-  background: rgba(240, 247, 240, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: #f0f7f0;
   border-bottom: 1px solid transparent;
   transition: all 0.3s ease;
 }
@@ -24,19 +22,19 @@
   box-shadow: 0 2px 20px rgba(45, 106, 53, 0.08);
 }
 .lp-nav__inner {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
   padding: 14px 32px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
+  justify-content: flex-end;
+  gap: 32px;
 }
 .lp-nav__brand {
+  margin-right: auto;
   display: flex;
   align-items: center;
   gap: 10px;
-  cursor: default;
+  cursor: pointer;
 }
 .lp-logo-img {
   height: 40px;
@@ -204,7 +202,7 @@
 .lp-hero__mockup-wrap {
   position: relative;
   width: 100%;
-  max-width: 860px;
+  max-width: 1000px;
   padding: 0 24px;
   z-index: 1;
 }
@@ -282,9 +280,12 @@
 }
 .lp-ticker__items {
   display: flex;
-  gap: 48px;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
   flex-wrap: wrap;
-  justify-content: center;
+  gap: 24px;
 }
 .lp-ticker__item {
   display: flex;
@@ -335,45 +336,53 @@
   display: flex;
   align-items: center;
   gap: 64px;
-  max-width: 1200px;
+  max-width: 1360px;
   margin: 0 auto;
   padding: 96px 48px;
 }
 .lp-about__text {
-  flex: 1;
-  border: 2px solid #2d6a35;
-  border-radius: 16px;
-  padding: 40px;
+  flex: 1.5;
+  border: none;
+  padding: 0;
 }
 .lp-section-headline {
   font-family: 'Outfit', sans-serif;
-  font-size: clamp(26px, 3.5vw, 40px);
+  font-size: clamp(32px, 4.5vw, 52px);
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.8px;
   color: #1a2e1a;
-  margin: 0 0 20px;
+  margin: 0 0 24px;
 }
 .lp-section-headline--center { text-align: center; }
 .lp-about__body {
-  font-size: 15px;
+  font-size: 17px;
   color: #4a6a4a;
-  line-height: 1.75;
-  margin: 0 0 16px;
+  line-height: 1.8;
+  margin: 0 0 20px;
 }
 .lp-about__checks {
   display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
-  gap: 20px;
-  margin-top: 24px;
+  gap: 14px;
+  margin-top: 32px;
 }
 .lp-check-item {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 14px;
+  gap: 8px;
+  font-size: 15px;
   font-weight: 600;
   color: #2d6a35;
+  background: rgba(45, 106, 53, 0.06);
+  padding: 10px 20px;
+  border-radius: 100px;
+  transition: all 0.25s ease;
+}
+.lp-check-item:hover {
+  background: rgba(45, 106, 53, 0.1);
+  transform: translateY(-1px);
 }
 
 .lp-about__image-wrap {
@@ -381,7 +390,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-width: 480px;
+  max-width: 580px;
 }
 .lp-about__image {
   width: 100%;
@@ -417,9 +426,12 @@
 .lp-ecosystem__flow {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 20px;
 }
 .lp-flow-step {
   display: flex;
@@ -728,14 +740,14 @@
     padding: 60px 24px;
     gap: 32px;
   }
-  .lp-about__text { padding: 28px; }
+  .lp-about__text { padding: 0; }
   .lp-nav__links { display: none; }
   .lp-nav__links--open {
     display: flex;
     flex-direction: column;
     position: absolute;
     top: 64px; left: 0; right: 0;
-    background: rgba(240,247,240,0.97);
+    background: #f0f7f0;
     border-bottom: 1px solid rgba(45,106,53,0.15);
     padding: 16px 24px;
     gap: 4px;
@@ -743,7 +755,10 @@
   .lp-hamburger { display: flex; }
   .lp-footer__inner { flex-direction: column; gap: 40px; }
   .lp-stats__item { min-width: 140px; }
-  .lp-ecosystem__flow { gap: 8px; }
+  .lp-ecosystem__flow {
+    justify-content: center;
+    gap: 16px;
+  }
   .lp-flow-icon { width: 58px; height: 58px; }
 }
 
@@ -752,7 +767,10 @@
   .lp-hero__content { padding: 40px 16px 32px; }
   .lp-stats { flex-direction: column; }
   .lp-stats__item { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); }
-  .lp-ticker__items { gap: 24px; }
+  .lp-ticker__items {
+    justify-content: center;
+    gap: 24px;
+  }
   .lp-footer { padding: 48px 24px 0; }
   .lp-footer__links { gap: 32px; }
 }
@@ -893,32 +911,32 @@
 
 /* ─── Testimonials ──────────────────────────────────────────────── */
 .lp-testimonials {
-  padding: 96px 48px;
+  padding: 120px 48px;
   background: #ebf6eb;
 }
 
 .lp-testimonials__header {
   text-align: center;
-  margin-bottom: 56px;
+  margin-bottom: 72px;
 }
 
 .lp-testimonials__title {
   font-family: 'Outfit', sans-serif;
-  font-size: clamp(28px, 4vw, 42px);
+  font-size: clamp(36px, 5.5vw, 54px);
   font-weight: 800;
   color: #111f11;
-  margin: 0 0 12px;
+  margin: 0 0 18px;
 }
 
 .lp-testimonials__sub {
-  font-size: 17px;
+  font-size: 21px;
   color: #4a6a4a;
-  max-width: 600px;
+  max-width: 800px;
   margin: 0 auto;
 }
 
 .lp-testimonials__carousel-wrap {
-  max-width: 800px;
+  max-width: 1040px;
   margin: 0 auto;
   position: relative;
 }
@@ -944,7 +962,7 @@
 .lp-tcard {
   background: #f8fbfa;
   border-radius: 16px;
-  padding: 32px 28px;
+  padding: 56px 48px;
   box-shadow: 0 8px 24px rgba(45,106,53,0.08);
   position: relative;
   display: flex;
@@ -960,19 +978,19 @@
 
 .lp-tcard__quote {
   font-family: 'Outfit', serif;
-  font-size: 70px;
+  font-size: 110px;
   color: rgba(45,106,53,0.2);
   line-height: 1;
-  margin: -10px 0 -30px -10px;
+  margin: -25px 0 -45px -20px;
   font-weight: 700;
 }
 
 .lp-tcard__body {
-  font-size: 15px;
+  font-size: 20px;
   color: #334a33;
-  line-height: 1.6;
+  line-height: 1.8;
   flex: 1;
-  margin: 0 0 32px;
+  margin: 0 0 40px;
   position: relative;
   z-index: 1;
 }
@@ -980,12 +998,12 @@
 .lp-tcard__author {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
 }
 
 .lp-tcard__avatar {
-  width: 48px;
-  height: 48px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   border: 2px solid #fff;
   display: flex;
@@ -995,18 +1013,18 @@
   color: #fff;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   flex-shrink: 0;
-  font-size: 16px;
+  font-size: 20px;
 }
 
 .lp-tcard__name {
   font-weight: 700;
-  font-size: 15px;
+  font-size: 19px;
   color: #111f11;
   margin-bottom: 2px;
 }
 
 .lp-tcard__role {
-  font-size: 12px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #2d6a35;
@@ -1017,16 +1035,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 24px;
-  margin-top: 32px;
+  gap: 28px;
+  margin-top: 40px;
 }
 
 .lp-tcarousel-btn {
   background: #fff;
   border: 1px solid #c0d1c0;
   border-radius: 50%;
-  width: 44px;
-  height: 44px;
+  width: 54px;
+  height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1069,7 +1087,13 @@
 }
 
 @media (max-width: 600px) {
-  .lp-testimonials { padding: 60px 24px; }
+  .lp-testimonials { padding: 80px 24px; }
+  .lp-tcard { padding: 36px 28px; }
+  .lp-tcard__body { font-size: 17px; margin-bottom: 24px; line-height: 1.75; }
+  .lp-tcard__quote { font-size: 80px; margin: -15px 0 -35px -12px; }
+  .lp-tcard__avatar { width: 52px; height: 52px; font-size: 18px; }
+  .lp-tcard__name { font-size: 16px; }
+  .lp-tcard__role { font-size: 12px; }
 }
 
 /* ─── Mobile APK Promo Section ───────────────────────────── */

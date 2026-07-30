@@ -8,6 +8,7 @@ import Logo from "../assets/Logo.png";
 import backgroundImage from "../assets/UserloginBG.png";
 import supplierImg from "../assets/supplier.png";
 import warehouseManagerImg from "../assets/warehouse-manager.png";
+import farmerImg from "../assets/farmer.jpg";
 
 const roles = [
   {
@@ -25,6 +26,14 @@ const roles = [
     buttonText: "Register as Warehouse Manager",
     image: warehouseManagerImg,
     path: "/register/warehouse-manager",
+  },
+  {
+    key: "farmer",
+    title: "Farmer",
+    description: "Manage farm information, submit harvests, and supply rice products.",
+    buttonText: "Register as Farmer",
+    image: farmerImg,
+    path: "/register/farmer",
   },
 ];
 
@@ -81,7 +90,7 @@ const SupplierWarehouseGateway = () => {
           </p>
         </div>
 
-        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
           {roles.map((role) => (
             <RoleCard
               key={role.key}
@@ -96,7 +105,7 @@ const SupplierWarehouseGateway = () => {
 
         <p className="flex items-center justify-center gap-2 text-sm text-gray-500 mt-10">
           <Info size={16} />
-          This registration portal is intended for Suppliers and Warehouse Managers only.
+          This registration portal is intended for Suppliers, Warehouse Managers, and Farmers only.
         </p>
       </div>
 

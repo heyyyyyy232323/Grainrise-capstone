@@ -8,6 +8,7 @@ import SupplierWarehouseGateway from "./Register/SupplierWarehouseGateway";
 import RetailerRegister from "./Register/RetailerRegister";
 import WarehouseManagerRegister from "./Register/WarehouseManagerRegister";
 import SupplierRegister from "./Register/SupplierRegister";
+import FarmerRegister from "./Register/FarmerRegister";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         <Route path="/register/retailer" element={<RetailerRegister />} />
         <Route path="/register/warehouse-manager" element={<WarehouseManagerRegister />} />
         <Route path="/register/supplier" element={<SupplierRegister />} />
+        <Route path="/register/farmer" element={<FarmerRegister />} />
       </Routes>
     </BrowserRouter>
   );

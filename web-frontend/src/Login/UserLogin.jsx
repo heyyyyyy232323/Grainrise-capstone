@@ -146,7 +146,7 @@ const UserLogin = () => {
             <p className="text-center text-sm text-gray-700 mt-6">
               Don't have an account?{" "}
               <Link
-                to="/register"
+                to="/register/retailer"
                 className="text-green-700 font-semibold hover:underline"
               >
                 Register
