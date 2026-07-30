@@ -570,26 +570,85 @@
 
 /* ─── CTA Banner ─────────────────────────────────────────────── */
 .lp-cta-banner {
-  background: linear-gradient(to right, #2d6a35 0%, #c8a020 60%, #d4a017 100%);
-  padding: 80px 24px;
+  position: relative;
+  padding: 90px 48px;
+  overflow: hidden;
+  background: linear-gradient(to right, #00580C 0%, #E4A81D 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+.lp-cta-banner__bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.18;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.lp-cta-banner__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(0, 88, 12, 0.4) 0%, rgba(228, 168, 29, 0.4) 100%);
+  pointer-events: none;
+}
+
 .lp-cta-banner__inner {
-  max-width: 680px;
+  position: relative;
+  z-index: 2;
+  max-width: 850px;
   margin: 0 auto;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
+
 .lp-cta-banner__headline {
   font-family: 'Outfit', sans-serif;
-  font-size: clamp(24px, 3vw, 36px);
+  font-size: clamp(32px, 4vw, 48px);
   font-weight: 800;
-  color: #fff;
-  margin: 0 0 16px;
+  color: #ffffff;
+  margin: 0 0 16px 0;
   letter-spacing: -0.5px;
+  line-height: 1.15;
 }
+
 .lp-cta-banner__sub {
   font-size: 16px;
-  color: rgba(255,255,255,0.75);
-  margin: 0 0 32px;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 36px 0;
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+.lp-cta-banner__sub strong {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.lp-cta-banner__btn {
+  background: #E4A81D;
+  color: #00580C;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 14px 38px;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  transition: all 0.25s ease;
+}
+
+.lp-cta-banner__btn:hover {
+  transform: translateY(-2px);
+  background: #f0b324;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 /* ─── Footer ─────────────────────────────────────────────────── */
@@ -773,12 +832,13 @@
   }
   .lp-footer { padding: 48px 24px 0; }
   .lp-footer__links { gap: 32px; }
+  .lp-cta-banner { padding: 60px 24px; }
 }
 
 /* ─── Why Choose GrainRise ──────────────────────────────── */
 .lp-why {
-  padding: 80px 48px;
-  background: #f5f9f5;
+  padding: 90px 48px;
+  background: #e5ffe5;
 }
 
 .lp-why__header {
@@ -788,40 +848,54 @@
 
 .lp-why__title {
   font-family: 'Outfit', sans-serif;
-  font-size: clamp(26px, 4vw, 40px);
+  font-size: clamp(28px, 4vw, 42px);
   font-weight: 800;
   color: #1a2e1a;
   margin: 0 0 12px;
 }
 
+/* Keep GrainRise dark in this section (Figma has no green highlight here) */
+.lp-why__title .lp-green {
+  color: #1a2e1a;
+}
+
 .lp-why__sub {
   font-size: 16px;
   color: #5a7a5a;
-  max-width: 520px;
+  max-width: 900px;
   margin: 0 auto;
   line-height: 1.6;
+  white-space: nowrap;
 }
 
 /* ─── Grid ───────────────────────────────────────────────── */
 .lp-why__grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  max-width: 1100px;
+  gap: 24px;
+  max-width: 1180px;
   margin: 0 auto;
 }
 
 /* ─── Card ───────────────────────────────────────────────── */
 .lp-why-card {
-  border-radius: 14px;
+  border-radius: 16px;
   overflow: hidden;
+  background: #00580C;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.lp-why-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.12);
 }
 
 .lp-why-card__img-wrap {
-  position: relative;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  height: 200px;
   overflow: hidden;
 }
 
@@ -834,57 +908,33 @@
 }
 
 .lp-why-card:hover .lp-why-card__img {
-  transform: scale(1.06);
+  transform: scale(1.05);
 }
 
-/* ─── Overlay (always visible, stronger on hover) ─────────── */
-.lp-why-card__overlay {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  padding: 20px 18px 18px;
-  background: linear-gradient(
-    to top,
-    rgba(15, 60, 20, 0.92) 0%,
-    rgba(15, 60, 20, 0.65) 55%,
-    transparent 100%
-  );
-  transition: background 0.3s ease;
-}
-
-.lp-why-card:hover .lp-why-card__overlay {
-  background: linear-gradient(
-    to top,
-    rgba(15, 60, 20, 0.97) 0%,
-    rgba(15, 60, 20, 0.80) 60%,
-    rgba(15, 60, 20, 0.2) 100%
-  );
+.lp-why-card__content {
+  padding: 22px 20px 26px;
+  background: #00580C;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .lp-why-card__tag {
-  display: block;
   font-family: 'Outfit', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffffff;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #6ee87a;
-  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+  margin: 0 0 10px 0;
 }
 
 .lp-why-card__desc {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.90);
-  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.55;
   margin: 0;
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-height 0.35s ease, opacity 0.3s ease;
-}
-
-.lp-why-card:hover .lp-why-card__desc {
-  max-height: 80px;
-  opacity: 1;
+  font-weight: 400;
 }
 
 /* ─── Responsive ─────────────────────────────────────────── */
@@ -911,189 +961,110 @@
 
 /* ─── Testimonials ──────────────────────────────────────────────── */
 .lp-testimonials {
-  padding: 120px 48px;
-  background: #ebf6eb;
+  padding: 90px 48px;
+  background: #e5ffe5;
 }
 
 .lp-testimonials__header {
   text-align: center;
-  margin-bottom: 72px;
+  margin-bottom: 56px;
 }
 
 .lp-testimonials__title {
   font-family: 'Outfit', sans-serif;
-  font-size: clamp(36px, 5.5vw, 54px);
+  font-size: clamp(32px, 4.5vw, 48px);
   font-weight: 800;
   color: #111f11;
-  margin: 0 0 18px;
+  margin: 0;
 }
 
-.lp-testimonials__sub {
-  font-size: 21px;
-  color: #4a6a4a;
-  max-width: 800px;
+.lp-testimonials__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 1200px;
   margin: 0 auto;
-}
-
-.lp-testimonials__carousel-wrap {
-  max-width: 1040px;
-  margin: 0 auto;
-  position: relative;
-}
-
-.lp-testimonials__carousel-overflow {
-  overflow: hidden;
-  border-radius: 16px;
-  padding: 10px;
-}
-
-.lp-testimonials__slider {
-  display: flex;
-  transition: transform 0.5s ease;
-  width: 100%;
-}
-
-.lp-testimonials__slide {
-  min-width: 100%;
-  padding: 0 10px;
-  box-sizing: border-box;
 }
 
 .lp-tcard {
-  background: #f8fbfa;
+  background: #f4f7ff;
   border-radius: 16px;
-  padding: 56px 48px;
-  box-shadow: 0 8px 24px rgba(45,106,53,0.08);
+  padding: 40px 32px 36px;
   position: relative;
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s;
-  border: 1px solid rgba(45,106,53,0.1);
+  justify-content: space-between;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .lp-tcard:hover {
   transform: translateY(-4px);
-  box-shadow: 0 16px 40px rgba(45,106,53,0.12);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
 }
 
 .lp-tcard__quote {
+  position: absolute;
+  top: 20px;
+  right: 24px;
   font-family: 'Outfit', serif;
-  font-size: 110px;
-  color: rgba(45,106,53,0.2);
+  font-size: 52px;
+  color: #cfd9cf;
   line-height: 1;
-  margin: -25px 0 -45px -20px;
   font-weight: 700;
+  pointer-events: none;
 }
 
 .lp-tcard__body {
-  font-size: 20px;
-  color: #334a33;
-  line-height: 1.8;
-  flex: 1;
-  margin: 0 0 40px;
+  font-size: 15px;
+  color: #4a5568;
+  line-height: 1.65;
+  margin: 0 0 36px;
   position: relative;
   z-index: 1;
+  font-weight: 400;
 }
 
 .lp-tcard__author {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 14px;
 }
 
 .lp-tcard__avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  border: 2px solid #fff;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #c8e6c9;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  color: #fff;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  color: #1b5c27;
+  font-size: 14px;
   flex-shrink: 0;
-  font-size: 20px;
 }
 
 .lp-tcard__name {
   font-weight: 700;
-  font-size: 19px;
+  font-size: 15px;
   color: #111f11;
   margin-bottom: 2px;
 }
 
 .lp-tcard__role {
-  font-size: 14px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #2d6a35;
   font-weight: 700;
 }
 
-.lp-testimonials__controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 28px;
-  margin-top: 40px;
-}
-
-.lp-tcarousel-btn {
-  background: #fff;
-  border: 1px solid #c0d1c0;
-  border-radius: 50%;
-  width: 54px;
-  height: 54px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #2d6a35;
-  transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(45,106,53,0.08);
-}
-.lp-tcarousel-btn:hover:not(:disabled) {
-  background: #2d6a35;
-  color: #fff;
-  border-color: #2d6a35;
-}
-.lp-tcarousel-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.lp-tcarousel-dots {
-  display: flex;
-  gap: 8px;
-}
-
-.lp-tcarousel-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #c0d1c0;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s;
-  padding: 0;
-}
-.lp-tcarousel-dot.active {
-  background: #2d6a35;
-  transform: scale(1.3);
-}
-.lp-tcarousel-dot:hover:not(.active) {
-  background: #8eab8e;
-}
-
-@media (max-width: 600px) {
-  .lp-testimonials { padding: 80px 24px; }
-  .lp-tcard { padding: 36px 28px; }
-  .lp-tcard__body { font-size: 17px; margin-bottom: 24px; line-height: 1.75; }
-  .lp-tcard__quote { font-size: 80px; margin: -15px 0 -35px -12px; }
-  .lp-tcard__avatar { width: 52px; height: 52px; font-size: 18px; }
-  .lp-tcard__name { font-size: 16px; }
-  .lp-tcard__role { font-size: 12px; }
+@media (max-width: 900px) {
+  .lp-testimonials__grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
 }
 
 /* ─── Mobile APK Promo Section ───────────────────────────── */
@@ -1104,7 +1075,6 @@
   padding: 100px 48px;
   overflow: hidden;
   position: relative;
-  border-bottom: 8px solid #c8a020;
 }
 
 .lp-mobile-promo__inner {

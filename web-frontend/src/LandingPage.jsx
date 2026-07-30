@@ -36,6 +36,7 @@ import pinkscreenImg from './assets/pinkscreen.jpg';
 import stockImg from './assets/stock.jpg';
 import phoneImg from './assets/phone.jpg';
 import phone2Img from './assets/phone2.jpg';
+import ctaBgImg from './assets/adminloginBG.png';
 
 // ─── Animated counter ─────────────────────────────────────────────────────────
 function useCounter(target, duration, trigger) {
@@ -111,7 +112,7 @@ export default function LandingPage() {
 
   const TESTIMONIALS = [
     {
-      body: "GrainRise has completely revolutionized how we handle seasonal spikes. Our inventory accuracy jumped from 80% to 99% in just three months. It’s the brain of our operation.",
+      body: "GrainRise has completely revolutionized how we handle seasonal spikes. Our inventory accuracy jumped from 82% to 99% in just three months. It's the brain of our operation.",
       initials: "RM",
       color: "#2d6a35",
       name: "Ricardo Mendoza",
@@ -306,55 +307,60 @@ export default function LandingPage() {
           <div className="lp-why-card">
             <div className="lp-why-card__img-wrap">
               <img src={bluescreenImg} alt="Real-Time Tracking" className="lp-why-card__img" />
-              <div className="lp-why-card__overlay">
-                <span className="lp-why-card__tag">Real-Time Tracking</span>
-                <p className="lp-why-card__desc">Monitor your inventory, shipments, and operations in real-time from any device.</p>
-              </div>
+            </div>
+            <div className="lp-why-card__content">
+              <h3 className="lp-why-card__tag">REAL-TIME TRACKING</h3>
+              <p className="lp-why-card__desc">Monitor your inventory, shipments, and operations in real-time from any device.</p>
             </div>
           </div>
+
           <div className="lp-why-card">
             <div className="lp-why-card__img-wrap">
               <img src={talkieImg} alt="User Management" className="lp-why-card__img" />
-              <div className="lp-why-card__overlay">
-                <span className="lp-why-card__tag">User Management</span>
-                <p className="lp-why-card__desc">Manage roles and access across your entire team — from warehouse staff to retailers — from one place.</p>
-              </div>
+            </div>
+            <div className="lp-why-card__content">
+              <h3 className="lp-why-card__tag">USER MANAGEMENT</h3>
+              <p className="lp-why-card__desc">Manage roles and access across your entire team — from warehouse staff to retailers — from one place.</p>
             </div>
           </div>
+
           <div className="lp-why-card">
             <div className="lp-why-card__img-wrap">
               <img src={dashboardMockup} alt="Secure & Compliant" className="lp-why-card__img" />
-              <div className="lp-why-card__overlay">
-                <span className="lp-why-card__tag">Secure &amp; Compliant</span>
-                <p className="lp-why-card__desc">Protection measures help keep your data safe and standards-ready across all operations.</p>
-              </div>
+            </div>
+            <div className="lp-why-card__content">
+              <h3 className="lp-why-card__tag">SECURE &amp; COMPLIANT</h3>
+              <p className="lp-why-card__desc">Protection measures help keep your data safe and standards-ready across all operations.</p>
             </div>
           </div>
+
           <div className="lp-why-card">
             <div className="lp-why-card__img-wrap">
               <img src={pinkscreenImg} alt="Advanced Analytics" className="lp-why-card__img" />
-              <div className="lp-why-card__overlay">
-                <span className="lp-why-card__tag">Advanced Analytics</span>
-                <p className="lp-why-card__desc">Use reports to track performance, spot trends, and continuously improve operations.</p>
-              </div>
+            </div>
+            <div className="lp-why-card__content">
+              <h3 className="lp-why-card__tag">ADVANCED ANALYTICS</h3>
+              <p className="lp-why-card__desc">Use reports to track performance, spot trends, and continuously improve operations.</p>
             </div>
           </div>
+
           <div className="lp-why-card">
             <div className="lp-why-card__img-wrap">
               <img src={grainHands} alt="Sales Management" className="lp-why-card__img" />
-              <div className="lp-why-card__overlay">
-                <span className="lp-why-card__tag">Sales Management</span>
-                <p className="lp-why-card__desc">Track orders, monitor sales performance, and manage retailer transactions efficiently in one dashboard.</p>
-              </div>
+            </div>
+            <div className="lp-why-card__content">
+              <h3 className="lp-why-card__tag">SALES MANAGEMENT</h3>
+              <p className="lp-why-card__desc">Track orders, monitor sales performance, and manage retailer transactions efficiently in one dashboard.</p>
             </div>
           </div>
+
           <div className="lp-why-card">
             <div className="lp-why-card__img-wrap">
               <img src={stockImg} alt="Procurement Control" className="lp-why-card__img" />
-              <div className="lp-why-card__overlay">
-                <span className="lp-why-card__tag">Procurement Control</span>
-                <p className="lp-why-card__desc">Streamline supplier orders, purchase requests, and procurement approvals across your supply chain.</p>
-              </div>
+            </div>
+            <div className="lp-why-card__content">
+              <h3 className="lp-why-card__tag">PROCUREMENT CONTROL</h3>
+              <p className="lp-why-card__desc">Streamline supplier orders, purchase requests, and procurement approvals across your supply chain.</p>
             </div>
           </div>
         </div>
@@ -364,59 +370,22 @@ export default function LandingPage() {
       <section className="lp-testimonials" id="testimonials">
         <div className="lp-testimonials__header">
           <h2 className="lp-testimonials__title">What our <span className="lp-green">Partners</span> Say</h2>
-          <p className="lp-testimonials__sub">Hear from the people transforming their supply chains with GrainRise.</p>
         </div>
         
-        <div className="lp-testimonials__carousel-wrap">
-          <div className="lp-testimonials__carousel-overflow">
-            <div 
-              className="lp-testimonials__slider"
-              style={{ transform: `translateX(-${currentTestimonial * 100}%)` }}
-            >
-              {TESTIMONIALS.map((t, idx) => (
-                <div className="lp-testimonials__slide" key={idx}>
-                  <div className="lp-tcard">
-                     <div className="lp-tcard__quote">“”</div>
-                    <p className="lp-tcard__body">{t.body}</p>
-                    <div className="lp-tcard__author">
-                      <div className="lp-tcard__avatar" style={{background: t.color}}>{t.initials}</div>
-                      <div>
-                        <div className="lp-tcard__name">{t.name}</div>
-                        <div className="lp-tcard__role">{t.role}</div>
-                      </div>
-                    </div>
-                  </div>
+        <div className="lp-testimonials__grid">
+          {TESTIMONIALS.map((t, idx) => (
+            <div className="lp-tcard" key={idx}>
+              <div className="lp-tcard__quote">“”</div>
+              <p className="lp-tcard__body">"{t.body}"</p>
+              <div className="lp-tcard__author">
+                <div className="lp-tcard__avatar">{t.initials}</div>
+                <div>
+                  <div className="lp-tcard__name">{t.name}</div>
+                  <div className="lp-tcard__role">{t.role}</div>
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
-          
-          <div className="lp-testimonials__controls">
-            <button 
-              className="lp-tcarousel-btn" 
-              onClick={() => setCurrentTestimonial(p => Math.max(0, p - 1))} 
-              disabled={currentTestimonial === 0}
-            >
-              <ChevronLeft size={20} strokeWidth={2.5} />
-            </button>
-            <div className="lp-tcarousel-dots">
-              {TESTIMONIALS.map((_, i) => (
-                <button 
-                  key={i} 
-                  className={`lp-tcarousel-dot ${currentTestimonial === i ? 'active' : ''}`} 
-                  onClick={() => setCurrentTestimonial(i)}
-                  aria-label={`Go to slide ${i+1}`}
-                />
-              ))}
-            </div>
-            <button 
-              className="lp-tcarousel-btn" 
-              onClick={() => setCurrentTestimonial(p => Math.min(TESTIMONIALS.length - 1, p + 1))} 
-              disabled={currentTestimonial === TESTIMONIALS.length - 1}
-            >
-              <ChevronRight size={20} strokeWidth={2.5} />
-            </button>
-          </div>
+          ))}
         </div>
       </section>
 
@@ -452,15 +421,17 @@ export default function LandingPage() {
 
       {/* ── CTA BANNER ─── */}
       <section className="lp-cta-banner">
+        <div className="lp-cta-banner__bg" style={{ backgroundImage: `url(${ctaBgImg})` }} />
+        <div className="lp-cta-banner__overlay" />
         <div className="lp-cta-banner__inner">
           <h2 className="lp-cta-banner__headline">
             Power the Future of Rice Distribution
           </h2>
           <p className="lp-cta-banner__sub">
-            Register as a Supplier or Warehouse Manager and manage your operations with GrainRise.
+            Register as a <strong>Supplier</strong> or <strong>Warehouse Manager</strong> and manage your operations with GrainRise.
           </p>
           <button
-            className="lp-btn lp-btn--cta lp-btn--lg"
+            className="lp-btn lp-cta-banner__btn"
             onClick={() => navigate('/register/supplier-warehouse')}
             id="cta-get-started-btn"
           >
