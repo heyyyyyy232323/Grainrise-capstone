@@ -1,11 +1,11 @@
 import { Package, BarChart3, AlertCircle, CheckCircle } from "lucide-react";
-import KPICard from "../../Components/Major-Components/KPICard";
-import DistributionCard from "../../Components/Major-Components/DistributionCard";
-import CategoryBarCard from "../../Components/Major-Components/CategoryBarCard";
-import RecentActivityCard from "../../Components/Major-Components/RecentActivityCard";
-import PendingReviewsCard from "../../Components/Major-Components/PendingReviewsCard";
-import Breadcrumbs from "../../Components/Minor-Components/Breadcrumbs";
-import DateDisplay from "../../Components/Minor-Components/DateDisplay";
+import KPICard from "../../../Components/Major-Components/KPICard";
+import DistributionCard from "../../../Components/Major-Components/DistributionCard";
+import CategoryBarCard from "../../../Components/Major-Components/CategoryBarCard";
+import RecentActivityCard from "../../../Components/Major-Components/RecentActivityCard";
+import PendingReviewsCard from "../../../Components/Major-Components/PendingReviewsCard";
+import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
+import DateDisplay from "../../../Components/Minor-Components/DateDisplay";
 
 const WarehouseEncoderDashboard = () => {
   const lastUpdatedTime = new Date().toLocaleTimeString("en-US", {

@@ -11,8 +11,8 @@ import WarehouseManagerRegister from "./Register/WarehouseManagerRegister";
 import SupplierRegister from "./Register/SupplierRegister";
 import FarmerRegister from "./Register/FarmerRegister";
 import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout";
-import WarehouseEncoderDashboard from "./WarehouseAccounts/WarehouseEncoder/WarehouseEncoderDashboard";
-import OrderHistory from "./WarehouseAccounts/WarehouseEncoder/OrderHistory";
+import WarehouseEncoderDashboard from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderDashboard";
+import OrderHistory from "./Users/WarehouseAccounts/WarehouseEncoder/OrderHistory";
 
 function App() {
   return (

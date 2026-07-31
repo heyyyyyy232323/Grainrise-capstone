@@ -1,10 +1,10 @@
 import { useState, useMemo } from "react";
-import Breadcrumbs from "../../Components/Minor-Components/Breadcrumbs";
-import Tabs from "../../Components/Minor-Components/Tabs";
-import SearchFilter from "../../Components/Minor-Components/SearchFilter";
-import DateRangePicker from "../../Components/Minor-Components/DateRangePicker";
-import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
-import SectionedTableCard from "../../Components/Minor-Components/SectionedTableCard";
+import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
+import Tabs from "../../../Components/Minor-Components/Tabs";
+import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
+import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
+import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
+import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
 const orderHistoryColumns = [
   { key: "batchId", label: "Batch ID" },
