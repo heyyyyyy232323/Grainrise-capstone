@@ -23,6 +23,9 @@
 }
 .lp-nav__inner {
   width: 100%;
+  max-width: 1360px;
+  margin: 0 auto;
+  box-sizing: border-box;
   padding: 14px 32px;
   display: flex;
   align-items: center;

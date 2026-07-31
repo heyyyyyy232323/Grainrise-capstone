@@ -10,6 +10,8 @@ import DashboardPreview from "./DashboardPreview";
 import WarehouseManagerRegister from "./Register/WarehouseManagerRegister";
 import SupplierRegister from "./Register/SupplierRegister";
 import FarmerRegister from "./Register/FarmerRegister";
+import WarehouseEncoderDashboard from "./WarehouseAccounts/WarehouseEncoder/WarehouseEncoderDashboard";
+import OrderHistory from "./WarehouseAccounts/WarehouseEncoder/OrderHistory";
 
 function App() {
   return (
@@ -25,6 +27,8 @@ function App() {
         <Route path="/register/warehouse-manager" element={<WarehouseManagerRegister />} />
         <Route path="/register/supplier" element={<SupplierRegister />} />
         <Route path="/register/farmer" element={<FarmerRegister />} />
+        <Route path="/warehouse-encoder/dashboard" element={<WarehouseEncoderDashboard />} />
+        <Route path="/warehouse-encoder/orders" element={<OrderHistory />} />
       </Routes>
     </BrowserRouter>
   );

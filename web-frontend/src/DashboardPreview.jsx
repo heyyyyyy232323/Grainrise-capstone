@@ -9,7 +9,7 @@ import CategoryBarCard from "./Components/Major-Components/CategoryBarCard";
 import SalesTrendCard from "./Components/Major-Components/SalesTrendCard";
 import RecentActivityCard from "./Components/Major-Components/RecentActivityCard";
 import PendingReviewsCard from "./Components/Major-Components/PendingReviewsCard";
-import SectionedTableCard from "./Components/Major-Components/SectionedTableCard";
+import SectionedTableCard from "./Components/Minor-Components/SectionedTableCard";
 import Logo from "./assets/Logo.png";
 
 const DashboardPreview = () => {

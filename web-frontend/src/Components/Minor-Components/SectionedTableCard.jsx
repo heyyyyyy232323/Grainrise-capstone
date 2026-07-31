@@ -76,7 +76,7 @@ export default function SectionedTableCard({
                 <tr key={`${section.label}-section`}>
                   <td
                     colSpan={columns.length}
-                    className="bg-[#F0FAEE] px-4 py-2 text-center text-[10px] font-extrabold uppercase tracking-[0.08em] text-emerald-700 sm:text-[11px]"
+                    className="bg-[#EAF7E8] px-4 py-2 text-center text-[12px] font-semibold text-emerald-700 sm:text-[13px]"
                   >
                     {section.label}
                   </td>
