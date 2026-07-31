@@ -3,7 +3,7 @@ import { Outlet } from "react-router-dom";
 import UserNavbar, { getUserNavbarMenuItems } from "./UserNavbar";
 import UserSidebar from "./UserSidebar";
 
-const WarehouseEncoderLayout = () => {
+const MainPageLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarMinimized, setSidebarMinimized] = useState(false);
   const [userRole] = useState("warehouse_encoder");
@@ -61,4 +61,4 @@ const WarehouseEncoderLayout = () => {
   );
 };
 
-export default WarehouseEncoderLayout;
+export default MainPageLayout;
