@@ -65,7 +65,7 @@ export default function PaginationControls({
               onClick={() => onPageChange?.(item)}
               className={`inline-flex h-8 min-w-8 items-center justify-center rounded-md border px-2.5 text-xs font-semibold transition ${
                 active
-                  ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
+                  ? "border-[#018311] bg-[#018311] text-white shadow-sm"
                   : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-700"
               }`}
             >

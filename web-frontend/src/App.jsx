@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import React from "react";
 import LandingPage from "./LandingPage";
-import Login from "./Login/UserLogin"; 
+import Login from "./Login/UserLogin";
 import AdminLogin from "./Login/AdminLogin";
 import Register from "./Register/Register";
 import SupplierWarehouseGateway from "./Register/SupplierWarehouseGateway";
@@ -10,6 +10,11 @@ import DashboardPreview from "./DashboardPreview";
 import WarehouseManagerRegister from "./Register/WarehouseManagerRegister";
 import SupplierRegister from "./Register/SupplierRegister";
 import FarmerRegister from "./Register/FarmerRegister";
+import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout";
+import WarehouseEncoderDashboard from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderDashboard";
+import WarehouseEncoderOrderHistory from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderOrderHistory";
+import WarehouseEncoderStock from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderStockManagement";
+import WarehouseEncoderRequests from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderNewRequest"; 
 
 function App() {
   return (
@@ -25,6 +30,14 @@ function App() {
         <Route path="/register/warehouse-manager" element={<WarehouseManagerRegister />} />
         <Route path="/register/supplier" element={<SupplierRegister />} />
         <Route path="/register/farmer" element={<FarmerRegister />} />
+
+        {/* Warehouse Encoder pages share one Layout so sidebar state persists across them */}
+        <Route element={<WarehouseEncoderLayout />}>
+          <Route path="/warehouse-encoder/dashboard" element={<WarehouseEncoderDashboard />} />
+          <Route path="/warehouse-encoder/orders" element={<WarehouseEncoderOrderHistory />} />
+          <Route path="/warehouse-encoder/stock" element={<WarehouseEncoderStock />} />
+          <Route path="/warehouse-encoder/requests" element={<WarehouseEncoderRequests />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

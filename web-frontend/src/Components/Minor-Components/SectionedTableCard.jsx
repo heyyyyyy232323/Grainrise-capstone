@@ -17,14 +17,6 @@ const getStatusClassName = (status) => {
   return defaultStatusStyles[key] || defaultStatusStyles.pending;
 };
 
-const resolveCellValue = (row, column) => {
-  if (typeof column.render === "function") {
-    return column.render(row);
-  }
-
-  return row[column.key];
-};
-
 const defaultRenderValue = (value) => {
   if (value === null || value === undefined || value === "") return "-";
   return value;
@@ -61,7 +53,7 @@ export default function SectionedTableCard({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`whitespace-nowrap px-3 py-3 first:pl-4 last:pr-4 sm:px-4 ${column.headerClassName || ""}`}
+                  className={`whitespace-nowrap px-3 py-3 align-middle first:pl-4 last:pr-8 sm:px-4 ${column.headerClassName || ""}`}
                   style={column.width ? { width: column.width } : undefined}
                 >
                   {column.label}
@@ -71,21 +63,33 @@ export default function SectionedTableCard({
           </thead>
 
           <tbody>
-            {sections.map((section) => (
-              <Fragment key={section.label}>
-                <tr key={`${section.label}-section`}>
-                  <td
-                    colSpan={columns.length}
-                    className="bg-[#F0FAEE] px-4 py-2 text-center text-[10px] font-extrabold uppercase tracking-[0.08em] text-emerald-700 sm:text-[11px]"
-                  >
-                    {section.label}
-                  </td>
-                </tr>
+            {sections.map((section, sectionIndex) => (
+              <Fragment key={section.label || section.id || `section-${sectionIndex}`}>
+                {section.label ? (
+                  <tr>
+                    <td
+                      colSpan={columns.length}
+                      className="bg-[#EAF7E8] px-4 py-2 text-center text-[12px] font-semibold text-emerald-700 sm:text-[13px]"
+                    >
+                      {section.label}
+                    </td>
+                  </tr>
+                ) : null}
 
                 {(section.rows || []).map((row, rowIndex) => (
-                  <tr key={row.id || `${section.label}-${rowIndex}`} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70">
+                  <tr key={row.id || `${section.label || "row"}-${rowIndex}`} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70">
                     {columns.map((column) => {
-                      const cellValue = resolveCellValue(row, column);
+                      // Fully custom cell content takes priority over the built-in
+                      // status/action/plain-text rendering below.
+                      if (typeof column.render === "function") {
+                        return (
+                          <td key={column.key} className={`px-3 py-3 align-middle sm:px-4 ${column.cellClassName || ""}`}>
+                            {column.render(row)}
+                          </td>
+                        );
+                      }
+
+                      const cellValue = row[column.key];
 
                       if (column.key === "status") {
                         return (
@@ -99,7 +103,7 @@ export default function SectionedTableCard({
 
                       if (column.key === "action") {
                         return (
-                          <td key={column.key} className={`whitespace-nowrap px-3 py-3 text-right align-middle sm:px-4 ${column.cellClassName || ""}`}>
+                          <td key={column.key} className={`whitespace-nowrap px-3 py-3 pr-8 text-right align-middle sm:px-4 ${column.cellClassName || ""}`}>
                             <button
                               type="button"
                               onClick={() => onViewDetails?.(row)}

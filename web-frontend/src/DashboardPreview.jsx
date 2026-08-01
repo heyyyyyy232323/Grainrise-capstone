@@ -3,13 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { DollarSign, Package, ShoppingCart, TrendingUp, UserPlus, Users } from "lucide-react";
 import UserNavbar, { getUserNavbarMenuItems } from "./Components/Major-Components/UserNavbar";
 import UserSidebar, { getUserSidebarConfig, userSidebarRoles } from "./Components/Major-Components/UserSidebar";
-import KPICard from "./Components/Major-Components/KPICard";
-import DistributionCard from "./Components/Major-Components/DistributionCard";
-import CategoryBarCard from "./Components/Major-Components/CategoryBarCard";
-import SalesTrendCard from "./Components/Major-Components/SalesTrendCard";
-import RecentActivityCard from "./Components/Major-Components/RecentActivityCard";
-import PendingReviewsCard from "./Components/Major-Components/PendingReviewsCard";
-import SectionedTableCard from "./Components/Major-Components/SectionedTableCard";
+import KPICard from "./Components/Graphs/KPICard";
+import DistributionCard from "./Components/Graphs/PieChartCard";
+import CategoryBarCard from "./Components/Graphs/BarGraphsCard";
+import SalesTrendCard from "./Components/Graphs/LineGraphsCard";
+import RecentActivityCard from "./Components/Graphs/RecentActivityCard";
+import PendingReviewsCard from "./Components/Graphs/PendingReviewsCard";
+import SectionedTableCard from "./Components/Minor-Components/SectionedTableCard";
 import Logo from "./assets/Logo.png";
 
 const DashboardPreview = () => {

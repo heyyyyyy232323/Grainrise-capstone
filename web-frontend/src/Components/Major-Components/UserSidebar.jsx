@@ -69,7 +69,7 @@ export const getUserSidebarConfig = (role = "admin") => {
           title: "MANAGEMENT",
           items: [
             { label: "Order History", icon: ShoppingCart, path: "/warehouse-encoder/orders" },
-            { label: "Request Order", icon: CornerUpLeft, path: "/warehouse-encoder/inventory" },
+            { label: "Request Order", icon: CornerUpLeft, path: "/warehouse-encoder/requests" },
             { label: "Stock Management", icon: Package , path: "/warehouse-encoder/stock" },
           ],
         },
@@ -82,7 +82,15 @@ export const getUserSidebarConfig = (role = "admin") => {
 
 export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder"];
 
-const UserSidebar = ({ role = "admin", panelLabel, sections, logo = Logo, isMinimized = false }) => {
+const UserSidebar = ({
+  role = "admin",
+  panelLabel,
+  sections,
+  logo = Logo,
+  isMinimized = false,
+  isOpen = false,
+  onClose,
+}) => {
   const location = useLocation();
   const sidebarConfig = getUserSidebarConfig(role);
   const resolvedPanelLabel = panelLabel ?? sidebarConfig.panelLabel;
@@ -90,23 +98,24 @@ const UserSidebar = ({ role = "admin", panelLabel, sections, logo = Logo, isMini
 
   return (
     <aside
-      className={`h-screen bg-white border-r border-gray-200 flex flex-col shrink-0 z-30 transition-all duration-300 ease-in-out ${
-        isMinimized ? "w-20" : "w-64"
-      }`}
+      className={`fixed md:relative inset-y-0 left-0 h-screen bg-white border-r border-gray-200 flex flex-col shrink-0 z-40 md:z-30 transition-all duration-300 ease-in-out w-64
+        ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0
+        ${isMinimized ? "md:w-20" : "md:w-64"}
+      `}
     >
       {/* Logo */}
       <div className={`h-18.25 flex items-center border-b border-gray-100 transition-all duration-300 ${
-        isMinimized ? "justify-center px-3" : "justify-start px-6"
+        isMinimized ? "md:justify-center md:px-3 px-6 justify-start" : "justify-start px-6"
       }`}>
-        <img src={logo} alt="GrainRise Logo" className={`object-contain transition-all duration-300 ${
-          isMinimized ? "h-6" : "h-9"
+        <img src={logo} alt="GrainRise Logo" className={`object-contain transition-all duration-300 h-9 ${
+          isMinimized ? "md:h-6" : "md:h-9"
         }`} />
       </div>
 
       {/* Panel label */}
       <div
-        className={`bg-linear-to-r from-[#0B5D1E] to-[#D6A62D] transition-all duration-300 overflow-hidden ${
-          isMinimized ? "py-0 px-0 h-0" : "py-3 px-6 h-auto"
+        className={`bg-linear-to-r from-[#0B5D1E] to-[#D6A62D] transition-all duration-300 overflow-hidden py-3 px-6 h-auto ${
+          isMinimized ? "md:py-0 md:px-0 md:h-0" : "md:py-3 md:px-6 md:h-auto"
         }`}
       >
         <span className="text-white font-bold text-sm tracking-wider uppercase">
@@ -118,11 +127,11 @@ const UserSidebar = ({ role = "admin", panelLabel, sections, logo = Logo, isMini
       <nav className="flex-1 overflow-y-auto py-4 transition-all duration-300">
         {resolvedSections.map((section) => (
           <div key={section.title} className="mb-5">
-            {!isMinimized && (
-              <p className="px-6 mb-2 text-xs font-bold text-amber-500 tracking-wider uppercase transition-all duration-300">
-                {section.title}
-              </p>
-            )}
+            <p className={`px-6 mb-2 text-xs font-bold text-amber-500 tracking-wider uppercase transition-all duration-300 ${
+              isMinimized ? "md:hidden" : ""
+            }`}>
+              {section.title}
+            </p>
             <div className="flex flex-col gap-1 px-3">
               {section.items.map((item) => {
                 const Icon = item.icon;
@@ -132,9 +141,10 @@ const UserSidebar = ({ role = "admin", panelLabel, sections, logo = Logo, isMini
                   <Link
                     key={item.path}
                     to={item.path}
+                    onClick={onClose}
                     title={isMinimized ? item.label : ""}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 ${
-                      isMinimized ? "justify-center" : "justify-start"
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 justify-start ${
+                      isMinimized ? "md:justify-center" : ""
                     } ${
                       isActive
                         ? "bg-[#0B5D1E] text-white shadow-sm"
@@ -142,7 +152,7 @@ const UserSidebar = ({ role = "admin", panelLabel, sections, logo = Logo, isMini
                     }`}
                   >
                     {Icon && <Icon size={18} className="shrink-0" />}
-                    {!isMinimized && <span>{item.label}</span>}
+                    <span className={isMinimized ? "md:hidden" : ""}>{item.label}</span>
                   </Link>
                 );
               })}
