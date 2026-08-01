@@ -477,6 +477,7 @@
   margin: 0 auto;
   padding: 96px 48px;
   align-items: flex-start;
+  background: #FFFEFE;
 }
 .lp-services__left { flex: 1; }
 .lp-services__sub {
@@ -633,7 +634,7 @@
 
 .lp-cta-banner__btn {
   background: #E4A81D;
-  color: #00580C;
+  color: #1a2e1a;
   font-family: 'Inter', sans-serif;
   font-size: 15px;
   font-weight: 700;
@@ -838,7 +839,7 @@
 /* ─── Why Choose GrainRise ──────────────────────────────── */
 .lp-why {
   padding: 90px 48px;
-  background: #e5ffe5;
+  background: #FFFEFE;
 }
 
 .lp-why__header {
@@ -974,8 +975,13 @@
   font-family: 'Outfit', sans-serif;
   font-size: clamp(32px, 4.5vw, 48px);
   font-weight: 800;
-  color: #111f11;
+  color: #00580C;
   margin: 0;
+}
+
+/* Override green for Partners to match the rest of the title */
+.lp-testimonials__title .lp-green {
+  color: #00580C;
 }
 
 .lp-testimonials__grid {
@@ -1098,11 +1104,10 @@
 .lp-phone-wrap {
   width: 250px;
   height: 440px;
-  border-radius: 36px;
-  border: 10px solid #1a1a1a;
+  border-radius: 16px;
   background: #333;
   overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.25);
   position: absolute;
   transition: all 0.4s ease-in-out;
 }
@@ -1127,8 +1132,7 @@
   right: 30px;
   top: 40px;
   z-index: 20;
-  border-color: #0d0d0d;
-  box-shadow: 0 30px 60px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.15) inset;
+  box-shadow: 0 30px 60px -15px rgba(0,0,0,0.4);
 }
 
 .lp-mobile-promo__images:hover .lp-phone-wrap--back {
@@ -1248,8 +1252,7 @@
   .lp-phone-wrap {
     width: 170px;
     height: 300px;
-    border-width: 6px;
-    border-radius: 24px;
+    border-radius: 12px;
   }
   .lp-phone-wrap--back {
     left: calc(50% - 150.5px);
