@@ -52,7 +52,7 @@ const MainPageLayout = () => {
 
         {/* Scrollable Content Area - each page renders inside here */}
         <div className="flex-1 overflow-y-auto">
-          <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+          <div className="px-4 py-6 md:px-8 md:py-8 space-y-6 w-full">
             <Outlet />
           </div>
         </div>

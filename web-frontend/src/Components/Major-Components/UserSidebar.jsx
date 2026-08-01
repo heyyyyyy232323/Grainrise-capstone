@@ -69,7 +69,7 @@ export const getUserSidebarConfig = (role = "admin") => {
           title: "MANAGEMENT",
           items: [
             { label: "Order History", icon: ShoppingCart, path: "/warehouse-encoder/orders" },
-            { label: "Request Order", icon: CornerUpLeft, path: "/warehouse-encoder/inventory" },
+            { label: "Request Order", icon: CornerUpLeft, path: "/warehouse-encoder/requests" },
             { label: "Stock Management", icon: Package , path: "/warehouse-encoder/stock" },
           ],
         },

@@ -170,6 +170,7 @@ const OrderHistory = () => {
         onPageChange={setCurrentPage}
         onViewDetails={handleViewDetails}
         footerLabel={footerLabel}
+        
       />
     </>
   );

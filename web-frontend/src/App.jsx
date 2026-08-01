@@ -12,7 +12,9 @@ import SupplierRegister from "./Register/SupplierRegister";
 import FarmerRegister from "./Register/FarmerRegister";
 import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout";
 import WarehouseEncoderDashboard from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderDashboard";
-import OrderHistory from "./Users/WarehouseAccounts/WarehouseEncoder/OrderHistory";
+import WarehouseEncoderOrderHistory from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderOrderHistory";
+import WarehouseEncoderStock from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderStockManagement";
+import WarehouseEncoderRequests from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderNewRequest"; 
 
 function App() {
   return (
@@ -32,7 +34,9 @@ function App() {
         {/* Warehouse Encoder pages share one Layout so sidebar state persists across them */}
         <Route element={<WarehouseEncoderLayout />}>
           <Route path="/warehouse-encoder/dashboard" element={<WarehouseEncoderDashboard />} />
-          <Route path="/warehouse-encoder/orders" element={<OrderHistory />} />
+          <Route path="/warehouse-encoder/orders" element={<WarehouseEncoderOrderHistory />} />
+          <Route path="/warehouse-encoder/stock" element={<WarehouseEncoderStock />} />
+          <Route path="/warehouse-encoder/requests" element={<WarehouseEncoderRequests />} />
         </Route>
       </Routes>
     </BrowserRouter>
