@@ -15,6 +15,10 @@ import WarehouseEncoderDashboard from "./Users/WarehouseAccounts/WarehouseEncode
 import WarehouseEncoderOrderHistory from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderOrderHistory";
 import WarehouseEncoderStock from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderStockManagement";
 import WarehouseEncoderRequests from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderNewRequest"; 
+import WarehouseSalesDashboard from "./Users/WarehouseAccounts/WarehouseSales/WarehouseSalesDashboard";
+import WarehouseSalesLayout from "./Components/Major-Components/WarehouseSalesLayout";
+import WarehouseSalesHistory from "./Users/WarehouseAccounts/WarehouseSales/WarehouseSalesHistory";
+import WarehouseOnlineOrders from "./Users/WarehouseAccounts/WarehouseSales/WarehouseOnlineOrders";
 
 function App() {
   return (
@@ -37,6 +41,13 @@ function App() {
           <Route path="/warehouse-encoder/orders" element={<WarehouseEncoderOrderHistory />} />
           <Route path="/warehouse-encoder/stock" element={<WarehouseEncoderStock />} />
           <Route path="/warehouse-encoder/requests" element={<WarehouseEncoderRequests />} />
+        </Route>
+
+        {/* Warehouse Sales pages */}
+        <Route element={<WarehouseSalesLayout />}>
+          <Route path="/warehouse-sales/dashboard" element={<WarehouseSalesDashboard />} />
+          <Route path="/warehouse-sales/sales-history" element={<WarehouseSalesHistory />} />
+          <Route path="/warehouse-sales/online-orders" element={<WarehouseOnlineOrders />} />
         </Route>
       </Routes>
     </BrowserRouter>

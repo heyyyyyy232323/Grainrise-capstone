@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package, CornerUpLeft  } from "lucide-react";
+import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package, CornerUpLeft, CreditCard, History  } from "lucide-react";
 import Logo from "../../assets/Logo.png";
 
 export const getUserSidebarConfig = (role = "admin") => {
@@ -75,12 +75,34 @@ export const getUserSidebarConfig = (role = "admin") => {
         },
       ],
     },
+    warehouse_sales: {
+      panelLabel: "Warehouse Sales Panel",
+      sections: [
+        {
+          title: "MAIN",
+          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/warehouse-sales/dashboard" }],
+        },
+        {
+          title: "SALES",
+          items: [
+            { label: "Point of Sale", icon: CreditCard, path: "/warehouse-sales/point-of-sale" },
+            { label: "Sales History", icon: History, path: "/warehouse-sales/sales-history" },
+          ],
+        },
+        {
+          title: "ORDERS",
+          items: [
+            { label: "Online Orders", icon: ShoppingCart, path: "/warehouse-sales/online-orders" },
+          ],
+        },
+      ],
+    },
   };
 
   return menuConfigs[role] || menuConfigs.admin;
 };
 
-export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder"];
+export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales"];
 
 const UserSidebar = ({
   role = "admin",
