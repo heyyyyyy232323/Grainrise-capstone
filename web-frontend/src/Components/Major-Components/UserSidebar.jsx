@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package, CornerUpLeft, CreditCard, History  } from "lucide-react";
+import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package, CornerUpLeft, CreditCard, History, X } from "lucide-react";
 import Logo from "../../assets/Logo.png";
 
 export const getUserSidebarConfig = (role = "admin") => {
@@ -125,13 +125,22 @@ const UserSidebar = ({
         ${isMinimized ? "md:w-20" : "md:w-64"}
       `}
     >
-      {/* Logo */}
+      {/* Logo + Mobile close button */}
       <div className={`h-18.25 flex items-center border-b border-gray-100 transition-all duration-300 ${
         isMinimized ? "md:justify-center md:px-3 px-6 justify-start" : "justify-start px-6"
       }`}>
         <img src={logo} alt="GrainRise Logo" className={`object-contain transition-all duration-300 h-9 ${
           isMinimized ? "md:h-6" : "md:h-9"
         }`} />
+
+        {/* Close button visible only on small screens when sidebar is open */}
+        <button
+          onClick={onClose}
+          aria-label="Close sidebar"
+          className="md:hidden ml-auto -mr-2 p-2 rounded-md text-slate-600 hover:bg-slate-100"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       {/* Panel label */}

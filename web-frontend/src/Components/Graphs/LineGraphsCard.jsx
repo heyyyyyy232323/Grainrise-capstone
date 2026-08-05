@@ -34,6 +34,34 @@ const buildSmoothPath = (points) => {
   return path;
 };
 
+function ChartEmptyState({ title = "No data available", description = "There isn't enough data to display this chart. Check back later or adjust your filters." }) {
+  return (
+    <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-7 w-7 text-emerald-500"
+        >
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <path d="M8 16v-3" />
+          <path d="M12 16v-6" />
+          <path d="M16 16v-2" />
+        </svg>
+      </div>
+      <h4 className="text-[16px] font-bold text-slate-900 sm:text-[17px]">{title}</h4>
+      <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-slate-400 sm:text-[13.5px]">
+        {description}
+      </p>
+    </div>
+  );
+}
+
 export default function SalesTrendCard({
   title,
   data = [],
@@ -49,11 +77,14 @@ export default function SalesTrendCard({
   axisFormatter,
   valueFormatter,
   selectedValue = "Week",
+  emptyStateTitle,
+  emptyStateDescription,
 }) {
   const safeData = data.map((item) => ({
     ...item,
     value: Math.max(Number(item.value) || 0, 0),
   }));
+  const isEmpty = safeData.length === 0;
 
   const chartMax = typeof maxValue === "number" && maxValue > 0
     ? maxValue
@@ -88,96 +119,100 @@ export default function SalesTrendCard({
           {title}
         </h3>
 
-        <div className="relative shrink-0">
-          {onRangeChange ? (
-            <select
-              value={selectedRange ?? selectedValue}
-              onChange={(event) => onRangeChange?.(event.target.value)}
-              className="appearance-none rounded-xl border border-slate-200 bg-white px-3 py-1.5 pr-8 text-sm font-semibold text-slate-600 outline-none transition focus:border-emerald-500"
-            >
-              {rangeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <div className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600">
-              {selectedRange ?? selectedValue}
-            </div>
-          )}
+        {!isEmpty && (
+          <div className="relative shrink-0">
+            {onRangeChange ? (
+              <select
+                value={selectedRange ?? selectedValue}
+                onChange={(event) => onRangeChange?.(event.target.value)}
+                className="appearance-none rounded-xl border border-slate-200 bg-white px-3 py-1.5 pr-8 text-sm font-semibold text-slate-600 outline-none transition focus:border-emerald-500"
+              >
+                {rangeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600">
+                {selectedRange ?? selectedValue}
+              </div>
+            )}
 
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-            ▾
-          </span>
-        </div>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+              ▾
+            </span>
+          </div>
+        )}
       </header>
 
-      <div className="px-4 py-4 sm:px-5 sm:py-5">
-        <div className="relative" style={{ height, marginLeft: 48 }}>
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
-            {ticksList.map((tickValue) => {
-              const tickRatio = chartRange > 0 ? (tickValue - chartMin) / chartRange : 0;
-              const y = paddingY + (1 - tickRatio) * (100 - paddingY * 2);
+      {isEmpty ? (
+        <ChartEmptyState title={emptyStateTitle} description={emptyStateDescription} />
+      ) : (
+        <div className="px-4 py-4 sm:px-5 sm:py-5">
+          <div className="relative" style={{ height, marginLeft: 48 }}>
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
+              {ticksList.map((tickValue) => {
+                const tickRatio = chartRange > 0 ? (tickValue - chartMin) / chartRange : 0;
+                const y = paddingY + (1 - tickRatio) * (100 - paddingY * 2);
 
-              return (
-                <g key={tickValue}>
-                  <line x1="0" x2="100" y1={y} y2={y} stroke={defaultGridColor} strokeWidth="0.25" />
-                </g>
-              );
-            })}
+                return (
+                  <g key={tickValue}>
+                    <line x1="0" x2="100" y1={y} y2={y} stroke={defaultGridColor} strokeWidth="0.25" />
+                  </g>
+                );
+              })}
 
-            {areaPath ? <path d={areaPath} fill={fillColor} /> : null}
-            {linePath ? <path d={linePath} fill="none" stroke={lineColor} strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" /> : null}
-          </svg>
+              {areaPath ? <path d={areaPath} fill={fillColor} /> : null}
+              {linePath ? <path d={linePath} fill="none" stroke={lineColor} strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" /> : null}
+            </svg>
 
-          {/* Markers + value labels rendered as plain HTML so they stay perfect circles,
-              unaffected by the SVG's non-uniform (preserveAspectRatio="none") stretch. */}
-          {points.map((point) => (
-            <div
-              key={point.label}
-              className="absolute -translate-x-1/2 -translate-y-1/2"
-              style={{ left: `${point.x}%`, top: `${point.y}%` }}
-            >
+            {points.map((point) => (
               <div
-                className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border bg-white px-1.5 py-0.5 text-[11px] font-bold text-slate-600 shadow-sm"
-                style={{ bottom: 10, borderColor: lineColor }}
+                key={point.label}
+                className="absolute -translate-x-1/2 -translate-y-1/2"
+                style={{ left: `${point.x}%`, top: `${point.y}%` }}
               >
-                {formatAxisValue(point.value, valueFormatter)}
-              </div>
-              <div
-                className="h-2.5 w-2.5 rounded-full bg-white"
-                style={{ border: `2px solid ${lineColor}` }}
-              />
-            </div>
-          ))}
-
-          <div className="absolute left-0 right-0 bottom-0 flex items-end justify-between px-1">
-            {safeData.map((item) => (
-              <div key={item.label} className="w-full text-center text-[11px] text-slate-500 sm:text-[12px]">
-                {item.label}
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border bg-white px-1.5 py-0.5 text-[11px] font-bold text-slate-600 shadow-sm"
+                  style={{ bottom: 10, borderColor: lineColor }}
+                >
+                  {formatAxisValue(point.value, valueFormatter)}
+                </div>
+                <div
+                  className="h-2.5 w-2.5 rounded-full bg-white"
+                  style={{ border: `2px solid ${lineColor}` }}
+                />
               </div>
             ))}
-          </div>
 
-          <div className="absolute -left-12 top-0 h-full w-[42px] pr-2 text-right text-[10px] font-medium text-slate-400 sm:w-[48px] sm:text-[11px]">
-            {ticksList.slice().reverse().map((tickValue, index) => {
-              const tickRatio = ticks > 0 ? index / ticks : 0;
-              const top = `${paddingY + tickRatio * (100 - paddingY * 2)}%`;
-
-              return (
-                <div
-                  key={tickValue}
-                  className="absolute right-1 -translate-y-1/2"
-                  style={{ top }}
-                >
-                  {formatAxisValue(tickValue, axisFormatter)}
+            <div className="absolute left-0 right-0 bottom-0 flex items-end justify-between px-1">
+              {safeData.map((item) => (
+                <div key={item.label} className="w-full text-center text-[11px] text-slate-500 sm:text-[12px]">
+                  {item.label}
                 </div>
-              );
-            })}
+              ))}
+            </div>
+
+            <div className="absolute -left-12 top-0 h-full w-[42px] pr-2 text-right text-[10px] font-medium text-slate-400 sm:w-[48px] sm:text-[11px]">
+              {ticksList.slice().reverse().map((tickValue, index) => {
+                const tickRatio = ticks > 0 ? index / ticks : 0;
+                const top = `${paddingY + tickRatio * (100 - paddingY * 2)}%`;
+
+                return (
+                  <div
+                    key={tickValue}
+                    className="absolute right-1 -translate-y-1/2"
+                    style={{ top }}
+                  >
+                    {formatAxisValue(tickValue, axisFormatter)}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </article>
   );
 }

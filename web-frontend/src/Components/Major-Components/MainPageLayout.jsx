@@ -36,7 +36,7 @@ const MainPageLayout = () => {
       {/* Overlay for mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black bg-opacity-50 md:hidden"
+          className="fixed inset-0 z-30 md:hidden bg-black/20 backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
         />
       )}

@@ -129,3 +129,52 @@ h1, h2, h3, h4, h5, h6 {
   70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
   100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
+
+/* Light theme overrides (apply `.light` to <html> or <body>) */
+.light {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --card-bg: rgba(255,255,255,0.8);
+  --card-border: rgba(15, 23, 42, 0.06);
+  --card-border-glow: rgba(16, 185, 129, 0.05);
+
+  --accent-emerald: #10b981;
+  --accent-emerald-hover: #059669;
+  --accent-sage: #a7f3d0;
+  --accent-amber: #eab308;
+  --accent-amber-hover: #ca8a04;
+  --accent-red: #ef4444;
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #6b7280;
+
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Common utility overrides for components that use Tailwind color classes */
+.light .bg-white { background-color: #ffffff !important; }
+.light .text-slate-900, .light .text-gray-900 { color: #0f172a !important; }
+.light .text-gray-800 { color: #1f2937 !important; }
+.light .text-gray-700 { color: #374151 !important; }
+.light .text-slate-500, .light .text-gray-500 { color: #6b7280 !important; }
+.light .text-slate-400 { color: #9ca3af !important; }
+.light .border-gray-200 { border-color: rgba(15, 23, 42, 0.06) !important; }
+.light .bg-gray-50, .light .bg-slate-50 { background-color: #f8fafc !important; }
+.light .bg-slate-100, .light .bg-slate-200 { background-color: #f1f5f9 !important; }
+.light .hover\:bg-gray-100:hover { background-color: #f3f4f6 !important; }
+.light .hover\:bg-gray-50:hover { background-color: #f8fafc !important; }
+
+/* Dark-mode overrides when `.light` is NOT present on <html> */
+html:not(.light) .bg-white { background-color: var(--bg-secondary) !important; }
+html:not(.light) .text-slate-900, html:not(.light) .text-gray-900 { color: #f3f4f6 !important; }
+html:not(.light) .text-gray-800, html:not(.light) .text-gray-700 { color: #e6eef0 !important; }
+html:not(.light) .text-slate-500, html:not(.light) .text-gray-500 { color: #9ca3af !important; }
+html:not(.light) .text-slate-400 { color: #94a3b8 !important; }
+html:not(.light) .border-gray-200 { border-color: rgba(255,255,255,0.06) !important; }
+html:not(.light) .bg-gray-50, html:not(.light) .bg-slate-50 { background-color: rgba(255,255,255,0.02) !important; }
+html:not(.light) .bg-slate-100, html:not(.light) .bg-slate-200 { background-color: rgba(255,255,255,0.03) !important; }
+html:not(.light) .hover\:bg-gray-100:hover { background-color: rgba(255,255,255,0.03) !important; }
+html:not(.light) .hover\:bg-gray-50:hover { background-color: rgba(255,255,255,0.02) !important; }
+

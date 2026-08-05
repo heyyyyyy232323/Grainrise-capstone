@@ -19,6 +19,7 @@ import WarehouseSalesDashboard from "./Users/WarehouseAccounts/WarehouseSales/Wa
 import WarehouseSalesLayout from "./Components/Major-Components/WarehouseSalesLayout";
 import WarehouseSalesHistory from "./Users/WarehouseAccounts/WarehouseSales/WarehouseSalesHistory";
 import WarehouseOnlineOrders from "./Users/WarehouseAccounts/WarehouseSales/WarehouseOnlineOrders";
+import WarehousePOS from "./Users/WarehouseAccounts/WarehouseSales/WarehousePOS";
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
         {/* Warehouse Sales pages */}
         <Route element={<WarehouseSalesLayout />}>
           <Route path="/warehouse-sales/dashboard" element={<WarehouseSalesDashboard />} />
+          <Route path="/warehouse-sales/point-of-sale" element={<WarehousePOS />} />
           <Route path="/warehouse-sales/sales-history" element={<WarehouseSalesHistory />} />
           <Route path="/warehouse-sales/online-orders" element={<WarehouseOnlineOrders />} />
         </Route>
