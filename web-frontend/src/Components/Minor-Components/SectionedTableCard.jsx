@@ -86,7 +86,7 @@ export default function SectionedTableCard({
                 {columns.map((column) => (
                   <th
                     key={column.key}
-                    className={`whitespace-nowrap px-3 py-3 align-middle first:pl-4 last:pr-8 sm:px-4 ${column.headerClassName || ""}`}
+                    className={`whitespace-nowrap px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-4 ${column.headerClassName || ""}`}
                     style={column.width ? { width: column.width } : undefined}
                   >
                     {column.label}
@@ -134,7 +134,7 @@ export default function SectionedTableCard({
 
                         if (column.key === "action") {
                           return (
-                            <td key={column.key} className={`whitespace-nowrap px-3 py-3 pr-8 text-right align-middle sm:px-4 ${column.cellClassName || ""}`}>
+                            <td key={column.key} className={`whitespace-nowrap px-3 py-3 pr-4 text-right align-middle sm:px-4 ${column.cellClassName || ""}`}>
                               <button
                                 type="button"
                                 onClick={() => onViewDetails?.(row)}

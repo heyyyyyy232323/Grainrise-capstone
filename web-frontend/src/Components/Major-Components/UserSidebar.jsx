@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package, CornerUpLeft, CreditCard, History, X } from "lucide-react";
+import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package, CornerUpLeft, CreditCard, History, X, ClipboardList, PackageCheck, Wallet } from "lucide-react";
 import Logo from "../../assets/Logo.png";
 
 export const getUserSidebarConfig = (role = "admin") => {
@@ -97,12 +97,42 @@ export const getUserSidebarConfig = (role = "admin") => {
         },
       ],
     },
+    warehouse_logistics: {
+      panelLabel: "Warehouse Logistics Panel",
+      sections: [
+        {
+          title: "MAIN",
+          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/warehouse-logistics/dashboard" }],
+        },
+        {
+          title: "DELIVERY OPERATIONS",
+          items: [
+            { label: "Delivery Management", icon: Truck, path: "/warehouse-logistics/delivery-management" },
+            { label: "Product Returns", icon: CornerUpLeft, path: "/warehouse-logistics/product-returns" },
+          ],
+        },
+        {
+          title: "RECORDS",
+          items: [
+            { label: "Assigned History", icon: ClipboardList, path: "/warehouse-logistics/assigned-history" },
+            { label: "Fulfillment History", icon: PackageCheck, path: "/warehouse-logistics/fulfillment-history" },
+          ],
+        },
+        {
+          title: "FINANCE",
+          items: [
+            { label: "Reimbursement", icon: Wallet, path: "/warehouse-logistics/reimbursement" },
+            { label: "Reimbursement History", icon: History, path: "/warehouse-logistics/reimbursement-history" },
+          ],
+        },
+      ],
+    },
   };
 
   return menuConfigs[role] || menuConfigs.admin;
 };
 
-export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales"];
+export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales", "warehouse_logistics"];
 
 const UserSidebar = ({
   role = "admin",

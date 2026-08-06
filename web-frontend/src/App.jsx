@@ -16,10 +16,13 @@ import WarehouseEncoderOrderHistory from "./Users/WarehouseAccounts/WarehouseEnc
 import WarehouseEncoderStock from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderStockManagement";
 import WarehouseEncoderRequests from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderNewRequest"; 
 import WarehouseSalesDashboard from "./Users/WarehouseAccounts/WarehouseSales/WarehouseSalesDashboard";
-import WarehouseSalesLayout from "./Components/Major-Components/WarehouseSalesLayout";
 import WarehouseSalesHistory from "./Users/WarehouseAccounts/WarehouseSales/WarehouseSalesHistory";
 import WarehouseOnlineOrders from "./Users/WarehouseAccounts/WarehouseSales/WarehouseOnlineOrders";
 import WarehousePOS from "./Users/WarehouseAccounts/WarehouseSales/WarehousePOS";
+import DeliveryManagement from "./Users/WarehouseAccounts/WarehouseLogistics/DeliveryManagement";
+import ProductReturns from "./Users/WarehouseAccounts/WarehouseLogistics/ProductReturns";
+import AssignedHistory from "./Users/WarehouseAccounts/WarehouseLogistics/AssignedHistory";
+import FulfillmentHistory from "./Users/WarehouseAccounts/WarehouseLogistics/FulfillmentHistory";
 
 function App() {
   return (
@@ -37,19 +40,27 @@ function App() {
         <Route path="/register/farmer" element={<FarmerRegister />} />
 
         {/* Warehouse Encoder pages share one Layout so sidebar state persists across them */}
-        <Route element={<WarehouseEncoderLayout />}>
+        <Route element={<WarehouseEncoderLayout role="warehouse_encoder" />}>
           <Route path="/warehouse-encoder/dashboard" element={<WarehouseEncoderDashboard />} />
           <Route path="/warehouse-encoder/orders" element={<WarehouseEncoderOrderHistory />} />
           <Route path="/warehouse-encoder/stock" element={<WarehouseEncoderStock />} />
           <Route path="/warehouse-encoder/requests" element={<WarehouseEncoderRequests />} />
         </Route>
 
-        {/* Warehouse Sales pages */}
-        <Route element={<WarehouseSalesLayout />}>
+        {/* Warehouse Sales pages (use MainPageLayout with sales role) */}
+        <Route element={<WarehouseEncoderLayout role="warehouse_sales" />}>
           <Route path="/warehouse-sales/dashboard" element={<WarehouseSalesDashboard />} />
           <Route path="/warehouse-sales/point-of-sale" element={<WarehousePOS />} />
           <Route path="/warehouse-sales/sales-history" element={<WarehouseSalesHistory />} />
           <Route path="/warehouse-sales/online-orders" element={<WarehouseOnlineOrders />} />
+        </Route>
+
+        {/* Warehouse Logistics pages (use MainPageLayout with logistics role) */}
+        <Route element={<WarehouseEncoderLayout role="warehouse_logistics" />}>
+          <Route path="/warehouse-logistics/delivery-management" element={<DeliveryManagement />} />
+          <Route path="/warehouse-logistics/product-returns" element={<ProductReturns />} />
+          <Route path="/warehouse-logistics/assigned-history" element={<AssignedHistory />} />
+          <Route path="/warehouse-logistics/fulfillment-history" element={<FulfillmentHistory />} />
         </Route>
       </Routes>
     </BrowserRouter>
