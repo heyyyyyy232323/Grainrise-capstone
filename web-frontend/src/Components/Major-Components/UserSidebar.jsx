@@ -97,12 +97,42 @@ export const getUserSidebarConfig = (role = "admin") => {
         },
       ],
     },
+    warehouse_procurement: {
+      panelLabel: "Warehouse Procurement Panel",
+      sections: [
+        {
+          title: "MAIN",
+          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/warehouse-procurement/dashboard" }],
+        },
+        {
+          title: "OPERATIONS",
+          items: [
+            { label: "Receiving Orders", icon: Truck, path: "/warehouse-procurement/receiving-orders" },
+            { label: "Goods Receipt", icon: Package, path: "/warehouse-procurement/goods-receipt" },
+            { label: "Returns", icon: CornerUpLeft, path: "/warehouse-procurement/returns" },
+            { label: "Receiving History", icon: History, path: "/warehouse-procurement/receiving-history" },
+          ],
+        },
+        {
+          title: "MASTER DATA",
+          items: [
+            { label: "Suppliers", icon: Truck, path: "/warehouse-procurement/suppliers" },
+          ],
+        },
+        {
+          title: "PAYMENT",
+          items: [
+            { label: "Payment History", icon: CreditCard, path: "/warehouse-procurement/payment-history" },
+          ],
+        },
+      ],
+    },
   };
 
   return menuConfigs[role] || menuConfigs.admin;
 };
 
-export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales"];
+export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales", "warehouse_procurement"];
 
 const UserSidebar = ({
   role = "admin",

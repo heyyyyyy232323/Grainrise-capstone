@@ -3,10 +3,14 @@ import PaginationControls from "./PaginationControls";
 
 const defaultStatusStyles = {
   approved: "bg-emerald-100 text-emerald-700",
-  requested: "bg-amber-100 text-amber-700",
+  requested: "bg-blue-100 text-blue-700",
   received: "bg-blue-100 text-blue-700",
   transit: "bg-orange-100 text-orange-700",
   "in transit": "bg-orange-100 text-orange-700",
+  "ready to receive": "bg-emerald-100 text-emerald-700",
+  active: "bg-emerald-100 text-emerald-700",
+  verified: "bg-emerald-100 text-emerald-700",
+  paid: "bg-emerald-100 text-emerald-700",
   declined: "bg-rose-100 text-rose-700",
   pending: "bg-slate-100 text-slate-700",
 };
@@ -137,8 +141,10 @@ export default function SectionedTableCard({
           pageLabel={footerLabel || `Showing ${totalRows} item${totalRows === 1 ? "" : "s"}`}
         />
       ) : footerLabel ? (
-        <div className="border-t border-slate-200 bg-[#F3F5FF] px-4 py-3 text-sm text-slate-500 sm:px-5">
-          {footerLabel}
+        <div className="border-t border-dashed border-slate-200 px-4 py-2.5 text-center sm:px-5">
+          <button type="button" className="text-[12px] font-semibold text-[#1a7a3a] hover:underline">
+            {footerLabel}
+          </button>
         </div>
       ) : null}
     </article>

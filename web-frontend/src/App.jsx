@@ -19,6 +19,14 @@ import WarehouseSalesDashboard from "./Users/WarehouseAccounts/WarehouseSales/Wa
 import WarehouseSalesLayout from "./Components/Major-Components/WarehouseSalesLayout";
 import WarehouseSalesHistory from "./Users/WarehouseAccounts/WarehouseSales/WarehouseSalesHistory";
 import WarehouseOnlineOrders from "./Users/WarehouseAccounts/WarehouseSales/WarehouseOnlineOrders";
+import WarehouseProcurementLayout from "./Components/Major-Components/WarehouseProcurementLayout";
+import WarehouseProcurementDashboard from "./Users/WarehouseAccounts/WarehouseProcurement/WarehouseProcurementDashboard";
+import WarehouseReceivingOrders from "./Users/WarehouseAccounts/WarehouseProcurement/WarehouseReceivingOrders";
+import WarehouseGoodsReceipt from "./Users/WarehouseAccounts/WarehouseProcurement/WarehouseGoodsReceipt";
+import WarehouseReturns from "./Users/WarehouseAccounts/WarehouseProcurement/WarehouseReturns";
+import WarehouseReceivingHistory from "./Users/WarehouseAccounts/WarehouseProcurement/WarehouseReceivingHistory";
+import WarehouseSuppliers from "./Users/WarehouseAccounts/WarehouseProcurement/WarehouseSuppliers";
+import WarehousePaymentHistory from "./Users/WarehouseAccounts/WarehouseProcurement/WarehousePaymentHistory";
 
 function App() {
   return (
@@ -48,6 +56,17 @@ function App() {
           <Route path="/warehouse-sales/dashboard" element={<WarehouseSalesDashboard />} />
           <Route path="/warehouse-sales/sales-history" element={<WarehouseSalesHistory />} />
           <Route path="/warehouse-sales/online-orders" element={<WarehouseOnlineOrders />} />
+        </Route>
+
+        {/* Warehouse Procurement pages */}
+        <Route element={<WarehouseProcurementLayout />}>
+          <Route path="/warehouse-procurement/dashboard" element={<WarehouseProcurementDashboard />} />
+          <Route path="/warehouse-procurement/receiving-orders" element={<WarehouseReceivingOrders />} />
+          <Route path="/warehouse-procurement/goods-receipt" element={<WarehouseGoodsReceipt />} />
+          <Route path="/warehouse-procurement/returns" element={<WarehouseReturns />} />
+          <Route path="/warehouse-procurement/receiving-history" element={<WarehouseReceivingHistory />} />
+          <Route path="/warehouse-procurement/suppliers" element={<WarehouseSuppliers />} />
+          <Route path="/warehouse-procurement/payment-history" element={<WarehousePaymentHistory />} />
         </Route>
       </Routes>
     </BrowserRouter>
