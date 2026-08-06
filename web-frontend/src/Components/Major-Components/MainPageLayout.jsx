@@ -3,10 +3,10 @@ import { Outlet } from "react-router-dom";
 import UserNavbar, { getUserNavbarMenuItems } from "./UserNavbar";
 import UserSidebar from "./UserSidebar";
 
-const MainPageLayout = () => {
+const MainPageLayout = ({ role = "warehouse_encoder" }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarMinimized, setSidebarMinimized] = useState(false);
-  const [userRole] = useState("warehouse_encoder");
+  const [userRole] = useState(role);
 
   const handleToggleSidebar = () => {
     const isMobile = window.innerWidth < 768;
@@ -36,7 +36,7 @@ const MainPageLayout = () => {
       {/* Overlay for mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black bg-opacity-50 md:hidden"
+          className="fixed inset-0 z-30 md:hidden bg-black/20 backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
         />
       )}

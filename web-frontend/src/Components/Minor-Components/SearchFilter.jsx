@@ -24,7 +24,7 @@ const SearchFilter = ({ onSearch, placeholder = "Search Batch ID, Product Code, 
           value={searchValue}
           onChange={handleChange}
           placeholder={placeholder}
-          className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+          className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
         />
         {searchValue && (
           <button

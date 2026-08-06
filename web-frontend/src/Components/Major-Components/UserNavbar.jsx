@@ -70,7 +70,7 @@ const UserNavbar = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
+  const [darkModeEnabled, setDarkModeEnabled] = useState(true);
   const [notifications, setNotifications] = useState(
     notificationItems.length > 0 ? notificationItems : getUserNavbarNotifications(),
   );
@@ -82,6 +82,42 @@ const UserNavbar = ({
       setNotifications(notificationItems);
     }
   }, [notificationItems]);
+
+  // Initialize theme from localStorage (defaults to dark based on current CSS)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("theme");
+      if (saved === "light") {
+        document.documentElement.classList.add("light");
+        setDarkModeEnabled(false);
+      } else if (saved === "dark") {
+        document.documentElement.classList.remove("light");
+        setDarkModeEnabled(true);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    setDarkModeEnabled((prev) => {
+      const next = !prev;
+      try {
+        if (next) {
+          // dark -> remove light class
+          document.documentElement.classList.remove("light");
+          localStorage.setItem("theme", "dark");
+        } else {
+          // light -> add light class
+          document.documentElement.classList.add("light");
+          localStorage.setItem("theme", "light");
+        }
+      } catch (e) {
+        // ignore
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -241,7 +277,7 @@ const UserNavbar = ({
               <button
                 type="button"
                 aria-label="Toggle dark mode"
-                onClick={() => setDarkModeEnabled((prev) => !prev)}
+                onClick={toggleTheme}
                 className={`relative inline-flex h-5 w-9 items-center rounded-full transition ${
                   darkModeEnabled ? "bg-[#0B7A2A]" : "bg-gray-300"
                 }`}
