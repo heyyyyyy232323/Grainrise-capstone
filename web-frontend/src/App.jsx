@@ -19,10 +19,12 @@ import WarehouseSalesDashboard from "./Users/WarehouseAccounts/WarehouseSales/Wa
 import WarehouseSalesHistory from "./Users/WarehouseAccounts/WarehouseSales/WarehouseSalesHistory";
 import WarehouseOnlineOrders from "./Users/WarehouseAccounts/WarehouseSales/WarehouseOnlineOrders";
 import WarehousePOS from "./Users/WarehouseAccounts/WarehouseSales/WarehousePOS";
-import DeliveryManagement from "./Users/WarehouseAccounts/WarehouseLogistics/DeliveryManagement";
-import ProductReturns from "./Users/WarehouseAccounts/WarehouseLogistics/ProductReturns";
-import AssignedHistory from "./Users/WarehouseAccounts/WarehouseLogistics/AssignedHistory";
-import FulfillmentHistory from "./Users/WarehouseAccounts/WarehouseLogistics/FulfillmentHistory";
+import DeliveryManagement from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseDeliveryManagement";
+import ProductReturns from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseProductReturns";
+import AssignedHistory from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseAssignedHistory";
+import FulfillmentHistory from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseFulfillmentHistory";
+import Reimbursement from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseReimbursement";
+import ReimbursementHistory from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseReimbursementHistory";
 import WarehouseProcurementLayout from "./Components/Major-Components/WarehouseProcurementLayout";
 import WarehouseProcurementDashboard from "./Users/WarehouseAccounts/WarehouseProcurement/WarehouseProcurementDashboard";
 import WarehouseReceivingOrders from "./Users/WarehouseAccounts/WarehouseProcurement/WarehouseReceivingOrders";
@@ -31,6 +33,11 @@ import WarehouseReturns from "./Users/WarehouseAccounts/WarehouseProcurement/War
 import WarehouseReceivingHistory from "./Users/WarehouseAccounts/WarehouseProcurement/WarehouseReceivingHistory";
 import WarehouseSuppliers from "./Users/WarehouseAccounts/WarehouseProcurement/WarehouseSuppliers";
 import WarehousePaymentHistory from "./Users/WarehouseAccounts/WarehouseProcurement/WarehousePaymentHistory";
+import WarehousePayables from "./Users/WarehouseAccounts/WarehouseFinance/WarehousePayables";
+import WarehouseTaxes from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseTaxes";
+import WarehouseReimburse from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseReimburse";
+import WarehouseFinancePaymentHistory from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseFinancePaymentHistory";
+
 
 function App() {
   return (
@@ -67,6 +74,8 @@ function App() {
         <Route element={<WarehouseEncoderLayout role="warehouse_logistics" />}>
           <Route path="/warehouse-logistics/delivery-management" element={<DeliveryManagement />} />
           <Route path="/warehouse-logistics/product-returns" element={<ProductReturns />} />
+          <Route path="/warehouse-logistics/reimbursement" element={<Reimbursement />} />
+          <Route path="/warehouse-logistics/reimbursement-history" element={<ReimbursementHistory />} />
           <Route path="/warehouse-logistics/assigned-history" element={<AssignedHistory />} />
           <Route path="/warehouse-logistics/fulfillment-history" element={<FulfillmentHistory />} />
         </Route>
@@ -81,7 +90,14 @@ function App() {
           <Route path="/warehouse-procurement/suppliers" element={<WarehouseSuppliers />} />
           <Route path="/warehouse-procurement/payment-history" element={<WarehousePaymentHistory />} />
         </Route>
-      </Routes>
+        {/* Warehouse Finance pages */}
+        <Route element={<WarehouseEncoderLayout role="warehouse_finance" />}>
+          <Route path="/warehouse-finance/payables" element={<WarehousePayables />} />
+          <Route path="/warehouse-finance/taxes" element={<WarehouseTaxes />} />
+          <Route path="/warehouse-finance/reimburse" element={<WarehouseReimburse />} />
+          <Route path="/warehouse-finance/payment-history" element={<WarehouseFinancePaymentHistory />} />
+        </Route>
+      </Routes> 
     </BrowserRouter>
   );
 }

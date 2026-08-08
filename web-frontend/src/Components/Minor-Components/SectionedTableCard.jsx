@@ -83,8 +83,9 @@ export default function SectionedTableCard({
       {isEmpty ? (
         <EmptyState title={emptyStateTitle} description={emptyStateDescription} />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse">
+        <div className="overflow-x-auto -mx-4 md:mx-0">
+          <div className="px-4 md:px-0">
+            <table className="min-w-full border-collapse">
             <thead>
               <tr className="bg-[#EDEDED] text-left text-[11px] font-extrabold uppercase tracking-[0.03em] text-slate-600 sm:text-[12px]">
                 {columns.map((column) => (
@@ -161,7 +162,8 @@ export default function SectionedTableCard({
                 </Fragment>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       )}
 

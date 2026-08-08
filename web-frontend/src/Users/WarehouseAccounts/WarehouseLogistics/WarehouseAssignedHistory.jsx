@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
+import Dropdown from "../../../Components/Minor-Components/Dropdown";
 
 const sampleAssigned = Array.from({ length: 125 }, (_, i) => ({
   id: `a-${i + 1}`,
@@ -52,25 +53,51 @@ export default function AssignedHistory() {
       <Breadcrumbs items={[{ label: "Records", path: "/warehouse-logistics/dashboard" }, { label: "Assigned History" }]} />
 
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Assigned History</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Assigned History</h1>
         <p className="text-sm text-slate-500 mt-1">View all assigned, delivered, and completed delivery records.</p>
       </div>
 
-      <div className="mt-4 mb-4 flex flex-col md:flex-row gap-3 md:items-center">
-        <div className="flex-1">
-          <SearchFilter
-            onSearch={(v) => { setQuery(v); setPage(1); }}
-            placeholder="Search order no., batch no., driver, or product"
-          />
+      <div className="mt-4 mb-4 -mx-4 md:mx-0">
+        <div className="px-4 md:px-0">
+          <div className="w-full">
+            <div className="flex gap-3 items-center">
+            <div className="flex-1 min-w-0 max-w-xl">
+              <SearchFilter
+                onSearch={(v) => { setQuery(v); setPage(1); }}
+                placeholder="Search order no., batch no., driver, or product"
+              />
+            </div>
+
+            <div className="w-44 flex-none">
+              <Dropdown
+                options={[
+                  { label: "All", value: "all" },
+                  { label: "Pending", value: "pending" },
+                  { label: "In Transit", value: "in_transit" },
+                  { label: "Delivered", value: "delivered" },
+                ]}
+                value={deliveryFilter}
+                onChange={(v) => { setDeliveryFilter(v); setPage(1); }}
+                placeholder="Delivery Status"
+              />
+            </div>
+
+            <div className="w-44 flex-none">
+              <Dropdown
+                options={[
+                  { label: "All", value: "all" },
+                  { label: "Assigned", value: "assigned" },
+                  { label: "Completed", value: "completed" },
+                  { label: "Cancelled", value: "cancelled" },
+                ]}
+                value={assignmentFilter}
+                onChange={(v) => { setAssignmentFilter(v); setPage(1); }}
+                placeholder="Assignment Status"
+              />
+            </div>
+            </div>
+          </div>
         </div>
-
-        <select value={deliveryFilter} onChange={(e) => { setDeliveryFilter(e.target.value); setPage(1); }} className="rounded-md border border-slate-200 px-3 py-2">
-          <option value="all">Delivery Status</option>
-        </select>
-
-        <select value={assignmentFilter} onChange={(e) => { setAssignmentFilter(e.target.value); setPage(1); }} className="rounded-md border border-slate-200 px-3 py-2">
-          <option value="all">Assignment Status</option>
-        </select>
       </div>
 
       <SectionedTableCard

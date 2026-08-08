@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package, CornerUpLeft, CreditCard, History, X, ClipboardList, PackageCheck, Wallet } from "lucide-react";
+import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package, CornerUpLeft, CreditCard, History, X, ClipboardList, PackageCheck, Wallet, BookOpen, Receipt, RefreshCcw } from "lucide-react";
 import Logo from "../../assets/Logo.png";
 
 export const getUserSidebarConfig = (role = "admin") => {
@@ -149,10 +149,33 @@ export const getUserSidebarConfig = (role = "admin") => {
             { label: "Suppliers", icon: Truck, path: "/warehouse-procurement/suppliers" },
           ],
         },
+            {
+              title: "PAYMENT",
+              items: [
+                { label: "Procurement Payment History", icon: CreditCard, path: "/warehouse-procurement/payment-history" },
+              ],
+            },
+      ],
+    },
+    warehouse_finance: {
+      panelLabel: "Warehouse Finance Panel",
+      sections: [
         {
-          title: "PAYMENT",
+          title: "MAIN",
+          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/warehouse-finance/dashboard" }],
+        },
+        {
+          title: "FINANCE",
           items: [
-            { label: "Payment History", icon: CreditCard, path: "/warehouse-procurement/payment-history" },
+            { label: "Payables", icon: BookOpen, path: "/warehouse-finance/payables" },
+            { label: "Taxes", icon: Receipt, path: "/warehouse-finance/taxes" },
+            { label: "Reimburse", icon: RefreshCcw, path: "/warehouse-finance/reimburse" },
+          ],
+        },
+        {
+          title: "RECORDS",
+          items: [
+            { label: "Payment History", icon: History, path: "/warehouse-finance/payment-history" },
           ],
         },
       ],
@@ -162,7 +185,7 @@ export const getUserSidebarConfig = (role = "admin") => {
   return menuConfigs[role] || menuConfigs.admin;
 };
 
-export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales", "warehouse_logistics", "warehouse_procurement"];
+export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales", "warehouse_logistics", "warehouse_procurement", "warehouse_finance"];
 
 const UserSidebar = ({
   role = "admin",

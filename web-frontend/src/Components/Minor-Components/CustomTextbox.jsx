@@ -4,6 +4,8 @@ const CustomTextbox = ({
   type = "text",
   value,
   onChange,
+  className = "",
+  ...rest
 }) => {
   return (
     <div className="w-full">
@@ -20,7 +22,7 @@ const CustomTextbox = ({
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="
+        className={`
           w-full
           px-4 py-3
           rounded-xl
@@ -32,7 +34,9 @@ const CustomTextbox = ({
           outline-none
           focus:ring-2 focus:ring-green-100 focus:border-green-600
           transition
-        "
+          ${className}
+        `}
+        {...rest}
       />
     </div>
   );

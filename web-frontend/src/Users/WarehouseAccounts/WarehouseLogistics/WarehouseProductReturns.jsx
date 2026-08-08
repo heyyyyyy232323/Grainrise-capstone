@@ -39,15 +39,21 @@ export default function ProductReturns() {
       <Breadcrumbs items={[{ label: "Delivery Operations", path: "/warehouse-logistics/dashboard" }, { label: "Product Returns" }]} />
 
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Product Return Issues</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Product Return Issues</h1>
         <p className="text-sm text-slate-500 mt-1">Review product return requests and reported issues from retailers.</p>
       </div>
 
-      <div className="mt-4 mb-4">
-        <SearchFilter
-          onSearch={(v) => { setQuery(v); setPage(1); }}
-          placeholder="Search order no., batch no., product, or retailer"
-        />
+      <div className="mt-4 mb-4 -mx-4 md:mx-0">
+        <div className="px-4 md:px-0">
+          <div className="w-full md:w-1/2">
+            <div className="max-w-3xl">
+              <SearchFilter
+                onSearch={(v) => { setQuery(v); setPage(1); }}
+                placeholder="Search order no., batch no., product, or retailer"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <SectionedTableCard

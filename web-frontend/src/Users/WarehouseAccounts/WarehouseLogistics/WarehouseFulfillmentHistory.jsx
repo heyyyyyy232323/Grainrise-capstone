@@ -41,15 +41,21 @@ export default function FulfillmentHistory() {
       <Breadcrumbs items={[{ label: "Records", path: "/warehouse-logistics/dashboard" }, { label: "Fulfillment History" }]} />
 
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Fulfillment History</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Fulfillment History</h1>
         <p className="text-sm text-slate-500 mt-1">View completed fulfillment and delivery records.</p>
       </div>
 
-      <div className="mt-4 mb-4">
-        <SearchFilter
-          onSearch={(v) => { setQuery(v); setPage(1); }}
-          placeholder="Search order no., batch no., product, or customer"
-        />
+      <div className="mt-4 mb-4 -mx-4 md:mx-0">
+        <div className="px-4 md:px-0">
+          <div className="w-full md:w-1/2">
+            <div className="max-w-3xl">
+              <SearchFilter
+                onSearch={(v) => { setQuery(v); setPage(1); }}
+                placeholder="Search order no., batch no., product, or customer"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <SectionedTableCard

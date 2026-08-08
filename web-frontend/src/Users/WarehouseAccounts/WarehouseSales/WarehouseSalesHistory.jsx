@@ -113,15 +113,27 @@ const WarehouseSalesHistory = () => {
       <Tabs tabs={TABS} activeTab={activeTab} onTabChange={(id) => { setActiveTab(id); setCurrentPage(1); }} />
 
       {/* Filter Row */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex-1 min-w-[200px]">
-          <SearchFilter
-            onSearch={setSearchQuery}
-            placeholder="Search receipt no., variant, customer, or amount"
-          />
+      <div className="-mx-4 md:mx-0 mb-4">
+        <div className="px-4 md:px-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="w-full md:w-1/2">
+              <div className="flex gap-3 items-center">
+                <div className="flex-1 min-w-0 max-w-3xl">
+                  <SearchFilter
+                    onSearch={setSearchQuery}
+                    placeholder="Search receipt no., variant, customer, or amount"
+                  />
+                </div>
+                <div className="flex-none">
+                  <DateRangePicker onDateChange={() => {}} />
+                </div>
+                <div className="flex-none">
+                  <SortByDropdown value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <DateRangePicker onDateChange={() => {}} />
-        <SortByDropdown value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} />
       </div>
 
       {/* Transactions Table */}
