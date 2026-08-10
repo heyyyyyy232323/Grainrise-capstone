@@ -26,6 +26,7 @@ export default function KPICard({
   footer,
   icon,
   tone = "success",
+  variant = "surface",
   className = "",
 }) {
   const styles = toneStyles[tone] || toneStyles.success;
@@ -33,29 +34,50 @@ export default function KPICard({
   // Prefer `trend` as the single caption line (matches design); fall back to `footer`
   // so existing callers that only pass `footer` still render something.
   const caption = trend || footer;
+  const isSolid = variant === "solid";
 
   return (
     <article
-      className={`w-full rounded-[22px] border border-slate-200 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.1)] ${className}`}
+      className={`w-full rounded-[22px] border p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.1)] ${
+        isSolid
+          ? "border-[#065416] bg-[#0B5D1E] text-white"
+          : "border-slate-200 bg-white"
+      } ${className}`}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
+        <p
+          className={`text-[11px] font-bold uppercase tracking-[0.14em] ${
+            isSolid ? "text-white/80" : "text-slate-500"
+          }`}
+        >
           {title}
         </p>
 
         <div
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${styles.badge}`}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
+            isSolid ? "border-white/20 bg-white/10 text-white" : styles.badge
+          }`}
         >
           {badgeIcon}
         </div>
       </div>
 
-      <div className="mt-4 text-[clamp(1.75rem,3vw,2.25rem)] font-extrabold leading-none tracking-[-0.02em] text-slate-900">
+      <div
+        className={`mt-4 text-[clamp(1.75rem,3vw,2.25rem)] font-extrabold leading-none tracking-[-0.02em] ${
+          isSolid ? "text-white" : "text-slate-900"
+        }`}
+      >
         {value}
       </div>
 
       {caption ? (
-        <p className={`mt-3 text-sm font-semibold ${styles.caption}`}>{caption}</p>
+        <p
+          className={`mt-3 text-sm font-semibold ${
+            isSolid ? "text-white/80" : styles.caption
+          }`}
+        >
+          {caption}
+        </p>
       ) : null}
     </article>
   );

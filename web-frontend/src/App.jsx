@@ -37,6 +37,7 @@ import WarehousePayables from "./Users/WarehouseAccounts/WarehouseFinance/Wareho
 import WarehouseTaxes from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseTaxes";
 import WarehouseReimburse from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseReimburse";
 import WarehouseFinancePaymentHistory from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseFinancePaymentHistory";
+import WarehouseFinanceDashboard from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseFinanceDashboard";
 
 
 function App() {
@@ -92,6 +93,7 @@ function App() {
         </Route>
         {/* Warehouse Finance pages */}
         <Route element={<WarehouseEncoderLayout role="warehouse_finance" />}>
+          <Route path="/warehouse-finance/dashboard" element={<WarehouseFinanceDashboard />} />
           <Route path="/warehouse-finance/payables" element={<WarehousePayables />} />
           <Route path="/warehouse-finance/taxes" element={<WarehouseTaxes />} />
           <Route path="/warehouse-finance/reimburse" element={<WarehouseReimburse />} />
