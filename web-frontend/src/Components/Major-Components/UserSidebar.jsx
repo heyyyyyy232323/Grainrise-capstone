@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package, CornerUpLeft, CreditCard, History, X, ClipboardList, PackageCheck, Wallet, BookOpen, Receipt, RefreshCcw } from "lucide-react";
+import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package, CornerUpLeft, CreditCard, History, X, ClipboardList, PackageCheck, Wallet, BookOpen, Receipt, RefreshCcw, Mail } from "lucide-react";
 import Logo from "../../assets/Logo.png";
 
 export const getUserSidebarConfig = (role = "admin") => {
@@ -14,15 +14,16 @@ export const getUserSidebarConfig = (role = "admin") => {
         {
           title: "MANAGEMENT",
           items: [
-            { label: "Suppliers", icon: Truck, path: "/admin/suppliers" },
-            { label: "Warehouses", icon: Warehouse, path: "/admin/warehouses" },
-            { label: "Retailers", icon: Store, path: "/admin/retailers" },
-            { label: "Users", icon: Users, path: "/admin/users" },
+            { label: "Supplier Management", icon: Truck, path: "/admin/suppliers" },
+            { label: "Warehouse Management", icon: Warehouse, path: "/admin/warehouses" },
+            { label: "Retailer Management", icon: Store, path: "/admin/retailers" },
           ],
         },
         {
-          title: "ANALYTICS",
-          items: [{ label: "Reports", icon: FileBarChart, path: "/admin/reports" }],
+          title: "COMMUNICATION",
+          items: [
+            { label: "Email Users", icon: Mail, path: "/admin/email-users" },
+          ],
         },
       ],
     },
