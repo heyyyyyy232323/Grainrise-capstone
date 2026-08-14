@@ -38,6 +38,11 @@ import WarehouseTaxes from "./Users/WarehouseAccounts/WarehouseFinance/Warehouse
 import WarehouseReimburse from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseReimburse";
 import WarehouseFinancePaymentHistory from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseFinancePaymentHistory";
 import WarehouseFinanceDashboard from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseFinanceDashboard";
+import AdminDashboard from "./Users/AdminAccounts/AccountAdmin/AdminDashboard";
+import SupplierManagement from "./Users/AdminAccounts/AccountAdmin/SupplierManagement";
+import WarehouseManagement from "./Users/AdminAccounts/AccountAdmin/WarehouseManagement";
+import RetailerManagement from "./Users/AdminAccounts/AccountAdmin/RetailerManagement";
+import EmailUsers from "./Users/AdminAccounts/AccountAdmin/EmailUsers";
 
 
 function App() {
@@ -98,6 +103,14 @@ function App() {
           <Route path="/warehouse-finance/taxes" element={<WarehouseTaxes />} />
           <Route path="/warehouse-finance/reimburse" element={<WarehouseReimburse />} />
           <Route path="/warehouse-finance/payment-history" element={<WarehouseFinancePaymentHistory />} />
+        </Route>
+        {/* Admin pages */}
+        <Route element={<WarehouseEncoderLayout role="admin" />}>
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/suppliers" element={<SupplierManagement />} />
+          <Route path="/admin/warehouses" element={<WarehouseManagement />} />
+          <Route path="/admin/retailers" element={<RetailerManagement />} />
+          <Route path="/admin/email-users" element={<EmailUsers />} />
         </Route>
       </Routes> 
     </BrowserRouter>

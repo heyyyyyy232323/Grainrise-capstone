@@ -1,115 +1,48 @@
-import { Package, BarChart3, AlertCircle, CheckCircle } from "lucide-react";
+import { useMemo } from "react";
+import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import KPICard from "../../../Components/Graphs/KPICard";
-import DistributionCard from "../../../Components/Graphs/PieChartCard";
 import CategoryBarCard from "../../../Components/Graphs/BarGraphsCard";
 import RecentActivityCard from "../../../Components/Graphs/RecentActivityCard";
-import PendingReviewsCard from "../../../Components/Graphs/PendingReviewsCard";
-import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
-import DateDisplay from "../../../Components/Minor-Components/DateDisplay";
+import { DollarSign, ShoppingCart, Users, Package } from "lucide-react";
 
-const WarehouseEncoderDashboard = () => {
-  const lastUpdatedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+const sampleBars = [
+	{ label: "Supplier A", value: 89 },
+	{ label: "Supplier B", value: 13 },
+	{ label: "Supplier C", value: 64 },
+	{ label: "Supplier D", value: 24 },
+];
 
-  const warehouseMetrics = [
-    { title: "Product Variants", value: "500", trend: "Registered warehouse products", footer: "Total SKUs", icon: <Package size={18} strokeWidth={2.2} />, tone: "success" },
-    { title: "Inventory Value", value: "₱24.8M", trend: "Total warehouse inventory value", footer: "Across all products", icon: <BarChart3 size={18} strokeWidth={2.2} />, tone: "success" },
-    { title: "Low Stock Products", value: "42", trend: "Products requiring restocking", footer: "Products needing inventory", icon: <AlertCircle size={18} strokeWidth={2.2} />, tone: "warning" },
-    { title: "Out of Stock", value: "5", trend: "Products with zero inventory", footer: "Products with empty inventory", icon: <AlertCircle size={18} strokeWidth={2.2} />, tone: "danger" },
-  ];
+const sampleActivity = [
+	{ id: "e1", title: "New Supplier Registered", description: "Supplier X joined the platform", time: "5 mins ago", icon: Users, color: "#0B7A2A" },
+	{ id: "e2", title: "Order Received", description: "Order #1234 placed", time: "20 mins ago", icon: ShoppingCart, color: "#0F9D2A" },
+	{ id: "e3", title: "Payment Received", description: "Payment cleared for order #1220", time: "1 hour ago", icon: DollarSign, color: "#0B7A2A" },
+];
 
-  const inventoryDistribution = [
-    { label: "In Stock", value: 50, color: "#0B7A2A" },
-    { label: "Low Stock", value: 23, color: "#E0AC1C" },
-    { label: "Out of Stock", value: 17, color: "#DC2626" },
-  ];
+export default function WarehouseEncoderDashboard() {
+	const metrics = useMemo(() => [
+		{ title: "Today's Sales", value: "₱24,580", footer: "Sales recorded today", icon: <DollarSign size={18} strokeWidth={2.2} />, tone: "success" },
+		{ title: "Open Orders", value: "128", footer: "Awaiting processing", icon: <ShoppingCart size={18} strokeWidth={2.2} />, tone: "warning" },
+		{ title: "Active Users", value: "1,204", footer: "Across all roles", icon: <Users size={18} strokeWidth={2.2} />, tone: "neutral" },
+		{ title: "Fulfillment Rate", value: "98%", footer: "Orders completed on time", icon: <Package size={18} strokeWidth={2.2} />, tone: "success" },
+	], []);
 
-  const productVariants = [
-    { label: "Brand A", value: 89 },
-    { label: "Brand B", value: 13 },
-    { label: "Brand C", value: 64 },
-    { label: "Brand D", value: 24 },
-  ];
+	return (
+		<div className="space-y-6">
+			<div>
+				<Breadcrumbs items={[{ label: "Main" }, { label: "Dashboard" }]} />
+				<h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Warehouse Encoder Dashboard</h1>
+			</div>
 
-  const lowStockDistribution = [
-    { label: "Brand A", value: 89 },
-    { label: "Brand B", value: 13 },
-    { label: "Brand C", value: 64 },
-    { label: "Brand D", value: 24 },
-  ];
+			<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+				{metrics.map((m) => (
+					<KPICard key={m.title} {...m} />
+				))}
+			</div>
 
-  const inventoryActivity = [
-    { id: "activity-1", title: "Inventory Received", description: "Batch 2026-001 (Dinarado 50kg) accepted from Supplier A", time: "5 mins ago", icon: CheckCircle, color: "#0B7A2A" },
-    { id: "activity-2", title: "Inventory Received", description: "Batch 2026-001 (Dinarado 50kg) accepted from Supplier A", time: "5 mins ago", icon: CheckCircle, color: "#0B7A2A" },
-    { id: "activity-3", title: "Inventory Received", description: "Batch 2026-001 (Dinarado 50kg) accepted from Supplier A", time: "5 mins ago", icon: CheckCircle, color: "#0B7A2A" },
-  ];
-
-  const pendingRequests = [
-    { id: "req-1", category: "Supplier A", name: "Bulk Wholesale", date: "OCT 24", initials: "S", color: "#0B7A2A", onDetails: () => console.log("Open request", "req-1") },
-    { id: "req-2", category: "Supplier A", name: "Bulk Wholesale", date: "OCT 24", initials: "S", color: "#0B7A2A", onDetails: () => console.log("Open request", "req-2") },
-    { id: "req-3", category: "Supplier A", name: "Bulk Wholesale", date: "OCT 24", initials: "S", color: "#0B7A2A", onDetails: () => console.log("Open request", "req-3") },
-  ];
-
-  return (
-    <>
-      <Breadcrumbs
-        items={[
-          { label: "Main", path: "/warehouse-encoder/dashboard" },
-          { label: "Dashboard" },
-        ]}
-      />
-
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-            Dashboard
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Last Updated: Today, {lastUpdatedTime}
-          </p>
-        </div>
-        <DateDisplay />
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {warehouseMetrics.map((metric) => (
-          <KPICard key={metric.title} {...metric} />
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <DistributionCard
-          title="Inventory Status"
-          subtitle="Current Inventory Status"
-          data={inventoryDistribution}
-        />
-        <CategoryBarCard
-          title="Inventory Overview"
-          subtitle="Stock levels by brand"
-          bars={productVariants}
-        />
-        <CategoryBarCard
-          title="Low Stock Distributions"
-          subtitle="Stock levels by brand"
-          bars={lowStockDistribution}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <RecentActivityCard
-          title="Recent Inventory Activity"
-          activities={inventoryActivity}
-        />
-        <PendingReviewsCard
-          title="Pending Order Requests"
-          subtitle="3 awaiting approval"
-          reviews={pendingRequests}
-        />
-      </div>
-    </>
-  );
-};
-
-export default WarehouseEncoderDashboard;
+			<div className="grid gap-6 xl:grid-cols-3">
+				<CategoryBarCard title="Supplier Employee Distributions" items={sampleBars} seriesLabel="2026" className="h-full xl:col-span-2" />
+				<RecentActivityCard title="Recent Activity" items={sampleActivity} />
+			</div>
+		</div>
+	);
+}
