@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package, CornerUpLeft, CreditCard, History, X, ClipboardList, PackageCheck, Wallet, BookOpen, Receipt, RefreshCcw } from "lucide-react";
+import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package, CornerUpLeft, CreditCard, History, X, ClipboardList, PackageCheck, Wallet, BookOpen, Receipt, RefreshCcw, Archive } from "lucide-react";
 import Logo from "../../assets/Logo.png";
 
 export const getUserSidebarConfig = (role = "admin") => {
@@ -180,12 +180,29 @@ export const getUserSidebarConfig = (role = "admin") => {
         },
       ],
     },
+    supplier_encoder: {
+      panelLabel: "Supplier Encoder Panel",
+      sections: [
+        {
+          title: "MAIN",
+          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/supplier-encoder/dashboard" }],
+        },
+        {
+          title: "MANAGEMENT",
+          items: [
+            { label: "Order History", icon: History, path: "/supplier-encoder/orders" },
+            { label: "Request Orders", icon: CornerUpLeft, path: "/supplier-encoder/requests" },
+            { label: "Stock Management", icon: Archive, path: "/supplier-encoder/stock" },
+          ],
+        },
+      ],
+    },
   };
 
   return menuConfigs[role] || menuConfigs.admin;
 };
 
-export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales", "warehouse_logistics", "warehouse_procurement", "warehouse_finance"];
+export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales", "warehouse_logistics", "warehouse_procurement", "warehouse_finance", "supplier_encoder"];
 
 const UserSidebar = ({
   role = "admin",

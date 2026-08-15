@@ -38,6 +38,10 @@ import WarehouseTaxes from "./Users/WarehouseAccounts/WarehouseFinance/Warehouse
 import WarehouseReimburse from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseReimburse";
 import WarehouseFinancePaymentHistory from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseFinancePaymentHistory";
 import WarehouseFinanceDashboard from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseFinanceDashboard";
+import MillerEncoderDashboard from "./Users/MillerAccounts/MillerEncoder/MillerEncoderDashboard";
+import MillerEncoderOrderHistory from "./Users/MillerAccounts/MillerEncoder/MillerEncoderOrderHistory";
+import MillerEncoderRequestOrders from "./Users/MillerAccounts/MillerEncoder/MillerEncoderRequestOrders";
+import MillerEncoderStockManagement from "./Users/MillerAccounts/MillerEncoder/MillerEncoderStockManagement";
 
 
 function App() {
@@ -98,6 +102,14 @@ function App() {
           <Route path="/warehouse-finance/taxes" element={<WarehouseTaxes />} />
           <Route path="/warehouse-finance/reimburse" element={<WarehouseReimburse />} />
           <Route path="/warehouse-finance/payment-history" element={<WarehouseFinancePaymentHistory />} />
+        </Route>
+
+        {/* Supplier Encoder pages */}
+        <Route element={<WarehouseEncoderLayout role="supplier_encoder" />}>
+          <Route path="/supplier-encoder/dashboard" element={<MillerEncoderDashboard />} />
+          <Route path="/supplier-encoder/orders" element={<MillerEncoderOrderHistory />} />
+          <Route path="/supplier-encoder/requests" element={<MillerEncoderRequestOrders />} />
+          <Route path="/supplier-encoder/stock" element={<MillerEncoderStockManagement />} />
         </Route>
       </Routes> 
     </BrowserRouter>
