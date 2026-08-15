@@ -1,420 +1,309 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import Tabs from "../../../Components/Minor-Components/Tabs";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
 import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
-import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
+import PaginationControls from "../../../Components/Minor-Components/PaginationControls";
 import CustomGreenButton from "../../../Components/Minor-Components/CustomGreenButton";
 import CustomAmberButton from "../../../Components/Minor-Components/CustomAmberButton";
 import CustomRedButton from "../../../Components/Minor-Components/CustomRedButton";
-import ArchiveProductModal from "../../../Components/Modals/ArchiveProductModal";
-import DeleteProductModal from "../../../Components/Modals/DeleteProductModal";
-import RestoreProductModal from "../../../Components/Modals/RestoreProductModal";
-import Toast from "../../../Components/Modals/Toast";
+import StatusBadge from "../../../Components/Minor-Components/StatusBadge";
 
-const legendItems = [
-  { label: "In Stock", dot: "bg-emerald-500", text: "text-emerald-700" },
-  { label: "Low Stock", dot: "bg-amber-500", text: "text-amber-700" },
-  { label: "Out of Stock", dot: "bg-rose-500", text: "text-rose-700" },
+// ─── Static Data ───────────────────────────────────────────────────────────────
+const generateProducts = (count, archived = false) =>
+  Array.from({ length: count }, (_, i) => {
+    const stockOptions = [
+      { qty: "0 kg",     level: "out"  },
+      { qty: "100 kg",   level: "low"  },
+      { qty: "150 kg",   level: "low"  },
+      { qty: "2,500 kg", level: "in"   },
+    ];
+    const { qty, level } = stockOptions[i % stockOptions.length];
+    const variantBadges = archived
+      ? [null]
+      : [null, "Incoming", "Active", "Retired", null, null];
+    const expMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const expYear = 2026 + (i % 2);
+    const expMonth = expMonths[i % 12];
+    const expDay = ((i * 7) % 28) + 1;
+
+    return {
+      id: `prod-${archived ? "arch" : "act"}-${i + 1}`,
+      productCode: "WR-001",
+      variant: "Dinorado",
+      expiry: `Exp ${expMonth} ${expDay}, ${expYear}`,
+      variantBadge: variantBadges[i % variantBadges.length],
+      stockQty: qty,
+      stockLevel: level,
+      description: "Premium rice, locally sourced specialty…",
+      archived,
+    };
+  });
+
+const ACTIVE_PRODUCTS   = generateProducts(50, false);
+const ARCHIVED_PRODUCTS = generateProducts(10, true);
+
+const TABS = [
+  { id: "active",  label: "Active"  },
+  { id: "archive", label: "Archive" },
 ];
 
-const sortOptions = [
-  { value: "qty-desc", label: "Stock Qty (High-Low)" },
-  { value: "qty-asc", label: "Stock Qty (Low-High)" },
-  { value: "code-asc", label: "Product Code (A-Z)" },
+const SORT_OPTIONS = [
+  { value: "default",    label: "Sort By"       },
+  { value: "code-asc",   label: "Code (A-Z)"    },
+  { value: "qty-asc",    label: "Qty: Low → High"},
+  { value: "qty-desc",   label: "Qty: High → Low"},
+  { value: "level-out",  label: "Out of Stock First"},
 ];
 
-const statusDotStyles = {
-  in: "bg-emerald-500",
-  low: "bg-amber-500",
+const ROWS_PER_PAGE = 10;
+
+// ─── Stock dot indicator ───────────────────────────────────────────────────────
+const STOCK_DOT = {
+  in:  "bg-emerald-500",
+  low: "bg-amber-400",
   out: "bg-rose-500",
 };
 
-const expiryBadgeStyles = {
-  "Expiring Soon": "border-amber-200 bg-amber-50 text-amber-600",
-  Expired: "border-rose-200 bg-rose-50 text-rose-600",
+function StockDot({ level }) {
+  return (
+    <span
+      className={`inline-block h-2.5 w-2.5 rounded-full ${STOCK_DOT[level] || "bg-slate-300"}`}
+      aria-label={level}
+    />
+  );
+}
+
+// ─── Variant badge ─────────────────────────────────────────────────────────────
+const VARIANT_BADGE_STYLES = {
+  Incoming: "bg-blue-100 text-blue-700",
+  Active:   "bg-emerald-100 text-emerald-700",
+  Retired:  "bg-rose-100 text-rose-700",
 };
 
-// Shared sizing override for buttons inside table rows — the components
-// default to px-6 py-2 (good for standalone buttons like Add Product), but
-// table actions need to stay compact.
-const tableButtonClass = "px-3! py-1.5! text-xs! rounded-full!";
+function VariantBadge({ badge }) {
+  if (!badge) return null;
+  const style = VARIANT_BADGE_STYLES[badge] || "bg-slate-100 text-slate-600";
+  return (
+    <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${style}`}>
+      {badge}
+    </span>
+  );
+}
 
-const activeStockData = [
-  { id: "st-1", productCode: "WR-001", variant: "Dinorado", expiry: "Exp. Oct 17, 2026", stockQty: 0, stockStatus: "out", description: "Premium rice, locally sourced specialty..." },
-  { id: "st-2", productCode: "WR-001", variant: "Dinorado", expiry: "Exp. Oct 17, 2026", stockQty: 0, stockStatus: "out", description: "Premium rice, locally sourced specialty..." },
-  { id: "st-3", productCode: "WR-001", variant: "Dinorado", expiry: "Exp. Oct 17, 2026", stockQty: 100, stockStatus: "low", badge: "Expiring Soon", description: "Premium rice, locally sourced specialty..." },
-  { id: "st-4", productCode: "WR-001", variant: "Dinorado", expiry: "Exp. Jul 24, 2026", stockQty: 150, stockStatus: "low", badge: "Expired", description: "Premium rice, locally sourced specialty..." },
-  { id: "st-5", productCode: "WR-001", variant: "Dinorado", expiry: "Exp. Jul 24, 2026", stockQty: 150, stockStatus: "low", badge: "Expired", description: "Premium rice, locally sourced specialty..." },
-];
+// ─── Table header ──────────────────────────────────────────────────────────────
+const COLUMNS = ["Product Code", "Variant", "Stock Qty (kg)", "Description", "Action"];
 
-const archivedStockData = Array.from({ length: 20 }, (_, i) => {
-  const templates = [
-    { expiry: "Exp. Oct 17, 2026", stockQty: 0, stockStatus: "out" },
-    { expiry: "Exp. Oct 17, 2026", stockQty: 0, stockStatus: "out" },
-    { expiry: "Exp. Oct 17, 2026", stockQty: 100, stockStatus: "low" },
-    { expiry: "Exp. Jul 24, 2026", stockQty: 150, stockStatus: "low" },
-    { expiry: "Exp. Jul 24, 2026", stockQty: 150, stockStatus: "low" },
-  ];
-  const template = templates[i % templates.length];
-  return {
-    id: `arc-${i + 1}`,
-    productCode: "WR-001",
-    variant: "Dinorado",
-    description: "Premium rice, locally sourced specialty...",
-    ...template,
-  };
-});
+// ─── Sort helper ───────────────────────────────────────────────────────────────
+const sortProducts = (products, sortBy) => {
+  const arr = [...products];
+  if (sortBy === "code-asc")  return arr.sort((a, b) => a.productCode.localeCompare(b.productCode));
+  if (sortBy === "qty-desc")  return arr.sort((a, b) => parseFloat(b.stockQty) - parseFloat(a.stockQty));
+  if (sortBy === "qty-asc")   return arr.sort((a, b) => parseFloat(a.stockQty) - parseFloat(b.stockQty));
+  if (sortBy === "level-out") {
+    const order = { out: 0, low: 1, in: 2 };
+    return arr.sort((a, b) => (order[a.stockLevel] ?? 3) - (order[b.stockLevel] ?? 3));
+  }
+  return arr;
+};
 
-const StockManagement = () => {
-  const [activeTab, setActiveTab] = useState("active");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("qty-desc");
+// ─── Page ─────────────────────────────────────────────────────────────────────
+export default function WarehouseEncoderStockManagement() {
+  const [activeTab,   setActiveTab]   = useState("active");
+  const [search,      setSearch]      = useState("");
+  const [sortBy,      setSortBy]      = useState("default");
   const [currentPage, setCurrentPage] = useState(1);
-  const [toast, setToast] = useState({ isOpen: false, message: "", type: "success" });
 
-  // Modal states
-  const [archiveModal, setArchiveModal] = useState({ isOpen: false, product: null, isLoading: false });
-  const [deleteModal, setDeleteModal] = useState({ isOpen: false, product: null, isLoading: false });
-  const [restoreModal, setRestoreModal] = useState({ isOpen: false, product: null, isLoading: false });
+  const handleTab    = (v) => { setActiveTab(v); setCurrentPage(1); };
+  const handleSearch = (v) => { setSearch(v);    setCurrentPage(1); };
+  const handleSort   = (v) => { setSortBy(v);    setCurrentPage(1); };
 
-  const tabs = [
-    { id: "active", label: "Active" },
-    { id: "archive", label: "Archive" },
-  ];
+  const basePool = activeTab === "archive" ? ARCHIVED_PRODUCTS : ACTIVE_PRODUCTS;
 
-  const sourceData = activeTab === "active" ? activeStockData : archivedStockData;
-
-  const filteredData = useMemo(() => {
-    const filtered = sourceData.filter((item) => {
-      const query = searchQuery.toLowerCase();
-      return (
-        query === "" ||
-        item.productCode.toLowerCase().includes(query) ||
-        item.variant.toLowerCase().includes(query) ||
-        item.description.toLowerCase().includes(query)
+  const filtered = useMemo(() => {
+    let result = basePool;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.productCode.toLowerCase().includes(q) ||
+          p.variant.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q)
       );
-    });
-
-    const sorted = [...filtered];
-    switch (sortBy) {
-      case "qty-asc":
-        return sorted.sort((a, b) => a.stockQty - b.stockQty);
-      case "code-asc":
-        return sorted.sort((a, b) => a.productCode.localeCompare(b.productCode));
-      case "qty-desc":
-      default:
-        return sorted.sort((a, b) => b.stockQty - a.stockQty);
     }
-  }, [sourceData, searchQuery, sortBy]);
+    return sortProducts(result, sortBy);
+  }, [basePool, search, sortBy]);
 
-  const itemsPerPage = 10;
-  const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
-  const rangeEnd = Math.min(startIndex + itemsPerPage, filteredData.length);
-  const itemNoun = activeTab === "active" ? "products" : "archived products";
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ROWS_PER_PAGE));
+  const pageSlice  = filtered.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
+
   const footerLabel =
-    filteredData.length > 0
-      ? `Showing ${startIndex + 1}-${rangeEnd} of ${filteredData.length} ${itemNoun}`
-      : `No ${itemNoun} found`;
-
-  // SectionedTableCard groups rows into sections; a single section with no
-  // `label` renders as a plain flat table (no divider row), which is what
-  // this page needs (unlike Order History's date-grouped sections).
-  const tableSections = useMemo(() => [{ rows: paginatedData }], [paginatedData]);
-
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    setSearchQuery("");
-    setCurrentPage(1);
-  };
-
-  const handleAddProduct = () => {
-    console.log("Open add product form");
-  };
-
-  const handleViewDetails = (row) => {
-    console.log("View details", row.id);
-  };
-
-  const handleArchive = (row) => {
-    setArchiveModal({ isOpen: true, product: row, isLoading: false });
-  };
-
-  const handleArchiveConfirm = async () => {
-    setArchiveModal((prev) => ({ ...prev, isLoading: true }));
-    try {
-      console.log("Archiving product:", archiveModal.product.id);
-      // Add API call here
-      setTimeout(() => {
-        setArchiveModal({ isOpen: false, product: null, isLoading: false });
-        setToast({
-          isOpen: true,
-          message: `${archiveModal.product.variant} archived successfully!`,
-          type: "success",
-        });
-      }, 500);
-    } catch (error) {
-      console.error("Archive failed:", error);
-      setArchiveModal((prev) => ({ ...prev, isLoading: false }));
-      setToast({
-        isOpen: true,
-        message: "Failed to archive product",
-        type: "error",
-      });
-    }
-  };
-
-  const handleRestore = (row) => {
-    setRestoreModal({ isOpen: true, product: row, isLoading: false });
-  };
-
-  const handleRestoreConfirm = async () => {
-    setRestoreModal((prev) => ({ ...prev, isLoading: true }));
-    try {
-      console.log("Restoring product:", restoreModal.product.id);
-      // Add API call here
-      setTimeout(() => {
-        setRestoreModal({ isOpen: false, product: null, isLoading: false });
-        setToast({
-          isOpen: true,
-          message: `${restoreModal.product.variant} restored successfully!`,
-          type: "success",
-        });
-      }, 500);
-    } catch (error) {
-      console.error("Restore failed:", error);
-      setRestoreModal((prev) => ({ ...prev, isLoading: false }));
-      setToast({
-        isOpen: true,
-        message: "Failed to restore product",
-        type: "error",
-      });
-    }
-  };
-
-  const handleDeletePermanently = (row) => {
-    setDeleteModal({ isOpen: true, product: row, isLoading: false });
-  };
-
-  const handleDeleteConfirm = async () => {
-    setDeleteModal((prev) => ({ ...prev, isLoading: true }));
-    try {
-      console.log("Deleting product:", deleteModal.product.id);
-      // Add API call here
-      setTimeout(() => {
-        setDeleteModal({ isOpen: false, product: null, isLoading: false });
-        setToast({
-          isOpen: true,
-          message: `${deleteModal.product.variant} deleted permanently!`,
-          type: "success",
-        });
-      }, 500);
-    } catch (error) {
-      console.error("Delete failed:", error);
-      setDeleteModal((prev) => ({ ...prev, isLoading: false }));
-      setToast({
-        isOpen: true,
-        message: "Failed to delete product",
-        type: "error",
-      });
-    }
-  };
-
-  const columns = [
-    { key: "productCode", label: "Product Code" },
-    {
-      key: "variant",
-      label: "Variant",
-      render: (row) => (
-        <div>
-          <p className="text-[13px] font-semibold text-slate-800">{row.variant}</p>
-          <p className="text-[11px] text-slate-400">{row.expiry}</p>
-          {row.badge ? (
-            <span
-              className={`mt-1 inline-flex rounded-md border px-1.5 py-0.5 text-[9px] font-semibold ${
-                expiryBadgeStyles[row.badge] || "border-slate-200 bg-slate-50 text-slate-500"
-              }`}
-            >
-              {row.badge}
-            </span>
-          ) : null}
-        </div>
-      ),
-    },
-    {
-      key: "stockQty",
-      label: "Stock Qty (kg)",
-      render: (row) => (
-        <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] text-slate-700">
-          <span className={`h-1.5 w-1.5 rounded-full ${statusDotStyles[row.stockStatus] || "bg-slate-400"}`} />
-          {row.stockQty.toLocaleString()} kg
-        </span>
-      ),
-    },
-    {
-      key: "description",
-      label: "Description",
-      cellClassName: "max-w-xs truncate text-slate-500",
-    },
-    {
-      key: "action",
-      label: "Action",
-      headerClassName: "text-right",
-      render: (row) =>
-        activeTab === "active" ? (
-          <div className="flex items-center justify-end gap-2">
-            <button
-              onClick={() => handleViewDetails(row)}
-              className="rounded-full border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700"
-            >
-              View Details
-            </button>
-            <CustomAmberButton
-              text="Archive"
-              onClick={() => handleArchive(row)}
-              className={tableButtonClass}
-            />
-          </div>
-        ) : (
-          <div className="flex items-center justify-end gap-2">
-            <CustomGreenButton
-              text="Restore"
-              onClick={() => handleRestore(row)}
-              className={tableButtonClass}
-            />
-            <CustomRedButton
-              text="Delete Permanently"
-              onClick={() => handleDeletePermanently(row)}
-              className={tableButtonClass}
-            />
-          </div>
-        ),
-    },
-  ];
+    filtered.length === 0
+      ? "No products found"
+      : `Showing ${(currentPage - 1) * ROWS_PER_PAGE + 1}–${Math.min(
+          currentPage * ROWS_PER_PAGE,
+          filtered.length
+        )} of ${filtered.length} ${activeTab === "archive" ? "archived products" : "products"}`;
 
   return (
-    <>
-      <Breadcrumbs
-        items={[
-          { label: "Management", path: "/warehouse-encoder/dashboard" },
-          { label: "Stock Management" },
-        ]}
-      />
-
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Stock Management</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Manage warehouse inventory and product records.
-        </p>
+    <div className="space-y-5">
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      <div className="space-y-1">
+        <Breadcrumbs items={[{ label: "Management" }, { label: "Stock Management" }]} />
+        <h1 className="text-[clamp(1.75rem,3vw,2.25rem)] font-extrabold tracking-[-0.03em] text-slate-900">
+          Stock Management
+        </h1>
+        <p className="text-sm text-slate-500">Manage warehouse inventory and product records.</p>
       </div>
 
-      <Tabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
+      {/* ── Tabs ────────────────────────────────────────────────────────────── */}
+      <Tabs tabs={TABS} activeTab={activeTab} onTabChange={handleTab} />
 
-      <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-        <div className="flex flex-col sm:flex-row gap-3 flex-1">
-          <div className="flex-1 min-w-0">
-            <SearchFilter
-              onSearch={(value) => {
-                setSearchQuery(value);
-                setCurrentPage(1);
-              }}
-              placeholder="Search product code, variant, or description"
-            />
-          </div>
-          <SortByDropdown value={sortBy} onChange={setSortBy} options={sortOptions} />
+      {/* ── Toolbar ─────────────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-[200px] max-w-sm">
+          <SearchFilter
+            onSearch={handleSearch}
+            placeholder="Search product code, variant, or description"
+          />
         </div>
+        <SortByDropdown value={sortBy} onChange={handleSort} options={SORT_OPTIONS} />
 
+        {/* Add Product — only on Active tab */}
         {activeTab === "active" && (
           <CustomGreenButton
             text={
-              <span className="flex items-center gap-2">
-                <Plus size={16} />
+              <span className="flex items-center gap-1.5">
+                <Plus size={14} strokeWidth={2.5} />
                 Add Product
               </span>
             }
-            onClick={handleAddProduct}
-            className="rounded-full! shrink-0"
+            className="ml-auto whitespace-nowrap px-4 py-2 text-sm"
           />
         )}
       </div>
 
+      {/* ── Legend (Active tab only) ─────────────────────────────────────────── */}
       {activeTab === "active" && (
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="font-semibold text-gray-700">Legend:</span>
-          {legendItems.map((item) => (
-            <span
-              key={item.label}
-              className={`inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold ${item.text}`}
-            >
-              <span className={`h-2 w-2 rounded-full ${item.dot}`} />
-              {item.label}
-            </span>
-          ))}
+        <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-600">
+          <span className="text-slate-400">Legend:</span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> In Stock
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-400" /> Low Stock
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Out of Stock
+          </span>
         </div>
       )}
 
-      <SectionedTableCard
-        columns={columns}
-        sections={tableSections}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        footerLabel={footerLabel}
-        className={activeTab === "active" ? "active-table" : "archive-table"}
-      />
+      {/* ── Table Card ──────────────────────────────────────────────────────── */}
+      <article className="w-full overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.06)]">
+        <div className="overflow-x-auto">
+          <table className="min-w-full border-collapse">
+            <thead>
+              <tr className="bg-[#EDEDED] text-left text-[11px] font-extrabold uppercase tracking-[0.03em] text-slate-600">
+                {COLUMNS.map((col) => (
+                  <th
+                    key={col}
+                    className="whitespace-nowrap px-4 py-3 align-middle first:pl-5 last:pr-5"
+                  >
+                    {col}
+                  </th>
+                ))}
+              </tr>
+            </thead>
 
-      <style>{`
-        .active-table th:last-child {
-          padding-right: 4rem;
-        }
-        .active-table td[data-col="action"] {
-          padding-right: 2rem;
-        }
-        .archive-table th:last-child {
-          padding-right: 7rem;
-        }
-        .archive-table td[data-col="action"] {
-          padding-right: 2rem;
-        }
-      `}</style>
+            <tbody>
+              {pageSlice.length === 0 ? (
+                <tr>
+                  <td colSpan={COLUMNS.length} className="px-5 py-16 text-center text-sm text-slate-400">
+                    No matching products found.
+                  </td>
+                </tr>
+              ) : (
+                pageSlice.map((product) => (
+                  <tr
+                    key={product.id}
+                    className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70 transition-colors"
+                  >
+                    {/* Product Code */}
+                    <td className="whitespace-nowrap px-4 py-3 pl-5 text-[13px] font-semibold text-slate-700">
+                      {product.productCode}
+                    </td>
 
-      {/* Modal Components */}
-      <ArchiveProductModal
-        isOpen={archiveModal.isOpen}
-        onClose={() => setArchiveModal({ isOpen: false, product: null, isLoading: false })}
-        onArchive={handleArchiveConfirm}
-        productName={archiveModal.product?.variant || "Product"}
-        isLoading={archiveModal.isLoading}
-      />
+                    {/* Variant + expiry + optional badge */}
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col">
+                        <span className="text-[13px] font-semibold text-slate-800">
+                          {product.variant}
+                        </span>
+                        <span className="text-[11px] text-slate-400">{product.expiry}</span>
+                        <VariantBadge badge={product.variantBadge} />
+                      </div>
+                    </td>
 
-      <DeleteProductModal
-        isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ isOpen: false, product: null, isLoading: false })}
-        onDelete={handleDeleteConfirm}
-        productName={deleteModal.product?.variant || "Product"}
-        isLoading={deleteModal.isLoading}
-      />
+                    {/* Stock Qty */}
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <span className="flex items-center gap-2 text-[13px] text-slate-700">
+                        <StockDot level={product.stockLevel} />
+                        {product.stockQty}
+                      </span>
+                    </td>
 
-      <RestoreProductModal
-        isOpen={restoreModal.isOpen}
-        onClose={() => setRestoreModal({ isOpen: false, product: null, isLoading: false })}
-        onRestore={handleRestoreConfirm}
-        productName={restoreModal.product?.variant || "Product"}
-        isLoading={restoreModal.isLoading}
-      />
+                    {/* Description */}
+                    <td className="px-4 py-3 text-[13px] text-slate-500 max-w-[220px]">
+                      <span className="line-clamp-2">{product.description}</span>
+                    </td>
 
-      {/* Toast Notification */}
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast({ isOpen: false, message: "", type: "success" })}
-      />
-    </>
+                    {/* Action */}
+                    <td className="whitespace-nowrap px-4 py-3 pr-5">
+                      {activeTab === "active" ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="rounded-full border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700"
+                          >
+                            View Details
+                          </button>
+                          <CustomAmberButton
+                            text="Archive"
+                            className="px-3 py-1.5 text-[11px] rounded-full"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <CustomGreenButton
+                            text="Restore"
+                            className="px-3 py-1.5 text-[11px] rounded-full"
+                          />
+                          <CustomRedButton
+                            text="Delete Permanently"
+                            className="px-3 py-1.5 text-[11px] rounded-full"
+                          />
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {filtered.length > 0 && (
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageLabel={footerLabel}
+          />
+        )}
+      </article>
+    </div>
   );
-};
-
-export default StockManagement;
+}
