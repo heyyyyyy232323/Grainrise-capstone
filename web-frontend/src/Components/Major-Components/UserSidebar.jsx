@@ -198,12 +198,87 @@ export const getUserSidebarConfig = (role = "admin") => {
         },
       ],
     },
+    miller_sales: {
+      panelLabel: "Miller Sales Panel",
+      sections: [
+        {
+          title: "MAIN",
+          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/miller-sales/dashboard" }],
+        },
+        {
+          title: "SALES",
+          items: [
+            { label: "Point of Sale", icon: CreditCard, path: "/miller-sales/point-of-sale" },
+            { label: "Sales History", icon: History, path: "/miller-sales/sales-history" },
+          ],
+        },
+        {
+          title: "ORDERS",
+          items: [
+            { label: "Online Orders", icon: ShoppingCart, path: "/miller-sales/online-orders" },
+          ],
+        },
+      ],
+    },
+    miller_logistics: {
+      panelLabel: "Miller Logistics Panel",
+      sections: [
+        {
+          title: "MAIN",
+          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/miller-logistics/dashboard" }],
+        },
+        {
+          title: "DELIVERY OPERATIONS",
+          items: [
+            { label: "Delivery Management", icon: Truck, path: "/miller-logistics/delivery-management" },
+            { label: "Product Returns", icon: CornerUpLeft, path: "/miller-logistics/product-returns" },
+          ],
+        },
+        {
+          title: "RECORDS",
+          items: [
+            { label: "Assigned History", icon: ClipboardList, path: "/miller-logistics/assigned-history" },
+            { label: "Fulfillment History", icon: PackageCheck, path: "/miller-logistics/fulfillment-history" },
+          ],
+        },
+        {
+          title: "FINANCE",
+          items: [
+            { label: "Reimbursement", icon: Wallet, path: "/miller-logistics/reimbursement" },
+            { label: "Reimbursement History", icon: History, path: "/miller-logistics/reimbursement-history" },
+          ],
+        },
+      ],
+    },
+    miller_finance: {
+      panelLabel: "Miller Finance Panel",
+      sections: [
+        {
+          title: "MAIN",
+          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/miller-finance/dashboard" }],
+        },
+        {
+          title: "FINANCE",
+          items: [
+            { label: "Payables", icon: BookOpen, path: "/miller-finance/payables" },
+            { label: "Taxes", icon: Receipt, path: "/miller-finance/taxes" },
+            { label: "Reimburse", icon: RefreshCcw, path: "/miller-finance/reimburse" },
+          ],
+        },
+        {
+          title: "RECORDS",
+          items: [
+            { label: "Payment History", icon: History, path: "/miller-finance/payment-history" },
+          ],
+        },
+      ],
+    },
   };
 
   return menuConfigs[role] || menuConfigs.admin;
 };
 
-export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales", "warehouse_logistics", "warehouse_procurement", "warehouse_finance", "supplier_encoder"];
+export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales", "warehouse_logistics", "warehouse_procurement", "warehouse_finance", "supplier_encoder", "miller_sales", "miller_logistics", "miller_finance"];
 
 const UserSidebar = ({
   role = "admin",

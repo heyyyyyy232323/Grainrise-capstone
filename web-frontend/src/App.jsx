@@ -48,6 +48,26 @@ import WarehouseManagement from "./Users/AdminAccounts/AccountAdmin/WarehouseMan
 import RetailerManagement from "./Users/AdminAccounts/AccountAdmin/RetailerManagement";
 import EmailUsers from "./Users/AdminAccounts/AccountAdmin/EmailUsers";
 
+// Miller Finance
+import MillerFinanceDashboard from "./Users/MillerAccounts/MillerFinance/MillerFinanceDashboard";
+import MillerFinancePaymentHistory from "./Users/MillerAccounts/MillerFinance/MillerFinancePaymentHistory";
+import MillerPayables from "./Users/MillerAccounts/MillerFinance/MillerPayables";
+import MillerReimburse from "./Users/MillerAccounts/MillerFinance/MillerReimburse";
+import MillerTaxes from "./Users/MillerAccounts/MillerFinance/MillerTaxes";
+
+// Miller Logistics
+import MillerAssignedHistory from "./Users/MillerAccounts/MillerLogistics/MillerAssignedHistory";
+import MillerDeliveryManagement from "./Users/MillerAccounts/MillerLogistics/MillerDeliveryManagement";
+import MillerFulfillmentHistory from "./Users/MillerAccounts/MillerLogistics/MillerFulfillmentHistory";
+import MillerProductReturns from "./Users/MillerAccounts/MillerLogistics/MillerProductReturns";
+import MillerReimbursement from "./Users/MillerAccounts/MillerLogistics/MillerReimbursement";
+import MillerReimbursementHistory from "./Users/MillerAccounts/MillerLogistics/MillerReimbursementHistory";
+
+// Miller Sales
+import MillerOnlineOrders from "./Users/MillerAccounts/MillerSales/MillerOnlineOrders";
+import MillerPOS from "./Users/MillerAccounts/MillerSales/MillerPOS";
+import MillerSalesDashboard from "./Users/MillerAccounts/MillerSales/MillerSalesDashboard";
+import MillerSalesHistory from "./Users/MillerAccounts/MillerSales/MillerSalesHistory";
 
 function App() {
   return (
@@ -115,6 +135,33 @@ function App() {
           <Route path="/supplier-encoder/orders" element={<MillerEncoderOrderHistory />} />
           <Route path="/supplier-encoder/requests" element={<MillerEncoderRequestOrders />} />
           <Route path="/supplier-encoder/stock" element={<MillerEncoderStockManagement />} />
+        </Route>
+
+        {/* Miller Sales pages */}
+        <Route element={<WarehouseEncoderLayout role="miller_sales" />}>
+          <Route path="/miller-sales/dashboard" element={<MillerSalesDashboard />} />
+          <Route path="/miller-sales/point-of-sale" element={<MillerPOS />} />
+          <Route path="/miller-sales/sales-history" element={<MillerSalesHistory />} />
+          <Route path="/miller-sales/online-orders" element={<MillerOnlineOrders />} />
+        </Route>
+
+        {/* Miller Logistics pages */}
+        <Route element={<WarehouseEncoderLayout role="miller_logistics" />}>
+          <Route path="/miller-logistics/delivery-management" element={<MillerDeliveryManagement />} />
+          <Route path="/miller-logistics/product-returns" element={<MillerProductReturns />} />
+          <Route path="/miller-logistics/reimbursement" element={<MillerReimbursement />} />
+          <Route path="/miller-logistics/reimbursement-history" element={<MillerReimbursementHistory />} />
+          <Route path="/miller-logistics/assigned-history" element={<MillerAssignedHistory />} />
+          <Route path="/miller-logistics/fulfillment-history" element={<MillerFulfillmentHistory />} />
+        </Route>
+
+        {/* Miller Finance pages */}
+        <Route element={<WarehouseEncoderLayout role="miller_finance" />}>
+          <Route path="/miller-finance/dashboard" element={<MillerFinanceDashboard />} />
+          <Route path="/miller-finance/payables" element={<MillerPayables />} />
+          <Route path="/miller-finance/taxes" element={<MillerTaxes />} />
+          <Route path="/miller-finance/reimburse" element={<MillerReimburse />} />
+          <Route path="/miller-finance/payment-history" element={<MillerFinancePaymentHistory />} />
         </Route>
 
         {/* Admin pages */}
