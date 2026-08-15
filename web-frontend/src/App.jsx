@@ -42,6 +42,11 @@ import MillerEncoderDashboard from "./Users/MillerAccounts/MillerEncoder/MillerE
 import MillerEncoderOrderHistory from "./Users/MillerAccounts/MillerEncoder/MillerEncoderOrderHistory";
 import MillerEncoderRequestOrders from "./Users/MillerAccounts/MillerEncoder/MillerEncoderRequestOrders";
 import MillerEncoderStockManagement from "./Users/MillerAccounts/MillerEncoder/MillerEncoderStockManagement";
+import AdminDashboard from "./Users/AdminAccounts/AccountAdmin/AdminDashboard";
+import SupplierManagement from "./Users/AdminAccounts/AccountAdmin/SupplierManagement";
+import WarehouseManagement from "./Users/AdminAccounts/AccountAdmin/WarehouseManagement";
+import RetailerManagement from "./Users/AdminAccounts/AccountAdmin/RetailerManagement";
+import EmailUsers from "./Users/AdminAccounts/AccountAdmin/EmailUsers";
 
 
 function App() {
@@ -110,6 +115,15 @@ function App() {
           <Route path="/supplier-encoder/orders" element={<MillerEncoderOrderHistory />} />
           <Route path="/supplier-encoder/requests" element={<MillerEncoderRequestOrders />} />
           <Route path="/supplier-encoder/stock" element={<MillerEncoderStockManagement />} />
+        </Route>
+
+        {/* Admin pages */}
+        <Route element={<WarehouseEncoderLayout role="admin" />}>
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/suppliers" element={<SupplierManagement />} />
+          <Route path="/admin/warehouses" element={<WarehouseManagement />} />
+          <Route path="/admin/retailers" element={<RetailerManagement />} />
+          <Route path="/admin/email-users" element={<EmailUsers />} />
         </Route>
       </Routes> 
     </BrowserRouter>
