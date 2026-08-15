@@ -132,7 +132,7 @@ const UserNavbar = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const effectiveMenuItems = menuItems.length > 0 ? menuItems : getUserNavbarMenuItems(() => {});
+  const effectiveMenuItems = menuItems.length > 0 ? menuItems : getUserNavbarMenuItems(() => { });
   const unreadCount = notifications.filter((item) => !item.read).length;
   const badgeCount = notificationCount || unreadCount;
 
@@ -278,14 +278,12 @@ const UserNavbar = ({
                 type="button"
                 aria-label="Toggle dark mode"
                 onClick={toggleTheme}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition ${
-                  darkModeEnabled ? "bg-[#0B7A2A]" : "bg-gray-300"
-                }`}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition ${darkModeEnabled ? "bg-[#0B7A2A]" : "bg-gray-300"
+                  }`}
               >
                 <span
-                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition ${
-                    darkModeEnabled ? "translate-x-4.5" : "translate-x-1"
-                  }`}
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition ${darkModeEnabled ? "translate-x-4.5" : "translate-x-1"
+                    }`}
                 />
               </button>
             </div>
@@ -301,11 +299,10 @@ const UserNavbar = ({
                       item.onClick?.();
                       setMenuOpen(false);
                     }}
-                    className={`w-full flex items-center gap-1.5 px-1.5 py-1.5 text-left transition ${
-                      isLogout
-                        ? "mt-0.5 pt-2 border-t border-gray-300 text-red-600 hover:text-red-700"
-                        : "text-gray-500 hover:text-gray-700"
-                    }`}
+                    className={`w-full flex items-center gap-1.5 px-1.5 py-1.5 text-left transition ${isLogout
+                      ? "mt-0.5 pt-2 border-t border-gray-300 text-red-600 hover:text-red-700"
+                      : "text-gray-500 hover:text-gray-700"
+                      }`}
                   >
                     {isLogout ? <LogOut size={16} /> : <CircleHelp size={16} />}
                     <span className="text-sm leading-none">{item.label}</span>
