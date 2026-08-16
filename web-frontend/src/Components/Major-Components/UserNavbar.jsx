@@ -70,7 +70,7 @@ const UserNavbar = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [darkModeEnabled, setDarkModeEnabled] = useState(true);
+  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [notifications, setNotifications] = useState(
     notificationItems.length > 0 ? notificationItems : getUserNavbarNotifications(),
   );
@@ -83,7 +83,7 @@ const UserNavbar = ({
     }
   }, [notificationItems]);
 
-  // Initialize theme from localStorage (defaults to dark based on current CSS)
+  // Initialize theme from localStorage. Default to light when no saved preference exists.
   useEffect(() => {
     try {
       const saved = localStorage.getItem("theme");
@@ -93,6 +93,10 @@ const UserNavbar = ({
       } else if (saved === "dark") {
         document.documentElement.classList.remove("light");
         setDarkModeEnabled(true);
+      } else {
+        document.documentElement.classList.add("light");
+        localStorage.setItem("theme", "light");
+        setDarkModeEnabled(false);
       }
     } catch (e) {
       // ignore
