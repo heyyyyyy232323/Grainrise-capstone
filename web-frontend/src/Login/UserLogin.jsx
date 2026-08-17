@@ -78,7 +78,7 @@ const UserLogin = () => {
           {/* Panel color overlay at 70% opacity so the background image shows through */}
           <div className="absolute inset-0 bg-[#F9F9FF] opacity-70" />
 
-          <div className="relative z-10 w-full max-w-md bg-white rounded-2xl shadow-xl p-8 sm:p-10">
+          <div className="relative z-10 w-full max-w-md bg-white/60 rounded-2xl shadow-xl p-8 sm:p-10">
             {/* Logo placeholder — swap this block for your real GrainRise logo */}
             <div className="flex items-center justify-center mb-6">
               <img
