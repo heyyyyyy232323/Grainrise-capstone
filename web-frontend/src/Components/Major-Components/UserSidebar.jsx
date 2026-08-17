@@ -54,13 +54,28 @@ export const getUserSidebarConfig = (role = "admin") => {
           title: "SALES",
           items: [
             { label: "Point of Sale", icon: CreditCard, path: "/retailer/point-of-sale" },
+            { label: "Sales History", icon: History, path: "/retailer/sales-history" },
           ],
         },
         {
-          title: "MANAGEMENT",
+          title: "INVENTORY",
           items: [
-            { label: "Orders", icon: ShoppingCart, path: "/retailer/orders" },
             { label: "Inventory", icon: Package, path: "/retailer/inventory" },
+            { label: "Warehouse Marketplace", icon: Warehouse, path: "/retailer/warehouse-marketplace" },
+          ],
+        },
+        {
+          title: "ORDERS",
+          items: [
+            { label: "Order Tracking", icon: Truck, path: "/retailer/order-tracking" },
+            { label: "My Purchases", icon: ShoppingCart, path: "/retailer/my-purchases" },
+          ],
+        },
+        {
+          title: "SUPPORT",
+          items: [
+            { label: "Product Returns Issue", icon: CornerUpLeft, path: "/retailer/product-returns" },
+            { label: "Messages", icon: Mail, path: "/retailer/messages" },
           ],
         },
       ],

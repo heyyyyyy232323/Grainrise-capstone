@@ -9,7 +9,6 @@ import RetailerRegister from "./Register/RetailerRegister";
 import DashboardPreview from "./DashboardPreview";
 import WarehouseManagerRegister from "./Register/WarehouseManagerRegister";
 import SupplierRegister from "./Register/SupplierRegister";
-import FarmerRegister from "./Register/FarmerRegister";
 import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout";
 import WarehouseEncoderDashboard from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderDashboard";
 import WarehouseEncoderOrderHistory from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderOrderHistory";
@@ -48,6 +47,10 @@ import WarehouseManagement from "./Users/AdminAccounts/AccountAdmin/WarehouseMan
 import RetailerManagement from "./Users/AdminAccounts/AccountAdmin/RetailerManagement";
 import EmailUsers from "./Users/AdminAccounts/AccountAdmin/EmailUsers";
 import RetailerPointOfSale from "./Users/RetailerAccounts/RetailerPointOfSale";
+import RetailerSalesHistory from "./Users/RetailerAccounts/RetailerSalesHistory";
+import RetailerInventory from "./Users/RetailerAccounts/RetailerInventory";
+import RetailerProductReturns from "./Users/RetailerAccounts/RetailerProductReturns";
+import RetailerMyPurchases from "./Users/RetailerAccounts/RetailerMyPurchases";
 
 // Miller Finance
 import MillerFinanceDashboard from "./Users/MillerAccounts/MillerFinance/MillerFinanceDashboard";
@@ -83,7 +86,6 @@ function App() {
         <Route path="/dashboard-preview" element={<DashboardPreview />} />
         <Route path="/register/warehouse-manager" element={<WarehouseManagerRegister />} />
         <Route path="/register/supplier" element={<SupplierRegister />} />
-        <Route path="/register/farmer" element={<FarmerRegister />} />
 
         {/* Warehouse Encoder pages share one Layout so sidebar state persists across them */}
         <Route element={<WarehouseEncoderLayout role="warehouse_encoder" />}>
@@ -168,6 +170,10 @@ function App() {
         {/* Retailer pages */}
         <Route element={<WarehouseEncoderLayout role="retailer" />}>
           <Route path="/retailer/point-of-sale" element={<RetailerPointOfSale />} />
+          <Route path="/retailer/sales-history" element={<RetailerSalesHistory />} />
+          <Route path="/retailer/inventory" element={<RetailerInventory />} />
+          <Route path="/retailer/product-returns" element={<RetailerProductReturns />} />
+          <Route path="/retailer/my-purchases" element={<RetailerMyPurchases />} />
         </Route>
 
         {/* Admin pages */}
