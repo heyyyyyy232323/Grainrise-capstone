@@ -51,6 +51,12 @@ export const getUserSidebarConfig = (role = "admin") => {
           items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/retailer/dashboard" }],
         },
         {
+          title: "SALES",
+          items: [
+            { label: "Point of Sale", icon: CreditCard, path: "/retailer/point-of-sale" },
+          ],
+        },
+        {
           title: "MANAGEMENT",
           items: [
             { label: "Orders", icon: ShoppingCart, path: "/retailer/orders" },

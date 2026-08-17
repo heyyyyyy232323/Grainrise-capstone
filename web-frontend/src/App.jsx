@@ -47,6 +47,7 @@ import SupplierManagement from "./Users/AdminAccounts/AccountAdmin/SupplierManag
 import WarehouseManagement from "./Users/AdminAccounts/AccountAdmin/WarehouseManagement";
 import RetailerManagement from "./Users/AdminAccounts/AccountAdmin/RetailerManagement";
 import EmailUsers from "./Users/AdminAccounts/AccountAdmin/EmailUsers";
+import RetailerPointOfSale from "./Users/RetailerAccounts/RetailerPointOfSale";
 
 // Miller Finance
 import MillerFinanceDashboard from "./Users/MillerAccounts/MillerFinance/MillerFinanceDashboard";
@@ -162,6 +163,11 @@ function App() {
           <Route path="/miller-finance/taxes" element={<MillerTaxes />} />
           <Route path="/miller-finance/reimburse" element={<MillerReimburse />} />
           <Route path="/miller-finance/payment-history" element={<MillerFinancePaymentHistory />} />
+        </Route>
+
+        {/* Retailer pages */}
+        <Route element={<WarehouseEncoderLayout role="retailer" />}>
+          <Route path="/retailer/point-of-sale" element={<RetailerPointOfSale />} />
         </Route>
 
         {/* Admin pages */}
