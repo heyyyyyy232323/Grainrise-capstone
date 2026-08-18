@@ -23,6 +23,8 @@ const stockFilterOptions = [
 	{ value: "low-stock", label: "Low Stock Products" },
 ];
 
+const paymentMethods = ["Cash on Delivery", "GCash", "Bank Transfer", "Credit Card"];
+
 const PRODUCTS_PER_PAGE = 6;
 const LOW_STOCK_THRESHOLD = 50;
 
@@ -33,8 +35,10 @@ export default function WarehousePOS() {
 	const [page, setPage] = useState(1);
 
 	const [cartItems, setCartItems] = useState([]); // { id, productId, name, price, quantity }
-	const [paymentMethod] = useState("Cash");
+	const [paymentMethod, setPaymentMethod] = useState(paymentMethods[0]);
+	const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
 	const [cash, setCash] = useState(0);
+	const [transactionDone, setTransactionDone] = useState(false);
 
 	const filtered = useMemo(() => {
 		const q = query.trim().toLowerCase();
@@ -79,6 +83,7 @@ export default function WarehousePOS() {
 	};
 
 	const handleAddToCart = (product) => {
+		setTransactionDone(false);
 		setCartItems((prev) => {
 			const idx = prev.findIndex((it) => it.productId === product.id);
 			if (idx !== -1) {
@@ -99,6 +104,13 @@ export default function WarehousePOS() {
 
 	const handleRemove = (cartId) => setCartItems((prev) => prev.filter((it) => it.id !== cartId));
 
+	const handleCompleteTransaction = () => {
+		if (cartItems.length === 0) return;
+		setTransactionDone(true);
+		setCartItems([]);
+		setCash(0);
+	};
+
 	const itemCount = useMemo(() => cartItems.reduce((s, it) => s + it.quantity, 0), [cartItems]);
 	const subtotal = useMemo(() => cartItems.reduce((s, it) => s + it.price * it.quantity, 0), [cartItems]);
 	const total = subtotal;
@@ -118,8 +130,16 @@ export default function WarehousePOS() {
 				<p className="text-sm text-slate-500">Browse available warehouse products and process walk-in retailer transactions efficiently.</p>
 			</div>
 
-			<div className="flex flex-col lg:flex-row gap-6">
-				{/* Products area */}
+		{transactionDone && (
+			<div className="mb-4 flex items-center gap-3 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3">
+				<span className="text-emerald-700 font-semibold text-sm">
+					Transaction completed successfully!
+				</span>
+			</div>
+		)}
+
+		<div className="flex flex-col lg:flex-row gap-6">
+			{/* Products area */}
 				<div className="flex-1">
 					<div className="flex gap-3 mb-4 items-center">
 						<div className="flex-1">
@@ -188,19 +208,23 @@ export default function WarehousePOS() {
 					)}
 				</div>
 
-				{/* Cart column */}
-				<aside className="w-full lg:w-[400px] sticky top-20 self-start">
-					<div className="flex max-h-[calc(100vh-6rem)] flex-col rounded-md border border-slate-200 bg-white">
-						<div className="flex items-center justify-between px-4 pt-4">
-							<h3 className="text-lg font-bold text-slate-900">Current Sale</h3>
-							<span className="rounded-full bg-emerald-700 px-3 py-1 text-xs font-bold text-white">
-								Items: {itemCount}
-							</span>
-						</div>
+{/* Cart / Checkout Sidebar */}
+			<aside className="w-full lg:w-[400px] lg:sticky lg:top-20 self-start">
+				<div className="flex max-h-[calc(100vh-6rem)] flex-col rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+					{/* Cart header */}
+					<div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-100">
+						<h3 className="text-lg font-bold text-slate-900">Current Sale</h3>
+						<span className="rounded-full bg-emerald-700 px-3 py-1 text-xs font-bold text-white">
+							Items: {itemCount}
+						</span>
+					</div>
 
-						<div className="mt-3 flex-1 space-y-3 overflow-y-auto px-4">
-							{cartItems.length === 0 ? (
-								<div className="text-sm text-slate-500 pb-4">No items in cart</div>
+					{/* Cart item list */}
+					<div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+						{cartItems.length === 0 ? (
+							<div className="flex flex-col items-center gap-2 py-6 text-slate-400">
+								<p className="text-sm">No items in cart</p>
+							</div>
 							) : (
 								cartItems.map((it) => (
 									<POSCartCard
@@ -227,16 +251,46 @@ export default function WarehousePOS() {
 								</span>
 							</div>
 
-							<button
-								type="button"
-								className="flex w-full items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-left"
-							>
-								<div>
-									<p className="text-xs text-slate-500">Payment Method</p>
-									<p className="text-sm font-bold text-slate-900">{paymentMethod}</p>
-								</div>
-								<ChevronDown size={16} className="text-slate-400" />
-							</button>
+							<div className="relative">
+								<button
+									type="button"
+									id="payment-method-btn"
+									onClick={() => setShowPaymentDropdown((v) => !v)}
+									className="flex w-full items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-left hover:border-emerald-400 transition"
+								>
+									<div>
+										<p className="text-xs text-slate-500">Payment Method</p>
+										<p className="text-sm font-bold text-slate-900">{paymentMethod}</p>
+									</div>
+									<ChevronDown
+										size={16}
+										className={`text-slate-400 transition-transform ${showPaymentDropdown ? "rotate-180" : ""}`}
+									/>
+								</button>
+
+								{showPaymentDropdown && (
+									<ul className="absolute bottom-full left-0 right-0 mb-1 z-20 rounded-md border border-slate-200 bg-white shadow-lg overflow-hidden">
+										{paymentMethods.map((m) => (
+											<li key={m}>
+												<button
+													type="button"
+													onClick={() => {
+														setPaymentMethod(m);
+														setShowPaymentDropdown(false);
+													}}
+													className={`w-full px-3 py-2 text-left text-sm transition hover:bg-emerald-50 ${
+														m === paymentMethod
+															? "font-semibold text-emerald-700 bg-emerald-50"
+															: "text-slate-700"
+													}`}
+												>
+													{m}
+												</button>
+											</li>
+										))}
+									</ul>
+								)}
+							</div>
 
 							<div>
 								<label className="text-xs text-slate-500">Amount Paid</label>
@@ -260,13 +314,20 @@ export default function WarehousePOS() {
 
 							<div className="flex gap-3 pt-1">
 								<button
-									onClick={() => setCartItems([])}
-									className="flex-1 rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+									type="button"
+									id="clear-cart-btn"
+									onClick={() => {
+										setCartItems([]);
+										setCash(0);
+										setTransactionDone(false);
+									}}
+									className="flex-1 rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
 								>
 									Clear Cart
 								</button>
 								<CustomGreenButton
 									text="Complete Transaction"
+									onClick={handleCompleteTransaction}
 									className="flex-1 !rounded-md"
 								/>
 							</div>

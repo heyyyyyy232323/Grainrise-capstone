@@ -37,13 +37,13 @@ const Dropdown = ({
     if (label.endsWith("*")) {
       const baseLabel = label.slice(0, -1).trim();
       return (
-        <label className="block mb-2 text-sm font-medium text-gray-700 text-left">
+        <label className="block mb-4 text-sm font-medium text-gray-700 text-left">
           {baseLabel} <span className="text-red-500">*</span>
         </label>
       );
     }
     return (
-      <label className="block mb-2 text-sm font-medium text-gray-700 text-left">
+      <label className="block mb-4 text-sm font-medium text-gray-700 text-left">
         {label}
       </label>
     );
