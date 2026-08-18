@@ -23,8 +23,9 @@ const RetailerManagement = () => {
       key: "action",
       label: "Action",
       render: (row) => {
-        const s = String(row.status || "").toLowerCase();
-        if (s.includes("to review") || s.includes("review")) {
+        const s = String(row.status || "").toLowerCase().trim();
+
+        if (s === "to review") {
           return (
             <div className="flex justify-end">
               <button className="rounded-full bg-amber-400 text-white px-3 py-1.5 text-[11px] font-semibold hover:brightness-95">Review</button>
@@ -32,20 +33,24 @@ const RetailerManagement = () => {
           );
         }
 
-        if (s.includes("active")) {
+        if (s === "inactive" || s === "archived") {
           return (
             <div className="flex gap-2 justify-end">
-              <button className="rounded-full border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50">View Details</button>
-              <button className="rounded-full bg-amber-400 text-white px-3 py-1.5 text-[11px] font-semibold hover:brightness-95">Archive</button>
+              <button className="rounded-full text-white px-3 py-1.5 text-[11px] font-semibold" style={{backgroundColor: '#00A516'}} onMouseEnter={(e) => e.target.style.backgroundColor = '#008C13'} onMouseLeave={(e) => e.target.style.backgroundColor = '#00A516'}>
+                Restore
+              </button>
+              <button className="rounded-full bg-[#DC2626] text-white px-3 py-1.5 text-[11px] font-semibold hover:bg-[#B91C1C]">
+                Delete Permanently
+              </button>
             </div>
           );
         }
 
-        if (s.includes("inactive") || s.includes("archived")) {
+        if (s === "active") {
           return (
             <div className="flex gap-2 justify-end">
-              <button className="rounded-full bg-emerald-600 text-white px-3 py-1.5 text-[11px] font-semibold hover:brightness-95">Restore</button>
-              <button className="rounded-full bg-rose-600 text-white px-3 py-1.5 text-[11px] font-semibold hover:brightness-95">Delete Permanently</button>
+              <button className="rounded-full border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50">View Details</button>
+              <button className="rounded-full bg-amber-400 text-white px-3 py-1.5 text-[11px] font-semibold hover:brightness-95">Archive</button>
             </div>
           );
         }
@@ -81,10 +86,10 @@ const RetailerManagement = () => {
   const counts = useMemo(() => {
     return rawRows.reduce(
       (acc, r) => {
-        const s = String(r.status).toLowerCase();
-        if (s.includes("to review") || s.includes("review")) acc.toReview++;
-        else if (s.includes("active")) acc.active++;
-        else if (s.includes("inactive") || s.includes("archived")) acc.inactive++;
+        const s = String(r.status).toLowerCase().trim();
+        if (s === "to review") acc.toReview++;
+        else if (s === "inactive" || s === "archived") acc.inactive++;
+        else if (s === "active") acc.active++;
         return acc;
       },
       { toReview: 0, active: 0, inactive: 0 }
@@ -94,9 +99,12 @@ const RetailerManagement = () => {
   // No section label needed — the active Tab already tells the user which
   // category they're viewing, so we skip the extra colored banner row.
   const sections = useMemo(() => {
-    if (activeTab === "to-review") return [{ rows: rawRows.filter((r) => String(r.status).toLowerCase().includes("to review")) }];
-    if (activeTab === "active") return [{ rows: rawRows.filter((r) => String(r.status).toLowerCase().includes("active")) }];
-    if (activeTab === "inactive") return [{ rows: rawRows.filter((r) => String(r.status).toLowerCase().includes("inactive") || String(r.status).toLowerCase().includes("archived")) }];
+    if (activeTab === "to-review")
+      return [{ rows: rawRows.filter((r) => String(r.status).toLowerCase().trim() === "to review") }];
+    if (activeTab === "inactive")
+      return [{ rows: rawRows.filter((r) => ["inactive", "archived"].includes(String(r.status).toLowerCase().trim())) }];
+    if (activeTab === "active")
+      return [{ rows: rawRows.filter((r) => String(r.status).toLowerCase().trim() === "active") }];
     return [{ rows: rawRows }];
   }, [activeTab, rawRows]);
 
