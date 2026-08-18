@@ -83,7 +83,7 @@ export default function SectionedTableCard({
       {isEmpty ? (
         <EmptyState title={emptyStateTitle} description={emptyStateDescription} />
       ) : (
-        <div className="overflow-x-auto -mx-4 md:mx-0">
+        <div className="overflow-x-auto overflow-y-auto max-h-72 sm:max-h-96 md:max-h-none -mx-4 md:mx-0">
           <div className="px-4 md:px-0">
             <table className="min-w-full border-collapse">
             <thead>
