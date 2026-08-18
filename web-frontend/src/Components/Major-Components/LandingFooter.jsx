@@ -105,13 +105,11 @@ export default function LandingFooter() {
       </div>
 
       <div className="lp-footer__bottom">
-        <p>&copy; 2024 GrainRise. All rights reserved.</p>
+        <p>2026 GrainRise. All rights reserved.</p>
         <div className="lp-footer__bottom-links">
           <button>Sitemap</button>
           <span className="lp-footer__separator">|</span>
           <button>Privacy Policy</button>
-          <span className="lp-footer__separator">|</span>
-          <button>Terms of Service</button>
         </div>
       </div>
     </footer>

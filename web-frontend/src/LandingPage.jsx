@@ -30,6 +30,7 @@ import {
 import dashboardMockup from './assets/lapisIStop.png';
 import grainHands from './assets/handss.png';
 import groceryImg from './assets/Grocery.png';
+import warehouseImg from './assets/supplier-warehouse.jpg';
 import bluescreenImg from './assets/bluescreen.jpg';
 import talkieImg from './assets/talkie.jpg';
 import pinkscreenImg from './assets/pinkscreen.jpg';
@@ -37,6 +38,8 @@ import stockImg from './assets/stock.jpg';
 import phoneImg from './assets/phone.jpg';
 import phone2Img from './assets/phone2.jpg';
 import ctaBgImg from './assets/adminloginBG.png';
+import grainBgImg from './assets/grainnn.jpg';
+import fieldBgImg from './assets/field.jpg';
 
 // ─── Animated counter ─────────────────────────────────────────────────────────
 function useCounter(target, duration, trigger) {
@@ -60,7 +63,7 @@ function useCounter(target, duration, trigger) {
 }
 
 // ─── Intersection observer ────────────────────────────────────────────────────
-function useInView(threshold = 0.2) {
+function useInView(threshold = 0.15) {
   const ref = useRef(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
@@ -71,6 +74,20 @@ function useInView(threshold = 0.2) {
     return () => obs.disconnect();
   }, [threshold]);
   return [ref, inView];
+}
+
+// ─── Scroll Reveal Wrapper ────────────────────────────────────────────────────
+function AnimatedSection({ children, className = '', id, tag: Tag = 'section', animation = 'fade-up' }) {
+  const [ref, inView] = useInView(0.15);
+  return (
+    <Tag
+      ref={ref}
+      id={id}
+      className={`${className} lp-reveal lp-reveal--${animation} ${inView ? 'lp-reveal--visible' : ''}`}
+    >
+      {children}
+    </Tag>
+  );
 }
 
 // ─── Landing Page ─────────────────────────────────────────────────────────────
@@ -102,7 +119,8 @@ export default function LandingPage() {
   };
 
   const ECOSYSTEM_STEPS = [
-    { icon: <Tractor size={26} strokeWidth={1.8} />,        label: 'Suppliers'  },
+    { icon: <Tractor size={26} strokeWidth={1.8} />,        label: 'Farmers'    },
+    { icon: <Truck size={26} strokeWidth={1.8} />,          label: 'Suppliers'  },
     { icon: <Warehouse size={26} strokeWidth={1.8} />,      label: 'Warehouse'  },
     { icon: <ClipboardCheck size={26} strokeWidth={1.8} />,  label: 'Inventory'  },
     { icon: <ClipboardList size={26} strokeWidth={1.8} />,   label: 'Orders'     },
@@ -157,19 +175,21 @@ export default function LandingPage() {
 
       {/* ── HERO ─── */}
       <section className="lp-hero" id="hero">
+        <div className="lp-hero__bg" style={{ backgroundImage: `url(${fieldBgImg})` }} />
+        <div className="lp-hero__overlay" />
         <div className="lp-hero__bg-blob lp-hero__bg-blob--1" />
         <div className="lp-hero__bg-blob lp-hero__bg-blob--2" />
 
         <div className="lp-hero__content">
           <h1 className="lp-hero__headline">
             Empowering the Future of Rice<br />
-            <span className="lp-green">Supply Chain Management</span>
+            Supply Chain Management
           </h1>
           <p className="lp-hero__sub">
             Built for smarter inventory, logistics, and supply chain operations.
           </p>
           <div className="lp-hero__ctas">
-            <button className="lp-btn lp-btn--cta" onClick={() => navigate('/register')} id="hero-register-btn">Join Us Now</button>
+            <button className="lp-btn lp-btn--cta" onClick={() => navigate('/register')} id="hero-register-btn">Register</button>
             <button className="lp-btn lp-btn--outline" onClick={() => scrollTo('about')} id="hero-learn-btn">Learn More</button>
           </div>
         </div>
@@ -187,31 +207,11 @@ export default function LandingPage() {
         <div className="lp-hero__ticker">
           <span className="lp-ticker__label">Built for Rice Supply Chain Stakeholders</span>
           <div className="lp-ticker__items">
-            <div className="lp-ticker__item"><Store size={26} strokeWidth={1.8} /><span>Retailers</span></div>
+            <div className="lp-ticker__item"><Tractor size={26} strokeWidth={1.8} /><span>Farmers</span></div>
             <div className="lp-ticker__item"><Truck size={26} strokeWidth={1.8} /><span>Suppliers</span></div>
             <div className="lp-ticker__item"><Warehouse size={26} strokeWidth={1.8} /><span>Warehouses</span></div>
+            <div className="lp-ticker__item"><Store size={26} strokeWidth={1.8} /><span>Retailers</span></div>
           </div>
-        </div>
-      </section>
-
-      {/* ── ECOSYSTEM ─── */}
-      <section className="lp-ecosystem" id="ecosystem">
-        <div className="lp-ecosystem__badge">How it works</div>
-        <h2 className="lp-section-headline lp-section-headline--center">
-          Connected Supply Chain Ecosystem
-        </h2>
-        <div className="lp-ecosystem__flow">
-          {ECOSYSTEM_STEPS.map((step, i) => (
-            <React.Fragment key={step.label}>
-              <div className="lp-flow-step">
-                <div className="lp-flow-icon">{step.icon}</div>
-                <span className="lp-flow-label">{step.label}</span>
-              </div>
-              {i < ECOSYSTEM_STEPS.length - 1 && (
-                <div className="lp-flow-arrow"><ArrowRight size={20} strokeWidth={1.5} color="#aac8aa" /></div>
-              )}
-            </React.Fragment>
-          ))}
         </div>
       </section>
 
@@ -236,69 +236,94 @@ export default function LandingPage() {
       </section>
 
       {/* ── ABOUT ─── */}
-      <section className="lp-about" id="about">
-        <div className="lp-about__text">
-          <h2 className="lp-section-headline">
-            Transforming Rice Supply Chains Through Innovation and Technology
-          </h2>
-          <p className="lp-about__body">
-            GrainRise modernizes rice distribution through smart tools and sustainable practices. We connect key stakeholders across the ecosystem helping create a cleaner, faster, and more reliable supply chain.
-          </p>
-          <p className="lp-about__body">
-            Built on innovation and inclusivity, we help businesses reduce waste, improve planning, and increase profitability. With AI-driven insights and forecasting, teams can make smarter decisions with confidence.
-          </p>
-          <div className="lp-about__checks">
-            <div className="lp-check-item"><CheckCircle size={18} strokeWidth={2} /><span>Real-time visibility</span></div>
-            <div className="lp-check-item"><CheckCircle size={18} strokeWidth={2} /><span>Smarter restocking</span></div>
-            <div className="lp-check-item"><CheckCircle size={18} strokeWidth={2} /><span>Cleaner operations</span></div>
+      <AnimatedSection className="lp-about" id="about">
+        <div className="lp-about__inner">
+          <div className="lp-about__text">
+            <h2 className="lp-section-headline">
+              Transforming Rice Supply Chains Through Innovation and Technology
+            </h2>
+            <p className="lp-about__body">
+              GrainRise modernizes rice distribution through smart tools and sustainable practices. We connect key stakeholders across the ecosystem helping create a cleaner, faster, and more reliable supply chain.
+            </p>
+            <p className="lp-about__body">
+              Built on innovation and inclusivity, we help businesses reduce waste, improve planning, and increase profitability. With AI-driven insights and forecasting, teams can make smarter decisions with confidence.
+            </p>
+            <div className="lp-about__checks">
+              <div className="lp-check-item"><CheckCircle size={18} strokeWidth={2} /><span>Real-time visibility</span></div>
+              <div className="lp-check-item"><CheckCircle size={18} strokeWidth={2} /><span>Smarter restocking</span></div>
+              <div className="lp-check-item"><CheckCircle size={18} strokeWidth={2} /><span>Cleaner operations</span></div>
+            </div>
           </div>
-        </div>
 
-        {/* About image */}
-        <div className="lp-about__image-wrap">
-          <img
-            src={groceryImg}
-            alt="Grocery and rice products"
-            className="lp-about__image"
-          />
-        </div>
-      </section>
-
-      {/* ── SERVICES ─── */}
-      <section className="lp-services" id="services">
-        <div className="lp-services__left">
-          <h2 className="lp-section-headline">Our Services</h2>
-          <p className="lp-services__sub">
-            Everything you need to run a cleaner, faster, and more predictable rice distribution workflow.
-          </p>
-          {/* Grain hands image */}
-          <div className="lp-services__image-wrap">
+          {/* About image */}
+          <div className="lp-about__image-wrap">
             <img
-              src={grainHands}
-              alt="Hands holding rice grain"
-              className="lp-services__image"
+              src={groceryImg}
+              alt="Warehouse operations aisle"
+              className="lp-about__image"
             />
           </div>
         </div>
+      </AnimatedSection>
 
-        <div className="lp-services__right">
-          {SERVICES.map(svc => (
-            <div key={svc.name} className="lp-service-item">
-              <div className="lp-service-icon">
-                {svc.icon}
+      {/* ── ECOSYSTEM ─── */}
+      <AnimatedSection className="lp-ecosystem" id="ecosystem">
+        <div className="lp-ecosystem__badge">How it works</div>
+        <h2 className="lp-section-headline lp-section-headline--center">
+          Connected Supply Chain Ecosystem
+        </h2>
+        <div className="lp-ecosystem__flow">
+          {ECOSYSTEM_STEPS.map((step, i) => (
+            <React.Fragment key={step.label}>
+              <div className="lp-flow-step">
+                <div className="lp-flow-icon">{step.icon}</div>
+                <span className="lp-flow-label">{step.label}</span>
               </div>
-              <div className="lp-service-text">
-                <div className="lp-service-name">{svc.name}</div>
-                <div className="lp-service-desc">{svc.desc}</div>
-              </div>
-              <div className="lp-service-arrow"><ChevronRight size={18} strokeWidth={2} color="#2d6a35" /></div>
-            </div>
+              {i < ECOSYSTEM_STEPS.length - 1 && (
+                <div className="lp-flow-arrow"><ArrowRight size={20} strokeWidth={1.5} color="#aac8aa" /></div>
+              )}
+            </React.Fragment>
           ))}
         </div>
-      </section>
+      </AnimatedSection>
+
+      {/* ── SERVICES ─── */}
+      <AnimatedSection className="lp-services" id="services">
+        <div className="lp-services__inner">
+          <div className="lp-services__left">
+            <h2 className="lp-section-headline">Our Services</h2>
+            <p className="lp-services__sub">
+              Everything you need to run a cleaner, faster, and more predictable rice distribution workflow.
+            </p>
+            {/* Grain hands image */}
+            <div className="lp-services__image-wrap">
+              <img
+                src={grainHands}
+                alt="Hands holding rice grain"
+                className="lp-services__image"
+              />
+            </div>
+          </div>
+
+          <div className="lp-services__right">
+            {SERVICES.map(svc => (
+              <div key={svc.name} className="lp-service-item">
+                <div className="lp-service-icon">
+                  {svc.icon}
+                </div>
+                <div className="lp-service-text">
+                  <div className="lp-service-name">{svc.name}</div>
+                  <div className="lp-service-desc">{svc.desc}</div>
+                </div>
+                <div className="lp-service-arrow"><ChevronRight size={18} strokeWidth={2} color="#2d6a35" /></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </AnimatedSection>
 
       {/* ── WHY CHOOSE ─── */}
-      <section className="lp-why" id="why">
+      <AnimatedSection className="lp-why" id="why">
         <div className="lp-why__header">
           <h2 className="lp-why__title">Why Choose <span className="lp-green">GrainRise</span>?</h2>
           <p className="lp-why__sub">A smarter way to manage rice distribution — built for clarity, speed, and better decision-making.</p>
@@ -364,10 +389,10 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* ── TESTIMONIALS ─── */}
-      <section className="lp-testimonials" id="testimonials">
+      <AnimatedSection className="lp-testimonials" id="testimonials">
         <div className="lp-testimonials__header">
           <h2 className="lp-testimonials__title">What our <span className="lp-green">Partners</span> Say</h2>
         </div>
@@ -387,10 +412,12 @@ export default function LandingPage() {
             </div>
           ))}
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* ── MOBILE PROMO ─── */}
-      <section className="lp-mobile-promo">
+      <AnimatedSection className="lp-mobile-promo">
+        <div className="lp-mobile-promo__bg" style={{ backgroundImage: `url(${grainBgImg})` }} />
+        <div className="lp-mobile-promo__overlay" />
         <div className="lp-mobile-promo__inner">
           <div className="lp-mobile-promo__images">
             <div className="lp-phone-wrap lp-phone-wrap--back">
@@ -417,10 +444,10 @@ export default function LandingPage() {
             </p>
           </div>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* ── CTA BANNER ─── */}
-      <section className="lp-cta-banner">
+      <AnimatedSection className="lp-cta-banner">
         <div className="lp-cta-banner__bg" style={{ backgroundImage: `url(${ctaBgImg})` }} />
         <div className="lp-cta-banner__overlay" />
         <div className="lp-cta-banner__inner">
@@ -438,7 +465,7 @@ export default function LandingPage() {
             Join Us Now
           </button>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* Reusable Landing Page Footer */}
       <LandingFooter />
