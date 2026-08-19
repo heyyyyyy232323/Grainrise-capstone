@@ -388,8 +388,14 @@ const WarehouseManagerRegister = () => {
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden bg-gray-50">
-      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${backgroundImage})` }} />
-      <div className="absolute inset-0 bg-white/75 backdrop-blur-[2px]" />
+      {/* Gradient background matching Figma design */}
+      <div className="absolute inset-0" style={{
+        background: "linear-gradient(135deg, #e8f5e9 0%, #f1f8f1 25%, #ffffff 50%, #f0faf2 75%, #dcf0e0 100%)"
+      }} />
+      {/* Subtle decorative radial glow */}
+      <div className="absolute inset-0" style={{
+        background: "radial-gradient(ellipse at 80% 10%, rgba(134,197,148,0.25) 0%, transparent 55%), radial-gradient(ellipse at 10% 90%, rgba(100,180,120,0.18) 0%, transparent 50%)"
+      }} />
 
       {/* Top Header */}
       <div className="relative z-10 w-full px-6 sm:px-10 pt-6 flex items-center justify-between">
