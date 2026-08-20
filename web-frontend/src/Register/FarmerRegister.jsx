@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -23,8 +23,10 @@ import CustomGreenButton from "../Components/Minor-Components/CustomGreenButton"
 import CustomWhiteButton from "../Components/Minor-Components/CustomWhiteButton";
 import Dropdown from "../Components/Minor-Components/Dropdown";
 import Footer from "../Components/Minor-Components/CustomFooter";
+import Toast from "../Components/Minor-Components/Toast";
+import useToast from "../Components/hooks/useToast";
 import logo from "../assets/Logo.png";
-import backgroundImage from "../assets/UserloginBG.png";
+import backgroundImage from "../assets/smudge.jpg";
 import useFormValidation from "../Components/hooks/useFormValidation";
 
 const PROVINCES = ["Bulacan", "Metro Manila (NCR)"];
@@ -35,7 +37,7 @@ const MUNICIPALITIES_MAP = {
 const BARANGAYS_MAP = {
   "Baliuag": ["Bagong Nayon", "Barangca", "Calantipay", "Catulinan", "Concepcion", "Hinukay", "Makinabang", "Matangtubig", "Pagala", "Paitan", "Piel"]
 };
-const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "V"];
+const SUFFIXES = ["N/A", "Jr.", "Sr.", "II", "III", "IV", "V"];
 const GENDERS = ["Male", "Female", "Others", "Preferred Not To Say"];
 const LAND_OWNERSHIP_OPTIONS = ["Owner", "Tenant", "Lessee", "Agricultural Worker", "Cooperative Member"];
 const RICE_VARIETIES = [
@@ -48,8 +50,8 @@ const RICE_VARIETIES = [
 ];
 
 // Helper: Wraps CustomTextbox to show field-level error message underneath
-const FieldWithError = ({ error, children }) => (
-  <div>
+const FieldWithError = ({ error, children, fieldRef }) => (
+  <div ref={fieldRef}>
     {children}
     {error && <span className="text-xs text-red-500 mt-1 block text-left">{error}</span>}
   </div>
@@ -120,6 +122,32 @@ const FarmerRegister = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { errors, setErrors, validators, validate, getPasswordStrength } = useFormValidation();
   const [validationMsg, setValidationMsg] = useState("");
+  const { toasts, showToast, removeToast } = useToast();
+
+  // Field refs for scroll-to-error
+  const fieldRefs = useRef({});
+  const setFieldRef = (fieldName) => (el) => { if (el) fieldRefs.current[fieldName] = el; };
+
+  const STEP1_FIELD_ORDER = [
+    "firstName", "lastName", "gender",
+    "province", "municipality", "barangay", "streetAddress",
+    "email", "contactNumber", "password", "confirmPassword", "agreeTerms",
+  ];
+  const STEP3_FIELD_ORDER = [
+    "farmProvince", "farmMunicipality", "farmBarangay", "farmStreetAddress",
+    "totalFarmArea", "landOwnership", "riceVariety", "croppingCycles",
+  ];
+
+  const scrollToFirstError = useCallback((errorMap, fieldOrder) => {
+    for (const field of fieldOrder) {
+      if (errorMap[field] && fieldRefs.current[field]) {
+        fieldRefs.current[field].scrollIntoView({ behavior: "smooth", block: "center" });
+        const focusable = fieldRefs.current[field].querySelector("input, select, textarea");
+        if (focusable) focusable.focus({ preventScroll: true });
+        break;
+      }
+    }
+  }, []);
 
   // Dynamic dropdowns for Step 1 Address
   const activeMunicipalitiesStep1 = form.province ? (MUNICIPALITIES_MAP[form.province] || []) : [];
@@ -130,7 +158,18 @@ const FarmerRegister = () => {
   const activeBarangaysStep3 = form.farmMunicipality ? (BARANGAYS_MAP[form.farmMunicipality] || ["Barangay 1", "Barangay 2", "Barangay 3"]) : [];
 
   const handleInputChange = (field, value) => {
-    const processedValue = field === "middleInitial" ? value.toUpperCase().slice(0, 1) : value;
+    let processedValue = value;
+    if (field === "firstName") {
+      processedValue = value.replace(/[^a-zA-Z\s]/g, "");
+    } else if (field === "lastName") {
+      processedValue = value.replace(/[^a-zA-Z\s\-]/g, "");
+    } else if (field === "middleInitial") {
+      // Auto-uppercase and cap to 2 chars for middle initial
+      processedValue = value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 2);
+    } else if (field === "contactNumber" || field === "officialContactNumber") {
+      // Allow digits, spaces, and a leading + for +63 format, max 13 chars
+      processedValue = value.replace(/[^0-9+\s]/g, "").slice(0, 13);
+    }
     setForm((prev) => ({ ...prev, [field]: processedValue }));
     validateField(field, processedValue);
   };
@@ -213,7 +252,7 @@ const FarmerRegister = () => {
   // Step 1 Submit handler
   const handleNextStep1 = (e) => {
     e.preventDefault();
-    const passed = validate({
+    const rules = {
       firstName: validators.firstName(form.firstName),
       middleInitial: validators.middleInitial(form.middleInitial),
       lastName: validators.lastName(form.lastName),
@@ -231,11 +270,18 @@ const FarmerRegister = () => {
         form.agreeTerms,
         "You must agree to the Privacy Policy and Terms of Service"
       ),
-    });
+    };
+    const passed = validate(rules);
 
     if (!passed) {
       setValidationMsg("Please correct the errors in the form before proceeding.");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      scrollToFirstError(rules, STEP1_FIELD_ORDER);
+      showToast({
+        type: "error",
+        title: "Validation Error",
+        message: "Please correct the highlighted fields before proceeding.",
+        duration: 4000,
+      });
     } else {
       setValidationMsg("");
       setStep(2);
@@ -304,7 +350,7 @@ const FarmerRegister = () => {
   // Step 3 Submit handler
   const handleNextStep3 = (e) => {
     e.preventDefault();
-    const passed = validate({
+    const rules = {
       farmProvince: form.farmProvince ? "" : "Farm Province is required",
       farmMunicipality: form.farmMunicipality ? "" : "Farm Municipality is required",
       farmBarangay: form.farmBarangay ? "" : "Farm Barangay is required",
@@ -317,11 +363,18 @@ const FarmerRegister = () => {
         : !/^\d+$/.test(form.croppingCycles)
         ? "Accepts whole numbers only"
         : "",
-    });
+    };
+    const passed = validate(rules);
 
     if (!passed) {
       setValidationMsg("Please fill in all required farm information fields.");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      scrollToFirstError(rules, STEP3_FIELD_ORDER);
+      showToast({
+        type: "error",
+        title: "Missing Farm Information",
+        message: "Please fill in all required farm information fields.",
+        duration: 4000,
+      });
     } else {
       setValidationMsg("");
       setStep(4);
@@ -434,9 +487,21 @@ const FarmerRegister = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden bg-gray-50">
-      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${backgroundImage})` }} />
-      <div className="absolute inset-0 bg-white/75 backdrop-blur-[2px]" />
+    <div className="min-h-screen flex flex-col relative overflow-hidden">
+      {/* Gradient background matching Figma design */}
+      <div className="absolute inset-0" style={{
+        background: "linear-gradient(135deg, #e8f5e9 0%, #f5faf5 35%, #ffffff 65%, #bcead1 100%)"
+      }} />
+      {/* Subtle decorative radial glow */}
+      <div className="absolute inset-0" style={{
+        background: "radial-gradient(ellipse at 80% 10%, rgba(134,197,148,0.3) 0%, transparent 60%), radial-gradient(ellipse at 20% 90%, rgba(76,175,80,0.25) 0%, transparent 60%)"
+      }} />
+      {/* Background image overlay matching CTA style */}
+      <div className="absolute inset-0 bg-cover bg-center pointer-events-none" style={{
+        backgroundImage: `url(${backgroundImage})`,
+        opacity: 0.42,
+        mixBlendMode: "multiply"
+      }} />
 
       {/* Top Header Navigation */}
       <div className="relative z-10 w-full px-6 sm:px-10 pt-6 flex items-center justify-between">
@@ -516,11 +581,8 @@ const FarmerRegister = () => {
 
             {renderStepper()}
 
-            {validationMsg && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium text-left">
-                {validationMsg}
-              </div>
-            )}
+            {/* Toast notifications */}
+            <Toast toasts={toasts} removeToast={removeToast} />
 
             {/* STEP 1: PERSONAL INFORMATION */}
             {step === 1 && (
@@ -531,7 +593,7 @@ const FarmerRegister = () => {
                     Personal Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
-                    <FieldWithError error={errors.firstName}>
+                    <FieldWithError error={errors.firstName} fieldRef={setFieldRef("firstName")}>
                       <CustomTextbox
                         label={<>First Name <span className="text-red-500">*</span></>}
                         placeholder="e.g. Juan"
@@ -547,7 +609,7 @@ const FarmerRegister = () => {
                       onChange={(e) => handleInputChange("middleInitial", e.target.value)}
                     />
 
-                    <FieldWithError error={errors.lastName}>
+                    <FieldWithError error={errors.lastName} fieldRef={setFieldRef("lastName")}>
                       <CustomTextbox
                         label={<>Last Name <span className="text-red-500">*</span></>}
                         placeholder="e.g. Dela Cruz"
@@ -561,7 +623,7 @@ const FarmerRegister = () => {
                     <div className="md:col-span-1">
                       <Dropdown label="Suffix (Optional)" placeholder="Select suffix" options={SUFFIXES} value={form.suffix} onChange={(val) => handleInputChange("suffix", val)} />
                     </div>
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-2" ref={setFieldRef("gender")}>
                       <Dropdown label="Gender *" placeholder="Select Gender" options={GENDERS} value={form.gender} onChange={(val) => handleInputChange("gender", val)} error={errors.gender} />
                     </div>
                   </div>
@@ -573,8 +635,12 @@ const FarmerRegister = () => {
                     Address Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                    <Dropdown label="Province *" placeholder="Select Province" options={PROVINCES} value={form.province} onChange={handleProvinceChange} error={errors.province} />
-                    <Dropdown label="Municipality *" placeholder="Select City" options={activeMunicipalitiesStep1} value={form.municipality} onChange={handleMunicipalityChange} error={errors.municipality} />
+                    <div ref={setFieldRef("province")}>
+                      <Dropdown label="Province *" placeholder="Select Province" options={PROVINCES} value={form.province} onChange={handleProvinceChange} error={errors.province} />
+                    </div>
+                    <div ref={setFieldRef("municipality")}>
+                      <Dropdown label="Municipality *" placeholder="Select City" options={activeMunicipalitiesStep1} value={form.municipality} onChange={handleMunicipalityChange} error={errors.municipality} />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -590,9 +656,11 @@ const FarmerRegister = () => {
                       />
                     </div>
 
-                    <Dropdown label="Barangay *" placeholder="Select Barangay" options={activeBarangaysStep1} value={form.barangay} onChange={(val) => handleInputChange("barangay", val)} error={errors.barangay} />
+                    <div ref={setFieldRef("barangay")}>
+                      <Dropdown label="Barangay *" placeholder="Select Barangay" options={activeBarangaysStep1} value={form.barangay} onChange={(val) => handleInputChange("barangay", val)} error={errors.barangay} />
+                    </div>
 
-                    <FieldWithError error={errors.streetAddress}>
+                    <FieldWithError error={errors.streetAddress} fieldRef={setFieldRef("streetAddress")}>
                       <CustomTextbox
                         label={<>Street Address <span className="text-red-500">*</span></>}
                         placeholder="Unit/Bldg, Street Name"
@@ -610,7 +678,7 @@ const FarmerRegister = () => {
                   </h3>
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <FieldWithError error={errors.email}>
+                      <FieldWithError error={errors.email} fieldRef={setFieldRef("email")}>
                         <CustomTextbox
                           label={<>Email Address <span className="text-red-500">*</span></>}
                           placeholder="youremail@example.com"
@@ -620,7 +688,7 @@ const FarmerRegister = () => {
                         />
                       </FieldWithError>
 
-                      <FieldWithError error={errors.contactNumber}>
+                      <FieldWithError error={errors.contactNumber} fieldRef={setFieldRef("contactNumber")}>
                         <CustomTextbox
                           label={<>Contact Number <span className="text-red-500">*</span></>}
                           placeholder="63+ 9XX XXX XXXX"
@@ -629,16 +697,18 @@ const FarmerRegister = () => {
                         />
                       </FieldWithError>
 
-                      <CustomTextbox
-                        label={<>Username <span className="text-gray-400 font-normal text-xs">(Optional)</span></>}
-                        placeholder="yourusername"
-                        value={form.username}
-                        onChange={(e) => handleInputChange("username", e.target.value)}
-                      />
+                      <FieldWithError error={errors.username} fieldRef={setFieldRef("username")}>
+                        <CustomTextbox
+                          label={<>Username <span className="text-gray-400 font-normal text-xs">(Optional)</span></>}
+                          placeholder="username"
+                          value={form.username}
+                          onChange={(e) => handleInputChange("username", e.target.value)}
+                        />
+                      </FieldWithError>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                      <div>
+                      <div ref={setFieldRef("password")}>
                         <FieldWithError error={errors.password}>
                           <div className="relative">
                             <CustomTextbox
@@ -699,7 +769,7 @@ const FarmerRegister = () => {
                         })()}
                       </div>
 
-                      <div>
+                      <div ref={setFieldRef("confirmPassword")}>
                         <FieldWithError error={errors.confirmPassword}>
                           <div className="relative">
                             <CustomTextbox
@@ -729,7 +799,7 @@ const FarmerRegister = () => {
                   </div>
                 </div>
 
-                <div className="pt-2 flex items-start gap-3">
+                <div className="pt-2 flex items-start gap-3" ref={setFieldRef("agreeTerms")}>
                   <input
                     id="agreeTerms"
                     type="checkbox"
@@ -1086,7 +1156,8 @@ const FarmerRegister = () => {
                   <div className="space-y-6">
                     {/* Drag and Drop Zone */}
                     <div
-                      className="border-2 border-dashed border-gray-200 rounded-2xl p-8 flex flex-col items-center justify-center text-center bg-gray-50/50 hover:bg-emerald-50/30 transition relative"
+                      className="border-2 border-dashed border-gray-200 rounded-2xl p-8 flex flex-col items-center justify-center text-center bg-gray-50/50 hover:bg-emerald-50/30 transition relative cursor-pointer"
+                      onClick={() => document.getElementById('rsbsa-upload-input').click()}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={handleFileDrop}
                     >

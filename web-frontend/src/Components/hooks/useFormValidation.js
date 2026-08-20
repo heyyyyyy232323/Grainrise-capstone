@@ -46,12 +46,12 @@ const useFormValidation = () => {
     /**
      * Middle Initial
      * - Optional (blank is acceptable)
-     * - Exactly 1 letter if provided
+     * - Exactly 1 or 2 letters if provided
      * - Should be auto-uppercased before calling this
      */
     middleInitial: (value) => {
       if (!value || value.trim() === "") return ""; // optional — no error
-      if (!/^[a-zA-Z]$/.test(value.trim())) return "Middle initial must be a single letter";
+      if (!/^[a-zA-Z]{1,2}$/.test(value.trim())) return "Middle initial must be 1 or 2 letters";
       return "";
     },
 

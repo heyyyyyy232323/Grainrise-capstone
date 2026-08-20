@@ -5,7 +5,7 @@ import CustomGreenButton from "../Components/Minor-Components/CustomGreenButton"
 import CustomWhiteButton from "../Components/Minor-Components/CustomWhiteButton";
 import Footer from "../Components/Minor-Components/CustomFooter";
 import Logo from "../assets/Logo.png";
-import backgroundImage from "../assets/UserloginBG.png";
+import backgroundImage from "../assets/smudge.jpg";
 
 
 import retailerImg from "../assets/retailer.jpg";
@@ -55,14 +55,20 @@ const RegisterGateway = () => {
 
   return (
 
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
+    <div className="min-h-screen flex flex-col relative overflow-hidden animate-page-fade">
       {/* Gradient background matching Figma design */}
       <div className="absolute inset-0" style={{
-        background: "linear-gradient(135deg, #e8f5e9 0%, #f1f8f1 25%, #ffffff 50%, #f0faf2 75%, #dcf0e0 100%)"
+        background: "linear-gradient(135deg, #e8f5e9 0%, #f5faf5 35%, #ffffff 65%, #bcead1 100%)"
       }} />
       {/* Subtle decorative radial glow */}
       <div className="absolute inset-0" style={{
-        background: "radial-gradient(ellipse at 80% 10%, rgba(134,197,148,0.25) 0%, transparent 55%), radial-gradient(ellipse at 10% 90%, rgba(100,180,120,0.18) 0%, transparent 50%)"
+        background: "radial-gradient(ellipse at 80% 10%, rgba(134,197,148,0.3) 0%, transparent 60%), radial-gradient(ellipse at 20% 90%, rgba(76,175,80,0.25) 0%, transparent 60%)"
+      }} />
+      {/* Background image overlay matching CTA style */}
+      <div className="absolute inset-0 bg-cover bg-center pointer-events-none" style={{
+        backgroundImage: `url(${backgroundImage})`,
+        opacity: 0.42,
+        mixBlendMode: "multiply"
       }} />
 
       <div className="relative z-10 flex-1 px-6 py-10">

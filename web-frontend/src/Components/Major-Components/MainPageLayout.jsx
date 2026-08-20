@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import UserNavbar, { getUserNavbarMenuItems } from "./UserNavbar";
 import UserSidebar from "./UserSidebar";
 
@@ -7,6 +7,7 @@ const MainPageLayout = ({ role = "warehouse_encoder" }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarMinimized, setSidebarMinimized] = useState(false);
   const [userRole] = useState(role);
+  const location = useLocation();
 
   const handleToggleSidebar = () => {
     const isMobile = window.innerWidth < 768;
@@ -53,7 +54,9 @@ const MainPageLayout = ({ role = "warehouse_encoder" }) => {
         {/* Scrollable Content Area - each page renders inside here */}
         <div className="flex-1 overflow-y-auto">
           <div className="px-4 py-6 md:px-8 md:py-8 space-y-6 w-full">
-            <Outlet />
+            <div key={location.pathname} className="animate-page-fade">
+              <Outlet />
+            </div>
           </div>
         </div>
       </main>

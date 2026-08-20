@@ -1,96 +1,120 @@
 # GrainRise — Setup Guide
 
+This guide details the instructions to configure and run the backend, web frontend, and mobile application for the GrainRise capstone project.
+
+---
+
 ## Prerequisites
-Make sure you have these installed before starting:
+Ensure the following are installed:
 - **Python 3.10+**
-- **Node.js 18+**
-- **npm**
+- **Node.js 18+** & **npm**
 
 ---
 
 ## 1. Backend (Django)
 
-```bash
-# Go to the backend folder
-cd backend
+The backend is built with Django and includes a pre-configured Python virtual environment (`.venv`) inside the `backend` folder.
 
-# Install dependencies
-pip install -r requirements.txt
+1. **Navigate to the backend directory:**
+   ```bash
+   cd backend
+   ```
 
-# Run database migrations
-python manage.py migrate
+2. **Activate the Virtual Environment:**
+   * **Windows (PowerShell):**
+     ```powershell
+     .venv\Scripts\Activate.ps1
+     ```
+   * **Windows (Command Prompt):**
+     ```cmd
+     .venv\Scripts\activate.bat
+     ```
+   * **macOS / Linux:**
+     ```bash
+     source .venv/bin/activate
+     ```
 
-# Start the server
-python manage.py runserver 0.0.0.0:8000
-```
+3. **Install Dependencies** (if needed):
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-> API will be live at **http://localhost:8000**
+4. **Run Database Migrations** (if needed):
+   ```bash
+   python manage.py migrate
+   ```
+
+5. **Start the Server:**
+   ```bash
+   python manage.py runserver 0.0.0.0:8000
+   ```
+
+> 🌐 **Backend API live at:** [http://localhost:8000](http://localhost:8000)
 >
-> Default accounts seeded automatically:
-> - `admin` / `admin123`
-> - `farmer` / `farmer123`
+> **Default seeded accounts:**
+> - Admin: `admin` / `admin123`
+> - Farmer: `farmer` / `farmer123`
 
 ---
 
 ## 2. Web Frontend (React + Vite)
 
-Open a **new terminal**, then:
+The frontend is a React application powered by Vite.
 
-```bash
-# Go to the web-frontend folder
-cd web-frontend
+1. **Navigate to the web frontend directory:**
+   ```bash
+   cd web-frontend
+   ```
 
-npm install react-router-dom
-npm install lucide-react
+2. **Install Dependencies:**
+   ```bash
+   npm install
+   ```
 
-# Install dependencies
+3. **Start the Development Server:**
+   ```bash
+   npm run dev
+   ```
 
-# Start the dev server
-npm run dev
-```
-
-> Website will be live at **http://localhost:5173**
+> 🌐 **Web App live at:** [http://localhost:5173](http://localhost:5173)
 
 ---
 
 ## 3. Mobile App (React Native / Expo)
 
-Open a **new terminal**, then:
+1. **Navigate to the mobile app directory:**
+   ```bash
+   cd mobile-app
+   ```
 
-```bash
-# Go to the mobile-app folder
-cd mobile-app
+2. **Install Dependencies:**
+   ```bash
+   npm install
+   ```
 
-# Install dependencies
-npm install
+3. **Start the Expo server:**
+   ```bash
+   npx expo start
+   ```
 
-# Start Expo
-npx expo start
+   *If you encounter dependency errors, run:*
+   ```bash
+   npx expo install expo@~54.0.0
+   npx expo install --fix
+   npx expo start -c
+   ```
 
-
-# to fix this 
-
-Run:
-npx expo install expo@~54.0.0
-
-then:
-npx expo install --fix
-
-Then, clear  cache:
-npx expo start -c
-```
-
-> Scan the QR code with the **Expo Go** app on your phone,
-> or press `w` for web, `a` for Android emulator, `i` for iOS simulator.
+> 📱 Scan the QR code using the **Expo Go** app on your phone, or press `w` for web, `a` for Android emulator, `i` for iOS simulator.
 
 ---
 
 ## Quick Summary
 
-| Service      | Command                          | URL / Access              |
-|--------------|----------------------------------|---------------------------|
-| Backend      | `python manage.py runserver`     | http://localhost:8000     |
-| Web Frontend | `npm run dev`                    | http://localhost:5173     |
-| Mobile App   | `npx expo start`                 | Expo QR / emulator        |
+To run everything simultaneously, open separate terminals and run:
 
-> **Run all three in separate terminals at the same time.**
+| Service | Directory | Command | URL / Access |
+| :--- | :--- | :--- | :--- |
+| **Backend** | `backend` | `.venv\Scripts\Activate` <br> `python manage.py runserver` | [http://localhost:8000](http://localhost:8000) |
+| **Web Frontend** | `web-frontend` | `npm run dev` | [http://localhost:5173](http://localhost:5173) |
+| **Mobile App** | `mobile-app` | `npx expo start` | Expo Go App / Emulator |
+

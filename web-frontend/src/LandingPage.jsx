@@ -168,7 +168,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="lp-root">
+    <div className="lp-root animate-page-fade">
       
       {/* Reusable Landing Page Header */}
       <LandingHeader />

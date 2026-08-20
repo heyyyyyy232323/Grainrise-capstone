@@ -25,7 +25,7 @@ const UserLogin = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col animate-page-fade">
       <div className="flex flex-1 flex-col md:flex-row">
         {/* Left panel */}
         <div className="relative w-full md:w-1/2 bg-gradient-to-b from-green-900 to-yellow-500 px-8 sm:px-12 py-10 flex flex-col justify-between">

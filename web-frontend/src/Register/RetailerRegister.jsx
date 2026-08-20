@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, CheckCircle, Upload, X, FileText, Check, Info, Clock } from "lucide-react";
 import CustomTextbox from "../Components/Minor-Components/CustomTextbox";
@@ -6,8 +6,10 @@ import CustomGreenButton from "../Components/Minor-Components/CustomGreenButton"
 import CustomWhiteButton from "../Components/Minor-Components/CustomWhiteButton";
 import Dropdown from "../Components/Minor-Components/Dropdown";
 import Footer from "../Components/Minor-Components/CustomFooter";
+import Toast from "../Components/Minor-Components/Toast";
+import useToast from "../Components/hooks/useToast";
 import logo from "../assets/Logo.png";
-import backgroundImage from "../assets/UserloginBG.png";
+import backgroundImage from "../assets/smudge.jpg";
 import useFormValidation from "../Components/hooks/useFormValidation";
 
 const PROVINCES = ["Bulacan", "Metro Manila (NCR)"];
@@ -18,13 +20,13 @@ const MUNICIPALITIES_MAP = {
 const BARANGAYS_MAP = {
   "Baliuag": ["Bagong Nayon", "Barangca", "Calantipay", "Catulinan", "Concepcion", "Hinukay", "Makinabang", "Matangtubig", "Pagala", "Paitan", "Piel"]
 };
-const SUFFIXES = ["Jr.", "Sr.", "II", "III", "IV", "V"];
+const SUFFIXES = ["N/A", "Jr.", "Sr.", "II", "III", "IV", "V"];
 const GENDERS = ["Male", "Female", "Others", "Preferred Not To Say"];
 
 // Small helper: wraps CustomTextbox so we can show a field-level error message
 // underneath it, since CustomTextbox itself has no built-in error state.
-const FieldWithError = ({ error, children }) => (
-  <div>
+const FieldWithError = ({ error, children, fieldRef }) => (
+  <div ref={fieldRef}>
     {children}
     {error && <span className="text-xs text-red-500 mt-1 block">{error}</span>}
   </div>
@@ -71,14 +73,47 @@ const RetailerRegister = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { errors, setErrors, validators, validate, getPasswordStrength } = useFormValidation();
   const [validationMsg, setValidationMsg] = useState("");
+  const { toasts, showToast, removeToast } = useToast();
+
+  // Field refs for scroll-to-error
+  const fieldRefs = useRef({});
+  const setFieldRef = (fieldName) => (el) => { if (el) fieldRefs.current[fieldName] = el; };
+
+  // Ordered list of fields — used to find the FIRST error to scroll to
+  const FIELD_ORDER = [
+    "firstName", "lastName", "gender",
+    "province", "municipality", "barangay", "streetAddress",
+    "email", "contactNumber", "password", "confirmPassword", "agreeTerms",
+  ];
+
+  const scrollToFirstError = useCallback((errorMap) => {
+    for (const field of FIELD_ORDER) {
+      if (errorMap[field] && fieldRefs.current[field]) {
+        fieldRefs.current[field].scrollIntoView({ behavior: "smooth", block: "center" });
+        // Try to focus the first focusable child
+        const focusable = fieldRefs.current[field].querySelector("input, select, textarea");
+        if (focusable) focusable.focus({ preventScroll: true });
+        break;
+      }
+    }
+  }, []);
 
   const activeMunicipalities = form.province ? (MUNICIPALITIES_MAP[form.province] || []) : [];
   const activeBarangays = form.municipality ? (BARANGAYS_MAP[form.municipality] || ["Barangay 1", "Barangay 2", "Barangay 3"]) : [];
 
   const handleInputChange = (field, value) => {
-    // Auto-uppercase and cap to 1 char for middle initial
-    const processedValue =
-      field === "middleInitial" ? value.toUpperCase().slice(0, 1) : value;
+    let processedValue = value;
+    if (field === "firstName") {
+      processedValue = value.replace(/[^a-zA-Z\s]/g, "");
+    } else if (field === "lastName") {
+      processedValue = value.replace(/[^a-zA-Z\s\-]/g, "");
+    } else if (field === "middleInitial") {
+      // Auto-uppercase and cap to 2 chars for middle initial
+      processedValue = value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 2);
+    } else if (field === "contactNumber" || field === "officialContactNumber") {
+      // Allow digits, spaces, and a leading + for +63 format, max 13 chars
+      processedValue = value.replace(/[^0-9+\s]/g, "").slice(0, 13);
+    }
     setForm((prev) => ({ ...prev, [field]: processedValue }));
     validateField(field, processedValue);
   };
@@ -147,7 +182,7 @@ const RetailerRegister = () => {
 
   // Step 1 Validation — uses useFormValidation hook's validate()
   const validateStep1 = () => {
-    const passed = validate({
+    const rules = {
       firstName:       validators.firstName(form.firstName),
       middleInitial:   validators.middleInitial(form.middleInitial),
       lastName:        validators.lastName(form.lastName),
@@ -173,11 +208,18 @@ const RetailerRegister = () => {
                          form.agreeTerms,
                          "You must agree to the Privacy Policy and Terms of Service"
                        ),
-    });
+    };
+    const passed = validate(rules);
 
     if (!passed) {
       setValidationMsg("Please correct the errors in the form before proceeding.");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      scrollToFirstError(rules);
+      showToast({
+        type: "error",
+        title: "Validation Error",
+        message: "Please correct the highlighted fields before proceeding.",
+        duration: 4000,
+      });
     } else {
       setValidationMsg("");
     }
@@ -339,14 +381,20 @@ const RetailerRegister = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden bg-gray-50">
+    <div className="min-h-screen flex flex-col relative overflow-hidden">
       {/* Gradient background matching Figma design */}
       <div className="absolute inset-0" style={{
-        background: "linear-gradient(135deg, #e8f5e9 0%, #f1f8f1 25%, #ffffff 50%, #f0faf2 75%, #dcf0e0 100%)"
+        background: "linear-gradient(135deg, #e8f5e9 0%, #f5faf5 35%, #ffffff 65%, #bcead1 100%)"
       }} />
       {/* Subtle decorative radial glow */}
       <div className="absolute inset-0" style={{
-        background: "radial-gradient(ellipse at 80% 10%, rgba(134,197,148,0.25) 0%, transparent 55%), radial-gradient(ellipse at 10% 90%, rgba(100,180,120,0.18) 0%, transparent 50%)"
+        background: "radial-gradient(ellipse at 80% 10%, rgba(134,197,148,0.3) 0%, transparent 60%), radial-gradient(ellipse at 20% 90%, rgba(76,175,80,0.25) 0%, transparent 60%)"
+      }} />
+      {/* Background image overlay matching CTA style */}
+      <div className="absolute inset-0 bg-cover bg-center pointer-events-none" style={{
+        backgroundImage: `url(${backgroundImage})`,
+        opacity: 0.42,
+        mixBlendMode: "multiply"
       }} />
 
       {/* Top Header */}
@@ -442,11 +490,8 @@ const RetailerRegister = () => {
 
             {renderStepper()}
 
-            {validationMsg && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium text-left">
-                {validationMsg}
-              </div>
-            )}
+            {/* Toast notifications rendered at page level */}
+            <Toast toasts={toasts} removeToast={removeToast} />
 
             {/* STEP 1 FORM */}
             {step === 1 && (
@@ -457,7 +502,7 @@ const RetailerRegister = () => {
                     Personal Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
-                    <FieldWithError error={errors.firstName}>
+                    <FieldWithError error={errors.firstName} fieldRef={setFieldRef("firstName")}>
                       <CustomTextbox
                         label={<>First Name <span className="text-red-500">*</span></>}
                         placeholder="e.g. Juan"
@@ -473,7 +518,7 @@ const RetailerRegister = () => {
                       onChange={(e) => handleInputChange("middleInitial", e.target.value)}
                     />
 
-                    <FieldWithError error={errors.lastName}>
+                    <FieldWithError error={errors.lastName} fieldRef={setFieldRef("lastName")}>
                       <CustomTextbox
                         label={<>Last Name <span className="text-red-500">*</span></>}
                         placeholder="e.g. Dela Cruz"
@@ -487,7 +532,7 @@ const RetailerRegister = () => {
                     <div className="md:col-span-1">
                       <Dropdown label="Suffix (Optional)" placeholder="Select suffix" options={SUFFIXES} value={form.suffix} onChange={(val) => handleInputChange("suffix", val)} />
                     </div>
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-2" ref={setFieldRef("gender")}>
                       <Dropdown label="Gender *" placeholder="Select Gender" options={GENDERS} value={form.gender} onChange={(val) => handleInputChange("gender", val)} error={errors.gender} />
                     </div>
                   </div>
@@ -499,8 +544,12 @@ const RetailerRegister = () => {
                     Address Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                    <Dropdown label="Province *" placeholder="Select Province" options={PROVINCES} value={form.province} onChange={handleProvinceChange} error={errors.province} />
-                    <Dropdown label="Municipality *" placeholder="Select City" options={activeMunicipalities} value={form.municipality} onChange={handleMunicipalityChange} error={errors.municipality} />
+                    <div ref={setFieldRef("province")}>
+                      <Dropdown label="Province *" placeholder="Select Province" options={PROVINCES} value={form.province} onChange={handleProvinceChange} error={errors.province} />
+                    </div>
+                    <div ref={setFieldRef("municipality")}>
+                      <Dropdown label="Municipality *" placeholder="Select City" options={activeMunicipalities} value={form.municipality} onChange={handleMunicipalityChange} error={errors.municipality} />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -516,9 +565,11 @@ const RetailerRegister = () => {
                       />
                     </div>
 
-                    <Dropdown label="Barangay *" placeholder="Select Barangay" options={activeBarangays} value={form.barangay} onChange={(val) => handleInputChange("barangay", val)} error={errors.barangay} />
+                    <div ref={setFieldRef("barangay")}>
+                      <Dropdown label="Barangay *" placeholder="Select Barangay" options={activeBarangays} value={form.barangay} onChange={(val) => handleInputChange("barangay", val)} error={errors.barangay} />
+                    </div>
 
-                    <FieldWithError error={errors.streetAddress}>
+                    <FieldWithError error={errors.streetAddress} fieldRef={setFieldRef("streetAddress")}>
                       <CustomTextbox
                         label={<>Street Address <span className="text-red-500">*</span></>}
                         placeholder="Unit/Bldg, Street Name"
@@ -536,7 +587,7 @@ const RetailerRegister = () => {
                   </h3>
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <FieldWithError error={errors.email}>
+                      <FieldWithError error={errors.email} fieldRef={setFieldRef("email")}>
                         <CustomTextbox
                           label={<>Email Address <span className="text-red-500">*</span></>}
                           placeholder="youremail@example.com"
@@ -546,7 +597,7 @@ const RetailerRegister = () => {
                         />
                       </FieldWithError>
 
-                      <FieldWithError error={errors.contactNumber}>
+                      <FieldWithError error={errors.contactNumber} fieldRef={setFieldRef("contactNumber")}>
                         <CustomTextbox
                           label={<>Contact Number <span className="text-red-500">*</span></>}
                           placeholder="63+ 9XX XXX XXXX"
@@ -555,17 +606,19 @@ const RetailerRegister = () => {
                         />
                       </FieldWithError>
 
-                      <CustomTextbox
-                        label={<>Username <span className="text-gray-400 font-normal text-xs">(Optional)</span></>}
-                        placeholder="yourusername"
-                        value={form.username}
-                        onChange={(e) => handleInputChange("username", e.target.value)}
-                      />
+                      <FieldWithError error={errors.username} fieldRef={setFieldRef("username")}>
+                        <CustomTextbox
+                          label={<>Username <span className="text-gray-400 font-normal text-xs">(Optional)</span></>}
+                          placeholder="username"
+                          value={form.username}
+                          onChange={(e) => handleInputChange("username", e.target.value)}
+                        />
+                      </FieldWithError>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                       {/* ── Password Column ── */}
-                      <div>
+                      <div ref={setFieldRef("password")}>
                         <FieldWithError error={errors.password}>
                           <div className="relative">
                             <CustomTextbox
@@ -633,7 +686,7 @@ const RetailerRegister = () => {
                       </div>
 
                       {/* ── Confirm Password Column ── */}
-                      <div>
+                      <div ref={setFieldRef("confirmPassword")}>
                         <FieldWithError error={errors.confirmPassword}>
                           <div className="relative">
                             <CustomTextbox
@@ -665,7 +718,7 @@ const RetailerRegister = () => {
                   </div>
                 </div>
 
-                <div className="pt-2 flex items-start gap-3">
+                <div className="pt-2 flex items-start gap-3" ref={setFieldRef("agreeTerms")}>
                   <input id="agreeTerms" type="checkbox" checked={form.agreeTerms} onChange={(e) => handleInputChange("agreeTerms", e.target.checked)} className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer mt-0.5" />
                   <label htmlFor="agreeTerms" className="text-sm font-medium text-gray-700 text-left cursor-pointer select-none leading-relaxed">
                     I agree to the <span className="text-[#08511f] font-semibold underline">Privacy Policy</span> and <span className="text-[#08511f] font-semibold underline">Terms of Service</span>.
@@ -756,7 +809,8 @@ const RetailerRegister = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                   {/* Document 1 (Required) */}
                   <div
-                    className="border-2 border-dashed border-gray-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-green-50/50 hover:border-green-400 transition-colors relative"
+                    className={`border-2 border-dashed border-gray-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-green-50/50 hover:border-green-400 transition-colors relative ${!files.doc1 ? 'cursor-pointer' : ''}`}
+                    onClick={() => !files.doc1 && document.getElementById('file-doc1').click()}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => handleFileDrop(e, 'doc1')}
                   >
@@ -787,7 +841,8 @@ const RetailerRegister = () => {
 
                   {/* Document 2 (Optional) */}
                   <div
-                    className="border-2 border-dashed border-gray-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-green-50/50 hover:border-green-400 transition-colors relative"
+                    className={`border-2 border-dashed border-gray-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-green-50/50 hover:border-green-400 transition-colors relative ${!files.doc2 ? 'cursor-pointer' : ''}`}
+                    onClick={() => !files.doc2 && document.getElementById('file-doc2').click()}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => handleFileDrop(e, 'doc2')}
                   >
