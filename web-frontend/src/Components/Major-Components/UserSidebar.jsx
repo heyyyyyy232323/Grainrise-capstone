@@ -203,7 +203,7 @@ export const getUserSidebarConfig = (role = "admin") => {
       ],
     },
     supplier_encoder: {
-      panelLabel: "Supplier Encoder Panel",
+      panelLabel: "Miller Encoder Panel",
       sections: [
         {
           title: "MAIN",
