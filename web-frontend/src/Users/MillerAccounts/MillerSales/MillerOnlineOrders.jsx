@@ -3,7 +3,6 @@ import { ShoppingCart } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
 import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
-import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -20,7 +19,6 @@ const COLUMNS = [
   { key: "variant",      label: "Variant"       },
   { key: "productCode",  label: "Product Code"  },
   { key: "totalPrice",   label: "Total Price"   },
-  { key: "status",       label: "Status"        },
   { key: "action",       label: "Action"        },
 ];
 
@@ -34,32 +32,6 @@ const PENDING_ORDERS = Array.from({ length: 14 }, (_, i) => ({
   status:       "pending",
 }));
 
-const APPROVED_ORDERS = Array.from({ length: 6 }, (_, i) => ({
-  id:           `approved-${i + 1}`,
-  retailerName: "Retailer B",
-  batchNo:      "Batch 2026-002",
-  variant:      "Sinandomeng",
-  productCode:  "WR-002",
-  totalPrice:   "₱2,200",
-  status:       "approved",
-}));
-
-const DECLINED_ORDERS = Array.from({ length: 4 }, (_, i) => ({
-  id:           `declined-${i + 1}`,
-  retailerName: "Retailer C",
-  batchNo:      "Batch 2026-003",
-  variant:      "Dinorado",
-  productCode:  "WR-003",
-  totalPrice:   "₱900",
-  status:       "declined",
-}));
-
-const ALL_SECTIONS = [
-  { label: "Pending",  rows: PENDING_ORDERS  },
-  { label: "Approved", rows: APPROVED_ORDERS },
-  { label: "Declined", rows: DECLINED_ORDERS },
-];
-
 const ITEMS_PER_PAGE = 10;
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -69,25 +41,30 @@ const MillerOnlineOrders = () => {
   const [sortBy,      setSortBy     ] = useState("date-desc");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Filter rows
+  const filteredRows = PENDING_ORDERS.filter((row) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      row.retailerName.toLowerCase().includes(q) ||
+      row.batchNo.toLowerCase().includes(q)      ||
+      row.variant.toLowerCase().includes(q)      ||
+      row.productCode.toLowerCase().includes(q)
+    );
+  });
+
   const pendingCount = PENDING_ORDERS.length;
+  const totalRows     = filteredRows.length;
+  const totalPages    = Math.max(1, Math.ceil(totalRows / ITEMS_PER_PAGE));
 
-  // Filter rows across all sections
-  const filteredSections = ALL_SECTIONS.map((section) => ({
-    ...section,
-    rows: section.rows.filter((row) => {
-      if (!searchQuery) return true;
-      const q = searchQuery.toLowerCase();
-      return (
-        row.retailerName.toLowerCase().includes(q) ||
-        row.batchNo.toLowerCase().includes(q)      ||
-        row.variant.toLowerCase().includes(q)      ||
-        row.productCode.toLowerCase().includes(q)
-      );
-    }),
-  })).filter((section) => section.rows.length > 0);
+  const startIdx    = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIdx       = Math.min(startIdx + ITEMS_PER_PAGE, totalRows);
+  const visibleRows  = filteredRows.slice(startIdx, endIdx);
 
-  const totalRows  = filteredSections.reduce((n, s) => n + s.rows.length, 0);
-  const totalPages = Math.max(1, Math.ceil(totalRows / ITEMS_PER_PAGE));
+  const handleSearch = (val) => {
+    setSearchQuery(val);
+    setCurrentPage(1);
+  };
 
   return (
     <>
@@ -100,7 +77,7 @@ const MillerOnlineOrders = () => {
       />
 
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
             Online Orders
@@ -109,21 +86,13 @@ const MillerOnlineOrders = () => {
             Review and process pending retailer online orders.
           </p>
         </div>
-
-        {/* Pending badge */}
-        {pendingCount > 0 && (
-          <div className="inline-flex items-center gap-2 self-start sm:self-auto rounded-full bg-amber-50 border border-amber-300 px-4 py-2 text-sm font-semibold text-amber-700 shadow-sm">
-            <ShoppingCart size={15} className="shrink-0" />
-            Pending Orders ({pendingCount})
-          </div>
-        )}
       </div>
 
       {/* Filter row */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex-1 min-w-[220px]">
           <SearchFilter
-            onSearch={(val) => { setSearchQuery(val); setCurrentPage(1); }}
+            onSearch={handleSearch}
             placeholder="Search retailer, batch number, product code, or variant"
           />
         </div>
@@ -132,19 +101,106 @@ const MillerOnlineOrders = () => {
           onChange={setSortBy}
           options={SORT_OPTIONS}
         />
+
+        {/* Pending badge */}
+        {pendingCount > 0 && (
+          <div className="ml-auto inline-flex items-center gap-2 rounded-full bg-amber-50 border border-amber-300 px-4 py-2 text-sm font-semibold text-amber-700 shadow-sm">
+            <ShoppingCart size={15} className="shrink-0" />
+            Pending Orders ({pendingCount})
+          </div>
+        )}
       </div>
 
       {/* Orders table */}
-      <SectionedTableCard
-        columns={COLUMNS}
-        sections={filteredSections}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        onViewDetails={(row) => console.log("View order:", row)}
-        viewDetailsLabel="View Details"
-        footerLabel={`Showing 1–${Math.min(ITEMS_PER_PAGE, totalRows)} of ${totalRows} pending orders`}
-      />
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                {COLUMNS.map((col) => (
+                  <th
+                    key={col.key}
+                    className="px-6 py-3 font-semibold text-gray-600 whitespace-nowrap"
+                  >
+                    {col.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {visibleRows.map((row) => (
+                <tr
+                  key={row.id}
+                  className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
+                >
+                  <td className="px-6 py-4 text-gray-800">{row.retailerName}</td>
+                  <td className="px-6 py-4 text-gray-800">{row.batchNo}</td>
+                  <td className="px-6 py-4 text-gray-800">{row.variant}</td>
+                  <td className="px-6 py-4 text-gray-800">{row.productCode}</td>
+                  <td className="px-6 py-4 text-gray-800">{row.totalPrice}</td>
+                  <td className="px-6 py-4">
+                    <button
+                      onClick={() => console.log("View order:", row)}
+                      className="rounded-full border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                      View Details
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {visibleRows.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={COLUMNS.length}
+                    className="px-6 py-10 text-center text-gray-400"
+                  >
+                    No pending orders found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer / pagination */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-6 py-3 border-t border-gray-100 bg-white">
+          <p className="text-sm text-gray-500">
+            Showing {totalRows === 0 ? 0 : startIdx + 1}–{endIdx} of {totalRows} pending orders
+          </p>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 text-sm rounded-md text-gray-500 disabled:text-gray-300 hover:bg-gray-100 disabled:hover:bg-transparent"
+            >
+              Previous
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`h-8 w-8 text-sm rounded-md ${
+                  page === currentPage
+                    ? "bg-green-700 text-white font-semibold"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 text-sm rounded-md text-gray-500 disabled:text-gray-300 hover:bg-gray-100 disabled:hover:bg-transparent"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
     </>
   );
 };
