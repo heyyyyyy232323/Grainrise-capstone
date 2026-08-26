@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
-import Tabs from "../../../Components/Minor-Components/Tabs";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
 import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
 import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
@@ -42,10 +41,7 @@ const ALL_ORDERS = [
   { id: "r25", batchId: "BATCH 2026 - 001", productCode: "WR-001", variant: "Dinorado", stockQty: "2,500 kg", supplier: "Supplier A", status: "Requested",  date: "2026-07-18", recent: true },
 ];
 
-const TABS = [
-  { id: "all", label: "All Records" },
-  { id: "recent", label: "Recent Updates" },
-];
+
 
 const COLUMNS = [
   { key: "batchId",     label: "Batch ID" },
@@ -55,6 +51,13 @@ const COLUMNS = [
   { key: "supplier",    label: "Supplier" },
   { key: "status",      label: "Status" },
   { key: "action",      label: "Action" },
+];
+
+const SORT_OPTIONS = [
+  { value: "variant-asc",  label: "Variant (A-Z)"                },
+  { value: "code-asc",     label: "Product Code (A-Z)"           },
+  { value: "qty-asc",      label: "Stock Quantity (Low to High)" },
+  { value: "exp-asc",      label: "Expiration Date (Nearest)"    },
 ];
 
 const ROWS_PER_PAGE = 10;
@@ -113,34 +116,28 @@ const applyFilters = (rows, { search, dateRange, sortBy }) => {
   }
 
   // Sort
-  if (sortBy === "date-asc")   result.sort((a, b) => a.date.localeCompare(b.date));
-  else if (sortBy === "date-desc") result.sort((a, b) => b.date.localeCompare(a.date));
-  else if (sortBy === "batch-asc") result.sort((a, b) => a.batchId.localeCompare(b.batchId));
-  else if (sortBy === "status") result.sort((a, b) => a.status.localeCompare(b.status));
+  if (sortBy === "variant-asc") result.sort((a, b) => a.variant.localeCompare(b.variant));
+  else if (sortBy === "code-asc")    result.sort((a, b) => a.productCode.localeCompare(b.productCode));
+  else if (sortBy === "qty-asc")     result.sort((a, b) => a.stockQty.localeCompare(b.stockQty));
+  else if (sortBy === "exp-asc")     result.sort((a, b) => a.date.localeCompare(b.date));
   else result.sort((a, b) => b.date.localeCompare(a.date)); // default: newest first
 
   return result;
 };
 
 export default function MillerEncoderOrderHistory() {
-  const [activeTab,  setActiveTab]  = useState("all");
   const [search,     setSearch]     = useState("");
   const [dateRange,  setDateRange]  = useState({ startDate: "", endDate: "" });
-  const [sortBy,     setSortBy]     = useState("date-desc");
+  const [sortBy,     setSortBy]     = useState("variant-asc");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Reset to page 1 whenever filters/tab change
+  // Reset to page 1 whenever filters change
   const handleSearch    = (v) => { setSearch(v);     setCurrentPage(1); };
   const handleDate      = (v) => { setDateRange(v);  setCurrentPage(1); };
   const handleSort      = (v) => { setSortBy(v);     setCurrentPage(1); };
-  const handleTab       = (v) => { setActiveTab(v);  setCurrentPage(1); };
 
-  // Base pool depending on tab
-  const baseRows = useMemo(() =>
-    activeTab === "recent"
-      ? ALL_ORDERS.filter((r) => r.recent)
-      : ALL_ORDERS,
-  [activeTab]);
+  // Base pool
+  const baseRows = ALL_ORDERS;
 
   const totalCount = baseRows.length;
 
@@ -154,7 +151,7 @@ export default function MillerEncoderOrderHistory() {
   const pageSlice  = filtered.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
   const sections   = groupByDate(pageSlice);
 
-  const footerLabel = `Showing ${(currentPage - 1) * ROWS_PER_PAGE + 1}–${Math.min(currentPage * ROWS_PER_PAGE, filtered.length)} of ${filtered.length} ${activeTab === "recent" ? "recent updates" : "records"}`;
+  const footerLabel = `Showing ${(currentPage - 1) * ROWS_PER_PAGE + 1}–${Math.min(currentPage * ROWS_PER_PAGE, filtered.length)} of ${filtered.length} records`;
 
   return (
     <div className="space-y-5">
@@ -172,8 +169,7 @@ export default function MillerEncoderOrderHistory() {
         <p className="text-sm text-slate-500">Review warehouse transaction history.</p>
       </div>
 
-      {/* ── Tabs ────────────────────────────────────────────────────────────── */}
-      <Tabs tabs={TABS} activeTab={activeTab} onTabChange={handleTab} />
+
 
       {/* ── Toolbar ─────────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3">
@@ -184,7 +180,7 @@ export default function MillerEncoderOrderHistory() {
           />
         </div>
         <DateRangePicker onDateChange={handleDate} />
-        <SortByDropdown value={sortBy} onChange={handleSort} />
+        <SortByDropdown value={sortBy} onChange={handleSort} options={SORT_OPTIONS} />
       </div>
 
       {/* ── Table ───────────────────────────────────────────────────────────── */}

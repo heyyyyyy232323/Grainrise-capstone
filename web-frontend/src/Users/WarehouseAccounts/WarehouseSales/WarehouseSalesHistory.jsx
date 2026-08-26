@@ -12,20 +12,20 @@ const TABS = [
 ];
 
 const SORT_OPTIONS = [
-  { value: "date-desc", label: "Newest First" },
-  { value: "date-asc", label: "Oldest First" },
-  { value: "amount-desc", label: "Highest Amount" },
-  { value: "amount-asc", label: "Lowest Amount" },
+  { value: "variant-asc",  label: "Variant (A-Z)"                },
+  { value: "code-asc",     label: "Product Code (A-Z)"           },
+  { value: "qty-asc",      label: "Stock Quantity (Low to High)" },
+  { value: "exp-asc",      label: "Expiration Date (Nearest)"    },
 ];
 
 const COLUMNS = [
-  { key: "time", label: "Transaction Time" },
-  { key: "variant", label: "Variant" },
-  { key: "quantity", label: "Quantity" },
-  { key: "totalPayment", label: "Total Payment" },
-  { key: "amountPaid", label: "Amount Paid" },
-  { key: "change", label: "Change" },
-  { key: "action", label: "ACTION" },
+  { key: "time", label: "Transaction Time", width: "16%" },
+  { key: "variant", label: "Variant", width: "16%" },
+  { key: "quantity", label: "Quantity", width: "14%" },
+  { key: "totalPayment", label: "Total Payment", width: "16%" },
+  { key: "amountPaid", label: "Amount Paid", width: "14%" },
+  { key: "change", label: "Change", width: "12%" },
+  { key: "action", label: "ACTION", width: "12%", headerClassName: "text-center", cellClassName: "text-center" },
 ];
 
 const IN_STORE_SECTIONS = [

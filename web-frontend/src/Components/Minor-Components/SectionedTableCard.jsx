@@ -3,7 +3,7 @@ import PaginationControls from "./PaginationControls";
 
 const defaultStatusStyles = {
   approved: "bg-emerald-100 text-emerald-700",
-  requested: "bg-blue-100 text-blue-700",
+  requested: "bg-amber-100 text-amber-700",
   received: "bg-blue-100 text-blue-700",
   transit: "bg-orange-100 text-orange-700",
   "in transit": "bg-orange-100 text-orange-700",
@@ -11,8 +11,12 @@ const defaultStatusStyles = {
   active: "bg-emerald-100 text-emerald-700",
   verified: "bg-emerald-100 text-emerald-700",
   paid: "bg-emerald-100 text-emerald-700",
+  assigned: "bg-blue-100 text-blue-700",
   declined: "bg-rose-100 text-rose-700",
-  pending: "bg-slate-100 text-slate-700",
+  pending: "bg-amber-100 text-amber-700",
+  completed: "bg-emerald-100 text-emerald-700",
+  cancelled: "bg-rose-100 text-rose-700",
+  delivered: "bg-emerald-100 text-emerald-700",
 };
 
 const getStatusClassName = (status) => {
@@ -85,13 +89,15 @@ export default function SectionedTableCard({
       ) : (
         <div className="overflow-x-auto overflow-y-auto max-h-72 sm:max-h-96 md:max-h-none -mx-4 md:mx-0">
           <div className="px-4 md:px-0">
-            <table className="min-w-full border-collapse">
+            <table className="w-full border-collapse table-auto">
             <thead>
-              <tr className="bg-[#EDEDED] text-left text-[11px] font-extrabold uppercase tracking-[0.03em] text-slate-600 sm:text-[12px]">
+              <tr className="bg-[#EDEDED] text-left text-[11px] font-extrabold tracking-[0.03em] text-slate-600 sm:text-[12px]">
                 {columns.map((column) => (
                   <th
                     key={column.key}
-                    className={`whitespace-nowrap px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-4 ${column.headerClassName || ""}`}
+                    className={`whitespace-nowrap px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-4 ${
+                      column.key === "action" || column.key === "ACTION" ? "text-center" : ""
+                    } ${column.headerClassName || ""}`}
                     style={column.width ? { width: column.width } : undefined}
                   >
                     {column.label}
@@ -107,7 +113,7 @@ export default function SectionedTableCard({
                     <tr>
                       <td
                         colSpan={columns.length}
-                        className="bg-[#EAF7E8] px-4 py-2 text-center text-[12px] font-semibold text-emerald-700 sm:text-[13px]"
+                        className="bg-white border-b border-slate-100 px-4 py-2 text-center text-[12px] font-semibold italic text-emerald-600"
                       >
                         {section.label}
                       </td>
@@ -119,7 +125,11 @@ export default function SectionedTableCard({
                       {columns.map((column) => {
                         if (typeof column.render === "function") {
                           return (
-                            <td key={column.key} className={`px-3 py-3 align-middle sm:px-4 ${column.cellClassName || ""}`}>
+                            <td
+                              key={column.key}
+                              className={`px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || ""}`}
+                              style={column.width ? { width: column.width } : undefined}
+                            >
                               {column.render(row)}
                             </td>
                           );
@@ -129,7 +139,11 @@ export default function SectionedTableCard({
 
                         if (column.key === "status") {
                           return (
-                            <td key={column.key} className={`whitespace-nowrap px-3 py-3 align-middle sm:px-4 ${column.cellClassName || ""}`}>
+                            <td
+                              key={column.key}
+                              className={`whitespace-nowrap px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || ""}`}
+                              style={column.width ? { width: column.width } : undefined}
+                            >
                               <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-bold capitalize ${getStatusClassName(cellValue)}`}>
                                 {cellValue}
                               </span>
@@ -139,11 +153,15 @@ export default function SectionedTableCard({
 
                         if (column.key === "action") {
                           return (
-                            <td key={column.key} className={`whitespace-nowrap px-3 py-3 pr-4 text-right align-middle sm:px-4 ${column.cellClassName || ""}`}>
+                            <td
+                              key={column.key}
+                              className={`whitespace-nowrap px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || "text-center"}`}
+                              style={column.width ? { width: column.width } : undefined}
+                            >
                               <button
                                 type="button"
                                 onClick={() => onViewDetails?.(row)}
-                                className="rounded-full border border-slate-300 px-3 py-1.5 text-[10px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 sm:text-[11px]"
+                                className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-emerald-300 hover:text-emerald-700"
                               >
                                 {row.actionLabel || viewDetailsLabel}
                               </button>
@@ -152,7 +170,11 @@ export default function SectionedTableCard({
                         }
 
                         return (
-                          <td key={column.key} className={`whitespace-nowrap px-3 py-3 text-[12px] text-slate-700 sm:px-4 sm:text-[13px] ${column.cellClassName || ""}`}>
+                            <td
+                              key={column.key}
+                              className={`whitespace-nowrap overflow-hidden text-ellipsis px-3 py-4 text-[13px] font-medium text-slate-700 first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || ""}`}
+                              style={column.width ? { width: column.width } : undefined}
+                            >
                             {defaultRenderValue(cellValue)}
                           </td>
                         );

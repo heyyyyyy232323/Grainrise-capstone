@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { PanelLeft, Search, Bell, ChevronDown, UserPlus, CircleUserRound, Moon, CircleHelp, LogOut } from "lucide-react";
+import { PanelLeft, Search, Bell, ChevronDown, UserPlus, CircleUserRound, Moon, CircleHelp, LogOut, AlertCircle } from "lucide-react";
 
 /**
  * Reusable top navbar for all user roles.
@@ -27,35 +27,35 @@ export const getUserNavbarMenuItems = (navigate) => [
 export const getUserNavbarNotifications = () => [
   {
     id: "notif-1",
-    title: "New Supplier Registration",
-    description: "ABC Rice Trading submitted a registration application.",
-    time: "5 mins",
+    title: "Low Stock Alert",
+    description: "Dinorado Rice has reached the minimum stock level.",
+    time: "15 mins",
     read: false,
-    onView: () => alert("Open supplier registration details"),
+    onView: () => alert("Open stock details"),
   },
   {
     id: "notif-2",
-    title: "New Supplier Registration",
-    description: "ABC Rice Trading submitted a registration application.",
-    time: "5 mins",
+    title: "Low Stock Alert",
+    description: "Dinorado Rice has reached the minimum stock level.",
+    time: "15 mins",
     read: false,
-    onView: () => alert("Open supplier registration details"),
+    onView: () => alert("Open stock details"),
   },
   {
     id: "notif-3",
-    title: "New Supplier Registration",
-    description: "ABC Rice Trading submitted a registration application.",
-    time: "5 mins",
+    title: "Low Stock Alert",
+    description: "Dinorado Rice has reached the minimum stock level.",
+    time: "15 mins",
     read: false,
-    onView: () => alert("Open supplier registration details"),
+    onView: () => alert("Open stock details"),
   },
   {
     id: "notif-4",
-    title: "New Supplier Registration",
-    description: "ABC Rice Trading submitted a registration application.",
-    time: "5 mins",
+    title: "Low Stock Alert",
+    description: "Dinorado Rice has reached the minimum stock level.",
+    time: "15 mins",
     read: false,
-    onView: () => alert("Open supplier registration details"),
+    onView: () => alert("Open stock details"),
   },
 ];
 
@@ -186,7 +186,7 @@ const UserNavbar = ({
         </button>
 
         {notificationOpen && (
-          <div className="absolute right-0 mt-2 w-[min(88vw,18rem)] rounded-xl border border-gray-200 bg-[#EDF4EE] shadow-2xl z-50 overflow-hidden">
+          <div className="absolute right-0 mt-2 w-[min(88vw,20rem)] rounded-xl border border-slate-200 bg-white shadow-2xl z-50 overflow-hidden">
             <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
               <h3 className="text-sm leading-none font-bold text-gray-900">Notification</h3>
               <button
@@ -197,15 +197,15 @@ const UserNavbar = ({
               </button>
             </div>
 
-            <div className="max-h-72 overflow-y-auto px-2 py-2 space-y-1.5">
+            <div className="max-h-80 overflow-y-auto px-2 py-2 space-y-1">
               {notifications.map((item) => (
                 <div
                   key={item.id}
-                  className={`rounded-lg p-2 ${item.read ? "bg-[#E7EEE8]" : "bg-[#DDE7DF]"}`}
+                  className={`p-3 border-b border-slate-100 last:border-b-0 ${item.read ? "bg-white" : "bg-[#F0F8F1]"}`}
                 >
-                  <div className="flex items-start gap-2">
-                    <div className="w-6 h-6 rounded-full bg-[#007A1F] text-white flex items-center justify-center shrink-0">
-                      <UserPlus size={11} />
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-amber-400 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                      <AlertCircle size={16} />
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -224,9 +224,9 @@ const UserNavbar = ({
 
                       <button
                         onClick={() => item.onView?.(item)}
-                        className="mt-1.5 inline-flex items-center rounded-full bg-[#007A1F] px-2.5 py-0.5 text-[10px] font-bold text-white hover:bg-[#006218] transition"
+                        className="mt-2.5 inline-flex items-center rounded-full bg-[#007A1F] px-3 py-1 text-[11px] font-bold text-white hover:bg-[#006218] transition"
                       >
-                        View
+                        View Stock
                       </button>
                     </div>
                   </div>

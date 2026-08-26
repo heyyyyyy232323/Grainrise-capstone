@@ -16,14 +16,16 @@ const SupplierManagement = () => {
   const totalPages = 4;
 
   const columns = [
-    { key: "supplier", label: "Supplier Name" },
-    { key: "company", label: "Company Name" },
-    { key: "email", label: "Email" },
-    { key: "contact", label: "Contact" },
+    { key: "supplier", label: "Supplier Name", width: "24%" },
+    { key: "company", label: "Company Name", width: "24%" },
+    { key: "email", label: "Email", width: "24%" },
+    { key: "contact", label: "Contact", width: "20%" },
     {
       key: "action",
       label: "Action",
+      width: "8%",
       headerClassName: "text-right",
+      cellClassName: "text-right",
       render: (row) => {
         if (!row.status) return null;
         const s = String(row.status).toLowerCase().trim();
@@ -40,7 +42,7 @@ const SupplierManagement = () => {
 
         if (s === "inactive" || s === "archived") {
           return (
-            <div className="flex gap-2 justify-end">
+            <div className="flex justify-end gap-2">
               <button className="rounded-full text-white px-3 py-1.5 text-[11px] font-semibold" style={{backgroundColor: '#00A516'}} onMouseEnter={(e) => e.target.style.backgroundColor = '#008C13'} onMouseLeave={(e) => e.target.style.backgroundColor = '#00A516'}>
                 Restore
               </button>
@@ -53,7 +55,7 @@ const SupplierManagement = () => {
 
         if (s === "active") {
           return (
-            <div className="flex gap-2 justify-end">
+            <div className="flex justify-end gap-2">
               <button className="rounded-full border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50">
                 View Details
               </button>

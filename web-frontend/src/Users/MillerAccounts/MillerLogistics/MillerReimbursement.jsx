@@ -3,12 +3,14 @@ import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import CustomTextbox from "../../../Components/Minor-Components/CustomTextbox";
 import CustomGreenButton from "../../../Components/Minor-Components/CustomGreenButton";
 import Dropdown from "../../../Components/Minor-Components/Dropdown";
+import RichTextEditor from "../../../Components/Minor-Components/RichTextEditor";
 
 export default function MillerReimbursement() {
   const [category, setCategory] = useState("");
   const [cost, setCost] = useState(0);
   const [date, setDate] = useState("");
   const [description, setDescription] = useState("");
+  const [descriptionLength, setDescriptionLength] = useState(0);
   const [file, setFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef(null);
@@ -41,6 +43,7 @@ export default function MillerReimbursement() {
       setCost(0);
       setDate("");
       setDescription("");
+      setDescriptionLength(0);
       setFile(null);
     }, 700);
   };
@@ -115,16 +118,14 @@ export default function MillerReimbursement() {
 
           <div className="mt-4">
             <label className="text-sm font-medium text-slate-700">Description <span className="text-rose-500">*</span></label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={1000}
-              rows={6}
-              className="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-sm resize-none"
+            <RichTextEditor
+              onChange={(html, text) => {
+                setDescription(html);
+                setDescriptionLength(text.length);
+              }}
               placeholder="Provide detailed context for this expense ..."
-              required
+              maxLength={1000}
             />
-            <div className="text-xs text-slate-400 text-right mt-1">{description.length} / 1000</div>
           </div>
 
           <div className="mt-4">

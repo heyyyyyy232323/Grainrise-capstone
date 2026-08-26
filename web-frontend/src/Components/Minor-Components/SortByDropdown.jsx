@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUpDown, ChevronDown, Check } from "lucide-react";
+import { ArrowUpDown, ChevronDown } from "lucide-react";
 
 const defaultOptions = [
   { value: "date-desc", label: "Newest First" },
@@ -18,30 +18,92 @@ const SortByDropdown = ({ value, onChange, options = defaultOptions }) => {
   };
 
   return (
-    <div className="relative">
+    <div style={{ position: "relative" }}>
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "10px 16px",
+          border: "1px solid #e5e7eb",
+          borderRadius: "12px",
+          fontSize: "14px",
+          fontWeight: 500,
+          color: "#374151",
+          background: "#fff",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+          transition: "background 0.15s",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "#f9fafb")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
       >
-        <ArrowUpDown size={16} className="text-gray-600" />
-        <span className="text-gray-700 whitespace-nowrap">{activeLabel}</span>
-        <ChevronDown size={16} className={`text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
+        <ArrowUpDown size={16} style={{ color: "#6b7280" }} />
+        <span style={{ color: "#374151" }}>{activeLabel}</span>
+        <ChevronDown
+          size={16}
+          style={{
+            color: "#9ca3af",
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 0.2s",
+          }}
+        />
       </button>
 
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute top-full mt-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg py-1.5 z-20 w-48">
-            {options.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => handleSelect(option.value)}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm text-left text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                {option.label}
-                {option.value === value && <Check size={14} className="text-green-600" />}
-              </button>
-            ))}
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 10 }}
+            onClick={() => setOpen(false)}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: "calc(100% + 8px)",
+              right: 0,
+              background: "#fff",
+              border: "1px solid #e5e7eb",
+              borderRadius: "16px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+              padding: "8px",
+              zIndex: 20,
+              minWidth: "240px",
+            }}
+          >
+            {options.map((option) => {
+              const isSelected = option.value === value;
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => handleSelect(option.value)}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "12px 16px",
+                    fontSize: "14px",
+                    fontWeight: isSelected ? 700 : 500,
+                    color: isSelected ? "#0B5D1E" : "#374151",
+                    background: isSelected ? "#EAF7E8" : "transparent",
+                    border: "none",
+                    borderRadius: "10px",
+                    cursor: "pointer",
+                    transition: "background 0.15s",
+                    marginBottom: "2px",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) e.currentTarget.style.background = "#f3f4f6";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
           </div>
         </>
       )}

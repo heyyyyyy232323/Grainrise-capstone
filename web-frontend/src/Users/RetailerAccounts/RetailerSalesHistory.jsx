@@ -13,13 +13,13 @@ const SORT_OPTIONS = [
 ];
 
 const COLUMNS = [
-  { key: "time", label: "Transaction Time" },
-  { key: "variant", label: "Variant" },
-  { key: "quantity", label: "Quantity" },
-  { key: "totalPayment", label: "Total Payment" },
-  { key: "amountPaid", label: "Amount Paid" },
-  { key: "change", label: "Change" },
-  { key: "action", label: "Action" },
+  { key: "time", label: "Transaction Time", width: "16%" },
+  { key: "variant", label: "Variant", width: "16%" },
+  { key: "quantity", label: "Quantity", width: "14%" },
+  { key: "totalPayment", label: "Total Payment", width: "16%" },
+  { key: "amountPaid", label: "Amount Paid", width: "14%" },
+  { key: "change", label: "Change", width: "12%" },
+  { key: "action", label: "Action", width: "12%", headerClassName: "text-center", cellClassName: "text-center" },
 ];
 
 const IN_STORE_SECTIONS = [

@@ -3,6 +3,7 @@ import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
 import Dropdown from "../../../Components/Minor-Components/Dropdown";
+import WarehouseDeliveryDetails from "./WarehouseDeliveryDetails";
 
 const sampleAssigned = Array.from({ length: 125 }, (_, i) => ({
   id: `a-${i + 1}`,
@@ -18,6 +19,7 @@ export default function AssignedHistory() {
   const [deliveryFilter, setDeliveryFilter] = useState("all");
   const [assignmentFilter, setAssignmentFilter] = useState("all");
   const [page, setPage] = useState(1);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   const columns = [
     { key: "orderNo", label: "Order No." },
@@ -47,6 +49,24 @@ export default function AssignedHistory() {
   const startIndex = (page - 1) * itemsPerPage;
   const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
   const sections = useMemo(() => [{ rows: paginated }], [paginated]);
+
+  if (selectedRecord) {
+    return (
+      <div>
+        <Breadcrumbs 
+          items={[
+            { label: "Records", path: "/warehouse-logistics/dashboard" }, 
+            { label: "Assigned History", path: "/warehouse-logistics/assigned-history", onClick: () => setSelectedRecord(null) },
+            { label: "Delivery Details" }
+          ]} 
+        />
+        <WarehouseDeliveryDetails 
+          record={selectedRecord} 
+          onBack={() => setSelectedRecord(null)} 
+        />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -106,6 +126,7 @@ export default function AssignedHistory() {
         currentPage={page}
         totalPages={totalPages}
         onPageChange={setPage}
+        onViewDetails={(row) => setSelectedRecord(row)}
         footerLabel={`Showing ${startIndex + 1}-${Math.min(startIndex + itemsPerPage, filtered.length)} of ${filtered.length} records`}
       />
     </div>

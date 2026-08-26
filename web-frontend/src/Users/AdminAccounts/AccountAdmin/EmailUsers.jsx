@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
+import RichTextEditor from "../../../Components/Minor-Components/RichTextEditor";
 
 const SENT_SAMPLE = Array.from({ length: 4 }).map((_, i) => ({
   id: i + 1,
@@ -12,9 +13,10 @@ const SENT_SAMPLE = Array.from({ length: 4 }).map((_, i) => ({
 export default function EmailUsers() {
   const [to, setTo] = useState("All Users");
   const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("");
+  const [messageHtml, setMessageHtml] = useState("");
+  const [messagePlain, setMessagePlain] = useState("");
 
-  const sendDisabled = !subject.trim() && !message.trim();
+  const sendDisabled = !subject.trim() && !messagePlain.trim();
 
   return (
     <div>
@@ -39,7 +41,7 @@ export default function EmailUsers() {
             </header>
 
             <div className="px-5 py-5">
-              <label className="text-xs font-semibold text-slate-600">SEND TO</label>
+              <label className="text-xs font-semibold text-slate-600">SEND TO <span className="text-red-500">*</span></label>
               <div className="mt-2">
                 <select value={to} onChange={(e) => setTo(e.target.value)} className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm bg-white">
                   <option>All Users</option>
@@ -50,18 +52,25 @@ export default function EmailUsers() {
               </div>
 
               <div className="mt-4">
-                <label className="text-xs font-semibold text-slate-600">SUBJECT</label>
+                <label className="text-xs font-semibold text-slate-600">SUBJECT <span className="text-red-500">*</span></label>
                 <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g Important Updates from GrainRise" className="mt-2 w-full rounded-md border border-gray-200 px-3 py-2 text-sm" />
               </div>
 
               <div className="mt-4">
-                <label className="text-xs font-semibold text-slate-600">MESSAGE</label>
-                <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Write your message here..." rows={8} className="mt-2 w-full rounded-md border border-gray-200 px-3 py-2 text-sm resize-none" />
+                <label className="text-xs font-semibold text-slate-600">MESSAGE <span className="text-red-500">*</span></label>
+                <RichTextEditor
+                  onChange={(html, plain) => {
+                    setMessageHtml(html);
+                    setMessagePlain(plain);
+                  }}
+                  placeholder="Write your message here..."
+                  minHeight={220}
+                />
               </div>
             </div>
 
             <div className="border-t border-slate-200 px-5 py-3 bg-[#F3F5FF] flex items-center justify-between">
-              <div className="text-xs text-slate-500">0 / 1000</div>
+              <div className="text-xs text-slate-500">{messagePlain.length} / 1000</div>
               <button disabled={sendDisabled} className={`rounded-full px-4 py-2 text-sm font-semibold text-white ${sendDisabled ? 'bg-emerald-300' : 'bg-emerald-600 hover:brightness-95'}`}>
                 Send ➤
               </button>

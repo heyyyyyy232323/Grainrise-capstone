@@ -50,11 +50,10 @@ const TABS = [
 ];
 
 const SORT_OPTIONS = [
-  { value: "default",    label: "Sort By"       },
-  { value: "code-asc",   label: "Code (A-Z)"    },
-  { value: "qty-asc",    label: "Qty: Low → High"},
-  { value: "qty-desc",   label: "Qty: High → Low"},
-  { value: "level-out",  label: "Out of Stock First"},
+  { value: "variant-asc", label: "Variant (A-Z)"               },
+  { value: "code-asc",    label: "Product Code (A-Z)"          },
+  { value: "qty-asc",     label: "Stock Quantity (Low to High)"},
+  { value: "exp-asc",     label: "Expiration Date (Nearest)"   },
 ];
 
 const ROWS_PER_PAGE = 10;
@@ -92,8 +91,13 @@ function VariantBadge({ badge }) {
   );
 }
 
-// ─── Table header ──────────────────────────────────────────────────────────────
-const COLUMNS = ["Product Code", "Variant", "Stock Qty (kg)", "Description", "Action"];
+const COLUMNS = [
+  { label: "Product Code",   width: "16%" },
+  { label: "Variant",        width: "20%" },
+  { label: "Stock Qty (kg)", width: "16%" },
+  { label: "Description",    width: "30%" },
+  { label: "Action",         width: "18%", align: "center" },
+];
 
 // ─── Sort helper ───────────────────────────────────────────────────────────────
 const sortProducts = (products, sortBy) => {
@@ -170,32 +174,30 @@ export default function MillerEncoderStockManagement() {
         </div>
         <SortByDropdown value={sortBy} onChange={handleSort} options={SORT_OPTIONS} />
 
-        {/* Add Product — only on Active tab */}
+        {/* Add Product — only on Active tab, pushed to far right */}
         {activeTab === "active" && (
-          <CustomGreenButton
-            text={
-              <span className="flex items-center gap-1.5">
-                <Plus size={14} strokeWidth={2.5} />
-                Add Product
-              </span>
-            }
-            className="ml-auto whitespace-nowrap px-4 py-2 text-sm"
-          />
+          <button
+            type="button"
+            className="ml-auto inline-flex items-center gap-2 rounded-full bg-[#0B5D1E] px-5 py-2.5 text-[13px] font-semibold text-white transition hover:opacity-90"
+          >
+            <Plus size={15} strokeWidth={2.5} />
+            Add Product
+          </button>
         )}
       </div>
 
       {/* ── Legend (Active tab only) ─────────────────────────────────────────── */}
       {activeTab === "active" && (
-        <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-600">
-          <span className="text-slate-400">Legend:</span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> In Stock
+        <div className="flex flex-wrap items-center gap-3 text-[12px] font-semibold">
+          <span className="text-slate-500">Legend:</span>
+          <span className="flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-emerald-700">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" /> In Stock
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-400" /> Low Stock
+          <span className="flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-amber-700">
+            <span className="h-2 w-2 rounded-full bg-amber-400" /> Low Stock
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Out of Stock
+          <span className="flex items-center gap-1.5 rounded-full border border-rose-300 bg-rose-50 px-3 py-1 text-rose-700">
+            <span className="h-2 w-2 rounded-full bg-rose-500" /> Out of Stock
           </span>
         </div>
       )}
@@ -203,15 +205,16 @@ export default function MillerEncoderStockManagement() {
       {/* ── Table Card ──────────────────────────────────────────────────────── */}
       <article className="w-full overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.06)]">
         <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse">
+          <table className="min-w-full border-collapse table-fixed">
             <thead>
               <tr className="bg-[#EDEDED] text-left text-[11px] font-extrabold uppercase tracking-[0.03em] text-slate-600">
                 {COLUMNS.map((col) => (
                   <th
-                    key={col}
-                    className="whitespace-nowrap px-4 py-3 align-middle first:pl-5 last:pr-5"
+                    key={col.label}
+                    className={`whitespace-nowrap px-4 py-3.5 align-middle first:pl-5 last:pr-5 ${col.align === "center" ? "text-center" : "text-left"}`}
+                    style={{ width: col.width }}
                   >
-                    {col}
+                    {col.label}
                   </th>
                 ))}
               </tr>
@@ -262,7 +265,7 @@ export default function MillerEncoderStockManagement() {
                     {/* Action */}
                     <td className="whitespace-nowrap px-4 py-3 pr-5">
                       {activeTab === "active" ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-center gap-2">
                           <button
                             type="button"
                             className="rounded-full border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700"
@@ -275,7 +278,7 @@ export default function MillerEncoderStockManagement() {
                           />
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-center gap-2">
                           <CustomGreenButton
                             text="Restore"
                             className="px-3 py-1.5 text-[11px] rounded-full"

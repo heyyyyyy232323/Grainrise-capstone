@@ -28,15 +28,15 @@ const DateRangePicker = ({ onDateChange }) => {
     <div className="relative">
       <button
         onClick={() => setShowPicker(!showPicker)}
-        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+        className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors bg-white shadow-sm"
       >
-        <Calendar size={18} className="text-gray-600" />
+        <Calendar size={18} className="text-gray-500" />
         <span className="text-gray-700">Date Range</span>
         <ChevronDown size={16} className="text-gray-400" />
       </button>
 
       {showPicker && (
-        <div className="absolute top-full mt-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-10 w-64">
+        <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-10 w-64">
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">

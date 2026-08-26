@@ -25,6 +25,7 @@ import AssignedHistory from "./Users/WarehouseAccounts/WarehouseLogistics/Wareho
 import FulfillmentHistory from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseFulfillmentHistory";
 import Reimbursement from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseReimbursement";
 import ReimbursementHistory from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseReimbursementHistory";
+import WarehouseLogisticsDashboard from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseLogisticsDashboard";
 import WarehouseProcurementLayout from "./Components/Major-Components/WarehouseProcurementLayout";
 import WarehouseProcurementDashboard from "./Users/WarehouseAccounts/WarehouseProcurement/WarehouseProcurementDashboard";
 import WarehouseReceivingOrders from "./Users/WarehouseAccounts/WarehouseProcurement/WarehouseReceivingOrders";
@@ -61,6 +62,7 @@ import MillerReimburse from "./Users/MillerAccounts/MillerFinance/MillerReimburs
 import MillerTaxes from "./Users/MillerAccounts/MillerFinance/MillerTaxes";
 
 // Miller Logistics
+import MillerLogisticsDashboard from "./Users/MillerAccounts/MillerLogistics/MillerLogisticsDashboard";
 import MillerAssignedHistory from "./Users/MillerAccounts/MillerLogistics/MillerAssignedHistory";
 import MillerDeliveryManagement from "./Users/MillerAccounts/MillerLogistics/MillerDeliveryManagement";
 import MillerFulfillmentHistory from "./Users/MillerAccounts/MillerLogistics/MillerFulfillmentHistory";
@@ -107,6 +109,7 @@ function App() {
 
         {/* Warehouse Logistics pages (use MainPageLayout with logistics role) */}
         <Route element={<WarehouseEncoderLayout role="warehouse_logistics" />}>
+          <Route path="/warehouse-logistics/dashboard" element={<WarehouseLogisticsDashboard />} />
           <Route path="/warehouse-logistics/delivery-management" element={<DeliveryManagement />} />
           <Route path="/warehouse-logistics/product-returns" element={<ProductReturns />} />
           <Route path="/warehouse-logistics/reimbursement" element={<Reimbursement />} />
@@ -152,6 +155,7 @@ function App() {
 
         {/* Miller Logistics pages */}
         <Route element={<WarehouseEncoderLayout role="miller_logistics" />}>
+          <Route path="/miller-logistics/dashboard" element={<MillerLogisticsDashboard />} />
           <Route path="/miller-logistics/delivery-management" element={<MillerDeliveryManagement />} />
           <Route path="/miller-logistics/product-returns" element={<MillerProductReturns />} />
           <Route path="/miller-logistics/reimbursement" element={<MillerReimbursement />} />

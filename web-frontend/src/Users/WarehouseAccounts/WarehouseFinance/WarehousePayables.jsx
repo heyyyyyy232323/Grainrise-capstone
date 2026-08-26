@@ -54,8 +54,8 @@ export default function WarehousePayables() {
         <button
           type="button"
           onClick={() => alert(`Paying ${row.batchNo}`)}
-          className="inline-flex items-center justify-center px-3 py-0.5 h-7 rounded-full text-white text-xs font-semibold hover:bg-[#016b0f]"
-          style={{ backgroundColor: "#018311", minWidth: 72 }}
+          className="inline-flex items-center justify-center px-4 py-1.5 rounded-full text-white text-[11px] font-bold transition hover:opacity-90"
+          style={{ backgroundColor: "#00A516", minWidth: 72 }}
         >
           Pay Now
         </button>
@@ -91,7 +91,10 @@ export default function WarehousePayables() {
           </div>
 
           <div className="ml-4 flex items-center gap-3">
-            <div className="inline-block px-3 py-1 rounded-md bg-amber-50 text-amber-700 text-sm font-semibold">10 for payment</div>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#FFF8E6] text-[#F59E0B] text-[12px] font-bold">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#F59E0B]"></span>
+              10 for payment
+            </div>
           </div>
         </div>
       </div>

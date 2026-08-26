@@ -2,6 +2,15 @@ import { useMemo, useState } from "react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
+import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
+import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
+
+const SORT_OPTIONS = [
+  { value: "variant-asc",  label: "Variant (A-Z)"                },
+  { value: "code-asc",     label: "Product Code (A-Z)"           },
+  { value: "qty-asc",      label: "Stock Quantity (Low to High)" },
+  { value: "exp-asc",      label: "Expiration Date (Nearest)"    },
+];
 
 const sampleReturns = Array.from({ length: 24 }, (_, i) => ({
   id: `r-${i + 1}`,
@@ -13,6 +22,7 @@ const sampleReturns = Array.from({ length: 24 }, (_, i) => ({
 
 export default function ProductReturns() {
   const [query, setQuery] = useState("");
+  const [sortBy, setSortBy] = useState("date-desc");
   const [page, setPage] = useState(1);
 
   const columns = [
@@ -45,12 +55,18 @@ export default function ProductReturns() {
 
       <div className="mt-4 mb-4 -mx-4 md:mx-0">
         <div className="px-4 md:px-0">
-          <div className="w-full md:w-1/2">
-            <div className="max-w-3xl">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex-1 min-w-[200px] max-w-xl">
               <SearchFilter
                 onSearch={(v) => { setQuery(v); setPage(1); }}
                 placeholder="Search order no., batch no., product, or retailer"
               />
+            </div>
+            <div className="flex-none">
+              <DateRangePicker onDateChange={() => {}} />
+            </div>
+            <div className="flex-none">
+              <SortByDropdown value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} />
             </div>
           </div>
         </div>

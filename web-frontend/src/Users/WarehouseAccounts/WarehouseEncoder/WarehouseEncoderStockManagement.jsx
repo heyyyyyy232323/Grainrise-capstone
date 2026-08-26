@@ -9,6 +9,9 @@ import CustomGreenButton from "../../../Components/Minor-Components/CustomGreenB
 import CustomAmberButton from "../../../Components/Minor-Components/CustomAmberButton";
 import CustomRedButton from "../../../Components/Minor-Components/CustomRedButton";
 import StatusBadge from "../../../Components/Minor-Components/StatusBadge";
+import ArchiveProductModal from "../../../Components/Modals/ArchiveProductModal";
+import RestoreProductModal from "../../../Components/Modals/RestoreProductModal";
+import DeleteProductModal from "../../../Components/Modals/DeleteProductModal";
 
 // ─── Static Data ───────────────────────────────────────────────────────────────
 const generateProducts = (count, archived = false) =>
@@ -50,11 +53,10 @@ const TABS = [
 ];
 
 const SORT_OPTIONS = [
-  { value: "default",    label: "Sort By"       },
-  { value: "code-asc",   label: "Code (A-Z)"    },
-  { value: "qty-asc",    label: "Qty: Low → High"},
-  { value: "qty-desc",   label: "Qty: High → Low"},
-  { value: "level-out",  label: "Out of Stock First"},
+  { value: "variant-asc", label: "Variant (A-Z)" },
+  { value: "code-asc",    label: "Product Code (A-Z)" },
+  { value: "qty-asc",     label: "Stock Quantity (Low to High)" },
+  { value: "exp-asc",     label: "Expiration Date (Nearest)" },
 ];
 
 const ROWS_PER_PAGE = 10;
@@ -92,8 +94,13 @@ function VariantBadge({ badge }) {
   );
 }
 
-// ─── Table header ──────────────────────────────────────────────────────────────
-const COLUMNS = ["Product Code", "Variant", "Stock Qty (kg)", "Description", "Action"];
+const COLUMNS = [
+  { label: "Product Code",   width: "16%" },
+  { label: "Variant",        width: "20%" },
+  { label: "Stock Qty (kg)", width: "16%" },
+  { label: "Description",    width: "30%" },
+  { label: "Action",         width: "18%", align: "center" },
+];
 
 // ─── Sort helper ───────────────────────────────────────────────────────────────
 const sortProducts = (products, sortBy) => {
@@ -112,8 +119,9 @@ const sortProducts = (products, sortBy) => {
 export default function WarehouseEncoderStockManagement() {
   const [activeTab,   setActiveTab]   = useState("active");
   const [search,      setSearch]      = useState("");
-  const [sortBy,      setSortBy]      = useState("default");
+  const [sortBy,      setSortBy]      = useState("variant-asc");
   const [currentPage, setCurrentPage] = useState(1);
+  const [modalState,  setModalState]  = useState({ type: null, product: null });
 
   const handleTab    = (v) => { setActiveTab(v); setCurrentPage(1); };
   const handleSearch = (v) => { setSearch(v);    setCurrentPage(1); };
@@ -186,15 +194,15 @@ export default function WarehouseEncoderStockManagement() {
 
       {/* ── Legend (Active tab only) ─────────────────────────────────────────── */}
       {activeTab === "active" && (
-        <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-600">
+        <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-600">
           <span className="text-slate-400">Legend:</span>
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-1.5 rounded-md bg-emerald-100 px-2 py-1 text-emerald-700">
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> In Stock
           </span>
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-1.5 rounded-md bg-amber-100 px-2 py-1 text-amber-700">
             <span className="h-2.5 w-2.5 rounded-full bg-amber-400" /> Low Stock
           </span>
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-1.5 rounded-md bg-rose-100 px-2 py-1 text-rose-700">
             <span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Out of Stock
           </span>
         </div>
@@ -205,13 +213,14 @@ export default function WarehouseEncoderStockManagement() {
         <div className="overflow-x-auto">
           <table className="min-w-full border-collapse">
             <thead>
-              <tr className="bg-[#EDEDED] text-left text-[11px] font-extrabold uppercase tracking-[0.03em] text-slate-600">
+              <tr className="bg-[#EDEDED] text-[13px] font-bold text-slate-700">
                 {COLUMNS.map((col) => (
                   <th
-                    key={col}
-                    className="whitespace-nowrap px-4 py-3 align-middle first:pl-5 last:pr-5"
+                    key={col.label}
+                    className={`whitespace-nowrap px-4 py-3.5 align-middle first:pl-5 last:pr-5 ${col.align === "center" ? "text-center" : "text-left"}`}
+                    style={{ width: col.width }}
                   >
-                    {col}
+                    {col.label}
                   </th>
                 ))}
               </tr>
@@ -231,7 +240,7 @@ export default function WarehouseEncoderStockManagement() {
                     className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70 transition-colors"
                   >
                     {/* Product Code */}
-                    <td className="whitespace-nowrap px-4 py-3 pl-5 text-[13px] font-semibold text-slate-700">
+                    <td className="whitespace-nowrap px-4 py-3 pl-5 text-[13px] font-bold text-slate-800">
                       {product.productCode}
                     </td>
 
@@ -262,7 +271,7 @@ export default function WarehouseEncoderStockManagement() {
                     {/* Action */}
                     <td className="whitespace-nowrap px-4 py-3 pr-5">
                       {activeTab === "active" ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-center gap-2">
                           <button
                             type="button"
                             className="rounded-full border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700"
@@ -272,17 +281,20 @@ export default function WarehouseEncoderStockManagement() {
                           <CustomAmberButton
                             text="Archive"
                             className="px-3 py-1.5 text-[11px] rounded-full"
+                            onClick={() => setModalState({ type: "archive", product })}
                           />
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-center gap-2">
                           <CustomGreenButton
                             text="Restore"
                             className="px-3 py-1.5 text-[11px] rounded-full"
+                            onClick={() => setModalState({ type: "restore", product })}
                           />
                           <CustomRedButton
-                            text="Delete Permanently"
-                            className="px-3 py-1.5 text-[11px] rounded-full"
+                            text="Delete"
+                            className="px-4 py-1.5 text-[11px] rounded-full"
+                            onClick={() => setModalState({ type: "delete", product })}
                           />
                         </div>
                       )}
@@ -304,6 +316,26 @@ export default function WarehouseEncoderStockManagement() {
           />
         )}
       </article>
+
+      {/* ── Modals ──────────────────────────────────────────────────────────── */}
+      <ArchiveProductModal
+        isOpen={modalState.type === "archive"}
+        onClose={() => setModalState({ type: null, product: null })}
+        productName={modalState.product?.variant || "Product"}
+        onArchive={() => setModalState({ type: null, product: null })}
+      />
+      <RestoreProductModal
+        isOpen={modalState.type === "restore"}
+        onClose={() => setModalState({ type: null, product: null })}
+        productName={modalState.product?.variant || "Product"}
+        onRestore={() => setModalState({ type: null, product: null })}
+      />
+      <DeleteProductModal
+        isOpen={modalState.type === "delete"}
+        onClose={() => setModalState({ type: null, product: null })}
+        productName={modalState.product?.variant || "Product"}
+        onDelete={() => setModalState({ type: null, product: null })}
+      />
     </div>
   );
 }

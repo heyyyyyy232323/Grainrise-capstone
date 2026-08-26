@@ -16,12 +16,14 @@ const RetailerManagement = () => {
   const totalPages = 4;
 
   const columns = [
-    { key: "retailer", label: "Retailer Name" },
-    { key: "address", label: "Address" },
-    { key: "email", label: "Email" },
+    { key: "retailer", label: "Retailer Name", width: "30%" },
+    { key: "address", label: "Address", width: "30%" },
+    { key: "email", label: "Email", width: "25%" },
     {
       key: "action",
       label: "Action",
+      headerClassName: "text-right",
+      width: "15%",
       render: (row) => {
         const s = String(row.status || "").toLowerCase().trim();
 

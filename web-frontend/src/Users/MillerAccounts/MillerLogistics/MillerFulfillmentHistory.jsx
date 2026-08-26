@@ -3,57 +3,103 @@ import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
 
+const VARIANT_OPTIONS = [
+  { value: "all",         label: "All Variants"  },
+  { value: "dinorado",    label: "Dinorado"       },
+  { value: "sinandomeng", label: "Sinandomeng"    },
+  { value: "jasmine",     label: "Jasmine"        },
+];
+
 const sampleFulfill = Array.from({ length: 52 }, (_, i) => ({
   id: `f-${i + 1}`,
-  variant: "Dinorado",
-  customer: "Retailer A",
+  variant:   "Dinorado",
+  customer:  "Retailer A",
   delivered: "400 kg",
-  passed: "300 kg",
-  failed: "100 kg",
+  passed:    "300 kg",
+  failed:    "100 kg",
 }));
 
 export default function MillerFulfillmentHistory() {
-  const [query, setQuery] = useState("");
-  const [page, setPage] = useState(1);
+  const [query,         setQuery]         = useState("");
+  const [variantFilter, setVariantFilter] = useState("all");
+  const [page,          setPage]          = useState(1);
 
   const columns = [
-    { key: "variant", label: "Variant" },
-    { key: "customer", label: "Customer" },
-    { key: "delivered", label: "Delivered (kg)" },
-    { key: "passed", label: "Passed QC (kg)" },
-    { key: "failed", label: "Failed QC (kg)" },
-    { key: "action", label: "Action", headerClassName: "text-center", cellClassName: "!text-center !pr-3" },
+    { key: "variant",   label: "Variant",         width: "18%" },
+    { key: "customer",  label: "Customer Name",   width: "22%" },
+    { key: "delivered", label: "Delivered (kg)",  width: "16%" },
+    { key: "passed",    label: "Passed QC (kg)",  width: "16%" },
+    { key: "failed",    label: "Failed QC (kg)",  width: "16%" },
+    {
+      key: "action",
+      label: "Action",
+      width: "12%",
+      headerClassName: "text-center",
+      cellClassName:   "!text-center",
+    },
   ];
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return sampleFulfill.filter((r) => q === "" || `${r.variant} ${r.customer}`.toLowerCase().includes(q));
-  }, [query]);
+    return sampleFulfill.filter((r) => {
+      const matchesQuery =
+        q === "" ||
+        `${r.variant} ${r.customer}`.toLowerCase().includes(q);
+      const matchesVariant =
+        variantFilter === "all" ||
+        r.variant.toLowerCase() === variantFilter;
+      return matchesQuery && matchesVariant;
+    });
+  }, [query, variantFilter]);
 
   const itemsPerPage = 10;
-  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
-  const startIndex = (page - 1) * itemsPerPage;
-  const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
-  const sections = useMemo(() => [{ rows: paginated }], [paginated]);
+  const totalPages   = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+  const startIndex   = (page - 1) * itemsPerPage;
+  const paginated    = filtered.slice(startIndex, startIndex + itemsPerPage);
+  const sections     = useMemo(() => [{ rows: paginated }], [paginated]);
 
   return (
     <div>
-      <Breadcrumbs items={[{ label: "Records", path: "/miller-logistics/dashboard" }, { label: "Fulfillment History" }]} />
+      <Breadcrumbs
+        items={[
+          { label: "Records", path: "/miller-logistics/dashboard" },
+          { label: "Fulfillment History" },
+        ]}
+      />
 
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Fulfillment History</h1>
-        <p className="text-sm text-slate-500 mt-1">View completed fulfillment and delivery records.</p>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+          Fulfillment History
+        </h1>
+        <p className="text-sm text-slate-500 mt-1">
+          View completed fulfillment and delivery records.
+        </p>
       </div>
 
-      <div className="mt-4 mb-4 -mx-4 md:mx-0">
-        <div className="px-4 md:px-0">
-          <div className="w-full md:w-1/2">
-            <div className="max-w-3xl">
-              <SearchFilter
-                onSearch={(v) => { setQuery(v); setPage(1); }}
-                placeholder="Search order no., batch no., product, or customer"
-              />
-            </div>
+      {/* Search + All Variants filter row */}
+      <div className="mt-4 mb-4">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Search */}
+          <div className="flex-1 min-w-[200px] max-w-xl">
+            <SearchFilter
+              onSearch={(v) => { setQuery(v); setPage(1); }}
+              placeholder="Search order no., batch no., product, or customer"
+            />
+          </div>
+
+          {/* All Variants dropdown */}
+          <div className="flex-none">
+            <select
+              value={variantFilter}
+              onChange={(e) => { setVariantFilter(e.target.value); setPage(1); }}
+              className="rounded-[8px] border border-slate-200 bg-white px-2 py-2 text-[13px] text-slate-600 cursor-pointer focus:outline-none focus:border-[#0B5D1E] hover:border-slate-400 transition-colors"
+            >
+              {VARIANT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
@@ -64,8 +110,13 @@ export default function MillerFulfillmentHistory() {
         currentPage={page}
         totalPages={totalPages}
         onPageChange={setPage}
-        footerLabel={`Showing ${startIndex + 1}-${Math.min(startIndex + itemsPerPage, filtered.length)} of ${filtered.length} fulfillment records`}
+        onViewDetails={(row) => console.log("View details:", row.id)}
+        footerLabel={`Showing ${startIndex + 1}-${Math.min(
+          startIndex + itemsPerPage,
+          filtered.length
+        )} of ${filtered.length} fulfillment records`}
       />
     </div>
   );
 }
+

@@ -18,13 +18,13 @@ const SearchFilter = ({ onSearch, placeholder = "Search Batch ID, Product Code, 
   return (
     <div className="relative">
       <div className="relative flex items-center">
-        <Search size={18} className="absolute left-3 text-gray-400" />
+        <Search size={16} className="absolute left-3 text-slate-400" />
         <input
           type="text"
           value={searchValue}
           onChange={handleChange}
           placeholder={placeholder}
-          className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+          className="w-full pl-9 pr-9 py-2 border border-slate-200 rounded-[8px] text-[13px] font-normal text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-[#0B5D1E] focus:ring-1 focus:ring-[#EAF7E8]"
         />
         {searchValue && (
           <button

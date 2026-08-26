@@ -8,10 +8,10 @@ import SectionedTableCard from "../../../Components/Minor-Components/SectionedTa
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const SORT_OPTIONS = [
-  { value: "date-desc", label: "Newest First" },
-  { value: "date-asc",  label: "Oldest First"  },
-  { value: "amount-desc", label: "Highest Amount" },
-  { value: "amount-asc",  label: "Lowest Amount"  },
+  { value: "variant-asc",  label: "Variant (A-Z)"                },
+  { value: "code-asc",     label: "Product Code (A-Z)"           },
+  { value: "qty-asc",      label: "Stock Quantity (Low to High)" },
+  { value: "exp-asc",      label: "Expiration Date (Nearest)"    },
 ];
 
 const COLUMNS = [

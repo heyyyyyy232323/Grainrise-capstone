@@ -11,6 +11,7 @@ import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import Dropdown from "../../../Components/Minor-Components/Dropdown";
 import CustomTextbox from "../../../Components/Minor-Components/CustomTextbox";
 import CustomGreenButton from "../../../Components/Minor-Components/CustomGreenButton";
+import RichTextEditor from "../../../Components/Minor-Components/RichTextEditor";
 
 // ─── Static Option Data ────────────────────────────────────────────────────────
 const PRODUCT_VARIANTS = [
@@ -67,8 +68,8 @@ function SparkBar({ data, months }) {
 // ─── Section wrapper card ─────────────────────────────────────────────────────
 function FormSection({ title, children }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_4px_14px_rgba(15,23,42,0.06)]">
-      <h2 className="mb-8 text-[15px] font-extrabold uppercase tracking-[0.06em] text-slate-800">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_4px_14px_rgba(15,23,42,0.06)]">
+      <h2 className="mb-4 text-[13px] font-extrabold uppercase tracking-[0.07em] text-slate-800">
         {title}
       </h2>
       {children}
@@ -156,10 +157,10 @@ export default function WarehouseEncoderNewRequest() {
       </div>
 
       {/* ── Two-column layout ────────────────────────────────────────────────── */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+      <div className="grid gap-5 lg:grid-cols-[3fr_2fr]">
 
         {/* ── LEFT: Form panels ─────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
 
           {/* Product Details */}
           <FormSection title="Product Details">
@@ -290,17 +291,12 @@ export default function WarehouseEncoderNewRequest() {
               <label className="mb-2 block text-sm font-medium text-slate-700">
                 Additional Notes
               </label>
-              <textarea
-                value={notes}
-                onChange={(e) => notes.length <= 500 && setNotes(e.target.value)}
+              <RichTextEditor
+                onChange={(html) => setNotes(html)}
                 placeholder="Add additional instructions for the supplier…"
-                rows={4}
                 maxLength={500}
-                className="w-full resize-none rounded-xl border border-[#CECECE] bg-white px-4 py-3 text-sm text-gray-700 placeholder-gray-400 outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
+                minHeight={150}
               />
-              <p className="mt-1 text-right text-[11px] text-slate-400">
-                {notes.length} / 500
-              </p>
             </div>
           </FormSection>
 
@@ -317,7 +313,7 @@ export default function WarehouseEncoderNewRequest() {
 
           {/* Recommended Quantity */}
           <div className="rounded-2xl bg-[#0B5D1E] p-5 text-white shadow-[0_8px_24px_rgba(11,93,30,0.25)]">
-            <h3 className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/70">
+            <h3 className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-white/70">
               Recommended Quantity
             </h3>
             <p className="mt-3 text-[2.25rem] font-extrabold leading-none tracking-tight">
@@ -330,7 +326,7 @@ export default function WarehouseEncoderNewRequest() {
 
           {/* Historical Demand */}
           <SideCard>
-            <h3 className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-500">
+            <h3 className="text-[12px] font-extrabold uppercase tracking-[0.07em] text-slate-700">
               Historical Demand (Last 12 Months)
             </h3>
             {historicalData ? (
@@ -345,7 +341,7 @@ export default function WarehouseEncoderNewRequest() {
 
           {/* Current Month Forecast */}
           <SideCard>
-            <h3 className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-500">
+            <h3 className="text-[12px] font-extrabold uppercase tracking-[0.07em] text-slate-700">
               Current Month Forecast
             </h3>
             {currentForecast ? (
@@ -379,7 +375,7 @@ export default function WarehouseEncoderNewRequest() {
                 <BookOpen size={16} className="text-amber-700" strokeWidth={2} />
               </div>
               <div>
-                <h3 className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-amber-700">
+                <h3 className="text-[12px] font-extrabold uppercase tracking-[0.07em] text-amber-700">
                   Forecast Guide
                 </h3>
                 <p className="mt-1.5 text-[11px] leading-relaxed text-amber-700/80">

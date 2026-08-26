@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { FileText } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import Tabs from "../../../Components/Minor-Components/Tabs";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
@@ -35,16 +36,28 @@ const sampleTaxes = Array.from({ length: 24 }, (_, i) => ({
 
 const sampleReimburse = Array.from({ length: 24 }, (_, i) => ({
   id: `r-${i + 1}`,
-  category: i % 3 === 0 ? "Logistic / Delivery Reimbursement" : i % 3 === 1 ? "Warehouse Operation" : "Payroll",
-  description: i % 3 === 0 ? "Fuel reimbursement for delivery truck" : i % 3 === 1 ? "Warehouse supply expense" : "Weekly salary payout",
+  category:
+    i % 3 === 0
+      ? "Logistics / Delivery Reimbursement"
+      : i % 3 === 1
+      ? "Warehouse Operation"
+      : "Payroll",
+  description:
+    i % 3 === 0
+      ? "Fuel reimbursement for delivery truck"
+      : i % 3 === 1
+      ? "Warehouse supply expense"
+      : "Weekly salary payout",
   cost: i % 3 === 0 ? "₱2,500.00" : "₱150.00",
-  requester: i % 3 === 0 ? "Logistics A" : "Driver A",
+  requester: i % 3 === 0 ? "Logistics A" : i % 3 === 1 ? "Driver A" : "Finance A",
+  date: `Apr ${(i % 12) + 1}, 2026`,
 }));
 
 export default function WarehousePaymentHistory() {
   const [activeTab, setActiveTab] = useState("payables");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("");
+  const [variantFilter, setVariantFilter] = useState("");
   const [page, setPage] = useState(1);
 
   const data = useMemo(() => {
@@ -77,17 +90,52 @@ export default function WarehousePaymentHistory() {
     { key: "paidAt", label: "Paid At" },
   ] : activeTab === "taxes" ? [
     { key: "name", label: "Name of Tax" },
-    { key: "desc", label: "Description" },
+    {
+      key: "desc",
+      label: "Description",
+      render: (row) => (
+        <span className="text-[13px] text-slate-600">
+          {row.desc}
+        </span>
+      ),
+    },
     { key: "cost", label: "Cost Value" },
-    { key: "period", label: "Tax Period" },
+    {
+      key: "period",
+      label: "Tax Period",
+      render: (row) => {
+        const isYearly = row.period === "Yearly";
+        return (
+          <span
+            className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold ${
+              isYearly
+                ? "bg-purple-100 text-purple-700"
+                : "bg-blue-100 text-blue-700"
+            }`}
+          >
+            {row.period}
+          </span>
+        );
+      },
+    },
     { key: "dueDate", label: "Due Date" },
   ] : [
-    { key: "category", label: "Expense Category", render: (row) => (
-      <div>
-        <div className="inline-flex"><span className="inline-block rounded-full bg-sky-100 text-sky-700 px-3 py-1 text-xs font-semibold">{row.category}</span></div>
-        <div className="text-xs text-slate-400 mt-1">{row.date}</div>
-      </div>
-    ) },
+    { key: "category", label: "Expense Category", render: (row) => {
+      const colorMap = {
+        "Logistics / Delivery Reimbursement": "bg-blue-100 text-blue-700",
+        "Warehouse Operation": "bg-amber-100 text-amber-700",
+        "Payroll": "bg-purple-100 text-purple-700",
+      };
+      const colorClass = colorMap[row.category] || "bg-slate-100 text-slate-600";
+      return (
+        <div>
+          <span className={`inline-block rounded-full px-3 py-1 text-[10px] font-bold ${colorClass}`}>
+            {row.category}
+          </span>
+          <div className="text-[11px] text-slate-400 mt-1">{row.date}</div>
+        </div>
+      );
+    }},
     { key: "description", label: "Description" },
     { key: "cost", label: "Cost" },
     { key: "requester", label: "Requested By" },
@@ -113,16 +161,26 @@ export default function WarehousePaymentHistory() {
               <div className="flex-1 min-w-0 max-w-3xl">
                 <SearchFilter onSearch={(v) => { setQuery(v); setPage(1); }} placeholder={activeTab === "taxes" ? "Search tax name, description" : activeTab === "payables" ? "Search batch ID, supplier, product" : "Search category, description, recipient"} />
               </div>
-              <div className="w-44 flex-none">
-                <Dropdown options={[{ label: "All", value: "" }]} value={filter} onChange={(v) => setFilter(v)} placeholder={activeTab === "taxes" ? "Tax Period" : activeTab === "payables" ? "Supplier" : "All Categories"} />
-              </div>
+              {activeTab === "payables" ? (
+                <>
+                  <div className="w-36 flex-none">
+                    <Dropdown options={[{ label: "All Variants", value: "" }]} value={variantFilter} onChange={(v) => setVariantFilter(v)} placeholder="All Variants" />
+                  </div>
+                  <div className="w-36 flex-none">
+                    <Dropdown options={[{ label: "All Suppliers", value: "" }]} value={filter} onChange={(v) => setFilter(v)} placeholder="All Suppliers" />
+                  </div>
+                </>
+              ) : activeTab === "reimburse" ? (
+                null
+              ) : null}
             </div>
           </div>
 
           <div className="ml-4 flex items-center gap-3">
-           <button className="inline-flex items-center gap-2 bg-[#018311] hover:bg-[#016b0f] text-white px-4 py-2 rounded-full text-sm font-semibold">
-  Generate Financial Reports
-</button>
+           <button className="inline-flex items-center gap-2 bg-[#0B5D1E] hover:opacity-90 transition-opacity text-white px-4 py-[9px] rounded-full text-[13px] font-semibold">
+             <FileText size={16} />
+             Generate Financial Reports
+           </button>
           </div>
         </div>
       </div>
