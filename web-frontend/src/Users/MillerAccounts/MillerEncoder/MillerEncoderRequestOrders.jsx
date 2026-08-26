@@ -69,7 +69,7 @@ function SparkBar({ data, months }) {
 function FormSection({ title, children }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_4px_14px_rgba(15,23,42,0.06)]">
-      <h2 className="mb-4 text-[11px] font-extrabold uppercase tracking-[0.1em] text-slate-500">
+      <h2 className="mb-8 text-[15px] font-extrabold uppercase tracking-[0.06em] text-slate-800">
         {title}
       </h2>
       {children}
@@ -160,7 +160,7 @@ export default function MillerEncoderRequestOrders() {
       <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
 
         {/* ── LEFT: Form panels ─────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-6">
 
           {/* Product Details */}
           <FormSection title="Product Details">
