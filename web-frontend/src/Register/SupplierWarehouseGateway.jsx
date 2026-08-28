@@ -8,7 +8,6 @@ import Logo from "../assets/Logo.png";
 import backgroundImage from "../assets/smudge.jpg";
 import supplierImg from "../assets/supplier.png";
 import warehouseManagerImg from "../assets/warehouse-manager.png";
-import farmerImg from "../assets/farmer.jpg";
 
 const roles = [
   {
@@ -17,6 +16,7 @@ const roles = [
     description: "Manage deliveries, inventory, and retailer supply operations.",
     buttonText: "Register as Supplier",
     image: supplierImg,
+    imagePosition: "center",
     path: "/register/supplier",
   },
   {
@@ -25,24 +25,22 @@ const roles = [
     description: "Manage warehouse inventory and daily logistics operations.",
     buttonText: "Register as Warehouse Manager",
     image: warehouseManagerImg,
+    imagePosition: "50% 30%",
     path: "/register/warehouse-manager",
-  },
-  {
-    key: "farmer",
-    title: "Farmer",
-    description: "Manage farm information, submit harvests, and supply rice products.",
-    buttonText: "Register as Farmer",
-    image: farmerImg,
-    path: "/register/farmer",
   },
 ];
 
-const RoleCard = ({ title, description, buttonText, image, onClick }) => (
+const RoleCard = ({ title, description, buttonText, image, imagePosition = "center", onClick }) => (
   <div
     onClick={onClick}
     className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl"
   >
-    <img src={image} alt={title} className="w-full h-56 object-cover" />
+    <img
+      src={image}
+      alt={title}
+      className="w-full h-56 object-cover"
+      style={{ objectPosition: imagePosition }}
+    />
     <div className="p-6 flex flex-col flex-1">
       <h3 className="text-xl font-bold text-green-700 mb-2">{title}</h3>
       <p className="text-gray-600 text-sm mb-6 flex-1">{description}</p>
@@ -99,7 +97,7 @@ const SupplierWarehouseGateway = () => {
           </p>
         </div>
 
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6">
           {roles.map((role) => (
             <RoleCard
               key={role.key}
@@ -107,6 +105,7 @@ const SupplierWarehouseGateway = () => {
               description={role.description}
               buttonText={role.buttonText}
               image={role.image}
+              imagePosition={role.imagePosition}
               onClick={() => navigate(role.path)}
             />
           ))}
@@ -114,7 +113,7 @@ const SupplierWarehouseGateway = () => {
 
         <p className="flex items-center justify-center gap-2 text-sm text-gray-500 mt-10">
           <Info size={16} />
-          This registration portal is intended for Suppliers, Warehouse Managers, and Farmers only.
+          This registration portal is intended for Suppliers and Warehouse Managers only.
         </p>
       </div>
 

@@ -11,6 +11,8 @@ import WarehouseManagerRegister from "./Register/WarehouseManagerRegister";
 import SupplierRegister from "./Register/SupplierRegister";
 import FarmerRegister from "./Register/FarmerRegister";
 import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout";
+import FloatingChatbot from "./Components/Minor-Components/FloatingChatbot";
+import TopProgressBar from "./Components/Minor-Components/TopProgressBar";
 import WarehouseEncoderDashboard from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderDashboard";
 import WarehouseEncoderOrderHistory from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderOrderHistory";
 import WarehouseEncoderStock from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderStockManagement";
@@ -78,8 +80,10 @@ import MillerSalesHistory from "./Users/MillerAccounts/MillerSales/MillerSalesHi
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <>
+      <BrowserRouter>
+        <TopProgressBar />
+        <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/admin-login" element={<AdminLogin />} />
@@ -190,8 +194,13 @@ function App() {
           <Route path="/admin/retailers" element={<RetailerManagement />} />
           <Route path="/admin/email-users" element={<EmailUsers />} />
         </Route>
-      </Routes> 
-    </BrowserRouter>
+      </Routes>
+      </BrowserRouter>
+
+      {/* Floating chatbot — mounted outside BrowserRouter so position:fixed
+          is never broken by a transformed ancestor (animate-page-fade) */}
+      <FloatingChatbot />
+    </>
   );
 }
 

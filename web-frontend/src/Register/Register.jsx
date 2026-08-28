@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Info, Sidebar } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 
 import CustomGreenButton from "../Components/Minor-Components/CustomGreenButton";
 import CustomWhiteButton from "../Components/Minor-Components/CustomWhiteButton";
@@ -9,7 +9,7 @@ import backgroundImage from "../assets/smudge.jpg";
 
 
 import retailerImg from "../assets/retailer.jpg";
-import supplierWarehouseImg from "../assets/supplier-warehouse.jpg";
+import farmerImg from "../assets/farmer.jpg";
 
 const roles = [
   {
@@ -22,12 +22,13 @@ const roles = [
     path: "/register/retailer",
   },
   {
-    key: "supplier-warehouse",
-    title: "Supplier & Warehouse Manager",
-    description: "Continue to select your role before registering.",
-    buttonText: "Continue",
-    image: supplierWarehouseImg,
-    path: "/register/supplier-warehouse",
+    key: "farmer",
+    title: "Farmer",
+    description:
+      "Create an account to manage farm information, submit harvests, and supply rice products.",
+    buttonText: "Register as Farmer",
+    image: farmerImg,
+    path: "/register/farmer",
   },
 ];
 
