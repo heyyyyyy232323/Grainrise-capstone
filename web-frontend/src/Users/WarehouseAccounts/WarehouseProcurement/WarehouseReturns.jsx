@@ -54,24 +54,28 @@ const WarehouseReturns = () => {
         </p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-4 items-center">
-        <div className="relative flex-1 max-w-md w-full">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={16} className="text-gray-400" />
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="w-full max-w-sm">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search size={16} className="text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search batch no., supplier, or product"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+            />
           </div>
-          <input
-            type="text"
-            placeholder="Search batch no. or supplier"
-            className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
-          />
         </div>
         
-        <div className="flex gap-2 w-full sm:w-auto">
-          <button className="flex items-center gap-2 border border-gray-200 bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto justify-center transition-colors">
-            Status
-            <ChevronDown size={16} className="text-gray-500" />
-          </button>
-        </div>
+        <button className="flex items-center gap-2 border border-gray-200 bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+          Status
+          <ChevronDown size={16} className="text-gray-500" />
+        </button>
+        <button className="flex items-center gap-2 border border-gray-200 bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+          Sort By
+          <ChevronDown size={16} className="text-gray-500" />
+        </button>
       </div>
 
       <SectionedTableCard

@@ -1,14 +1,14 @@
-import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { Search, ChevronDown, X, Plus } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import Tabs from "../../../Components/Minor-Components/Tabs";
-import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
-import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
 import PaginationControls from "../../../Components/Minor-Components/PaginationControls";
 import CustomGreenButton from "../../../Components/Minor-Components/CustomGreenButton";
 import CustomAmberButton from "../../../Components/Minor-Components/CustomAmberButton";
 import CustomRedButton from "../../../Components/Minor-Components/CustomRedButton";
-import StatusBadge from "../../../Components/Minor-Components/StatusBadge";
+import ArchiveProductModal from "../../../Components/Modals/ArchiveProductModal";
+import RestoreProductModal from "../../../Components/Modals/RestoreProductModal";
+import DeleteProductModal from "../../../Components/Modals/DeleteProductModal";
 
 // ─── Static Data ───────────────────────────────────────────────────────────────
 const generateProducts = (count, archived = false) =>
@@ -50,10 +50,18 @@ const TABS = [
 ];
 
 const SORT_OPTIONS = [
-  { value: "variant-asc", label: "Variant (A-Z)"               },
-  { value: "code-asc",    label: "Product Code (A-Z)"          },
-  { value: "qty-asc",     label: "Stock Quantity (Low to High)"},
-  { value: "exp-asc",     label: "Expiration Date (Nearest)"   },
+  { value: "variant-asc", label: "Variant (A-Z)" },
+  { value: "variant-desc", label: "Variant (Z-A)" },
+  { value: "code-asc",    label: "Product Code (A-Z)" },
+  { value: "qty-desc",    label: "Stock Quantity (High to Low)" },
+  { value: "qty-asc",     label: "Stock Quantity (Low to High)" },
+];
+
+const STOCK_FILTER_OPTIONS = [
+  { value: "all", label: "All Stock Levels" },
+  { value: "in",  label: "In Stock" },
+  { value: "low", label: "Low Stock" },
+  { value: "out", label: "Out of Stock" },
 ];
 
 const ROWS_PER_PAGE = 10;
@@ -100,24 +108,48 @@ const COLUMNS = [
 ];
 
 // ─── Sort helper ───────────────────────────────────────────────────────────────
-const sortProducts = (products, sortBy) => {
-  const arr = [...products];
-  if (sortBy === "code-asc")  return arr.sort((a, b) => a.productCode.localeCompare(b.productCode));
-  if (sortBy === "qty-desc")  return arr.sort((a, b) => parseFloat(b.stockQty) - parseFloat(a.stockQty));
-  if (sortBy === "qty-asc")   return arr.sort((a, b) => parseFloat(a.stockQty) - parseFloat(b.stockQty));
-  if (sortBy === "level-out") {
-    const order = { out: 0, low: 1, in: 2 };
-    return arr.sort((a, b) => (order[a.stockLevel] ?? 3) - (order[b.stockLevel] ?? 3));
+const sortProducts = (products, sortBy, stockFilter) => {
+  let arr = [...products];
+
+  if (stockFilter && stockFilter !== "all") {
+    arr = arr.filter((p) => p.stockLevel === stockFilter);
   }
-  return arr;
+
+  if (sortBy === "code-asc")  return arr.sort((a, b) => a.productCode.localeCompare(b.productCode));
+  if (sortBy === "variant-desc") return arr.sort((a, b) => b.variant.localeCompare(a.variant));
+  if (sortBy === "qty-desc")  return arr.sort((a, b) => parseFloat(b.stockQty.replace(/[^0-9.]/g, "")) - parseFloat(a.stockQty.replace(/[^0-9.]/g, "")));
+  if (sortBy === "qty-asc")   return arr.sort((a, b) => parseFloat(a.stockQty.replace(/[^0-9.]/g, "")) - parseFloat(b.stockQty.replace(/[^0-9.]/g, "")));
+  return arr.sort((a, b) => a.variant.localeCompare(b.variant));
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function MillerEncoderStockManagement() {
-  const [activeTab,   setActiveTab]   = useState("active");
-  const [search,      setSearch]      = useState("");
-  const [sortBy,      setSortBy]      = useState("default");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab,     setActiveTab]     = useState("active");
+  const [search,        setSearch]        = useState("");
+  const [stockFilter,   setStockFilter]   = useState("all");
+  const [sortBy,        setSortBy]        = useState("variant-asc");
+  const [currentPage,   setCurrentPage]   = useState(1);
+  const [modalState,    setModalState]    = useState({ type: null, product: null });
+
+  const [showStockDrop, setShowStockDrop] = useState(false);
+  const [showSortDrop,  setShowSortDrop]  = useState(false);
+
+  const stockRef = useRef(null);
+  const sortRef  = useRef(null);
+
+  // Click outside to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (stockRef.current && !stockRef.current.contains(e.target)) {
+        setShowStockDrop(false);
+      }
+      if (sortRef.current && !sortRef.current.contains(e.target)) {
+        setShowSortDrop(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleTab    = (v) => { setActiveTab(v); setCurrentPage(1); };
   const handleSearch = (v) => { setSearch(v);    setCurrentPage(1); };
@@ -136,8 +168,8 @@ export default function MillerEncoderStockManagement() {
           p.description.toLowerCase().includes(q)
       );
     }
-    return sortProducts(result, sortBy);
-  }, [basePool, search, sortBy]);
+    return sortProducts(result, sortBy, stockFilter);
+  }, [basePool, search, sortBy, stockFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ROWS_PER_PAGE));
   const pageSlice  = filtered.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
@@ -164,23 +196,127 @@ export default function MillerEncoderStockManagement() {
       {/* ── Tabs ────────────────────────────────────────────────────────────── */}
       <Tabs tabs={TABS} activeTab={activeTab} onTabChange={handleTab} />
 
-      {/* ── Toolbar ─────────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex-1 min-w-[200px] max-w-sm">
-          <SearchFilter
-            onSearch={handleSearch}
-            placeholder="Search product code, variant, or description"
-          />
-        </div>
-        <SortByDropdown value={sortBy} onChange={handleSort} options={SORT_OPTIONS} />
+      {/* ── Toolbar (Procurement Design) ────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4 items-center justify-between">
+        {/* Left: Search + Filter Group */}
+        <div className="flex flex-col sm:flex-row gap-3 items-center w-full sm:w-auto flex-1">
+          {/* Search */}
+          <div className="relative flex-1 max-w-md w-full">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search size={16} className="text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Search product code, variant, or description"
+              className="block w-full pl-10 pr-9 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white placeholder-gray-400 text-gray-700"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => handleSearch("")}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
 
-        {/* Add Product — only on Active tab, pushed to far right */}
+          {/* Filter and Sort Dropdowns */}
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center">
+            {/* Stock Level Filter */}
+            <div className="relative w-full sm:w-auto" ref={stockRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowStockDrop((prev) => !prev);
+                  setShowSortDrop(false);
+                }}
+                className={`flex items-center gap-2 border border-gray-200 bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto justify-center transition-colors cursor-pointer ${
+                  stockFilter !== "all" ? "border-emerald-500 text-emerald-700 bg-emerald-50/40" : ""
+                }`}
+              >
+                <span>{STOCK_FILTER_OPTIONS.find((o) => o.value === stockFilter)?.label || "Stock Level"}</span>
+                <ChevronDown
+                  size={16}
+                  className={`text-gray-500 transition-transform duration-200 ${showStockDrop ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {showStockDrop && (
+                <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-xl shadow-lg p-1.5 z-20 min-w-[170px]">
+                  {STOCK_FILTER_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setStockFilter(opt.value);
+                        setCurrentPage(1);
+                        setShowStockDrop(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                        stockFilter === opt.value
+                          ? "bg-[#EAF7E8] text-[#0B5D1E] font-bold"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Sort By Dropdown */}
+            <div className="relative w-full sm:w-auto" ref={sortRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSortDrop((prev) => !prev);
+                  setShowStockDrop(false);
+                }}
+                className="flex items-center gap-2 border border-gray-200 bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto justify-center transition-colors cursor-pointer"
+              >
+                <span>{SORT_OPTIONS.find((o) => o.value === sortBy)?.label || "Sort By"}</span>
+                <ChevronDown
+                  size={16}
+                  className={`text-gray-500 transition-transform duration-200 ${showSortDrop ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {showSortDrop && (
+                <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-xl shadow-lg p-1.5 z-20 min-w-[210px]">
+                  {SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        handleSort(opt.value);
+                        setShowSortDrop(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                        sortBy === opt.value
+                          ? "bg-[#EAF7E8] text-[#0B5D1E] font-bold"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Add Product — only on Active tab */}
         {activeTab === "active" && (
           <button
             type="button"
-            className="ml-auto inline-flex items-center gap-2 rounded-full bg-[#0B5D1E] px-5 py-2.5 text-[13px] font-semibold text-white transition hover:opacity-90"
+            className="rounded-lg bg-[#0B5D1E] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#084b18] flex items-center gap-1.5 cursor-pointer whitespace-nowrap ml-auto"
           >
-            <Plus size={15} strokeWidth={2.5} />
+            <Plus size={16} strokeWidth={2.5} />
             Add Product
           </button>
         )}
@@ -275,6 +411,7 @@ export default function MillerEncoderStockManagement() {
                           <CustomAmberButton
                             text="Archive"
                             className="px-3 py-1.5 text-[11px] rounded-full"
+                            onClick={() => setModalState({ type: "archive", product })}
                           />
                         </div>
                       ) : (
@@ -282,10 +419,12 @@ export default function MillerEncoderStockManagement() {
                           <CustomGreenButton
                             text="Restore"
                             className="px-3 py-1.5 text-[11px] rounded-full"
+                            onClick={() => setModalState({ type: "restore", product })}
                           />
                           <CustomRedButton
-                            text="Delete Permanently"
+                            text="Delete"
                             className="px-3 py-1.5 text-[11px] rounded-full"
+                            onClick={() => setModalState({ type: "delete", product })}
                           />
                         </div>
                       )}
@@ -307,6 +446,26 @@ export default function MillerEncoderStockManagement() {
           />
         )}
       </article>
+
+      {/* ── Modals ──────────────────────────────────────────────────────────── */}
+      <ArchiveProductModal
+        isOpen={modalState.type === "archive"}
+        onClose={() => setModalState({ type: null, product: null })}
+        productName={modalState.product?.variant || "Product"}
+        onArchive={() => setModalState({ type: null, product: null })}
+      />
+      <RestoreProductModal
+        isOpen={modalState.type === "restore"}
+        onClose={() => setModalState({ type: null, product: null })}
+        productName={modalState.product?.variant || "Product"}
+        onRestore={() => setModalState({ type: null, product: null })}
+      />
+      <DeleteProductModal
+        isOpen={modalState.type === "delete"}
+        onClose={() => setModalState({ type: null, product: null })}
+        productName={modalState.product?.variant || "Product"}
+        onDelete={() => setModalState({ type: null, product: null })}
+      />
     </div>
   );
 }

@@ -1,21 +1,28 @@
 import { useMemo, useState } from "react";
-import { FileText } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import Tabs from "../../../Components/Minor-Components/Tabs";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
 import Dropdown from "../../../Components/Minor-Components/Dropdown";
+import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
+import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
+import { FileText } from "lucide-react";
 
 const TABS = [
-  { id: "payables", label: "Procurement Payables" },
-  { id: "taxes", label: "Tax Compliance Record" },
-  { id: "reimburse", label: "Reimbursement" },
+  { id: "payables",  label: "Procurement Payables"  },
+  { id: "taxes",     label: "Tax Compliance Record"  },
+  { id: "reimburse", label: "Reimbursement"          },
 ];
 
-// sample data for each tab (lightweight)
+const SORT_OPTIONS = [
+  { value: "date-desc", label: "Newest First" },
+  { value: "date-asc", label: "Oldest First" },
+  { value: "cost-desc", label: "Cost/Total (High to Low)" },
+  { value: "cost-asc", label: "Cost/Total (Low to High)" },
+];
+
 const samplePayables = Array.from({ length: 24 }, (_, i) => ({
   id: `p-${i + 1}`,
-  // mark as paid history so it's distinct from active Payables page
   batchNo: `Paid Batch 2026 - 00${(i % 12) + 1}`,
   supplier: `Supplier A (Paid)`,
   variant: "Dinorado",
@@ -58,6 +65,7 @@ export default function WarehousePaymentHistory() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("");
   const [variantFilter, setVariantFilter] = useState("");
+  const [sortBy, setSortBy] = useState("date-desc");
   const [page, setPage] = useState(1);
 
   const data = useMemo(() => {
@@ -79,7 +87,6 @@ export default function WarehousePaymentHistory() {
   const startIndex = (page - 1) * itemsPerPage;
   const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
 
-  // columns per tab
   const columns = activeTab === "payables" ? [
     { key: "batchNo", label: "Batch No." },
     { key: "supplier", label: "Supplier" },
@@ -154,35 +161,36 @@ export default function WarehousePaymentHistory() {
 
       <Tabs tabs={TABS} activeTab={activeTab} onTabChange={(t) => { setActiveTab(t); setPage(1); setQuery(""); }} />
 
-      <div className="mt-4 mb-4 -mx-4 md:mx-0">
-        <div className="px-4 md:px-0 flex items-center justify-between">
-          <div className="w-full md:w-1/2">
-            <div className="flex gap-3 items-center">
-              <div className="flex-1 min-w-0 max-w-3xl">
-                <SearchFilter onSearch={(v) => { setQuery(v); setPage(1); }} placeholder={activeTab === "taxes" ? "Search tax name, description" : activeTab === "payables" ? "Search batch ID, supplier, product" : "Search category, description, recipient"} />
-              </div>
-              {activeTab === "payables" ? (
-                <>
-                  <div className="w-36 flex-none">
-                    <Dropdown options={[{ label: "All Variants", value: "" }]} value={variantFilter} onChange={(v) => setVariantFilter(v)} placeholder="All Variants" />
-                  </div>
-                  <div className="w-36 flex-none">
-                    <Dropdown options={[{ label: "All Suppliers", value: "" }]} value={filter} onChange={(v) => setFilter(v)} placeholder="All Suppliers" />
-                  </div>
-                </>
-              ) : activeTab === "reimburse" ? (
-                null
-              ) : null}
-            </div>
+      <div className="mt-4 mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
+          <div className="w-full max-w-xs sm:w-72">
+            <SearchFilter onSearch={(v) => { setQuery(v); setPage(1); }} placeholder={activeTab === "taxes" ? "Search tax name, description" : activeTab === "payables" ? "Search batch ID, supplier, product" : "Search category, description, recipient"} />
           </div>
 
-          <div className="ml-4 flex items-center gap-3">
-           <button className="inline-flex items-center gap-2 bg-[#0B5D1E] hover:opacity-90 transition-opacity text-white px-4 py-[9px] rounded-full text-[13px] font-semibold">
-             <FileText size={16} />
-             Generate Financial Reports
-           </button>
-          </div>
+          {activeTab === "payables" && (
+            <>
+              <div className="w-36">
+                <Dropdown options={[{ label: "All Variants", value: "" }]} value={variantFilter} onChange={(v) => setVariantFilter(v)} placeholder="All Variants" />
+              </div>
+              <div className="w-36">
+                <Dropdown options={[{ label: "All Suppliers", value: "" }]} value={filter} onChange={(v) => setFilter(v)} placeholder="All Suppliers" />
+              </div>
+            </>
+          )}
+
+          <DateRangePicker onDateChange={() => {}} />
+
+          <SortByDropdown
+            options={SORT_OPTIONS}
+            value={sortBy}
+            onChange={(v) => { setSortBy(v); setPage(1); }}
+          />
         </div>
+
+        <button className="inline-flex items-center gap-2 bg-[#0B5D1E] hover:opacity-90 transition-opacity text-white px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer">
+          <FileText size={16} />
+          Generate Financial Reports
+        </button>
       </div>
 
       <SectionedTableCard

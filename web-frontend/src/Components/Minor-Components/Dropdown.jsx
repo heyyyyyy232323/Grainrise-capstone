@@ -49,44 +49,48 @@ const Dropdown = ({
     );
   };
 
+  const activeOption = options.find((opt) => (typeof opt === "string" ? opt : opt.value) === value);
+  const displayLabel = !value || value === "all"
+    ? placeholder
+    : activeOption
+    ? (typeof activeOption === "string" ? activeOption : activeOption.label)
+    : placeholder;
+
+  const isFiltered = value && value !== "all" && value !== "";
+
   return (
     <div className={`w-full relative ${className}`} ref={dropdownRef}>
       {renderLabel()}
 
-      <div
+      <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`
-          flex items-center justify-between
+          flex items-center justify-between gap-2
           w-full px-3 py-2
-          rounded-[8px] border
-          text-[13px] font-medium
+          rounded-lg border
+          text-sm font-medium
           bg-white text-gray-700
+          hover:bg-gray-50
           cursor-pointer
-          selection:bg-transparent
           transition-colors
-          ${isOpen ? "border-[#0B5D1E] ring-1 ring-[#EAF7E8]" : error ? "border-red-500" : "border-slate-200 hover:bg-slate-50"}
+          ${isFiltered ? "border-emerald-500 text-emerald-700 bg-emerald-50/40" : "border-gray-200"}
+          ${isOpen ? "ring-1 ring-emerald-500 border-emerald-500" : error ? "border-red-500" : ""}
         `}
       >
-        <span
-          className="truncate font-normal"
-          style={{ color: "#1E1E1E" }}
-        >
-          {(() => {
-            if (!value || value === "all") return placeholder;
-            const activeOpt = options.find((opt) => (typeof opt === "string" ? opt : opt.value) === value);
-            return activeOpt ? (typeof activeOpt === "string" ? activeOpt : activeOpt.label) : placeholder;
-          })()}
+        <span className="truncate text-left flex-1">
+          {displayLabel}
         </span>
         <ChevronDown
-          size={14}
-          className={`text-slate-400 ml-2 transition-transform duration-200 ${
-            isOpen ? "transform rotate-180 text-[#0B5D1E]" : ""
+          size={16}
+          className={`text-gray-500 ml-1.5 shrink-0 transition-transform duration-200 ${
+            isOpen ? "transform rotate-180" : ""
           }`}
         />
-      </div>
+      </button>
 
       {isOpen && (
-        <div className="absolute z-[999] w-full mt-2 bg-white border border-gray-200 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] max-h-60 overflow-y-auto p-2">
+        <div className="absolute z-[999] min-w-full w-max max-w-[280px] mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto p-1.5 right-0 sm:right-auto sm:left-0">
           {options.length > 0 ? (
             <div className="flex flex-col gap-0.5">
               {options.map((option, idx) => {
@@ -95,25 +99,26 @@ const Dropdown = ({
                 const isSelected = value === optionValue;
 
                 return (
-                  <div
+                  <button
                     key={idx}
+                    type="button"
                     onClick={() => handleSelect(optionValue)}
                     className={`
-                      px-4 py-3 
-                      text-sm text-left
+                      w-full px-3 py-2 
+                      text-xs text-left
                       cursor-pointer 
-                      rounded-[10px]
+                      rounded-lg
                       transition-colors 
                       ${isSelected ? "bg-[#EAF7E8] text-[#0B5D1E] font-bold" : "text-gray-700 font-medium hover:bg-gray-100"}
                     `}
                   >
                     {optionText}
-                  </div>
+                  </button>
                 );
               })}
             </div>
           ) : (
-            <div className="px-4 py-3 text-sm text-gray-400 text-center italic">
+            <div className="px-3 py-2 text-xs text-gray-400 text-center italic">
               No options available
             </div>
           )}

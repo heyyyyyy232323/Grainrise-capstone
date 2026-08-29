@@ -3,6 +3,13 @@ import { Search } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import Tabs from "../../../Components/Minor-Components/Tabs";
+import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
+
+const SORT_OPTIONS = [
+  { value: "name-asc", label: "Supplier Name (A-Z)" },
+  { value: "name-desc", label: "Supplier Name (Z-A)" },
+  { value: "company-asc", label: "Company (A-Z)" },
+];
 
 // Badge color per tab, matching the reference (To Review = amber, Active = green, Inactive = red)
 const TAB_BADGE_STYLES = {
@@ -98,6 +105,8 @@ const SupplierManagement = () => {
   ];
 
   const [activeTab, setActiveTab] = useState(tabs[0].id);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("name-asc");
 
   // counts for badges
   const counts = useMemo(() => {
@@ -113,17 +122,31 @@ const SupplierManagement = () => {
     );
   }, [rawRows]);
 
-  // No section label needed — the active Tab already tells the user which
-  // category they're viewing, so we skip the extra colored banner row.
+  const filteredRawRows = useMemo(() => {
+    let list = rawRows.filter((r) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        r.supplier.toLowerCase().includes(q) ||
+        r.company.toLowerCase().includes(q) ||
+        r.email.toLowerCase().includes(q)
+      );
+    });
+    if (sortBy === "name-asc") list.sort((a, b) => a.supplier.localeCompare(b.supplier));
+    else if (sortBy === "name-desc") list.sort((a, b) => b.supplier.localeCompare(a.supplier));
+    else if (sortBy === "company-asc") list.sort((a, b) => a.company.localeCompare(b.company));
+    return list;
+  }, [rawRows, searchQuery, sortBy]);
+
   const sections = useMemo(() => {
     if (activeTab === "to-review")
-      return [{ rows: rawRows.filter((r) => String(r.status).toLowerCase().trim() === "to review") }];
+      return [{ rows: filteredRawRows.filter((r) => String(r.status).toLowerCase().trim() === "to review") }];
     if (activeTab === "inactive")
-      return [{ rows: rawRows.filter((r) => ["inactive", "archived"].includes(String(r.status).toLowerCase().trim())) }];
+      return [{ rows: filteredRawRows.filter((r) => ["inactive", "archived"].includes(String(r.status).toLowerCase().trim())) }];
     if (activeTab === "active")
-      return [{ rows: rawRows.filter((r) => String(r.status).toLowerCase().trim() === "active") }];
-    return [{ rows: rawRows }];
-  }, [activeTab, rawRows]);
+      return [{ rows: filteredRawRows.filter((r) => String(r.status).toLowerCase().trim() === "active") }];
+    return [{ rows: filteredRawRows }];
+  }, [activeTab, filteredRawRows]);
 
   return (
     <>
@@ -155,15 +178,33 @@ const SupplierManagement = () => {
         }}
       />
 
-      <div className="mb-4">
-        <div className="relative max-w-md w-full">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={16} className="text-gray-400" />
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="w-full max-w-sm">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search size={16} className="text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Search by supplier, company, or email"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white placeholder-gray-400 text-gray-700"
+            />
           </div>
-          <input
-            type="text"
-            placeholder="Search by supplier, company, or email"
-            className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+        </div>
+
+        <div>
+          <SortByDropdown
+            options={SORT_OPTIONS}
+            value={sortBy}
+            onChange={(v) => {
+              setSortBy(v);
+              setCurrentPage(1);
+            }}
           />
         </div>
       </div>

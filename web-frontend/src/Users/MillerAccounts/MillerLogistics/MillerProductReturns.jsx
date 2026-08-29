@@ -2,12 +2,22 @@ import { useMemo, useState } from "react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
+import Dropdown from "../../../Components/Minor-Components/Dropdown";
+import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
+import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
 
 const VARIANT_OPTIONS = [
   { value: "all", label: "All Variants" },
   { value: "dinorado", label: "Dinorado" },
   { value: "sinandomeng", label: "Sinandomeng" },
   { value: "jasmine", label: "Jasmine" },
+];
+
+const SORT_OPTIONS = [
+  { value: "variant-asc",  label: "Variant (A-Z)" },
+  { value: "order-asc", label: "Order No. (A-Z)" },
+  { value: "retailer-asc", label: "Retailer (A-Z)" },
+  { value: "qty-desc", label: "Quantity (High to Low)" },
 ];
 
 const sampleReturns = Array.from({ length: 24 }, (_, i) => ({
@@ -21,6 +31,7 @@ const sampleReturns = Array.from({ length: 24 }, (_, i) => ({
 export default function MillerProductReturns() {
   const [query, setQuery] = useState("");
   const [variantFilter, setVariantFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("variant-asc");
   const [page, setPage] = useState(1);
 
   const columns = [
@@ -39,7 +50,7 @@ export default function MillerProductReturns() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return sampleReturns.filter((r) => {
+    let result = sampleReturns.filter((r) => {
       const matchesQuery =
         q === "" ||
         `${r.variant} ${r.orderNo} ${r.retailer}`.toLowerCase().includes(q);
@@ -48,7 +59,11 @@ export default function MillerProductReturns() {
         r.variant.toLowerCase() === variantFilter;
       return matchesQuery && matchesVariant;
     });
-  }, [query, variantFilter]);
+    if (sortBy === "variant-asc") result.sort((a, b) => a.variant.localeCompare(b.variant));
+    else if (sortBy === "retailer-asc") result.sort((a, b) => a.retailer.localeCompare(b.retailer));
+    else if (sortBy === "order-asc") result.sort((a, b) => a.orderNo.localeCompare(b.orderNo));
+    return result;
+  }, [query, variantFilter, sortBy]);
 
   const itemsPerPage = 10;
   const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
@@ -78,7 +93,7 @@ export default function MillerProductReturns() {
       <div className="mt-4 mb-4">
         <div className="flex flex-wrap items-center gap-3">
           {/* Search */}
-          <div className="flex-1 min-w-[200px] max-w-xl">
+          <div className="w-full max-w-sm">
             <SearchFilter
               onSearch={(v) => { setQuery(v); setPage(1); }}
               placeholder="Search order no., batch no., product, or retailer"
@@ -86,19 +101,22 @@ export default function MillerProductReturns() {
           </div>
 
           {/* All Variants dropdown */}
-          <div className="flex-none">
-            <select
+          <div className="w-36">
+            <Dropdown
+              options={VARIANT_OPTIONS}
               value={variantFilter}
-              onChange={(e) => { setVariantFilter(e.target.value); setPage(1); }}
-              className="rounded-[8px] border border-slate-200 bg-white px-2 py-2 text-[13px] text-slate-600 cursor-pointer focus:outline-none focus:border-[#0B5D1E] hover:border-slate-400 transition-colors"
-            >
-              {VARIANT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => { setVariantFilter(v); setPage(1); }}
+              placeholder="All Variants"
+            />
           </div>
+
+          <DateRangePicker onDateChange={() => {}} />
+
+          <SortByDropdown
+            options={SORT_OPTIONS}
+            value={sortBy}
+            onChange={(v) => { setSortBy(v); setPage(1); }}
+          />
         </div>
       </div>
 

@@ -2,12 +2,22 @@ import { useMemo, useState } from "react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
+import Dropdown from "../../../Components/Minor-Components/Dropdown";
+import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
+import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
 
 const VARIANT_OPTIONS = [
   { value: "all",         label: "All Variants"  },
   { value: "dinorado",    label: "Dinorado"       },
   { value: "sinandomeng", label: "Sinandomeng"    },
   { value: "jasmine",     label: "Jasmine"        },
+];
+
+const SORT_OPTIONS = [
+  { value: "variant-asc",  label: "Variant (A-Z)" },
+  { value: "customer-asc", label: "Customer Name (A-Z)" },
+  { value: "delivered-desc", label: "Delivered Qty (High to Low)" },
+  { value: "passed-desc", label: "Passed QC (High to Low)" },
 ];
 
 const sampleFulfill = Array.from({ length: 52 }, (_, i) => ({
@@ -22,6 +32,7 @@ const sampleFulfill = Array.from({ length: 52 }, (_, i) => ({
 export default function MillerFulfillmentHistory() {
   const [query,         setQuery]         = useState("");
   const [variantFilter, setVariantFilter] = useState("all");
+  const [sortBy,        setSortBy]        = useState("variant-asc");
   const [page,          setPage]          = useState(1);
 
   const columns = [
@@ -41,7 +52,7 @@ export default function MillerFulfillmentHistory() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return sampleFulfill.filter((r) => {
+    let result = sampleFulfill.filter((r) => {
       const matchesQuery =
         q === "" ||
         `${r.variant} ${r.customer}`.toLowerCase().includes(q);
@@ -50,7 +61,10 @@ export default function MillerFulfillmentHistory() {
         r.variant.toLowerCase() === variantFilter;
       return matchesQuery && matchesVariant;
     });
-  }, [query, variantFilter]);
+    if (sortBy === "variant-asc") result.sort((a, b) => a.variant.localeCompare(b.variant));
+    else if (sortBy === "customer-asc") result.sort((a, b) => a.customer.localeCompare(b.customer));
+    return result;
+  }, [query, variantFilter, sortBy]);
 
   const itemsPerPage = 10;
   const totalPages   = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
@@ -80,7 +94,7 @@ export default function MillerFulfillmentHistory() {
       <div className="mt-4 mb-4">
         <div className="flex flex-wrap items-center gap-3">
           {/* Search */}
-          <div className="flex-1 min-w-[200px] max-w-xl">
+          <div className="w-full max-w-sm">
             <SearchFilter
               onSearch={(v) => { setQuery(v); setPage(1); }}
               placeholder="Search order no., batch no., product, or customer"
@@ -88,19 +102,22 @@ export default function MillerFulfillmentHistory() {
           </div>
 
           {/* All Variants dropdown */}
-          <div className="flex-none">
-            <select
+          <div className="w-36">
+            <Dropdown
+              options={VARIANT_OPTIONS}
               value={variantFilter}
-              onChange={(e) => { setVariantFilter(e.target.value); setPage(1); }}
-              className="rounded-[8px] border border-slate-200 bg-white px-2 py-2 text-[13px] text-slate-600 cursor-pointer focus:outline-none focus:border-[#0B5D1E] hover:border-slate-400 transition-colors"
-            >
-              {VARIANT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => { setVariantFilter(v); setPage(1); }}
+              placeholder="All Variants"
+            />
           </div>
+
+          <DateRangePicker onDateChange={() => {}} />
+
+          <SortByDropdown
+            options={SORT_OPTIONS}
+            value={sortBy}
+            onChange={(v) => { setSortBy(v); setPage(1); }}
+          />
         </div>
       </div>
 

@@ -1,62 +1,75 @@
 import { useMemo, useState } from "react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
-import Tabs from "../../../Components/Minor-Components/Tabs";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
+import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
+import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
+import Tabs from "../../../Components/Minor-Components/Tabs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
 const TABS = [
-  { id: "payables",  label: "Procurement Payables"  },
-  { id: "taxes",     label: "Tax Compliance Record"  },
-  { id: "reimburse", label: "Reimbursement"          },
+  { id: "payables",       label: "Payables Payment" },
+  { id: "taxes",          label: "Taxes Payment" },
+  { id: "reimbursements", label: "Reimbursements" },
 ];
 
-const samplePayables = Array.from({ length: 24 }, (_, i) => ({
-  id:       `p-${i + 1}`,
-  batchNo:  `Batch 2026 - 001`,
-  supplier: `Supplier A`,
-  variant:  "Dinorado",
-  stockQty: "200 kg",
+const SORT_OPTIONS = [
+  { value: "date-desc", label: "Newest First" },
+  { value: "date-asc", label: "Oldest First" },
+  { value: "amount-desc", label: "Amount (High to Low)" },
+  { value: "amount-asc", label: "Amount (Low to High)" },
+];
+
+/* 30 payables, 12 taxes, 18 reimbursements */
+const samplePayables = Array.from({ length: 30 }, (_, i) => ({
+  id: `pay-${i + 1}`,
+  batchNo:   `Batch 2026 - 00${(i % 12) + 1}`,
+  supplier:  "Supplier A",
+  variant:   "Dinorado",
+  stockQty:  "200 kg",
   unitPrice: "₱45.00",
-  total:    "₱9,000.00",
-  paidAt:   "Sep 30, 2026",
+  total:     "₱9,000.00",
+  paidAt:    "Apr 14, 2026",
 }));
 
-const sampleTaxes = Array.from({ length: 24 }, (_, i) => ({
-  id:      `t-${i + 1}`,
-  name:    i % 2 === 0 ? "3% Percentage Tax" : "Local Business Tax",
-  desc:    i % 2 === 0
-    ? "Tax imposed by BIR on non-VAT registered businesses..."
-    : "Local tax imposed by the LGU...",
-  cost:    i % 2 === 0 ? "₱1.00" : "₱10,310.20",
+const sampleTaxes = Array.from({ length: 12 }, (_, i) => ({
+  id: `tax-${i + 1}`,
+  name:    "3% Percentage Tax",
+  desc:    "Non-VAT percentage tax obligation",
+  cost:    "₱1,250.00",
   period:  i % 2 === 0 ? "Quarterly" : "Yearly",
   dueDate: "Sep 30, 2026",
 }));
 
-const sampleReimburse = Array.from({ length: 24 }, (_, i) => ({
-  id:          `r-${i + 1}`,
-  category:    i % 3 === 0 ? "Logistic / Delivery Reimbursement" : i % 3 === 1 ? "Miller Operation" : "Payroll",
-  description: i % 3 === 0 ? "Fuel reimbursement for delivery truck" : i % 3 === 1 ? "Miller supply expense" : "Weekly salary payout",
-  cost:        i % 3 === 0 ? "₱2,500.00" : "₱150.00",
-  requester:   i % 3 === 0 ? "Logistics A" : "Driver A",
+const sampleReimbursements = Array.from({ length: 18 }, (_, i) => ({
+  id: `reim-${i + 1}`,
+  category:    "Vehicle Repair",
+  description: "Gasoline reimbursement",
+  cost:        "₱3,500.00",
+  requester:   "Juan Dela Cruz",
 }));
 
 export default function MillerFinancePaymentHistory() {
   const [activeTab, setActiveTab] = useState("payables");
   const [query,     setQuery]     = useState("");
+  const [sortBy,    setSortBy]    = useState("date-desc");
   const [page,      setPage]      = useState(1);
 
-  const data = useMemo(() => {
-    if (activeTab === "payables")  return samplePayables;
-    if (activeTab === "taxes")     return sampleTaxes;
-    return sampleReimburse;
-  }, [activeTab]);
+  const data =
+    activeTab === "payables"
+      ? samplePayables
+      : activeTab === "taxes"
+      ? sampleTaxes
+      : sampleReimbursements;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return data;
-    return data.filter((r) =>
-      Object.values(r).some((v) => String(v).toLowerCase().includes(q))
-    );
+    let result = data.filter((r) => {
+      if (!q) return true;
+      return Object.values(r).some((val) =>
+        String(val).toLowerCase().includes(q)
+      );
+    });
+    return result;
   }, [data, query]);
 
   const itemsPerPage = 10;
@@ -125,26 +138,34 @@ export default function MillerFinancePaymentHistory() {
         onTabChange={(t) => { setActiveTab(t); setPage(1); setQuery(""); }}
       />
 
-      {/* Search + Generate Financial Reports */}
-      <div className="mt-4 mb-4 flex items-center gap-3">
-        <div className="flex-1 max-w-md">
-          <SearchFilter
-            onSearch={(v) => { setQuery(v); setPage(1); }}
-            placeholder={
-              activeTab === "taxes"
-                ? "Search tax name, description"
-                : activeTab === "payables"
-                ? "Search batch ID, supplier, product"
-                : "Search category, description, recipient"
-            }
+      {/* Search + Filters + Generate Financial Reports */}
+      <div className="mt-4 mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
+          <div className="w-full max-w-xs sm:w-72">
+            <SearchFilter
+              onSearch={(v) => { setQuery(v); setPage(1); }}
+              placeholder={
+                activeTab === "taxes"
+                  ? "Search tax name, description"
+                  : activeTab === "payables"
+                  ? "Search batch ID, supplier, product"
+                  : "Search category, description, recipient"
+              }
+            />
+          </div>
+
+          <DateRangePicker onDateChange={() => {}} />
+
+          <SortByDropdown
+            options={SORT_OPTIONS}
+            value={sortBy}
+            onChange={(v) => { setSortBy(v); setPage(1); }}
           />
         </div>
 
-        <div className="ml-auto">
-          <button className="inline-flex items-center gap-2 bg-[#018311] hover:bg-[#016b0f] text-white px-5 py-2 rounded-full text-sm font-semibold transition-colors">
-            📄 Generate Financial Reports
-          </button>
-        </div>
+        <button className="inline-flex items-center gap-2 bg-[#018311] hover:bg-[#016b0f] text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer">
+          📄 Generate Financial Reports
+        </button>
       </div>
 
       <SectionedTableCard

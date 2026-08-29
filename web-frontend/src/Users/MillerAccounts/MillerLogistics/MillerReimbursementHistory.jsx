@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
+import Dropdown from "../../../Components/Minor-Components/Dropdown";
+import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
 /* 71 records matching the Figma data: first 4 Paid, next 3 Approved, rest Pending */
@@ -14,29 +16,42 @@ const sampleData = Array.from({ length: 71 }, (_, i) => ({
 }));
 
 const STATUS_OPTIONS = [
-  { value: "",         label: "Status"   },
+  { value: "all",      label: "All Status" },
   { value: "Paid",     label: "Paid"     },
   { value: "Approved", label: "Approved" },
   { value: "Pending",  label: "Pending"  },
 ];
 
+const SORT_OPTIONS = [
+  { value: "date-desc", label: "Newest First" },
+  { value: "date-asc", label: "Oldest First" },
+  { value: "amount-desc", label: "Amount (High to Low)" },
+  { value: "amount-asc", label: "Amount (Low to High)" },
+];
+
 export default function MillerReimbursementHistory() {
   const [query,        setQuery]        = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy,       setSortBy]       = useState("date-desc");
   const [currentPage,  setCurrentPage]  = useState(1);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return sampleData.filter((r) => {
+    let result = sampleData.filter((r) => {
       const matchesQuery =
         q === "" ||
         `${r.category} ${r.requester}`.toLowerCase().includes(q);
       const matchesStatus =
-        statusFilter === "" ||
+        statusFilter === "all" ||
         r.status.toLowerCase() === statusFilter.toLowerCase();
       return matchesQuery && matchesStatus;
     });
-  }, [query, statusFilter]);
+    if (sortBy === "amount-desc") result.sort((a, b) => b.amount - a.amount);
+    else if (sortBy === "amount-asc") result.sort((a, b) => a.amount - b.amount);
+    else if (sortBy === "date-asc") result.sort((a, b) => a.expense_date.localeCompare(b.expense_date));
+    else if (sortBy === "date-desc") result.sort((a, b) => b.expense_date.localeCompare(a.expense_date));
+    return result;
+  }, [query, statusFilter, sortBy]);
 
   const itemsPerPage = 10;
   const totalPages   = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
@@ -99,7 +114,7 @@ export default function MillerReimbursementHistory() {
       {/* Search + Status filter row */}
       <div className="mt-4 mb-4 flex flex-wrap items-center gap-3">
         {/* Search */}
-        <div className="flex-1 min-w-[200px] max-w-lg">
+        <div className="w-full max-w-sm">
           <SearchFilter
             onSearch={(v) => { setQuery(v); setCurrentPage(1); }}
             placeholder="Search category, description, requester"
@@ -107,19 +122,20 @@ export default function MillerReimbursementHistory() {
         </div>
 
         {/* Status dropdown */}
-        <div className="flex-none">
-          <select
+        <div className="w-36">
+          <Dropdown
+            options={STATUS_OPTIONS}
             value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-            className="rounded-[8px] border border-slate-200 bg-white px-2 py-2 text-[13px] text-slate-600 cursor-pointer focus:outline-none focus:border-[#0B5D1E] hover:border-slate-400 transition-colors"
-          >
-            {STATUS_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+            placeholder="Status"
+          />
         </div>
+
+        <SortByDropdown
+          options={SORT_OPTIONS}
+          value={sortBy}
+          onChange={(v) => { setSortBy(v); setCurrentPage(1); }}
+        />
       </div>
 
       <SectionedTableCard
