@@ -12,7 +12,7 @@ import SupplierRegister from "./Register/SupplierRegister";
 import FarmerRegister from "./Register/FarmerRegister";
 import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout";
 import FloatingChatbot from "./Components/Minor-Components/FloatingChatbot";
-import TopProgressBar from "./Components/Minor-Components/TopProgressBar";
+import GlobalLoadingScreen from "./Components/Minor-Components/GlobalLoadingScreen";
 import WarehouseEncoderDashboard from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderDashboard";
 import WarehouseEncoderOrderHistory from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderOrderHistory";
 import WarehouseEncoderStock from "./Users/WarehouseAccounts/WarehouseEncoder/WarehouseEncoderStockManagement";
@@ -55,6 +55,12 @@ import RetailerSalesHistory from "./Users/RetailerAccounts/RetailerSalesHistory"
 import RetailerInventory from "./Users/RetailerAccounts/RetailerInventory";
 import RetailerProductReturns from "./Users/RetailerAccounts/RetailerProductReturns";
 import RetailerMyPurchases from "./Users/RetailerAccounts/RetailerMyPurchases";
+import RetailerOrderTracking from "./Users/RetailerAccounts/RetailerOrderTracking";
+// Farmer
+import FarmerDashboard from "./Users/FarmersAccounts/FarmerDashboard";
+import FarmerForecasting from "./Users/FarmersAccounts/FarmerForecasting";
+import FarmerContracts from "./Users/FarmersAccounts/FarmerContracts";
+import FarmerNewsUpdates from "./Users/FarmersAccounts/FarmerNewsUpdates";
 
 // Miller Finance
 import MillerFinanceDashboard from "./Users/MillerAccounts/MillerFinance/MillerFinanceDashboard";
@@ -82,7 +88,7 @@ function App() {
   return (
     <>
       <BrowserRouter>
-        <TopProgressBar />
+        <GlobalLoadingScreen />
         <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
@@ -182,8 +188,17 @@ function App() {
           <Route path="/retailer/point-of-sale" element={<RetailerPointOfSale />} />
           <Route path="/retailer/sales-history" element={<RetailerSalesHistory />} />
           <Route path="/retailer/inventory" element={<RetailerInventory />} />
+          <Route path="/retailer/order-tracking" element={<RetailerOrderTracking />} />
           <Route path="/retailer/product-returns" element={<RetailerProductReturns />} />
           <Route path="/retailer/my-purchases" element={<RetailerMyPurchases />} />
+        </Route>
+
+        {/* Farmer pages */}
+        <Route element={<WarehouseEncoderLayout role="farmer" />}>
+          <Route path="/farmer/dashboard" element={<FarmerDashboard />} />
+          <Route path="/farmer/forecasting" element={<FarmerForecasting />} />
+          <Route path="/farmer/contracts" element={<FarmerContracts />} />
+          <Route path="/farmer/news-updates" element={<FarmerNewsUpdates />} />
         </Route>
 
         {/* Admin pages */}

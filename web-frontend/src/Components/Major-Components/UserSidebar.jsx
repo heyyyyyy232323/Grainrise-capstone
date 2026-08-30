@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package, CornerUpLeft, CreditCard, History, X, ClipboardList, PackageCheck, Wallet, BookOpen, Receipt, RefreshCcw, Archive, Mail } from "lucide-react";
+import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package, CornerUpLeft, CreditCard, History, X, ClipboardList, PackageCheck, Wallet, BookOpen, Receipt, RefreshCcw, Archive, Mail, Newspaper } from "lucide-react";
 import Logo from "../../assets/Logo.png";
 
 export const getUserSidebarConfig = (role = "admin") => {
@@ -294,12 +294,42 @@ export const getUserSidebarConfig = (role = "admin") => {
         },
       ],
     },
+    farmer: {
+      panelLabel: "FARMER PANEL",
+      sections: [
+        {
+          title: "MAIN",
+          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/farmer/dashboard" }],
+        },
+        {
+          title: "FARM",
+          items: [
+            { label: "Farm Management", icon: Package, path: "/farmer/farm-management" },
+            { label: "Forecasting", icon: FileBarChart, path: "/farmer/forecasting" },
+          ],
+        },
+        {
+          title: "BUSINESS",
+          items: [
+            { label: "Contracts", icon: ClipboardList, path: "/farmer/contracts" },
+            { label: "Point of Sale", icon: CreditCard, path: "/farmer/point-of-sale" },
+            { label: "Transaction History", icon: History, path: "/farmer/transaction-history" },
+          ],
+        },
+        {
+          title: "RESOURCES",
+          items: [
+            { label: "News & Updates", icon: Newspaper, path: "/farmer/news-updates" },
+          ],
+        }
+      ],
+    },
   };
 
   return menuConfigs[role] || menuConfigs.admin;
 };
 
-export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales", "warehouse_logistics", "warehouse_procurement", "warehouse_finance", "supplier_encoder", "miller_sales", "miller_logistics", "miller_finance"];
+export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales", "warehouse_logistics", "warehouse_procurement", "warehouse_finance", "supplier_encoder", "miller_sales", "miller_logistics", "miller_finance", "farmer"];
 
 const UserSidebar = ({
   role = "admin",
