@@ -29,14 +29,14 @@ const RetailerManagement = () => {
     {
       key: "action",
       label: "Action",
-      headerClassName: "text-right",
+      headerClassName: "text-center",
       width: "15%",
       render: (row) => {
         const s = String(row.status || "").toLowerCase().trim();
 
         if (s === "to review") {
           return (
-            <div className="flex justify-end">
+            <div className="flex justify-center">
               <button className="rounded-full bg-amber-400 text-white px-3 py-1.5 text-[11px] font-semibold hover:brightness-95">Review</button>
             </div>
           );
@@ -49,7 +49,7 @@ const RetailerManagement = () => {
                 Restore
               </button>
               <button className="rounded-full bg-[#DC2626] text-white px-3 py-1.5 text-[11px] font-semibold hover:bg-[#B91C1C]">
-                Delete Permanently
+                Delete
               </button>
             </div>
           );
@@ -58,7 +58,7 @@ const RetailerManagement = () => {
         if (s === "active") {
           return (
             <div className="flex gap-2 justify-end">
-              <button className="rounded-full border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50">View Details</button>
+              <button className="rounded-full border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50">View </button>
               <button className="rounded-full bg-amber-400 text-white px-3 py-1.5 text-[11px] font-semibold hover:brightness-95">Archive</button>
             </div>
           );

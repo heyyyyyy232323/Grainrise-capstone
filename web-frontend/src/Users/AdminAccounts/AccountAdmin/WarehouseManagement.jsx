@@ -23,33 +23,42 @@ const WarehouseManagement = () => {
   const totalPages = 4;
 
   const columns = [
-    { key: "manager", label: "Manager Name", width: "20%" },
-    { key: "company", label: "Company Name", width: "20%" },
-    { key: "email", label: "Email", width: "20%" },
+    { key: "manager", label: "Manager Name", width: "24%" },
+    { key: "company", label: "Company Name", width: "24%" },
+    { key: "email", label: "Email", width: "24%" },
     { key: "contact", label: "Contact", width: "20%" },
     {
       key: "action",
       label: "Action",
-      width: "20%",
+      width: "8%",
+      cellClassName: "text-right",
       render: (row) => {
-        const s = String(row.status || "").toLowerCase().trim();
+        if (!row.status) return null;
+        const s = String(row.status).toLowerCase().trim();
 
         if (s === "to review") {
           return (
-            <div className="flex">
-              <button className="rounded-full bg-amber-400 text-white px-3 py-1.5 text-[11px] font-semibold hover:brightness-95">Review</button>
+            <div className="flex justify-end">
+              <button className="rounded-full bg-amber-400 text-white px-3 py-1 text-[11px] font-semibold leading-normal hover:brightness-95">
+                Review
+              </button>
             </div>
           );
         }
 
         if (s === "inactive" || s === "archived") {
           return (
-            <div className="flex gap-2">
-              <button className="rounded-full text-white px-3 py-1.5 text-[11px] font-semibold" style={{backgroundColor: '#00A516'}} onMouseEnter={(e) => e.target.style.backgroundColor = '#008C13'} onMouseLeave={(e) => e.target.style.backgroundColor = '#00A516'}>
+            <div className="flex justify-end gap-1.5">
+              <button
+                className="rounded-full text-white px-2.5 py-1 text-[11px] font-semibold leading-normal"
+                style={{ backgroundColor: "#00A516" }}
+                onMouseEnter={(e) => (e.target.style.backgroundColor = "#008C13")}
+                onMouseLeave={(e) => (e.target.style.backgroundColor = "#00A516")}
+              >
                 Restore
               </button>
-              <button className="rounded-full bg-[#DC2626] text-white px-3 py-1.5 text-[11px] font-semibold hover:bg-[#B91C1C]">
-                Delete Permanently
+              <button className="rounded-full bg-[#DC2626] text-white px-2.5 py-1 text-[11px] font-semibold leading-normal hover:bg-[#B91C1C]">
+                Delete
               </button>
             </div>
           );
@@ -57,16 +66,22 @@ const WarehouseManagement = () => {
 
         if (s === "active") {
           return (
-            <div className="flex gap-2">
-              <button className="rounded-full border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50">View Details</button>
-              <button className="rounded-full bg-amber-400 text-white px-3 py-1.5 text-[11px] font-semibold hover:brightness-95">Archive</button>
+            <div className="flex justify-end gap-1.5">
+              <button className="rounded-full border border-gray-300 px-2.5 py-1 text-[11px] font-semibold leading-normal text-gray-700 hover:bg-gray-50">
+                View
+              </button>
+              <button className="rounded-full bg-amber-400 text-white px-2.5 py-1 text-[11px] font-semibold leading-normal hover:brightness-95">
+                Archive
+              </button>
             </div>
           );
         }
 
         return (
-          <div className="flex">
-            <button className="rounded-full border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50">Action</button>
+          <div className="flex justify-end">
+            <button className="rounded-full border border-gray-300 px-2.5 py-1 text-[11px] font-semibold leading-normal text-gray-700 hover:bg-gray-50">
+              Action
+            </button>
           </div>
         );
       },

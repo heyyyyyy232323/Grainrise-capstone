@@ -3,13 +3,6 @@ import { Search } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import Tabs from "../../../Components/Minor-Components/Tabs";
-import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
-
-const SORT_OPTIONS = [
-  { value: "name-asc", label: "Supplier Name (A-Z)" },
-  { value: "name-desc", label: "Supplier Name (Z-A)" },
-  { value: "company-asc", label: "Company (A-Z)" },
-];
 
 // Badge color per tab, matching the reference (To Review = amber, Active = green, Inactive = red)
 const TAB_BADGE_STYLES = {
@@ -31,7 +24,6 @@ const SupplierManagement = () => {
       key: "action",
       label: "Action",
       width: "8%",
-      headerClassName: "text-right",
       cellClassName: "text-right",
       render: (row) => {
         if (!row.status) return null;
@@ -40,7 +32,7 @@ const SupplierManagement = () => {
         if (s === "to review") {
           return (
             <div className="flex justify-end">
-              <button className="rounded-full bg-amber-400 text-white px-3 py-1.5 text-[11px] font-semibold hover:brightness-95">
+              <button className="rounded-full bg-amber-400 text-white px-3 py-1 text-[11px] font-semibold leading-normal hover:brightness-95">
                 Review
               </button>
             </div>
@@ -49,12 +41,17 @@ const SupplierManagement = () => {
 
         if (s === "inactive" || s === "archived") {
           return (
-            <div className="flex justify-end gap-2">
-              <button className="rounded-full text-white px-3 py-1.5 text-[11px] font-semibold" style={{backgroundColor: '#00A516'}} onMouseEnter={(e) => e.target.style.backgroundColor = '#008C13'} onMouseLeave={(e) => e.target.style.backgroundColor = '#00A516'}>
+            <div className="flex justify-end gap-1.5">
+              <button
+                className="rounded-full text-white px-2.5 py-1 text-[11px] font-semibold leading-normal"
+                style={{ backgroundColor: "#00A516" }}
+                onMouseEnter={(e) => (e.target.style.backgroundColor = "#008C13")}
+                onMouseLeave={(e) => (e.target.style.backgroundColor = "#00A516")}
+              >
                 Restore
               </button>
-              <button className="rounded-full bg-[#DC2626] text-white px-3 py-1.5 text-[11px] font-semibold hover:bg-[#B91C1C]">
-                Delete Permanently
+              <button className="rounded-full bg-[#DC2626] text-white px-2.5 py-1 text-[11px] font-semibold leading-normal hover:bg-[#B91C1C]">
+                Delete
               </button>
             </div>
           );
@@ -62,11 +59,12 @@ const SupplierManagement = () => {
 
         if (s === "active") {
           return (
-            <div className="flex justify-end gap-2">
-              <button className="rounded-full border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50">
-                View Details
+            <div className="flex justify-end gap-1.5">
+              <button className="rounded-full border border-gray-300 px-2.5 py-1 text-[11px] font-semibold leading-normal text-gray-700 hover:bg-gray-50">
+                View
+                
               </button>
-              <button className="rounded-full bg-yellow-400 text-white px-3 py-1.5 text-[11px] font-semibold hover:brightness-95">
+              <button className="rounded-full bg-amber-400 text-white px-2.5 py-1 text-[11px] font-semibold leading-normal hover:brightness-95">
                 Archive
               </button>
             </div>
@@ -75,7 +73,7 @@ const SupplierManagement = () => {
 
         return (
           <div className="flex justify-end">
-            <button className="rounded-full border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50">
+            <button className="rounded-full border border-gray-300 px-2.5 py-1 text-[11px] font-semibold leading-normal text-gray-700 hover:bg-gray-50">
               Action
             </button>
           </div>
@@ -87,12 +85,13 @@ const SupplierManagement = () => {
   // sample rows with statuses that match screenshot states
   const rawRows = Array.from({ length: 24 }).map((_, i) => {
     const status = i % 4 === 0 ? "To Review" : i % 4 === 1 ? "Active" : i % 4 === 2 ? "Inactive" : "Active";
+    const isToReview = status === "To Review";
     return {
       id: i + 1,
       supplier: `Supplier ${String.fromCharCode(65 + (i % 26))}`,
       company: `ABC Rice Trading`,
       email: `abc${i}@email.com`,
-      contact: `0917-XXX-XXXX`,
+      contact: isToReview ? "0917-XXX-XXXX" : "0917 000 0001",
       joined: "Mar 12, 2026",
       status,
     };
@@ -106,7 +105,6 @@ const SupplierManagement = () => {
 
   const [activeTab, setActiveTab] = useState(tabs[0].id);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("name-asc");
 
   // counts for badges
   const counts = useMemo(() => {
@@ -132,11 +130,9 @@ const SupplierManagement = () => {
         r.email.toLowerCase().includes(q)
       );
     });
-    if (sortBy === "name-asc") list.sort((a, b) => a.supplier.localeCompare(b.supplier));
-    else if (sortBy === "name-desc") list.sort((a, b) => b.supplier.localeCompare(a.supplier));
-    else if (sortBy === "company-asc") list.sort((a, b) => a.company.localeCompare(b.company));
+    list.sort((a, b) => a.supplier.localeCompare(b.supplier));
     return list;
-  }, [rawRows, searchQuery, sortBy]);
+  }, [rawRows, searchQuery]);
 
   const sections = useMemo(() => {
     if (activeTab === "to-review")
@@ -195,17 +191,6 @@ const SupplierManagement = () => {
               className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white placeholder-gray-400 text-gray-700"
             />
           </div>
-        </div>
-
-        <div>
-          <SortByDropdown
-            options={SORT_OPTIONS}
-            value={sortBy}
-            onChange={(v) => {
-              setSortBy(v);
-              setCurrentPage(1);
-            }}
-          />
         </div>
       </div>
 
