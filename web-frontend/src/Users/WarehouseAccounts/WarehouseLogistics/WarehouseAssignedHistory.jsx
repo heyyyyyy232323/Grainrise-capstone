@@ -4,6 +4,7 @@ import SectionedTableCard from "../../../Components/Minor-Components/SectionedTa
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
 import Dropdown from "../../../Components/Minor-Components/Dropdown";
 import WarehouseDeliveryDetails from "./WarehouseDeliveryDetails";
+import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
 
 const sampleAssigned = Array.from({ length: 125 }, (_, i) => ({
   id: `a-${i + 1}`,
@@ -14,10 +15,18 @@ const sampleAssigned = Array.from({ length: 125 }, (_, i) => ({
   assignedOn: "Apr 12, 2026",
 }));
 
+const SORT_OPTIONS = [
+  { value: "order-asc", label: "Order No. (A-Z)" },
+  { value: "variant-asc", label: "Variant (A-Z)" },
+  { value: "driver-asc", label: "Driver Name (A-Z)" },
+  { value: "status-asc", label: "Status" },
+];
+
 export default function AssignedHistory() {
   const [query, setQuery] = useState("");
   const [deliveryFilter, setDeliveryFilter] = useState("all");
   const [assignmentFilter, setAssignmentFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("order-asc");
   const [page, setPage] = useState(1);
   const [selectedRecord, setSelectedRecord] = useState(null);
 
@@ -32,7 +41,7 @@ export default function AssignedHistory() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return sampleAssigned.filter((r) => {
+    let result = sampleAssigned.filter((r) => {
       if (q && !(`${r.orderNo} ${r.variant} ${r.driver}`.toLowerCase().includes(q))) return false;
       if (deliveryFilter !== "all") {
         // placeholder for future delivery status filtering
@@ -42,7 +51,11 @@ export default function AssignedHistory() {
       }
       return true;
     });
-  }, [query, deliveryFilter, assignmentFilter]);
+    if (sortBy === "order-asc") result.sort((a, b) => a.orderNo.localeCompare(b.orderNo));
+    else if (sortBy === "variant-asc") result.sort((a, b) => a.variant.localeCompare(b.variant));
+    else if (sortBy === "driver-asc") result.sort((a, b) => a.driver.localeCompare(b.driver));
+    return result;
+  }, [query, deliveryFilter, assignmentFilter, sortBy]);
 
   const itemsPerPage = 10;
   const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
@@ -77,47 +90,47 @@ export default function AssignedHistory() {
         <p className="text-sm text-slate-500 mt-1">View all assigned, delivered, and completed delivery records.</p>
       </div>
 
-      <div className="mt-4 mb-4 -mx-4 md:mx-0">
-        <div className="px-4 md:px-0">
-          <div className="w-full">
-            <div className="flex gap-3 items-center">
-            <div className="flex-1 min-w-0 max-w-xl">
-              <SearchFilter
-                onSearch={(v) => { setQuery(v); setPage(1); }}
-                placeholder="Search order no., batch no., driver, or product"
-              />
-            </div>
-
-            <div className="w-44 flex-none">
-              <Dropdown
-                options={[
-                  { label: "All", value: "all" },
-                  { label: "Pending", value: "pending" },
-                  { label: "In Transit", value: "in_transit" },
-                  { label: "Delivered", value: "delivered" },
-                ]}
-                value={deliveryFilter}
-                onChange={(v) => { setDeliveryFilter(v); setPage(1); }}
-                placeholder="Delivery Status"
-              />
-            </div>
-
-            <div className="w-44 flex-none">
-              <Dropdown
-                options={[
-                  { label: "All", value: "all" },
-                  { label: "Assigned", value: "assigned" },
-                  { label: "Completed", value: "completed" },
-                  { label: "Cancelled", value: "cancelled" },
-                ]}
-                value={assignmentFilter}
-                onChange={(v) => { setAssignmentFilter(v); setPage(1); }}
-                placeholder="Assignment Status"
-              />
-            </div>
-            </div>
-          </div>
+      <div className="mt-4 mb-4 flex flex-wrap items-center gap-3">
+        <div className="w-full max-w-sm">
+          <SearchFilter
+            onSearch={(v) => { setQuery(v); setPage(1); }}
+            placeholder="Search order no., batch no., driver, or product"
+          />
         </div>
+
+        <div className="w-36">
+          <Dropdown
+            options={[
+              { label: "All Delivery", value: "all" },
+              { label: "Pending", value: "pending" },
+              { label: "In Transit", value: "in_transit" },
+              { label: "Delivered", value: "delivered" },
+            ]}
+            value={deliveryFilter}
+            onChange={(v) => { setDeliveryFilter(v); setPage(1); }}
+            placeholder="Delivery Status"
+          />
+        </div>
+
+        <div className="w-36">
+          <Dropdown
+            options={[
+              { label: "All Assignment", value: "all" },
+              { label: "Assigned", value: "assigned" },
+              { label: "Completed", value: "completed" },
+              { label: "Cancelled", value: "cancelled" },
+            ]}
+            value={assignmentFilter}
+            onChange={(v) => { setAssignmentFilter(v); setPage(1); }}
+            placeholder="Assignment Status"
+          />
+        </div>
+
+        <SortByDropdown
+            options={SORT_OPTIONS}
+            value={sortBy}
+            onChange={(v) => { setSortBy(v); setPage(1); }}
+          />
       </div>
 
       <SectionedTableCard

@@ -146,15 +146,11 @@ const RetailerInventory = () => {
 
       <Tabs tabs={TABS} activeTab={activeTab} onTabChange={(id) => { setActiveTab(id); setCurrentPage(1); }} />
 
-      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 items-center gap-3">
-          <div className="w-full max-w-md">
-            <SearchFilter onSearch={setSearchQuery} placeholder="Search product code, variant, or description" />
-          </div>
-          <div className="w-48">
-            <SortByDropdown value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} />
-          </div>
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="w-full max-w-sm">
+          <SearchFilter onSearch={setSearchQuery} placeholder="Search product code, variant, or description" />
         </div>
+        <SortByDropdown value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} />
       </div>
 
       {activeTab === "active" && (

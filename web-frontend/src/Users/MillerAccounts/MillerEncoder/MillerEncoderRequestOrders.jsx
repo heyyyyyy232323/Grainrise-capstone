@@ -157,10 +157,10 @@ export default function MillerEncoderRequestOrders() {
       </div>
 
       {/* ── Two-column layout ────────────────────────────────────────────────── */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+      <div className="grid gap-5 lg:grid-cols-[3fr_2fr]">
 
         {/* ── LEFT: Form panels ─────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
 
           {/* Product Details */}
           <FormSection title="Product Details">

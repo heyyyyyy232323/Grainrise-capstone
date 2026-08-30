@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
+import Dropdown from "../../../Components/Minor-Components/Dropdown";
+import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
 
 const sampleOrders = Array.from({ length: 10 }, (_, i) => ({
   id: `o-${i + 1}`,
@@ -78,6 +80,9 @@ const driverStatusStyles = {
 export default function MillerDeliveryManagement() {
   const [query, setQuery] = useState("");
   const [driverQuery, setDriverQuery] = useState("");
+  const [deliveryArea, setDeliveryArea] = useState("all");
+  const [priority, setPriority] = useState("all");
+  const [sortBy, setSortBy] = useState("batch-asc");
   const [currentPage, setCurrentPage] = useState(1);
 
   const columns = [
@@ -91,12 +96,17 @@ export default function MillerDeliveryManagement() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return sampleOrders.filter(
+    let result = sampleOrders.filter(
       (o) =>
         q === "" ||
         `${o.batch} ${o.retailer} ${o.variant}`.toLowerCase().includes(q),
     );
-  }, [query]);
+    if (sortBy === "batch-asc") result.sort((a, b) => a.batch.localeCompare(b.batch));
+    else if (sortBy === "retailer-asc") result.sort((a, b) => a.retailer.localeCompare(b.retailer));
+    else if (sortBy === "variant-asc") result.sort((a, b) => a.variant.localeCompare(b.variant));
+    else if (sortBy === "arrival-asc") result.sort((a, b) => a.arrival.localeCompare(b.arrival));
+    return result;
+  }, [query, sortBy]);
 
   const filteredDrivers = useMemo(() => {
     const q = driverQuery.trim().toLowerCase();
@@ -142,19 +152,52 @@ export default function MillerDeliveryManagement() {
               </span>
             </div>
 
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <div className="w-full max-w-sm">
                 <SearchFilter
                   onSearch={(v) => { setQuery(v); setCurrentPage(1); }}
                   placeholder="Search batch no., retailer, or product"
                 />
               </div>
-              <select className="rounded-md border border-slate-200 px-3 py-2 text-sm">
-                <option>Delivery Area</option>
-              </select>
-              <select className="rounded-md border border-slate-200 px-3 py-2 text-sm">
-                <option>Priority</option>
-              </select>
+              <div className="w-36">
+                <Dropdown
+                  options={[
+                    { label: "All Areas", value: "all" },
+                    { label: "North Sector", value: "north" },
+                    { label: "South Sector", value: "south" },
+                    { label: "East Sector", value: "east" },
+                    { label: "West Sector", value: "west" },
+                  ]}
+                  value={deliveryArea}
+                  onChange={(v) => { setDeliveryArea(v); setCurrentPage(1); }}
+                  placeholder="Delivery Area"
+                />
+              </div>
+              <div className="w-32">
+                <Dropdown
+                  options={[
+                    { label: "All Priority", value: "all" },
+                    { label: "High", value: "high" },
+                    { label: "Standard", value: "standard" },
+                    { label: "Low", value: "low" },
+                  ]}
+                  value={priority}
+                  onChange={(v) => { setPriority(v); setCurrentPage(1); }}
+                  placeholder="Priority"
+                />
+              </div>
+              <div>
+                <SortByDropdown
+                  options={[
+                    { value: "batch-asc", label: "Batch No. (A-Z)" },
+                    { value: "retailer-asc", label: "Retailer (A-Z)" },
+                    { value: "variant-asc", label: "Variant (A-Z)" },
+                    { value: "arrival-asc", label: "Target Arrival" },
+                  ]}
+                  value={sortBy}
+                  onChange={(v) => { setSortBy(v); setCurrentPage(1); }}
+                />
+              </div>
             </div>
 
             <SectionedTableCard

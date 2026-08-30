@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
 import Dropdown from "../../../Components/Minor-Components/Dropdown";
+import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
 const sample = Array.from({ length: 27 }, (_, i) => ({
@@ -15,21 +16,33 @@ const sample = Array.from({ length: 27 }, (_, i) => ({
   requestedBy: "Procurement A",
 }));
 
+const SORT_OPTIONS = [
+  { value: "batch-asc", label: "Batch No. (A-Z)" },
+  { value: "supplier-asc", label: "Supplier (A-Z)" },
+  { value: "variant-asc", label: "Variant (A-Z)" },
+  { value: "total-desc", label: "Total (High to Low)" },
+];
+
 export default function MillerPayables() {
   const [query, setQuery] = useState("");
   const [supplier, setSupplier] = useState("");
+  const [sortBy, setSortBy] = useState("batch-asc");
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return sample.filter((r) => {
+    let result = sample.filter((r) => {
       if (q && !(`${r.batchNo} ${r.supplier} ${r.variant}`.toLowerCase().includes(q))) return false;
       if (supplier && supplier !== "") {
         return r.supplier === supplier;
       }
       return true;
     });
-  }, [query, supplier]);
+    if (sortBy === "batch-asc") result.sort((a, b) => a.batchNo.localeCompare(b.batchNo));
+    else if (sortBy === "supplier-asc") result.sort((a, b) => a.supplier.localeCompare(b.supplier));
+    else if (sortBy === "variant-asc") result.sort((a, b) => a.variant.localeCompare(b.variant));
+    return result;
+  }, [query, supplier, sortBy]);
 
   const itemsPerPage = 10;
   const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
@@ -54,7 +67,7 @@ export default function MillerPayables() {
         <button
           type="button"
           onClick={() => alert(`Paying ${row.batchNo}`)}
-          className="inline-flex items-center justify-center px-3 py-0.5 h-7 rounded-full text-white text-xs font-semibold hover:bg-[#016b0f]"
+          className="inline-flex items-center justify-center px-3 py-0.5 h-7 rounded-full text-white text-xs font-semibold hover:bg-[#016b0f] cursor-pointer"
           style={{ backgroundColor: "#018311", minWidth: 72 }}
         >
           Pay Now
@@ -72,27 +85,30 @@ export default function MillerPayables() {
         <p className="text-sm text-slate-500 mt-1">Review goods receipts requested for payment by procurement staff.</p>
       </div>
 
-      <div className="mt-4 mb-4 -mx-4 md:mx-0">
-        <div className="px-4 md:px-0 flex items-center justify-between">
-          <div className="w-full md:w-1/2">
-            <div className="flex gap-3 items-center">
-              <div className="flex-1 min-w-0 max-w-3xl">
-                <SearchFilter onSearch={(v) => { setQuery(v); setPage(1); }} placeholder="Search batch no., supplier, product" />
-              </div>
-              <div className="w-44 flex-none">
-                <Dropdown
-                  options={[{ label: "All", value: "" }, { label: "Supplier A", value: "Supplier A" }]}
-                  value={supplier}
-                  onChange={(v) => { setSupplier(v); setPage(1); }}
-                  placeholder="Supplier"
-                />
-              </div>
-            </div>
+      <div className="mt-4 mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
+          <div className="w-full max-w-xs sm:w-72">
+            <SearchFilter onSearch={(v) => { setQuery(v); setPage(1); }} placeholder="Search batch no., supplier, product" />
           </div>
 
-          <div className="ml-4 flex items-center gap-3">
-            <div className="inline-block px-3 py-1 rounded-md bg-amber-50 text-amber-700 text-sm font-semibold">10 for payment</div>
+          <div className="w-36">
+            <Dropdown
+              options={[{ label: "All Suppliers", value: "" }, { label: "Supplier A", value: "Supplier A" }]}
+              value={supplier}
+              onChange={(v) => { setSupplier(v); setPage(1); }}
+              placeholder="Supplier"
+            />
           </div>
+
+          <SortByDropdown
+            options={SORT_OPTIONS}
+            value={sortBy}
+            onChange={(v) => { setSortBy(v); setPage(1); }}
+          />
+        </div>
+
+        <div className="inline-block px-3 py-2 rounded-lg bg-amber-50 text-amber-700 text-sm font-semibold border border-amber-200">
+          10 for payment
         </div>
       </div>
 

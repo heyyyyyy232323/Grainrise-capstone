@@ -106,18 +106,12 @@ export default function RetailerMyPurchases() {
         <p className="text-sm text-gray-500 mt-1">All items received from warehouse orders.</p>
       </div>
 
-      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="flex flex-wrap items-center gap-3 w-full">
-          <div className="flex-1 min-w-0 max-w-sm">
-            <SearchFilter onSearch={setSearchQuery} placeholder="Search product, batch number, or warehouse" />
-          </div>
-          <div className="flex-none">
-            <DateRangePicker onDateChange={() => {}} />
-          </div>
-          <div className="flex-none w-32">
-            <SortByDropdown value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} />
-          </div>
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="w-full max-w-sm">
+          <SearchFilter onSearch={setSearchQuery} placeholder="Search product, batch number, or warehouse" />
         </div>
+        <DateRangePicker onDateChange={() => {}} />
+        <SortByDropdown value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} />
       </div>
 
       <SectionedTableCard
