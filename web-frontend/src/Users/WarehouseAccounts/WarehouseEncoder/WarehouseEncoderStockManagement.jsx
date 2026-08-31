@@ -404,13 +404,13 @@ export default function WarehouseEncoderStockManagement() {
                         <div className="flex items-center justify-center gap-2">
                           <button
                             type="button"
-                            className="rounded-full border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700"
+                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
                           >
                             View Details
                           </button>
                           <CustomAmberButton
                             text="Archive"
-                            className="px-3 py-1.5 text-[11px] rounded-full"
+                            className="px-3 py-1.5 text-[11px] rounded-lg"
                             onClick={() => setModalState({ type: "archive", product })}
                           />
                         </div>
@@ -418,12 +418,12 @@ export default function WarehouseEncoderStockManagement() {
                         <div className="flex items-center justify-center gap-2">
                           <CustomGreenButton
                             text="Restore"
-                            className="px-3 py-1.5 text-[11px] rounded-full"
+                            className="px-3 py-1.5 text-[11px] rounded-lg"
                             onClick={() => setModalState({ type: "restore", product })}
                           />
                           <CustomRedButton
                             text="Delete"
-                            className="px-4 py-1.5 text-[11px] rounded-full"
+                            className="px-4 py-1.5 text-[11px] rounded-lg"
                             onClick={() => setModalState({ type: "delete", product })}
                           />
                         </div>

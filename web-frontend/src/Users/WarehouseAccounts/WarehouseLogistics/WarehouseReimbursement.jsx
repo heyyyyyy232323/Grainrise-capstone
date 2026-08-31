@@ -149,7 +149,7 @@ export default function Reimbursement() {
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       text={"Upload"}
-                      className="rounded-full px-4 py-1.5"
+                      className="rounded-lg px-4 py-1.5"
                     />
                   </div>
                 </div>
@@ -171,7 +171,7 @@ export default function Reimbursement() {
             <CustomGreenButton
               type="submit"
               text={submitting ? "Submitting..." : "Submit Reimbursement"}
-              className={`w-full rounded-full px-4 py-3 text-sm font-semibold ${submitting ? "opacity-80" : ""}`}
+              className={`w-full rounded-lg px-4 py-3 text-sm font-semibold ${submitting ? "opacity-80" : ""}`}
             />
           </div>
         </div>

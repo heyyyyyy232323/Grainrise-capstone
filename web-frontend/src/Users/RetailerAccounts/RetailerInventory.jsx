@@ -100,15 +100,15 @@ const RetailerInventory = () => {
         <div className="flex items-center justify-end gap-2">
           {activeTab === "active" ? (
             <>
-              <button onClick={() => handleAction("View Details", row)} className="rounded-full border border-gray-300 px-4 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition">
+              <button onClick={() => handleAction("View Details", row)} className="rounded-lg border border-gray-300 px-4 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition cursor-pointer">
                 View Details
               </button>
-              <CustomAmberButton text="Archive" onClick={() => handleAction("Archive", row)} className="!rounded-full !px-4 !py-1 !text-xs" />
+              <CustomAmberButton text="Archive" onClick={() => handleAction("Archive", row)} className="!rounded-lg !px-4 !py-1 !text-xs cursor-pointer" />
             </>
           ) : (
             <>
-              <CustomGreenButton text="Restore" onClick={() => handleAction("Restore", row)} className="!rounded-full !px-4 !py-1 !text-xs" />
-              <CustomRedButton text="Delete Permanently" onClick={() => handleAction("Delete Permanently", row)} className="!rounded-full !px-4 !py-1 !text-xs" />
+              <CustomGreenButton text="Restore" onClick={() => handleAction("Restore", row)} className="!rounded-lg !px-4 !py-1 !text-xs cursor-pointer" />
+              <CustomRedButton text="Delete Permanently" onClick={() => handleAction("Delete Permanently", row)} className="!rounded-lg !px-4 !py-1 !text-xs cursor-pointer" />
             </>
           )}
         </div>

@@ -6,7 +6,7 @@ export default function WarehouseDeliveryDetails({ record, onBack }) {
       <div className="mb-6 flex items-center">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 shadow-sm"
+          className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 shadow-sm"
         >
           <ArrowLeft size={16} />
           Back to Assigned History

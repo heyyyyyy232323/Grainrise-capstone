@@ -328,7 +328,7 @@ const MillerOnlineOrders = () => {
                     <button
                       type="button"
                       onClick={() => console.log("View order:", row)}
-                      className="rounded-full border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:border-emerald-500 hover:text-emerald-700 transition cursor-pointer"
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:border-emerald-500 hover:text-emerald-700 transition cursor-pointer"
                     >
                       View Details
                     </button>

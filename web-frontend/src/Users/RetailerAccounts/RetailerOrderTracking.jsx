@@ -47,7 +47,7 @@ const COLUMNS = [
       <div className="flex justify-end">
         <button
           onClick={() => console.log("View Details", row)}
-          className="rounded-full border border-gray-300 px-4 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition"
+          className="rounded-lg border border-gray-300 px-4 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition"
         >
           View Details
         </button>

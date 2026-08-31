@@ -347,24 +347,28 @@ const UserSidebar = ({
 
   return (
     <aside
-      className={`fixed md:relative inset-y-0 left-0 h-screen bg-white border-r border-gray-200 flex flex-col shrink-0 z-40 md:z-30 transition-all duration-300 ease-in-out w-64
-        ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0
-        ${isMinimized ? "md:w-20" : "md:w-64"}
+      className={`fixed md:relative inset-y-0 left-0 h-screen bg-white border-r border-gray-200 flex flex-col shrink-0 z-40 md:z-30 transition-[width] duration-300 ease-in-out select-none
+        ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 overflow-hidden
+        ${isMinimized ? "md:w-20" : "md:w-72"} w-72
       `}
     >
       {/* Logo + Mobile close button */}
-      <div className={`h-18.25 flex items-center border-b border-gray-100 transition-all duration-300 ${
-        isMinimized ? "md:justify-center md:px-3 px-6 justify-start" : "justify-start px-6"
+      <div className={`h-16 flex items-center border-b border-gray-100 px-5 transition-all duration-300 ease-in-out shrink-0 ${
+        isMinimized ? "md:justify-center md:px-0" : "justify-start"
       }`}>
-        <img src={logo} alt="GrainRise Logo" className={`object-contain transition-all duration-300 h-9 ${
-          isMinimized ? "md:h-6" : "md:h-9"
-        }`} />
+        <img
+          src={logo}
+          alt="GrainRise Logo"
+          className={`object-contain transition-all duration-300 ease-in-out ${
+            isMinimized ? "md:h-6 h-8" : "h-8"
+          }`}
+        />
 
         {/* Close button visible only on small screens when sidebar is open */}
         <button
           onClick={onClose}
           aria-label="Close sidebar"
-          className="md:hidden ml-auto -mr-2 p-2 rounded-md text-slate-600 hover:bg-slate-100"
+          className="md:hidden ml-auto -mr-2 p-2 rounded-md text-slate-600 hover:bg-slate-100 cursor-pointer"
         >
           <X size={18} />
         </button>
@@ -372,24 +376,30 @@ const UserSidebar = ({
 
       {/* Panel label */}
       <div
-        className={`bg-linear-to-r from-[#0B5D1E] to-[#D6A62D] transition-all duration-300 overflow-hidden py-3 px-6 h-auto ${
-          isMinimized ? "md:py-0 md:px-0 md:h-0" : "md:py-3 md:px-6 md:h-auto"
+        className={`bg-linear-to-r from-[#0B5D1E] to-[#D6A62D] transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
+          isMinimized ? "md:h-0 md:py-0 md:opacity-0" : "h-10 py-2.5 px-4 opacity-100 flex items-center"
         }`}
       >
-        <span className="text-white font-bold text-sm tracking-wider uppercase">
+        <span className="text-white font-bold text-xs tracking-wider uppercase whitespace-nowrap truncate">
           {resolvedPanelLabel}
         </span>
       </div>
 
       {/* Nav sections */}
-      <nav className="flex-1 overflow-y-auto py-4 transition-all duration-300">
+      <nav className="flex-1 overflow-y-auto py-4">
         {resolvedSections.map((section) => (
           <div key={section.title} className="mb-5">
-            <p className={`px-6 mb-2 text-xs font-bold text-amber-500 tracking-wider uppercase transition-all duration-300 ${
-              isMinimized ? "md:hidden" : ""
-            }`}>
-              {section.title}
-            </p>
+            {/* Section title — smoothly collapses height + opacity without layout jumps */}
+            <div
+              className={`px-5 mb-1.5 transition-all duration-300 ease-in-out overflow-hidden ${
+                isMinimized ? "md:h-0 md:mb-0 md:opacity-0" : "h-4 opacity-100"
+              }`}
+            >
+              <p className="text-[11px] font-bold text-amber-500 tracking-wider uppercase whitespace-nowrap">
+                {section.title}
+              </p>
+            </div>
+
             <div className="flex flex-col gap-1 px-3">
               {section.items.map((item) => {
                 const Icon = item.icon;
@@ -401,16 +411,24 @@ const UserSidebar = ({
                     to={item.path}
                     onClick={onClose}
                     title={isMinimized ? item.label : ""}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 justify-start ${
-                      isMinimized ? "md:justify-center" : ""
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out ${
+                      isMinimized ? "md:justify-center md:px-0" : "justify-start"
                     } ${
                       isActive
                         ? "bg-[#0B5D1E] text-white shadow-sm"
                         : "text-gray-600 hover:bg-gray-100"
                     }`}
                   >
-                    {Icon && <Icon size={18} className="shrink-0" />}
-                    <span className={isMinimized ? "md:hidden" : ""}>{item.label}</span>
+                    {Icon && <Icon size={19} className="shrink-0" />}
+                    <span
+                      className={`whitespace-nowrap transition-all duration-300 ease-in-out ${
+                        isMinimized
+                          ? "md:w-0 md:opacity-0 overflow-hidden"
+                          : "w-auto opacity-100"
+                      }`}
+                    >
+                      {item.label}
+                    </span>
                   </Link>
                 );
               })}

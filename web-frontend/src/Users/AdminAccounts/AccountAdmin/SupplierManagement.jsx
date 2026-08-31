@@ -4,12 +4,12 @@ import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import Tabs from "../../../Components/Minor-Components/Tabs";
 import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
-
-const SORT_OPTIONS = [
-  { value: "name-asc", label: "Supplier Name (A-Z)" },
-  { value: "name-desc", label: "Supplier Name (Z-A)" },
-  { value: "company-asc", label: "Company (A-Z)" },
-];
+import CustomGreenButton from "../../../Components/Minor-Components/CustomGreenButton";
+import CustomAmberButton from "../../../Components/Minor-Components/CustomAmberButton";
+import CustomRedButton from "../../../Components/Minor-Components/CustomRedButton";
+import ArchiveProductModal from "../../../Components/Modals/ArchiveProductModal";
+import RestoreProductModal from "../../../Components/Modals/RestoreProductModal";
+import DeleteProductModal from "../../../Components/Modals/DeleteProductModal";
 
 // Badge color per tab, matching the reference (To Review = amber, Active = green, Inactive = red)
 const TAB_BADGE_STYLES = {
@@ -18,64 +18,105 @@ const TAB_BADGE_STYLES = {
   inactive: "bg-rose-500 text-white",
 };
 
+const SORT_OPTIONS = [
+  { value: "name-asc", label: "Supplier (A-Z)" },
+  { value: "name-desc", label: "Supplier (Z-A)" },
+  { value: "company-asc", label: "Company (A-Z)" },
+];
+
 const SupplierManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = 4;
+
+  // Modal state
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [archiveModal, setArchiveModal] = useState(false);
+  const [restoreModal, setRestoreModal] = useState(false);
+  const [deleteModal, setDeleteModal] = useState(false);
+
+  const handleArchive = (row) => { setSelectedSupplier(row); setArchiveModal(true); };
+  const handleRestore = (row) => { setSelectedSupplier(row); setRestoreModal(true); };
+  const handleDelete  = (row) => { setSelectedSupplier(row); setDeleteModal(true); };
+
+  const confirmArchive = () => {
+    console.log("Archive supplier:", selectedSupplier);
+    setArchiveModal(false);
+    setSelectedSupplier(null);
+  };
+  const confirmRestore = () => {
+    console.log("Restore supplier:", selectedSupplier);
+    setRestoreModal(false);
+    setSelectedSupplier(null);
+  };
+  const confirmDelete = () => {
+    console.log("Delete supplier:", selectedSupplier);
+    setDeleteModal(false);
+    setSelectedSupplier(null);
+  };
 
   const columns = [
     { key: "supplier", label: "Supplier Name", width: "24%" },
     { key: "company", label: "Company Name", width: "24%" },
     { key: "email", label: "Email", width: "24%" },
-    { key: "contact", label: "Contact", width: "20%" },
+    { key: "contact", label: "Contact", width: "16%" },
     {
       key: "action",
       label: "Action",
-      width: "8%",
-      headerClassName: "text-right",
-      cellClassName: "text-right",
+      width: "20%",
+      cellClassName: "text-center",
       render: (row) => {
         if (!row.status) return null;
         const s = String(row.status).toLowerCase().trim();
 
         if (s === "to review") {
           return (
-            <div className="flex justify-end">
-              <button className="rounded-full bg-amber-400 text-white px-3 py-1.5 text-[11px] font-semibold hover:brightness-95">
-                Review
-              </button>
+            <div className="flex justify-center">
+              <CustomAmberButton text="Review" className="px-3 py-1.5 text-[11px] rounded-lg" />
             </div>
           );
         }
 
         if (s === "inactive" || s === "archived") {
           return (
-            <div className="flex justify-end gap-2">
-              <button className="rounded-full text-white px-3 py-1.5 text-[11px] font-semibold" style={{backgroundColor: '#00A516'}} onMouseEnter={(e) => e.target.style.backgroundColor = '#008C13'} onMouseLeave={(e) => e.target.style.backgroundColor = '#00A516'}>
-                Restore
-              </button>
-              <button className="rounded-full bg-[#DC2626] text-white px-3 py-1.5 text-[11px] font-semibold hover:bg-[#B91C1C]">
-                Delete Permanently
-              </button>
+            <div className="flex items-center justify-center gap-2">
+              <CustomGreenButton
+                text="Restore"
+                className="px-3 py-1.5 text-[11px] rounded-lg"
+                onClick={() => handleRestore(row)}
+              />
+              <CustomRedButton
+                text="Delete"
+                className="px-4 py-1.5 text-[11px] rounded-lg"
+                onClick={() => handleDelete(row)}
+              />
             </div>
           );
         }
 
         if (s === "active") {
           return (
-            <div className="flex justify-end gap-2">
-              <button className="rounded-full border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50">
+            <div className="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                className="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
+              >
                 View Details
               </button>
-              <button className="rounded-full bg-yellow-400 text-white px-3 py-1.5 text-[11px] font-semibold hover:brightness-95">
-                Archive
-              </button>
+              <CustomAmberButton
+                text="Archive"
+                className="whitespace-nowrap px-3 py-1.5 text-[11px] rounded-lg"
+                onClick={() => handleArchive(row)}
+              />
             </div>
           );
         }
 
         return (
-          <div className="flex justify-end">
-            <button className="rounded-full border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50">
+          <div className="flex justify-center">
+            <button
+              type="button"
+              className="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
+            >
               Action
             </button>
           </div>
@@ -87,12 +128,13 @@ const SupplierManagement = () => {
   // sample rows with statuses that match screenshot states
   const rawRows = Array.from({ length: 24 }).map((_, i) => {
     const status = i % 4 === 0 ? "To Review" : i % 4 === 1 ? "Active" : i % 4 === 2 ? "Inactive" : "Active";
+    const isToReview = status === "To Review";
     return {
       id: i + 1,
       supplier: `Supplier ${String.fromCharCode(65 + (i % 26))}`,
       company: `ABC Rice Trading`,
       email: `abc${i}@email.com`,
-      contact: `0917-XXX-XXXX`,
+      contact: isToReview ? "0917-XXX-XXXX" : "0917 000 0001",
       joined: "Mar 12, 2026",
       status,
     };
@@ -216,6 +258,26 @@ const SupplierManagement = () => {
         totalPages={totalPages}
         onPageChange={(p) => setCurrentPage(p)}
         footerLabel={`Showing 1-10 of ${sections[0].rows.length} suppliers`}
+      />
+
+      {/* Modals */}
+      <ArchiveProductModal
+        isOpen={archiveModal}
+        onClose={() => { setArchiveModal(false); setSelectedSupplier(null); }}
+        onArchive={confirmArchive}
+        productName={selectedSupplier?.supplier ?? "this supplier"}
+      />
+      <RestoreProductModal
+        isOpen={restoreModal}
+        onClose={() => { setRestoreModal(false); setSelectedSupplier(null); }}
+        onRestore={confirmRestore}
+        productName={selectedSupplier?.supplier ?? "this supplier"}
+      />
+      <DeleteProductModal
+        isOpen={deleteModal}
+        onClose={() => { setDeleteModal(false); setSelectedSupplier(null); }}
+        onDelete={confirmDelete}
+        productName={selectedSupplier?.supplier ?? "this supplier"}
       />
     </>
   );

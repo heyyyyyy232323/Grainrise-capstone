@@ -63,7 +63,7 @@ const DeleteProductModal = ({
             disabled={isLoading}
             className="flex-1 px-6 py-2.5 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm cursor-pointer"
           >
-            {isLoading ? "Deleting..." : "Delete Permanently"}
+            {isLoading ? "Deleting..." : "Delete "}
           </button>
         </div>
       </div>

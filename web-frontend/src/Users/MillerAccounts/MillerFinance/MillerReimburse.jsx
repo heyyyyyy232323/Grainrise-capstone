@@ -58,7 +58,7 @@ export default function MillerReimburse() {
         <button
           type="button"
           onClick={() => alert(`Marking ${row.id} as paid`) }
-          className="inline-flex items-center justify-center px-3 py-0.5 h-7 rounded-full text-white text-xs font-semibold hover:bg-[#016b0f]"
+          className="inline-flex items-center justify-center px-3 py-1 h-7 rounded-lg text-white text-xs font-semibold hover:bg-[#016b0f] transition cursor-pointer"
           style={{ backgroundColor: "#018311", minWidth: 88 }}
         >
           Mark as Paid

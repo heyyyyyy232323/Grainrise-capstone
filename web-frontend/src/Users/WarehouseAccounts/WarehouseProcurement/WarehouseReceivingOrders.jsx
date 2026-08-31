@@ -18,13 +18,16 @@ const WarehouseReceivingOrders = () => {
     {
       key: "action",
       label: "Action",
+      cellClassName: "text-center",
       render: (row) => (
-        <button
-          type="button"
-          className="rounded-full bg-[#1a7a3a] px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-[#125c2a] sm:px-4"
-        >
-          Mark as Received
-        </button>
+        <div className="flex items-center justify-center">
+          <button
+            type="button"
+            className="rounded-lg bg-[#1a7a3a] px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-[#125c2a] sm:px-4 cursor-pointer"
+          >
+            Mark as Received
+          </button>
+        </div>
       ),
     },
   ];

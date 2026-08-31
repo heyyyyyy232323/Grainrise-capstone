@@ -4,6 +4,12 @@ import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import Tabs from "../../../Components/Minor-Components/Tabs";
 import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
+import CustomGreenButton from "../../../Components/Minor-Components/CustomGreenButton";
+import CustomAmberButton from "../../../Components/Minor-Components/CustomAmberButton";
+import CustomRedButton from "../../../Components/Minor-Components/CustomRedButton";
+import ArchiveProductModal from "../../../Components/Modals/ArchiveProductModal";
+import RestoreProductModal from "../../../Components/Modals/RestoreProductModal";
+import DeleteProductModal from "../../../Components/Modals/DeleteProductModal";
 
 const SORT_OPTIONS = [
   { value: "name-asc", label: "Retailer Name (A-Z)" },
@@ -22,51 +28,96 @@ const RetailerManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = 4;
 
+  // Modal state
+  const [selectedRetailer, setSelectedRetailer] = useState(null);
+  const [archiveModal, setArchiveModal] = useState(false);
+  const [restoreModal, setRestoreModal] = useState(false);
+  const [deleteModal, setDeleteModal] = useState(false);
+
+  const handleArchive = (row) => { setSelectedRetailer(row); setArchiveModal(true); };
+  const handleRestore = (row) => { setSelectedRetailer(row); setRestoreModal(true); };
+  const handleDelete  = (row) => { setSelectedRetailer(row); setDeleteModal(true); };
+
+  const confirmArchive = () => {
+    console.log("Archive retailer:", selectedRetailer);
+    setArchiveModal(false);
+    setSelectedRetailer(null);
+  };
+  const confirmRestore = () => {
+    console.log("Restore retailer:", selectedRetailer);
+    setRestoreModal(false);
+    setSelectedRetailer(null);
+  };
+  const confirmDelete = () => {
+    console.log("Delete retailer:", selectedRetailer);
+    setDeleteModal(false);
+    setSelectedRetailer(null);
+  };
+
   const columns = [
-    { key: "retailer", label: "Retailer Name", width: "30%" },
-    { key: "address", label: "Address", width: "30%" },
-    { key: "email", label: "Email", width: "25%" },
+    { key: "retailer", label: "Retailer Name", width: "24%" },
+    { key: "address", label: "Address", width: "28%" },
+    { key: "email", label: "Email", width: "23%" },
     {
       key: "action",
       label: "Action",
-      headerClassName: "text-right",
-      width: "15%",
+      headerClassName: "text-center",
+      width: "25%",
+      cellClassName: "text-center",
       render: (row) => {
         const s = String(row.status || "").toLowerCase().trim();
 
         if (s === "to review") {
           return (
-            <div className="flex justify-end">
-              <button className="rounded-full bg-amber-400 text-white px-3 py-1.5 text-[11px] font-semibold hover:brightness-95">Review</button>
+            <div className="flex justify-center">
+              <CustomAmberButton text="Review" className="whitespace-nowrap px-3 py-1.5 text-[11px] rounded-lg" />
             </div>
           );
         }
 
         if (s === "inactive" || s === "archived") {
           return (
-            <div className="flex gap-2 justify-end">
-              <button className="rounded-full text-white px-3 py-1.5 text-[11px] font-semibold" style={{backgroundColor: '#00A516'}} onMouseEnter={(e) => e.target.style.backgroundColor = '#008C13'} onMouseLeave={(e) => e.target.style.backgroundColor = '#00A516'}>
-                Restore
-              </button>
-              <button className="rounded-full bg-[#DC2626] text-white px-3 py-1.5 text-[11px] font-semibold hover:bg-[#B91C1C]">
-                Delete Permanently
-              </button>
+            <div className="flex items-center justify-center gap-2">
+              <CustomGreenButton
+                text="Restore"
+                className="whitespace-nowrap px-3 py-1.5 text-[11px] rounded-lg"
+                onClick={() => handleRestore(row)}
+              />
+              <CustomRedButton
+                text="Delete"
+                className="whitespace-nowrap px-4 py-1.5 text-[11px] rounded-lg"
+                onClick={() => handleDelete(row)}
+              />
             </div>
           );
         }
 
         if (s === "active") {
           return (
-            <div className="flex gap-2 justify-end">
-              <button className="rounded-full border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50">View Details</button>
-              <button className="rounded-full bg-amber-400 text-white px-3 py-1.5 text-[11px] font-semibold hover:brightness-95">Archive</button>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                className="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
+              >
+                View Details
+              </button>
+              <CustomAmberButton
+                text="Archive"
+                className="whitespace-nowrap px-3 py-1.5 text-[11px] rounded-lg"
+                onClick={() => handleArchive(row)}
+              />
             </div>
           );
         }
 
         return (
-          <div className="flex justify-end">
-            <button className="rounded-full border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50">Action</button>
+          <div className="flex justify-center">
+            <button
+              type="button"
+              className="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
+            >
+              Action
+            </button>
           </div>
         );
       },
@@ -201,6 +252,26 @@ const RetailerManagement = () => {
         totalPages={totalPages}
         onPageChange={(p) => setCurrentPage(p)}
         footerLabel={`Showing 1-10 of ${sections[0].rows.length} retailers`}
+      />
+
+      {/* Modals */}
+      <ArchiveProductModal
+        isOpen={archiveModal}
+        onClose={() => { setArchiveModal(false); setSelectedRetailer(null); }}
+        onArchive={confirmArchive}
+        productName={selectedRetailer?.retailer ?? "this retailer"}
+      />
+      <RestoreProductModal
+        isOpen={restoreModal}
+        onClose={() => { setRestoreModal(false); setSelectedRetailer(null); }}
+        onRestore={confirmRestore}
+        productName={selectedRetailer?.retailer ?? "this retailer"}
+      />
+      <DeleteProductModal
+        isOpen={deleteModal}
+        onClose={() => { setDeleteModal(false); setSelectedRetailer(null); }}
+        onDelete={confirmDelete}
+        productName={selectedRetailer?.retailer ?? "this retailer"}
       />
     </>
   );
