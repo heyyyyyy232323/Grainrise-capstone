@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { ArrowLeft, Eye, EyeOff, Lock } from "lucide-react";
+import { useLoading } from "../Components/context/LoadingContext";
 
 // Adjust these import paths to match your project structure
 import CustomTextbox from "../Components/Minor-Components/CustomTextbox";
@@ -15,6 +16,13 @@ const AdminLogin = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const { triggerLoading } = useLoading();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    triggerLoading(900);
+    // TODO: add real admin login API call here
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -49,7 +57,7 @@ const AdminLogin = () => {
             />
           </div>
 
-          <form className="space-y-3" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-3" onSubmit={handleSubmit}>
             <CustomTextbox
               label="Email Address"
               placeholder="youremail@example.com"

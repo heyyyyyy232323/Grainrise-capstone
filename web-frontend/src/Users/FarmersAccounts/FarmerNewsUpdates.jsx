@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { Search, Heart, MessageSquare, ArrowRight } from "lucide-react";
 import Breadcrumbs from "../../Components/Minor-Components/Breadcrumbs";
 
@@ -38,6 +39,7 @@ const MOCK_NEWS = [
 ];
 
 export default function FarmerNewsUpdates() {
+  const navigate = useNavigate();
   return (
     <div className="space-y-6">
       {/* ── Page Header ─────────────────────────────────────────────────────── */}
@@ -119,9 +121,11 @@ export default function FarmerNewsUpdates() {
                       </span>
                       <span className="hidden sm:inline-block">Source: {news.source}</span>
                    </div>
-                   <button className="text-xs font-bold text-green-700 hover:text-green-800 flex items-center gap-1 transition">
-                      Read More <ArrowRight size={14} />
-                   </button>
+                   <button 
+                      onClick={() => navigate(`/farmer/news-updates/${news.id}`)}
+                      className="text-xs font-bold text-green-700 hover:text-green-800 flex items-center gap-1 transition">
+                       Read More <ArrowRight size={14} />
+                    </button>
                 </div>
              </div>
           </div>

@@ -78,6 +78,12 @@ export const getUserSidebarConfig = (role = "admin") => {
             { label: "Messages", icon: Mail, path: "/retailer/messages" },
           ],
         },
+        {
+          title: "RESOURCES",
+          items: [
+            { label: "News & Updates", icon: Newspaper, path: "/retailer/news-updates" },
+          ],
+        },
       ],
     },
      warehouse_encoder: {
@@ -294,6 +300,43 @@ export const getUserSidebarConfig = (role = "admin") => {
         },
       ],
     },
+    warehouse_manager: {
+      panelLabel: "WAREHOUSE MANAGER PANEL",
+      sections: [
+        {
+          title: "MAIN",
+          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/warehouse-manager/dashboard" }],
+        },
+        {
+          title: "MANAGEMENT",
+          items: [
+            { label: "Branch Management", icon: Warehouse, path: "/warehouse-manager/branches" },
+            { label: "Order Approval", icon: ClipboardList, path: "/warehouse-manager/order-approval" },
+          ],
+        },
+        {
+          title: "ANALYTICS",
+          items: [
+            { label: "Performance Monitoring", icon: FileBarChart, path: "/warehouse-manager/performance" },
+          ],
+        },
+        {
+          title: "HISTORY",
+          items: [
+            { label: "Fulfillment History", icon: PackageCheck, path: "/warehouse-manager/fulfillment-history" },
+            { label: "Sales History", icon: History, path: "/warehouse-manager/sales-history" },
+            { label: "Procurement Receiving History", icon: Truck, path: "/warehouse-manager/procurement-history" },
+            { label: "Finance Management History", icon: CreditCard, path: "/warehouse-manager/finance-history" },
+          ],
+        },
+        {
+          title: "RESOURCES",
+          items: [
+            { label: "News & Updates", icon: Newspaper, path: "/warehouse-manager/news-updates" },
+          ],
+        },
+      ],
+    },
     farmer: {
       panelLabel: "FARMER PANEL",
       sections: [
@@ -329,7 +372,7 @@ export const getUserSidebarConfig = (role = "admin") => {
   return menuConfigs[role] || menuConfigs.admin;
 };
 
-export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales", "warehouse_logistics", "warehouse_procurement", "warehouse_finance", "supplier_encoder", "miller_sales", "miller_logistics", "miller_finance", "farmer"];
+export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales", "warehouse_logistics", "warehouse_procurement", "warehouse_finance", "warehouse_manager", "supplier_encoder", "miller_sales", "miller_logistics", "miller_finance", "farmer"];
 
 const UserSidebar = ({
   role = "admin",

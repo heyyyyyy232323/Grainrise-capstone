@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import React from "react";
+import { LoadingProvider } from "./Components/context/LoadingContext";
 import LandingPage from "./LandingPage";
 import Login from "./Login/UserLogin";
 import AdminLogin from "./Login/AdminLogin";
@@ -41,6 +42,18 @@ import WarehouseTaxes from "./Users/WarehouseAccounts/WarehouseFinance/Warehouse
 import WarehouseReimburse from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseReimburse";
 import WarehouseFinancePaymentHistory from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseFinancePaymentHistory";
 import WarehouseFinanceDashboard from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseFinanceDashboard";
+// Warehouse Manager
+import WarehouseManagerDashboard from "./Users/WarehouseAccounts/WarehouseManager/WarehouseManagerDashboard";
+import BranchManagement from "./Users/WarehouseAccounts/WarehouseManager/BranchManagement";
+import EmployeeManagement from "./Users/WarehouseAccounts/WarehouseManager/EmployeeManagement";
+import OrderApproval from "./Users/WarehouseAccounts/WarehouseManager/OrderApproval";
+import PerformanceMonitoring from "./Users/WarehouseAccounts/WarehouseManager/PerformanceMonitoring";
+import WarehouseManagerFulfillmentHistory from "./Users/WarehouseAccounts/WarehouseManager/FulfillmentHistory";
+import WarehouseManagerSalesHistory from "./Users/WarehouseAccounts/WarehouseManager/SalesHistory";
+import ProcurementReceivingHistory from "./Users/WarehouseAccounts/WarehouseManager/ProcurementReceivingHistory";
+import FinanceManagementHistory from "./Users/WarehouseAccounts/WarehouseManager/FinanceManagementHistory";
+import WarehouseManagerNewsUpdates from "./Users/WarehouseAccounts/WarehouseManager/WarehouseManagerNewsUpdates";
+import WarehouseManagerNewsArticle from "./Users/WarehouseAccounts/WarehouseManager/WarehouseManagerNewsArticle";
 import MillerEncoderDashboard from "./Users/MillerAccounts/MillerEncoder/MillerEncoderDashboard";
 import MillerEncoderOrderHistory from "./Users/MillerAccounts/MillerEncoder/MillerEncoderOrderHistory";
 import MillerEncoderRequestOrders from "./Users/MillerAccounts/MillerEncoder/MillerEncoderRequestOrders";
@@ -50,17 +63,26 @@ import SupplierManagement from "./Users/AdminAccounts/AccountAdmin/SupplierManag
 import WarehouseManagement from "./Users/AdminAccounts/AccountAdmin/WarehouseManagement";
 import RetailerManagement from "./Users/AdminAccounts/AccountAdmin/RetailerManagement";
 import EmailUsers from "./Users/AdminAccounts/AccountAdmin/EmailUsers";
+import RetailerDashboard from "./Users/RetailerAccounts/RetailerDashboard";
 import RetailerPointOfSale from "./Users/RetailerAccounts/RetailerPointOfSale";
 import RetailerSalesHistory from "./Users/RetailerAccounts/RetailerSalesHistory";
 import RetailerInventory from "./Users/RetailerAccounts/RetailerInventory";
+import RetailerMarketplace from "./Users/RetailerAccounts/RetailerMarketplace";
 import RetailerProductReturns from "./Users/RetailerAccounts/RetailerProductReturns";
 import RetailerMyPurchases from "./Users/RetailerAccounts/RetailerMyPurchases";
 import RetailerOrderTracking from "./Users/RetailerAccounts/RetailerOrderTracking";
+import RetailerMessages from "./Users/RetailerAccounts/RetailerMessages";
+import RetailerNewsUpdates from "./Users/RetailerAccounts/RetailerNewsUpdates";
+import RetailerNewsArticle from "./Users/RetailerAccounts/RetailerNewsArticle";
 // Farmer
 import FarmerDashboard from "./Users/FarmersAccounts/FarmerDashboard";
 import FarmerForecasting from "./Users/FarmersAccounts/FarmerForecasting";
 import FarmerContracts from "./Users/FarmersAccounts/FarmerContracts";
 import FarmerNewsUpdates from "./Users/FarmersAccounts/FarmerNewsUpdates";
+import FarmerNewsArticle from "./Users/FarmersAccounts/FarmerNewsArticle";
+import FarmerFarmManagement from "./Users/FarmersAccounts/FarmerFarmManagement";
+import FarmerPointOfSale from "./Users/FarmersAccounts/FarmerPointOfSale";
+import FarmerTransactionHistory from "./Users/FarmersAccounts/FarmerTransactionHistory";
 
 // Miller Finance
 import MillerFinanceDashboard from "./Users/MillerAccounts/MillerFinance/MillerFinanceDashboard";
@@ -86,7 +108,7 @@ import MillerSalesHistory from "./Users/MillerAccounts/MillerSales/MillerSalesHi
 
 function App() {
   return (
-    <>
+    <LoadingProvider>
       <BrowserRouter>
         <GlobalLoadingScreen />
         <Routes>
@@ -147,6 +169,21 @@ function App() {
           <Route path="/warehouse-finance/payment-history" element={<WarehouseFinancePaymentHistory />} />
         </Route>
 
+        {/* Warehouse Manager pages */}
+        <Route element={<WarehouseEncoderLayout role="warehouse_manager" />}>
+          <Route path="/warehouse-manager/dashboard" element={<WarehouseManagerDashboard />} />
+          <Route path="/warehouse-manager/branches" element={<BranchManagement />} />
+          <Route path="/warehouse-manager/branches/:branchId/employees" element={<EmployeeManagement />} />
+          <Route path="/warehouse-manager/order-approval" element={<OrderApproval />} />
+          <Route path="/warehouse-manager/performance" element={<PerformanceMonitoring />} />
+          <Route path="/warehouse-manager/fulfillment-history" element={<WarehouseManagerFulfillmentHistory />} />
+          <Route path="/warehouse-manager/sales-history" element={<WarehouseManagerSalesHistory />} />
+          <Route path="/warehouse-manager/procurement-history" element={<ProcurementReceivingHistory />} />
+          <Route path="/warehouse-manager/finance-history" element={<FinanceManagementHistory />} />
+          <Route path="/warehouse-manager/news-updates" element={<WarehouseManagerNewsUpdates />} />
+          <Route path="/warehouse-manager/news-updates/:id" element={<WarehouseManagerNewsArticle />} />
+        </Route>
+
         {/* Supplier Encoder pages */}
         <Route element={<WarehouseEncoderLayout role="supplier_encoder" />}>
           <Route path="/supplier-encoder/dashboard" element={<MillerEncoderDashboard />} />
@@ -185,12 +222,17 @@ function App() {
 
         {/* Retailer pages */}
         <Route element={<WarehouseEncoderLayout role="retailer" />}>
+          <Route path="/retailer/dashboard" element={<RetailerDashboard />} />
           <Route path="/retailer/point-of-sale" element={<RetailerPointOfSale />} />
           <Route path="/retailer/sales-history" element={<RetailerSalesHistory />} />
           <Route path="/retailer/inventory" element={<RetailerInventory />} />
+          <Route path="/retailer/warehouse-marketplace" element={<RetailerMarketplace />} />
           <Route path="/retailer/order-tracking" element={<RetailerOrderTracking />} />
           <Route path="/retailer/product-returns" element={<RetailerProductReturns />} />
           <Route path="/retailer/my-purchases" element={<RetailerMyPurchases />} />
+          <Route path="/retailer/messages" element={<RetailerMessages />} />
+          <Route path="/retailer/news-updates" element={<RetailerNewsUpdates />} />
+          <Route path="/retailer/news-updates/:id" element={<RetailerNewsArticle />} />
         </Route>
 
         {/* Farmer pages */}
@@ -199,6 +241,10 @@ function App() {
           <Route path="/farmer/forecasting" element={<FarmerForecasting />} />
           <Route path="/farmer/contracts" element={<FarmerContracts />} />
           <Route path="/farmer/news-updates" element={<FarmerNewsUpdates />} />
+          <Route path="/farmer/news-updates/:id" element={<FarmerNewsArticle />} />
+          <Route path="/farmer/farm-management" element={<FarmerFarmManagement />} />
+          <Route path="/farmer/point-of-sale" element={<FarmerPointOfSale />} />
+          <Route path="/farmer/transaction-history" element={<FarmerTransactionHistory />} />
         </Route>
 
         {/* Admin pages */}
@@ -215,7 +261,7 @@ function App() {
       {/* Floating chatbot — mounted outside BrowserRouter so position:fixed
           is never broken by a transformed ancestor (animate-page-fade) */}
       <FloatingChatbot />
-    </>
+    </LoadingProvider>
   );
 }
 
