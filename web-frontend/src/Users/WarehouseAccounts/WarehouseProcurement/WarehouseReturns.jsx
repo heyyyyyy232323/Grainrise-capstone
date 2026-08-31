@@ -17,13 +17,16 @@ const WarehouseReturns = () => {
     {
       key: "action",
       label: "Action",
+      cellClassName: "text-center",
       render: (row) => (
-        <button
-          type="button"
-          className="rounded-full border border-gray-300 px-4 py-1.5 text-[11px] font-bold text-gray-600 transition hover:bg-gray-50"
-        >
-          Process Return
-        </button>
+        <div className="flex items-center justify-center">
+          <button
+            type="button"
+            className="rounded-lg border border-gray-300 px-4 py-1.5 text-[11px] font-bold text-gray-600 transition hover:bg-gray-50 cursor-pointer"
+          >
+            Process Return
+          </button>
+        </div>
       ),
     },
   ];

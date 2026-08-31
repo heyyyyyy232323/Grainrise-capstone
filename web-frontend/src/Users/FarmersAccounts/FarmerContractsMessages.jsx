@@ -156,9 +156,9 @@ export default function FarmerContractsMessages() {
                <input 
                   type="text" 
                   placeholder="Type a message..."
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-600 focus:border-green-600"
+                  className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-600 focus:border-green-600"
                />
-               <button className="bg-green-700 text-white rounded-full px-4 py-2.5 text-sm font-medium hover:bg-green-800 transition flex items-center gap-2">
+               <button className="bg-green-700 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-green-800 transition flex items-center gap-2">
                   Send <Send size={14} />
                </button>
             </div>

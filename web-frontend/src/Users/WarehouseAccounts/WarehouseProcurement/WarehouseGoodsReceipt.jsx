@@ -19,13 +19,16 @@ const WarehouseGoodsReceipt = () => {
     {
       key: "action",
       label: "Action",
+      cellClassName: "text-center",
       render: (row) => (
-        <button
-          type="button"
-          className="rounded-full bg-[#1a7a3a] px-4 py-1.5 text-[11px] font-bold text-white transition hover:bg-[#125c2a]"
-        >
-          Generate
-        </button>
+        <div className="flex items-center justify-center">
+          <button
+            type="button"
+            className="rounded-lg bg-[#1a7a3a] px-4 py-1.5 text-[11px] font-bold text-white transition hover:bg-[#125c2a] cursor-pointer"
+          >
+            Generate
+          </button>
+        </div>
       ),
     },
   ];

@@ -17,13 +17,16 @@ const WarehousePaymentHistory = () => {
     {
       key: "action",
       label: "Action",
+      cellClassName: "text-center",
       render: (row) => (
-        <button
-          type="button"
-          className="rounded-full border border-gray-300 px-4 py-1.5 text-[11px] font-bold text-gray-600 transition hover:bg-gray-50"
-        >
-          View Details
-        </button>
+        <div className="flex items-center justify-center">
+          <button
+            type="button"
+            className="rounded-lg border border-gray-300 px-4 py-1.5 text-[11px] font-bold text-gray-600 transition hover:bg-gray-50 cursor-pointer"
+          >
+            View Details
+          </button>
+        </div>
       ),
     },
   ];
@@ -57,7 +60,7 @@ const WarehousePaymentHistory = () => {
             View all supplier payment requests and completed payment transactions.
           </p>
         </div>
-        <button className="flex items-center gap-2 rounded-full bg-[#1a7a3a] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#125c2a]">
+        <button className="flex items-center gap-2 rounded-lg bg-[#1a7a3a] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#125c2a] cursor-pointer">
           <FileText size={16} />
           Generate Report
         </button>

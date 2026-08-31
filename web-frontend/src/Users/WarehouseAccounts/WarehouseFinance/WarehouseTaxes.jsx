@@ -59,7 +59,7 @@ export default function WarehouseTaxes() {
         <button
           type="button"
           onClick={() => alert(`Marking ${row.tax} as paid`) }
-          className="inline-flex items-center justify-center px-3 py-0.5 h-7 rounded-full text-white text-xs font-semibold hover:bg-[#016b0f] cursor-pointer"
+          className="inline-flex items-center justify-center px-3 py-1 h-7 rounded-lg text-white text-xs font-semibold hover:bg-[#016b0f] transition cursor-pointer"
           style={{ backgroundColor: "#018311", minWidth: 80 }}
         >
           Mark as Paid

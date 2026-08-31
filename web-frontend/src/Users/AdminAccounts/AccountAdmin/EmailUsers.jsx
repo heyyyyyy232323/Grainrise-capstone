@@ -71,7 +71,7 @@ export default function EmailUsers() {
 
             <div className="border-t border-slate-200 px-5 py-3 bg-[#F3F5FF] flex items-center justify-between">
               <div className="text-xs text-slate-500">{messagePlain.length} / 1000</div>
-              <button disabled={sendDisabled} className={`rounded-full px-4 py-2 text-sm font-semibold text-white ${sendDisabled ? 'bg-emerald-300' : 'bg-emerald-600 hover:brightness-95'}`}>
+              <button disabled={sendDisabled} className={`rounded-lg px-4 py-2 text-sm font-semibold text-white cursor-pointer transition ${sendDisabled ? 'bg-emerald-300 cursor-not-allowed' : 'bg-emerald-600 hover:brightness-95'}`}>
                 Send ➤
               </button>
             </div>
