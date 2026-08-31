@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { X, Receipt, CheckCircle, Clock, CreditCard, Banknote, ShoppingBag } from "lucide-react";
+import { createPortal } from "react-dom";
+import { X, Receipt, Clock } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
 import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
@@ -13,7 +14,7 @@ const SORT_OPTIONS = [
   { value: "amount-asc", label: "Amount (Low to High)" },
 ];
 
-/* ── Columns for In-Store Transactions (Screenshot 2) ────────────────────────── */
+/* ── Columns for In-Store Transactions ────────────────────────── */
 const IN_STORE_COLUMNS = [
   { key: "time", label: "Transaction Time", width: "16%" },
   { key: "branch", label: "Branch", width: "16%" },
@@ -53,7 +54,7 @@ const IN_STORE_SECTIONS = [
   },
 ];
 
-/* ── Columns for Online Orders Transactions (Screenshot 1) ────────────────────── */
+/* ── Columns for Online Orders Transactions ────────────────────── */
 const ONLINE_COLUMNS = [
   { key: "retailer", label: "Retailer", width: "16%" },
   { key: "branch", label: "Branch", width: "16%" },
@@ -202,94 +203,100 @@ export default function WarehouseManagerSalesHistory() {
         footerLabel={`Showing 1-10 of ${activeTab === "in-store" ? "256" : "128"} transactions`}
       />
 
-      {/* ── Transaction Details Modal ────────────────────────────────────────── */}
-      {selectedTransaction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 space-y-4 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                  <Receipt size={18} />
+      {/* ── Transaction Details Modal (Portaled to document.body) ────────────── */}
+      {selectedTransaction &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                    <Receipt size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base">Transaction Details</h3>
+                    <p className="text-xs text-gray-500">
+                      {activeTab === "in-store" ? "In-Store Point of Sale" : "Online Marketplace Order"}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-base">Transaction Details</h3>
-                  <p className="text-xs text-gray-500">{activeTab === "in-store" ? "In-Store Point of Sale" : "Online Marketplace Order"}</p>
+                <button
+                  onClick={() => setSelectedTransaction(null)}
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-3 bg-gray-50 p-4 rounded-xl text-sm">
+                <div className="flex justify-between items-center text-gray-600">
+                  <span>Branch:</span>
+                  <span className="font-semibold text-gray-900">{selectedTransaction.branch}</span>
+                </div>
+                {selectedTransaction.retailer && (
+                  <div className="flex justify-between items-center text-gray-600">
+                    <span>Retailer Client:</span>
+                    <span className="font-semibold text-gray-900">{selectedTransaction.retailer}</span>
+                  </div>
+                )}
+                {selectedTransaction.batchNo && (
+                  <div className="flex justify-between items-center text-gray-600">
+                    <span>Batch Number:</span>
+                    <span className="font-mono text-xs font-semibold text-gray-900">
+                      {selectedTransaction.batchNo}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center text-gray-600">
+                  <span>Rice Variant:</span>
+                  <span className="font-semibold text-gray-900">{selectedTransaction.variant}</span>
+                </div>
+                {selectedTransaction.quantity && (
+                  <div className="flex justify-between items-center text-gray-600">
+                    <span>Quantity:</span>
+                    <span className="font-semibold text-gray-900">{selectedTransaction.quantity}</span>
+                  </div>
+                )}
+                {selectedTransaction.time && (
+                  <div className="flex justify-between items-center text-gray-600">
+                    <span>Transaction Time:</span>
+                    <span className="font-semibold text-gray-900 flex items-center gap-1">
+                      <Clock size={13} className="text-gray-400" /> {selectedTransaction.time}
+                    </span>
+                  </div>
+                )}
+                <div className="border-t border-gray-200 pt-3 space-y-1.5">
+                  <div className="flex justify-between items-center text-gray-600">
+                    <span>Total Payment:</span>
+                    <span className="font-bold text-gray-900 text-base">
+                      {selectedTransaction.totalPayment || selectedTransaction.totalPrice}
+                    </span>
+                  </div>
+                  {selectedTransaction.amountPaid && (
+                    <div className="flex justify-between items-center text-gray-600">
+                      <span>Amount Paid:</span>
+                      <span className="font-semibold text-gray-900">{selectedTransaction.amountPaid}</span>
+                    </div>
+                  )}
+                  {selectedTransaction.change && (
+                    <div className="flex justify-between items-center text-gray-600">
+                      <span>Change Given:</span>
+                      <span className="font-semibold text-emerald-700">{selectedTransaction.change}</span>
+                    </div>
+                  )}
                 </div>
               </div>
+
               <button
                 onClick={() => setSelectedTransaction(null)}
-                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-sm rounded-xl transition"
               >
-                <X size={18} />
+                Close Details
               </button>
             </div>
-
-            <div className="space-y-3 bg-gray-50 p-4 rounded-xl text-sm">
-              <div className="flex justify-between items-center text-gray-600">
-                <span>Branch:</span>
-                <span className="font-semibold text-gray-900">{selectedTransaction.branch}</span>
-              </div>
-              {selectedTransaction.retailer && (
-                <div className="flex justify-between items-center text-gray-600">
-                  <span>Retailer Client:</span>
-                  <span className="font-semibold text-gray-900">{selectedTransaction.retailer}</span>
-                </div>
-              )}
-              {selectedTransaction.batchNo && (
-                <div className="flex justify-between items-center text-gray-600">
-                  <span>Batch Number:</span>
-                  <span className="font-mono text-xs font-semibold text-gray-900">{selectedTransaction.batchNo}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-center text-gray-600">
-                <span>Rice Variant:</span>
-                <span className="font-semibold text-gray-900">{selectedTransaction.variant}</span>
-              </div>
-              {selectedTransaction.quantity && (
-                <div className="flex justify-between items-center text-gray-600">
-                  <span>Quantity:</span>
-                  <span className="font-semibold text-gray-900">{selectedTransaction.quantity}</span>
-                </div>
-              )}
-              {selectedTransaction.time && (
-                <div className="flex justify-between items-center text-gray-600">
-                  <span>Transaction Time:</span>
-                  <span className="font-semibold text-gray-900 flex items-center gap-1">
-                    <Clock size={13} className="text-gray-400" /> {selectedTransaction.time}
-                  </span>
-                </div>
-              )}
-              <div className="border-t border-gray-200 pt-3 space-y-1.5">
-                <div className="flex justify-between items-center text-gray-600">
-                  <span>Total Payment:</span>
-                  <span className="font-bold text-gray-900 text-base">
-                    {selectedTransaction.totalPayment || selectedTransaction.totalPrice}
-                  </span>
-                </div>
-                {selectedTransaction.amountPaid && (
-                  <div className="flex justify-between items-center text-gray-600">
-                    <span>Amount Paid:</span>
-                    <span className="font-semibold text-gray-900">{selectedTransaction.amountPaid}</span>
-                  </div>
-                )}
-                {selectedTransaction.change && (
-                  <div className="flex justify-between items-center text-gray-600">
-                    <span>Change Given:</span>
-                    <span className="font-semibold text-emerald-700">{selectedTransaction.change}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <button
-              onClick={() => setSelectedTransaction(null)}
-              className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-sm rounded-xl transition"
-            >
-              Close Details
-            </button>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Search, X, PackageCheck, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Search, X, PackageCheck } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 
 const MOCK_RECORDS = Array.from({ length: 12 }).map((_, i) => ({
@@ -143,79 +144,81 @@ export default function FulfillmentHistory() {
         </div>
       </div>
 
-      {/* ── Fulfillment Details Modal ────────────────────────────────────────── */}
-      {selectedRecord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 space-y-4 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                  <PackageCheck size={18} />
+      {/* ── Fulfillment Details Modal (Portaled to document.body) ──────────────── */}
+      {selectedRecord &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                    <PackageCheck size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base">Fulfillment Record</h3>
+                    <p className="text-xs text-gray-500">{selectedRecord.id}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-base">Fulfillment Record</h3>
-                  <p className="text-xs text-gray-500">{selectedRecord.id}</p>
+                <button
+                  onClick={() => setSelectedRecord(null)}
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-3 bg-gray-50 p-4 rounded-xl text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Facility Branch:</span>
+                  <span className="font-bold text-gray-900">{selectedRecord.branch}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Customer Client:</span>
+                  <span className="font-semibold text-gray-900">{selectedRecord.customerName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Batch Number:</span>
+                  <span className="font-mono text-gray-800">{selectedRecord.batchNo}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Rice Variant:</span>
+                  <span className="font-semibold text-gray-900">{selectedRecord.variant}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Dispatched Driver:</span>
+                  <span className="font-semibold text-gray-800">{selectedRecord.driver}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Delivery Date:</span>
+                  <span className="text-gray-700">{selectedRecord.date}</span>
+                </div>
+
+                <div className="border-t border-gray-200 pt-3 space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 font-semibold">Total Delivered:</span>
+                    <span className="font-bold text-gray-900 text-sm">{selectedRecord.delivered}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-emerald-700 font-semibold">Passed Quality Inspection:</span>
+                    <span className="font-bold text-emerald-700">{selectedRecord.passedQC}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-rose-600 font-semibold">Failed QC (Rejected/Returned):</span>
+                    <span className="font-bold text-rose-600">{selectedRecord.failedQC}</span>
+                  </div>
                 </div>
               </div>
+
               <button
                 onClick={() => setSelectedRecord(null)}
-                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                className="w-full py-2.5 bg-[#0B5D1E] hover:bg-[#094d19] text-white font-semibold text-xs rounded-xl transition"
               >
-                <X size={18} />
+                Close Details
               </button>
             </div>
-
-            <div className="space-y-3 bg-gray-50 p-4 rounded-xl text-xs">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Facility Branch:</span>
-                <span className="font-bold text-gray-900">{selectedRecord.branch}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Customer Client:</span>
-                <span className="font-semibold text-gray-900">{selectedRecord.customerName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Batch Number:</span>
-                <span className="font-mono text-gray-800">{selectedRecord.batchNo}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Rice Variant:</span>
-                <span className="font-semibold text-gray-900">{selectedRecord.variant}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Dispatched Driver:</span>
-                <span className="font-semibold text-gray-800">{selectedRecord.driver}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Delivery Date:</span>
-                <span className="text-gray-700">{selectedRecord.date}</span>
-              </div>
-
-              <div className="border-t border-gray-200 pt-3 space-y-1.5">
-                <div className="flex justify-between">
-                  <span className="text-gray-600 font-semibold">Total Delivered:</span>
-                  <span className="font-bold text-gray-900 text-sm">{selectedRecord.delivered}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-emerald-700 font-semibold">Passed Quality Inspection:</span>
-                  <span className="font-bold text-emerald-700">{selectedRecord.passedQC}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-rose-600 font-semibold">Failed QC (Rejected/Returned):</span>
-                  <span className="font-bold text-rose-600">{selectedRecord.failedQC}</span>
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setSelectedRecord(null)}
-              className="w-full py-2.5 bg-[#0B5D1E] hover:bg-[#094d19] text-white font-semibold text-xs rounded-xl transition"
-            >
-              Close Details
-            </button>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

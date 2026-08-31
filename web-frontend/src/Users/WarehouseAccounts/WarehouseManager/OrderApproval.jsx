@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Search, ClipboardList, CheckCircle2, XCircle, Clock, Truck, Eye, X, AlertCircle, Check } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Search, ClipboardList, CheckCircle2, XCircle, Clock, X, Check } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 
 export const MOCK_ORDERS = [
@@ -204,95 +205,97 @@ export default function OrderApproval() {
         </div>
       </div>
 
-      {/* ── Order Review & Approval Modal ────────────────────────────────────── */}
-      {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl p-6 space-y-4 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                  <ClipboardList size={18} />
+      {/* ── Order Review & Approval Modal (Portaled to document.body) ────────── */}
+      {selectedOrder &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                    <ClipboardList size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base">Order Review &amp; Approval</h3>
+                    <p className="text-xs text-gray-500">Order ID: {selectedOrder.id}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-base">Order Review &amp; Approval</h3>
-                  <p className="text-xs text-gray-500">Order ID: {selectedOrder.id}</p>
+                <button
+                  onClick={() => setSelectedOrder(null)}
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-2.5 bg-gray-50 p-4 rounded-xl text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Rice Variant:</span>
+                  <span className="font-bold text-gray-900">{selectedOrder.variant} ({selectedOrder.grade})</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Batch Number:</span>
+                  <span className="font-mono text-gray-800">{selectedOrder.batchNo}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Supplier Name:</span>
+                  <span className="font-semibold text-gray-900">{selectedOrder.supplier}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Order Quantity:</span>
+                  <span className="font-bold text-gray-900">{selectedOrder.qty}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Total Purchase Value:</span>
+                  <span className="font-extrabold text-emerald-700 text-sm">{selectedOrder.totalAmount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Assigned Storage Bay:</span>
+                  <span className="font-semibold text-gray-800">{selectedOrder.bay}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Current Status:</span>
+                  <span className={`px-2.5 py-0.5 rounded-full font-bold ${STATUS_PILL_STYLES[selectedOrder.status]}`}>
+                    {selectedOrder.status}
+                  </span>
                 </div>
               </div>
+
+              {/* Status action buttons */}
+              <div className="space-y-2 pt-2">
+                <p className="text-xs font-semibold text-gray-600">Update Order Status:</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => handleUpdateStatus(selectedOrder.id, "Approved")}
+                    className="py-2 px-3 bg-[#0B5D1E] hover:bg-[#094d19] text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Check size={14} /> Approve
+                  </button>
+                  <button
+                    onClick={() => handleUpdateStatus(selectedOrder.id, "Processing")}
+                    className="py-2 px-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Clock size={14} /> Processing
+                  </button>
+                  <button
+                    onClick={() => handleUpdateStatus(selectedOrder.id, "Declined")}
+                    className="py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <XCircle size={14} /> Decline
+                  </button>
+                </div>
+              </div>
+
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                className="w-full py-2.5 border border-gray-200 text-gray-600 font-semibold text-xs rounded-xl hover:bg-gray-50 transition cursor-pointer"
               >
-                <X size={18} />
+                Close Details
               </button>
             </div>
-
-            <div className="space-y-2.5 bg-gray-50 p-4 rounded-xl text-xs">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Rice Variant:</span>
-                <span className="font-bold text-gray-900">{selectedOrder.variant} ({selectedOrder.grade})</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Batch Number:</span>
-                <span className="font-mono text-gray-800">{selectedOrder.batchNo}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Supplier Name:</span>
-                <span className="font-semibold text-gray-900">{selectedOrder.supplier}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Order Quantity:</span>
-                <span className="font-bold text-gray-900">{selectedOrder.qty}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Total Purchase Value:</span>
-                <span className="font-extrabold text-emerald-700 text-sm">{selectedOrder.totalAmount}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Assigned Storage Bay:</span>
-                <span className="font-semibold text-gray-800">{selectedOrder.bay}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Current Status:</span>
-                <span className={`px-2.5 py-0.5 rounded-full font-bold ${STATUS_PILL_STYLES[selectedOrder.status]}`}>
-                  {selectedOrder.status}
-                </span>
-              </div>
-            </div>
-
-            {/* Status action buttons */}
-            <div className="space-y-2 pt-2">
-              <p className="text-xs font-semibold text-gray-600">Update Order Status:</p>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => handleUpdateStatus(selectedOrder.id, "Approved")}
-                  className="py-2 px-3 bg-[#0B5D1E] hover:bg-[#094d19] text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
-                >
-                  <Check size={14} /> Approve
-                </button>
-                <button
-                  onClick={() => handleUpdateStatus(selectedOrder.id, "Processing")}
-                  className="py-2 px-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
-                >
-                  <Clock size={14} /> Processing
-                </button>
-                <button
-                  onClick={() => handleUpdateStatus(selectedOrder.id, "Declined")}
-                  className="py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
-                >
-                  <XCircle size={14} /> Decline
-                </button>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setSelectedOrder(null)}
-              className="w-full py-2.5 border border-gray-200 text-gray-600 font-semibold text-xs rounded-xl hover:bg-gray-50 transition"
-            >
-              Close Details
-            </button>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
