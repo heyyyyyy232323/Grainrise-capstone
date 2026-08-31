@@ -7,7 +7,14 @@ import SectionedTableCard from "../../Components/Minor-Components/SectionedTable
 import CustomGreenButton from "../../Components/Minor-Components/CustomGreenButton";
 import CustomAmberButton from "../../Components/Minor-Components/CustomAmberButton";
 import CustomRedButton from "../../Components/Minor-Components/CustomRedButton";
-import ProductPlaceholder from "../../assets/Logo.png"; // Using logo as a placeholder image
+
+// Import Modals
+import ArchiveProductModal from "../../Components/Modals/ArchiveProductModal";
+import RestoreProductModal from "../../Components/Modals/RestoreProductModal";
+import DeleteProductModal from "../../Components/Modals/DeleteProductModal";
+import ViewProductModal from "../../Components/Modals/ViewProductModal";
+
+import ProductPlaceholder from "../../assets/Logo.png";
 
 const TABS = [
   { id: "active", label: "Active" },
@@ -42,26 +49,61 @@ const StatusPill = ({ status }) => (
 );
 
 const MOCK_DATA = [
-  { id: 1, variant: "Dinorado", code: "WR-001", expiration: "Oct 17, 2026", stock: 0, price: 1500, status: "Out of Stock", isArchived: false },
-  { id: 2, variant: "Dinorado", code: "WR-001", expiration: "Oct 17, 2026", stock: 100, price: 1500, status: "Low Stock", isArchived: false },
-  { id: 3, variant: "Dinorado", code: "WR-001", expiration: "Jul 24, 2026", stock: 100, price: 1500, status: "Low Stock", isArchived: false },
-  { id: 4, variant: "Dinorado", code: "WR-001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: false },
-  { id: 5, variant: "Dinorado", code: "WR-001", expiration: "May 25, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: false },
-  { id: 6, variant: "Dinorado", code: "WR-001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: false },
-  { id: 7, variant: "Dinorado", code: "WR-001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: false },
-  { id: 8, variant: "Dinorado", code: "WR-001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: true },
-  { id: 9, variant: "Dinorado", code: "WR-001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: true },
+  { id: 1, variant: "Dinorado", code: "WR-001", expiration: "Oct 17, 2026", stock: 0, price: 1500, status: "Out of Stock", isArchived: false, description: "Premium rice, locally sourced specialty..." },
+  { id: 2, variant: "Dinorado", code: "WR-001", expiration: "Oct 17, 2026", stock: 100, price: 1500, status: "Low Stock", isArchived: false, description: "Premium rice, locally sourced specialty..." },
+  { id: 3, variant: "Dinorado", code: "WR-001", expiration: "Jul 24, 2026", stock: 100, price: 1500, status: "Low Stock", isArchived: false, description: "Premium rice, locally sourced specialty..." },
+  { id: 4, variant: "Dinorado", code: "WR-001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: false, description: "Premium rice, locally sourced specialty..." },
+  { id: 5, variant: "Dinorado", code: "WR-001", expiration: "May 25, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: false, description: "Premium rice, locally sourced specialty..." },
+  { id: 6, variant: "Dinorado", code: "WR-001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: false, description: "Premium rice, locally sourced specialty..." },
+  { id: 7, variant: "Dinorado", code: "WR-001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: false, description: "Premium rice, locally sourced specialty..." },
+  { id: 8, variant: "Dinorado", code: "WR-001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: true, description: "Premium rice, locally sourced specialty..." },
+  { id: 9, variant: "Dinorado", code: "WR-001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: true, description: "Premium rice, locally sourced specialty..." },
 ];
 
 const RetailerInventory = () => {
+  const [dataList, setDataList] = useState(MOCK_DATA);
   const [activeTab, setActiveTab] = useState("active");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("name-asc");
   const [currentPage, setCurrentPage] = useState(1);
   const TOTAL_PAGES = 3;
 
-  const handleAction = (action, row) => {
-    console.log(`${action} clicked for:`, row);
+  // Modal State Management
+  const [modalState, setModalState] = useState({ type: null, product: null });
+
+  // Handler Functions for Modal Actions
+  const handleArchive = () => {
+    if (modalState.product) {
+      setDataList((prev) =>
+        prev.map((item) =>
+          item.id === modalState.product.id ? { ...item, isArchived: true } : item
+        )
+      );
+    }
+    setModalState({ type: null, product: null });
+  };
+
+  const handleRestore = () => {
+    if (modalState.product) {
+      setDataList((prev) =>
+        prev.map((item) =>
+          item.id === modalState.product.id ? { ...item, isArchived: false } : item
+        )
+      );
+    }
+    setModalState({ type: null, product: null });
+  };
+
+  const handleDelete = () => {
+    if (modalState.product) {
+      setDataList((prev) => prev.filter((item) => item.id !== modalState.product.id));
+    }
+    setModalState({ type: null, product: null });
+  };
+
+  const handleSaveProduct = (updatedProduct) => {
+    console.log("Saved Product Details:", updatedProduct);
+    setModalState({ type: null, product: null });
   };
 
   const COLUMNS = [
@@ -75,7 +117,7 @@ const RetailerInventory = () => {
           </div>
           <div>
             <p className="text-sm font-bold text-gray-900">{row.variant}</p>
-            <p className="text-[10px] text-gray-400 max-w-[120px] truncate">Premium rice, locally sourced specialty...</p>
+            <p className="text-[10px] text-gray-400 max-w-[120px] truncate">{row.description}</p>
           </div>
         </div>
       ),
@@ -100,15 +142,30 @@ const RetailerInventory = () => {
         <div className="flex items-center justify-end gap-2">
           {activeTab === "active" ? (
             <>
-              <button onClick={() => handleAction("View Details", row)} className="rounded-lg border border-gray-300 px-4 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition cursor-pointer">
+              <button
+                onClick={() => setModalState({ type: "view", product: row })}
+                className="rounded-lg border border-gray-300 px-4 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition cursor-pointer"
+              >
                 View Details
               </button>
-              <CustomAmberButton text="Archive" onClick={() => handleAction("Archive", row)} className="!rounded-lg !px-4 !py-1 !text-xs cursor-pointer" />
+              <CustomAmberButton
+                text="Archive"
+                onClick={() => setModalState({ type: "archive", product: row })}
+                className="!rounded-lg !px-4 !py-1 !text-xs cursor-pointer"
+              />
             </>
           ) : (
             <>
-              <CustomGreenButton text="Restore" onClick={() => handleAction("Restore", row)} className="!rounded-lg !px-4 !py-1 !text-xs cursor-pointer" />
-              <CustomRedButton text="Delete Permanently" onClick={() => handleAction("Delete Permanently", row)} className="!rounded-lg !px-4 !py-1 !text-xs cursor-pointer" />
+              <CustomGreenButton
+                text="Restore"
+                onClick={() => setModalState({ type: "restore", product: row })}
+                className="!rounded-lg !px-4 !py-1 !text-xs cursor-pointer"
+              />
+              <CustomRedButton
+                text="Delete"
+                onClick={() => setModalState({ type: "delete", product: row })}
+                className="!rounded-lg !px-4 !py-1 !text-xs cursor-pointer"
+              />
             </>
           )}
         </div>
@@ -116,7 +173,7 @@ const RetailerInventory = () => {
     },
   ];
 
-  const filteredData = MOCK_DATA.filter((item) => {
+  const filteredData = dataList.filter((item) => {
     const matchesTab = activeTab === "active" ? !item.isArchived : item.isArchived;
     if (!matchesTab) return false;
 
@@ -169,6 +226,32 @@ const RetailerInventory = () => {
         totalPages={TOTAL_PAGES}
         onPageChange={setCurrentPage}
         footerLabel={`Showing 1-${Math.min(10, filteredData.length)} of ${filteredData.length} ${activeTab === "archive" ? "archived " : ""}products`}
+      />
+
+      {/* ── Modals Integration ───────────────────────────────────────── */}
+      <ViewProductModal
+        isOpen={modalState.type === "view"}
+        onClose={() => setModalState({ type: null, product: null })}
+        product={modalState.product}
+        onSave={handleSaveProduct}
+      />
+      <ArchiveProductModal
+        isOpen={modalState.type === "archive"}
+        onClose={() => setModalState({ type: null, product: null })}
+        productName={modalState.product?.variant || "Product"}
+        onArchive={handleArchive}
+      />
+      <RestoreProductModal
+        isOpen={modalState.type === "restore"}
+        onClose={() => setModalState({ type: null, product: null })}
+        productName={modalState.product?.variant || "Product"}
+        onRestore={handleRestore}
+      />
+      <DeleteProductModal
+        isOpen={modalState.type === "delete"}
+        onClose={() => setModalState({ type: null, product: null })}
+        productName={modalState.product?.variant || "Product"}
+        onDelete={handleDelete}
       />
     </>
   );

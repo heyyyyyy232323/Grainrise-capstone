@@ -21,6 +21,13 @@ const AdminLogin = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const navigate = useNavigate();
+  const { triggerLoading } = useLoading();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    triggerLoading(900);
+    // TODO: add real admin login API call here
+  };
 
   const { request } = useApi();
 
