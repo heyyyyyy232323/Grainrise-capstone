@@ -9,14 +9,16 @@ import CustomRedButton from "../../../Components/Minor-Components/CustomRedButto
 import ArchiveProductModal from "../../../Components/Modals/ArchiveProductModal";
 import RestoreProductModal from "../../../Components/Modals/RestoreProductModal";
 import DeleteProductModal from "../../../Components/Modals/DeleteProductModal";
+import AddProductModal from "../../../Components/Modals/AddProductModal";
+import ViewProductModal from "../../../Components/Modals/ViewProductModal";
 
 // ─── Static Data ───────────────────────────────────────────────────────────────
 const generateProducts = (count, archived = false) =>
   Array.from({ length: count }, (_, i) => {
     const stockOptions = [
-      { qty: "0 kg",     level: "out"  },
-      { qty: "100 kg",   level: "low"  },
-      { qty: "150 kg",   level: "low"  },
+      { qty: "0 kg",    level: "out"  },
+      { qty: "100 kg",  level: "low"  },
+      { qty: "150 kg",  level: "low"  },
       { qty: "2,500 kg", level: "in"   },
     ];
     const { qty, level } = stockOptions[i % stockOptions.length];
@@ -137,7 +139,6 @@ export default function WarehouseEncoderStockManagement() {
   const stockRef = useRef(null);
   const sortRef  = useRef(null);
 
-  // Click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (stockRef.current && !stockRef.current.contains(e.target)) {
@@ -154,6 +155,11 @@ export default function WarehouseEncoderStockManagement() {
   const handleTab    = (v) => { setActiveTab(v); setCurrentPage(1); };
   const handleSearch = (v) => { setSearch(v);    setCurrentPage(1); };
   const handleSort   = (v) => { setSortBy(v);    setCurrentPage(1); };
+
+  const handleSaveProduct = (formData) => {
+    console.log("Product Saved:", formData);
+    setModalState({ type: null, product: null });
+  };
 
   const basePool = activeTab === "archive" ? ARCHIVED_PRODUCTS : ACTIVE_PRODUCTS;
 
@@ -184,7 +190,7 @@ export default function WarehouseEncoderStockManagement() {
 
   return (
     <div className="space-y-5">
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      {/* Header */}
       <div className="space-y-1">
         <Breadcrumbs items={[{ label: "Management" }, { label: "Stock Management" }]} />
         <h1 className="text-[clamp(1.75rem,3vw,2.25rem)] font-extrabold tracking-[-0.03em] text-slate-900">
@@ -193,12 +199,11 @@ export default function WarehouseEncoderStockManagement() {
         <p className="text-sm text-slate-500">Manage warehouse inventory and product records.</p>
       </div>
 
-      {/* ── Tabs ────────────────────────────────────────────────────────────── */}
+      {/* Tabs */}
       <Tabs tabs={TABS} activeTab={activeTab} onTabChange={handleTab} />
 
-      {/* ── Toolbar (Procurement Design) ────────────────────────────────────── */}
+      {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4 items-center justify-between">
-        {/* Left: Search + Filter Group */}
         <div className="flex flex-col sm:flex-row gap-3 items-center w-full sm:w-auto flex-1">
           {/* Search */}
           <div className="relative flex-1 max-w-md w-full">
@@ -223,9 +228,9 @@ export default function WarehouseEncoderStockManagement() {
             )}
           </div>
 
-          {/* Filter and Sort Dropdowns */}
+          {/* Filters */}
           <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center">
-            {/* Stock Level Filter */}
+            {/* Stock Level Dropdown */}
             <div className="relative w-full sm:w-auto" ref={stockRef}>
               <button
                 type="button"
@@ -268,7 +273,7 @@ export default function WarehouseEncoderStockManagement() {
               )}
             </div>
 
-            {/* Sort By Dropdown */}
+            {/* Sort Dropdown */}
             <div className="relative w-full sm:w-auto" ref={sortRef}>
               <button
                 type="button"
@@ -310,10 +315,11 @@ export default function WarehouseEncoderStockManagement() {
           </div>
         </div>
 
-        {/* Right: Add Product — only on Active tab */}
+        {/* Add Product Button */}
         {activeTab === "active" && (
           <button
             type="button"
+            onClick={() => setModalState({ type: "add", product: null })}
             className="rounded-lg bg-[#0B5D1E] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#084b18] flex items-center gap-1.5 cursor-pointer whitespace-nowrap ml-auto"
           >
             <Plus size={16} strokeWidth={2.5} />
@@ -322,7 +328,7 @@ export default function WarehouseEncoderStockManagement() {
         )}
       </div>
 
-      {/* ── Legend (Active tab only) ─────────────────────────────────────────── */}
+      {/* Legend */}
       {activeTab === "active" && (
         <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-600">
           <span className="text-slate-400">Legend:</span>
@@ -338,7 +344,7 @@ export default function WarehouseEncoderStockManagement() {
         </div>
       )}
 
-      {/* ── Table Card ──────────────────────────────────────────────────────── */}
+      {/* Table Card */}
       <article className="w-full overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.06)]">
         <div className="overflow-x-auto">
           <table className="min-w-full border-collapse">
@@ -369,12 +375,10 @@ export default function WarehouseEncoderStockManagement() {
                     key={product.id}
                     className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70 transition-colors"
                   >
-                    {/* Product Code */}
                     <td className="whitespace-nowrap px-4 py-3 pl-5 text-[13px] font-bold text-slate-800">
                       {product.productCode}
                     </td>
 
-                    {/* Variant + expiry + optional badge */}
                     <td className="px-4 py-3">
                       <div className="flex flex-col">
                         <span className="text-[13px] font-semibold text-slate-800">
@@ -385,7 +389,6 @@ export default function WarehouseEncoderStockManagement() {
                       </div>
                     </td>
 
-                    {/* Stock Qty */}
                     <td className="whitespace-nowrap px-4 py-3">
                       <span className="flex items-center gap-2 text-[13px] text-slate-700">
                         <StockDot level={product.stockLevel} />
@@ -393,17 +396,16 @@ export default function WarehouseEncoderStockManagement() {
                       </span>
                     </td>
 
-                    {/* Description */}
                     <td className="px-4 py-3 text-[13px] text-slate-500 max-w-[220px]">
                       <span className="line-clamp-2">{product.description}</span>
                     </td>
 
-                    {/* Action */}
                     <td className="whitespace-nowrap px-4 py-3 pr-5">
                       {activeTab === "active" ? (
                         <div className="flex items-center justify-center gap-2">
                           <button
                             type="button"
+                            onClick={() => setModalState({ type: "view", product })}
                             className="rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
                           >
                             View Details
@@ -447,7 +449,18 @@ export default function WarehouseEncoderStockManagement() {
         )}
       </article>
 
-      {/* ── Modals ──────────────────────────────────────────────────────────── */}
+      {/* Modals */}
+      <AddProductModal
+        isOpen={modalState.type === "add"}
+        onClose={() => setModalState({ type: null, product: null })}
+        onSave={handleSaveProduct}
+      />
+      <ViewProductModal
+        isOpen={modalState.type === "view"}
+        onClose={() => setModalState({ type: null, product: null })}
+        product={modalState.product}
+        onSave={handleSaveProduct}
+      />
       <ArchiveProductModal
         isOpen={modalState.type === "archive"}
         onClose={() => setModalState({ type: null, product: null })}

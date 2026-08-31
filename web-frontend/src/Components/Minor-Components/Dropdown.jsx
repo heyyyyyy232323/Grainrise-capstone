@@ -8,6 +8,7 @@ const Dropdown = ({
   onChange,
   placeholder = "Select Option",
   error,
+  disabled = false, // 👈 Added disabled prop
   className = "",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,23 +28,23 @@ const Dropdown = ({
   }, []);
 
   const handleSelect = (option) => {
+    if (disabled) return;
     onChange(option);
     setIsOpen(false);
   };
 
-  // Check if label contains '*' to color it red
   const renderLabel = () => {
     if (!label) return null;
     if (label.endsWith("*")) {
       const baseLabel = label.slice(0, -1).trim();
       return (
-        <label className="block mb-2 text-sm font-medium text-gray-700 text-left">
+        <label className="block mb-1.5 text-xs font-medium text-gray-700 text-left">
           {baseLabel} <span className="text-red-500">*</span>
         </label>
       );
     }
     return (
-      <label className="block mb-2 text-sm font-medium text-gray-700 text-left">
+      <label className="block mb-1.5 text-xs font-medium text-gray-700 text-left">
         {label}
       </label>
     );
@@ -64,17 +65,19 @@ const Dropdown = ({
 
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        disabled={disabled} // 👈 Disable button action
+        onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`
           flex items-center justify-between gap-2
           w-full px-3 py-2
-          rounded-lg border
-          text-sm font-medium
-          bg-white text-gray-700
-          hover:bg-gray-50
-          cursor-pointer
+          rounded-xl border
+          text-xs font-medium
           transition-colors
-          ${isFiltered ? "border-emerald-500 text-emerald-700 bg-emerald-50/40" : "border-gray-200"}
+          ${disabled 
+            ? "bg-gray-50 text-gray-500 border-gray-200 cursor-not-allowed opacity-80" 
+            : "bg-white text-gray-700 hover:bg-gray-50 cursor-pointer"
+          }
+          ${isFiltered && !disabled ? "border-emerald-500 text-emerald-700 bg-emerald-50/40" : "border-gray-200"}
           ${isOpen ? "ring-1 ring-emerald-500 border-emerald-500" : error ? "border-red-500" : ""}
         `}
       >
@@ -83,13 +86,13 @@ const Dropdown = ({
         </span>
         <ChevronDown
           size={16}
-          className={`text-gray-500 ml-1.5 shrink-0 transition-transform duration-200 ${
+          className={`text-gray-400 ml-1.5 shrink-0 transition-transform duration-200 ${
             isOpen ? "transform rotate-180" : ""
           }`}
         />
       </button>
 
-      {isOpen && (
+      {isOpen && !disabled && (
         <div className="absolute z-[999] min-w-full w-max max-w-[280px] mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto p-1.5 right-0 sm:right-auto sm:left-0">
           {options.length > 0 ? (
             <div className="flex flex-col gap-0.5">
