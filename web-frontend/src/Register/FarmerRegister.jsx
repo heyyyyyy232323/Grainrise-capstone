@@ -25,21 +25,21 @@ import Dropdown from "../Components/Minor-Components/Dropdown";
 import Footer from "../Components/Minor-Components/CustomFooter";
 import Toast from "../Components/Minor-Components/Toast";
 import useToast from "../Components/hooks/useToast";
+import useApi from "../Components/hooks/useApi";
 import logo from "../assets/Logo.png";
 import backgroundImage from "../assets/smudge.jpg";
 import useFormValidation from "../Components/hooks/useFormValidation";
 
-const PROVINCES = ["Bulacan", "Metro Manila (NCR)"];
-const MUNICIPALITIES_MAP = {
-  "Bulacan": ["Baliuag", "Balagtas", "Bocaue", "Bulakan", "Bustos", "Calumpit", "Doña Remedios Trinidad", "Guiguinto", "Hagonoy", "Malolos City", "Marilao"],
-  "Metro Manila (NCR)": ["Valenzuela City", "Quezon City", "Manila", "Makati", "Pasig", "Taguig"]
-};
-const BARANGAYS_MAP = {
-  "Baliuag": ["Bagong Nayon", "Barangca", "Calantipay", "Catulinan", "Concepcion", "Hinukay", "Makinabang", "Matangtubig", "Pagala", "Paitan", "Piel"]
-};
 const SUFFIXES = ["N/A", "Jr.", "Sr.", "II", "III", "IV", "V"];
 const GENDERS = ["Male", "Female", "Others", "Preferred Not To Say"];
-const LAND_OWNERSHIP_OPTIONS = ["Owner", "Tenant", "Lessee", "Agricultural Worker", "Cooperative Member"];
+const LAND_OWNERSHIP_OPTIONS = ["Owned", "Leased", "Tenant", "Shared", "Other"];
+const LAND_OWNERSHIP_VALUES = {
+  Owned: "owned",
+  Leased: "leased",
+  Tenant: "tenant",
+  Shared: "shared",
+  Other: "other",
+};
 const RICE_VARIETIES = [
   "Inbred (NSIC Rc 222)",
   "Inbred (NSIC Rc 160)",
@@ -48,6 +48,140 @@ const RICE_VARIETIES = [
   "Organic / Traditional Rice",
   "Other Variety"
 ];
+
+const normalizeApiResults = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.results)) return payload.results;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  return [];
+};
+
+// Reused twice: one independent address state for home, one for farm.
+const useRegistrationAddressData = ({ request, setValidationMsg }) => {
+  const [provinceOptions, setProvinceOptions] = useState([]);
+  const [municipalityOptions, setMunicipalityOptions] = useState([]);
+  const [barangayOptions, setBarangayOptions] = useState([]);
+  const [provinceRecords, setProvinceRecords] = useState({});
+  const [municipalityRecords, setMunicipalityRecords] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProvinces = async () => {
+      setIsLoading(true);
+      try {
+        const payload = await request("/locations/provinces", {
+          throwOnError: true,
+        });
+        if (cancelled) return;
+
+        const rows = normalizeApiResults(payload);
+        const records = {};
+        const options = rows
+          .filter((row) => row?.name && row?.code)
+          .map((row) => {
+            records[row.name] = row;
+            return row.name;
+          })
+          .sort((a, b) => a.localeCompare(b));
+
+        setProvinceRecords(records);
+        setProvinceOptions(options);
+      } catch (error) {
+        if (!cancelled) {
+          setValidationMsg(error.message || "Unable to load Philippine address data.");
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    loadProvinces();
+    return () => { cancelled = true; };
+  }, [request, setValidationMsg]);
+
+  const selectProvince = useCallback(async (provinceName) => {
+    setMunicipalityOptions([]);
+    setMunicipalityRecords({});
+    setBarangayOptions([]);
+
+    if (!provinceName) return;
+
+    const record = provinceRecords[provinceName];
+    if (!record?.code) return;
+
+    setIsLoading(true);
+    try {
+      const payload = await request(
+        `/locations/provinces/${encodeURIComponent(record.code)}/cities-municipalities`,
+        { throwOnError: true },
+      );
+
+      const rows = normalizeApiResults(payload);
+      const records = {};
+      const options = rows
+        .filter((row) => row?.name && row?.code)
+        .map((row) => {
+          records[row.name] = row;
+          return row.name;
+        })
+        .sort((a, b) => a.localeCompare(b));
+
+      setMunicipalityRecords(records);
+      setMunicipalityOptions(options);
+    } catch (error) {
+      setValidationMsg(error.message || "Unable to load cities and municipalities.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [provinceRecords, request, setValidationMsg]);
+
+  const selectMunicipality = useCallback(async (municipalityName) => {
+    setBarangayOptions([]);
+    if (!municipalityName) return "";
+
+    const record = municipalityRecords[municipalityName];
+    if (!record?.code) return "";
+
+    setIsLoading(true);
+    try {
+      const [barangayPayload, localityPayload] = await Promise.all([
+        request(
+          `/locations/cities-municipalities/${encodeURIComponent(record.code)}/barangays`,
+          { throwOnError: true },
+        ),
+        request(
+          `/locations/cities-municipalities/${encodeURIComponent(record.code)}`,
+          { throwOnError: true },
+        ),
+      ]);
+
+      const barangays = normalizeApiResults(barangayPayload)
+        .filter((row) => row?.name)
+        .map((row) => row.name)
+        .sort((a, b) => a.localeCompare(b));
+
+      setBarangayOptions(barangays);
+      return String(localityPayload?.postal_code || "");
+    } catch (error) {
+      setValidationMsg(error.message || "Unable to load barangays or postal code.");
+      return "";
+    } finally {
+      setIsLoading(false);
+    }
+  }, [municipalityRecords, request, setValidationMsg]);
+
+  return {
+    provinceOptions,
+    municipalityOptions,
+    barangayOptions,
+    isLoading,
+    selectProvince,
+    selectMunicipality,
+  };
+};
 
 // Helper: Wraps CustomTextbox to show field-level error message underneath
 const FieldWithError = ({ error, children, fieldRef }) => (
@@ -59,6 +193,7 @@ const FieldWithError = ({ error, children, fieldRef }) => (
 
 const FarmerRegister = () => {
   const navigate = useNavigate();
+  const { request } = useApi();
 
   // Wizard State (1 to 4)
   const [step, setStep] = useState(1);
@@ -74,7 +209,7 @@ const FarmerRegister = () => {
     gender: "",
     province: "",
     municipality: "",
-    postalCode: "1423",
+    postalCode: "",
     barangay: "",
     streetAddress: "",
     email: "",
@@ -84,14 +219,11 @@ const FarmerRegister = () => {
     confirmPassword: "",
     agreeTerms: false,
 
-    // Step 2: OTP Delivery Option
-    otpDelivery: "contact", // "contact" | "email"
-
     // Step 3: Farm Information
     farmName: "",
     farmProvince: "",
     farmMunicipality: "",
-    farmPostalCode: "1423",
+    farmPostalCode: "",
     farmBarangay: "",
     farmStreetAddress: "",
     totalFarmArea: "",
@@ -101,21 +233,21 @@ const FarmerRegister = () => {
 
     // Step 4: Compliance (RSBSA)
     rsbsaMethod: "upload", // "upload" | "manual"
-    rsbsaNumber: "RSBSA-12-345-67890",
+    rsbsaNumber: "",
     certifyCompliance: false,
   });
 
   // Step 2 (OTP Verification)
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [otpTimer, setOtpTimer] = useState(60);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [verificationToken, setVerificationToken] = useState("");
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const otpRefs = useRef([]);
 
   // Step 4 Uploaded File State
-  const [rsbsaFile, setRsbsaFile] = useState({
-    name: "rsbsa_id_front.jpg",
-    size: "2.4 MB",
-    uploadedAt: "Uploaded successfully",
-  });
+  const [rsbsaFile, setRsbsaFile] = useState(null);
 
   // UI / Validation
   const [showPassword, setShowPassword] = useState(false);
@@ -123,6 +255,16 @@ const FarmerRegister = () => {
   const { errors, setErrors, validators, validate, getPasswordStrength } = useFormValidation();
   const [validationMsg, setValidationMsg] = useState("");
   const { toasts, showToast, removeToast } = useToast();
+
+  const homeAddress = useRegistrationAddressData({
+    request,
+    setValidationMsg,
+  });
+
+  const farmAddress = useRegistrationAddressData({
+    request,
+    setValidationMsg,
+  });
 
   // Field refs for scroll-to-error
   const fieldRefs = useRef({});
@@ -149,14 +291,6 @@ const FarmerRegister = () => {
     }
   }, []);
 
-  // Dynamic dropdowns for Step 1 Address
-  const activeMunicipalitiesStep1 = form.province ? (MUNICIPALITIES_MAP[form.province] || []) : [];
-  const activeBarangaysStep1 = form.municipality ? (BARANGAYS_MAP[form.municipality] || ["Barangay 1", "Barangay 2", "Barangay 3"]) : [];
-
-  // Dynamic dropdowns for Step 3 Farm Address
-  const activeMunicipalitiesStep3 = form.farmProvince ? (MUNICIPALITIES_MAP[form.farmProvince] || []) : [];
-  const activeBarangaysStep3 = form.farmMunicipality ? (BARANGAYS_MAP[form.farmMunicipality] || ["Barangay 1", "Barangay 2", "Barangay 3"]) : [];
-
   const handleInputChange = (field, value) => {
     let processedValue = value;
     if (field === "firstName") {
@@ -170,6 +304,12 @@ const FarmerRegister = () => {
       // Allow digits, spaces, and a leading + for +63 format, max 13 chars
       processedValue = value.replace(/[^0-9+\s]/g, "").slice(0, 13);
     }
+    if (field === "email" && processedValue !== form.email) {
+      setVerificationToken("");
+      setOtp(["", "", "", "", "", ""]);
+      setOtpTimer(0);
+    }
+
     setForm((prev) => ({ ...prev, [field]: processedValue }));
     validateField(field, processedValue);
   };
@@ -183,7 +323,7 @@ const FarmerRegister = () => {
       case "streetAddress": errorMsg = validators.streetAddress(value); break;
       case "email": errorMsg = validators.email(value); break;
       case "contactNumber": errorMsg = validators.contactNumber(value); break;
-      case "username": errorMsg = validators.username(value); break;
+      case "username": errorMsg = value?.trim() ? validators.username(value) : ""; break;
       case "confirmPassword": errorMsg = validators.confirmPassword(form.password, value); break;
       case "password":
         errorMsg = validators.password(value);
@@ -204,12 +344,16 @@ const FarmerRegister = () => {
       case "farmMunicipality": errorMsg = value ? "" : "Farm Municipality is required"; break;
       case "farmBarangay": errorMsg = value ? "" : "Farm Barangay is required"; break;
       case "farmStreetAddress": errorMsg = value ? "" : "Farm Street Address is required"; break;
-      case "totalFarmArea": errorMsg = value ? "" : "Total Farm Area is required"; break;
+      case "totalFarmArea":
+        if (!value) errorMsg = "Total Farm Area is required";
+        else if (Number.isNaN(Number(value)) || Number(value) <= 0) errorMsg = "Total Farm Area must be greater than 0";
+        break;
       case "landOwnership": errorMsg = value ? "" : "Land Ownership Status is required"; break;
       case "riceVariety": errorMsg = value ? "" : "Rice Variety is required"; break;
       case "croppingCycles":
         if (!value) errorMsg = "Cropping cycles per year is required";
         else if (!/^\d+$/.test(value)) errorMsg = "Accepts whole numbers only";
+        else if (Number(value) <= 0) errorMsg = "Cropping cycles must be greater than 0";
         break;
       case "rsbsaNumber": errorMsg = value ? "" : "RSBSA Registration Number is required"; break;
       default: break;
@@ -217,41 +361,72 @@ const FarmerRegister = () => {
     setErrors((prev) => ({ ...prev, [field]: errorMsg }));
   };
 
-  const handleProvinceChange = (provinceValue) => {
+  const handleProvinceChange = async (provinceValue) => {
     setForm((prev) => ({
       ...prev,
       province: provinceValue,
       municipality: "",
       barangay: "",
-      postalCode: provinceValue === "Bulacan" ? "3006" : "1423",
+      postalCode: "",
     }));
     setErrors((prev) => ({ ...prev, province: "", municipality: "", barangay: "" }));
+    setValidationMsg("");
+    await homeAddress.selectProvince(provinceValue);
   };
 
-  const handleMunicipalityChange = (municipalityValue) => {
-    setForm((prev) => ({ ...prev, municipality: municipalityValue, barangay: "" }));
+  const handleMunicipalityChange = async (municipalityValue) => {
+    setForm((prev) => ({
+      ...prev,
+      municipality: municipalityValue,
+      barangay: "",
+      postalCode: "",
+    }));
     setErrors((prev) => ({ ...prev, municipality: "", barangay: "" }));
+    setValidationMsg("");
+
+    const postalCode = await homeAddress.selectMunicipality(municipalityValue);
+    setForm((prev) => (
+      prev.municipality === municipalityValue
+        ? { ...prev, postalCode }
+        : prev
+    ));
   };
 
-  const handleFarmProvinceChange = (provinceValue) => {
+  const handleFarmProvinceChange = async (provinceValue) => {
     setForm((prev) => ({
       ...prev,
       farmProvince: provinceValue,
       farmMunicipality: "",
       farmBarangay: "",
-      farmPostalCode: provinceValue === "Bulacan" ? "3006" : "1423",
+      farmPostalCode: "",
     }));
     setErrors((prev) => ({ ...prev, farmProvince: "", farmMunicipality: "", farmBarangay: "" }));
+    setValidationMsg("");
+    await farmAddress.selectProvince(provinceValue);
   };
 
-  const handleFarmMunicipalityChange = (municipalityValue) => {
-    setForm((prev) => ({ ...prev, farmMunicipality: municipalityValue, farmBarangay: "" }));
+  const handleFarmMunicipalityChange = async (municipalityValue) => {
+    setForm((prev) => ({
+      ...prev,
+      farmMunicipality: municipalityValue,
+      farmBarangay: "",
+      farmPostalCode: "",
+    }));
     setErrors((prev) => ({ ...prev, farmMunicipality: "", farmBarangay: "" }));
+    setValidationMsg("");
+
+    const postalCode = await farmAddress.selectMunicipality(municipalityValue);
+    setForm((prev) => (
+      prev.farmMunicipality === municipalityValue
+        ? { ...prev, farmPostalCode: postalCode }
+        : prev
+    ));
   };
 
   // Step 1 Submit handler
-  const handleNextStep1 = (e) => {
+  const handleNextStep1 = async (e) => {
     e.preventDefault();
+
     const rules = {
       firstName: validators.firstName(form.firstName),
       middleInitial: validators.middleInitial(form.middleInitial),
@@ -263,7 +438,7 @@ const FarmerRegister = () => {
       streetAddress: validators.streetAddress(form.streetAddress),
       email: validators.email(form.email),
       contactNumber: validators.contactNumber(form.contactNumber),
-      username: validators.username(form.username),
+      username: form.username.trim() ? validators.username(form.username) : "",
       password: validators.password(form.password),
       confirmPassword: validators.confirmPassword(form.password, form.confirmPassword),
       agreeTerms: validators.checkbox(
@@ -271,6 +446,7 @@ const FarmerRegister = () => {
         "You must agree to the Privacy Policy and Terms of Service"
       ),
     };
+
     const passed = validate(rules);
 
     if (!passed) {
@@ -282,9 +458,44 @@ const FarmerRegister = () => {
         message: "Please correct the highlighted fields before proceeding.",
         duration: 4000,
       });
-    } else {
+      return;
+    }
+
+    if (isSendingOtp) return;
+
+    setIsSendingOtp(true);
+    try {
+      const response = await request("/auth/farmer/send-otp", {
+        method: "POST",
+        body: {
+          email: form.email.trim(),
+          username: form.username.trim(),
+        },
+        throwOnError: true,
+      });
+
+      setOtp(["", "", "", "", "", ""]);
+      setVerificationToken("");
+      setOtpTimer(response?.retry_after ?? 60);
       setValidationMsg("");
       setStep(2);
+
+      showToast({
+        type: "success",
+        title: "OTP Sent",
+        message: "A 6-digit verification code was sent to your email.",
+        duration: 3500,
+      });
+    } catch (error) {
+      setValidationMsg(error.message);
+      showToast({
+        type: "error",
+        title: "Unable to Send OTP",
+        message: error.message,
+        duration: 5000,
+      });
+    } finally {
+      setIsSendingOtp(false);
     }
   };
 
@@ -292,7 +503,7 @@ const FarmerRegister = () => {
   useEffect(() => {
     let timer;
     if (step === 2 && otpTimer > 0) {
-      timer = setInterval(() => setOtpTimer((prev) => prev - 1), 1000);
+      timer = setInterval(() => setOtpTimer((prev) => Math.max(prev - 1, 0)), 1000);
     }
     return () => clearInterval(timer);
   }, [step, otpTimer]);
@@ -302,49 +513,99 @@ const FarmerRegister = () => {
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
-    if (value && index < 5) otpRefs.current[index + 1].focus();
+    if (value && index < 5) otpRefs.current[index + 1]?.focus();
     if (errors.otp) setErrors((prev) => ({ ...prev, otp: "" }));
   };
 
   const handleOtpKeyDown = (index, e) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
-      otpRefs.current[index - 1].focus();
+      otpRefs.current[index - 1]?.focus();
     }
   };
 
-  const handleResendOtp = () => {
-    if (otpTimer === 0) {
-      setOtpTimer(60);
+  const handleResendOtp = async () => {
+    if (otpTimer > 0 || isSendingOtp) return;
+
+    setIsSendingOtp(true);
+    try {
+      const response = await request("/auth/farmer/send-otp", {
+        method: "POST",
+        body: {
+          email: form.email.trim(),
+          username: form.username.trim(),
+        },
+        throwOnError: true,
+      });
+
       setOtp(["", "", "", "", "", ""]);
+      setVerificationToken("");
+      setOtpTimer(response?.retry_after ?? 60);
       setValidationMsg("");
-    }
-  };
 
-  const maskContact = (contact) => {
-    if (!contact) return "09*******45";
-    if (contact.length >= 10) {
-      return contact.slice(0, 2) + "*".repeat(contact.length - 4) + contact.slice(-2);
+      showToast({
+        type: "success",
+        title: "OTP Resent",
+        message: "A new verification code was sent to your email.",
+        duration: 3500,
+      });
+    } catch (error) {
+      setValidationMsg(error.message);
+      showToast({
+        type: "error",
+        title: "Unable to Resend OTP",
+        message: error.message,
+        duration: 5000,
+      });
+    } finally {
+      setIsSendingOtp(false);
     }
-    return contact;
   };
 
   const maskEmail = (email) => {
-    if (!email) return "j**********@gmail.com";
+    if (!email) return "";
     const [name, domain] = email.split("@");
     if (!domain) return email;
     const maskedName = name[0] + "*".repeat(Math.max(name.length - 2, 3)) + (name.length > 1 ? name[name.length - 1] : "");
     return `${maskedName}@${domain}`;
   };
 
-  const handleVerifyOtp = () => {
+  const handleVerifyOtp = async () => {
     if (otp.some((digit) => digit === "")) {
-      setErrors({ otp: "Please enter the complete 6-digit code." });
+      setErrors((prev) => ({ ...prev, otp: "Please enter the complete 6-digit code." }));
       setValidationMsg("Please enter the complete 6-digit code.");
       return;
     }
-    setErrors({});
-    setValidationMsg("");
-    setStep(3);
+
+    if (isVerifyingOtp) return;
+
+    setIsVerifyingOtp(true);
+    try {
+      const response = await request("/auth/farmer/verify-otp", {
+        method: "POST",
+        body: {
+          email: form.email.trim(),
+          otp: otp.join(""),
+        },
+        throwOnError: true,
+      });
+
+      setVerificationToken(response?.verification_token || "");
+      setErrors((prev) => ({ ...prev, otp: "" }));
+      setValidationMsg("");
+      setStep(3);
+
+      showToast({
+        type: "success",
+        title: "Email Verified",
+        message: "Your email address has been verified.",
+        duration: 3000,
+      });
+    } catch (error) {
+      setErrors((prev) => ({ ...prev, otp: error.message }));
+      setValidationMsg(error.message);
+    } finally {
+      setIsVerifyingOtp(false);
+    }
   };
 
   // Step 3 Submit handler
@@ -355,13 +616,19 @@ const FarmerRegister = () => {
       farmMunicipality: form.farmMunicipality ? "" : "Farm Municipality is required",
       farmBarangay: form.farmBarangay ? "" : "Farm Barangay is required",
       farmStreetAddress: form.farmStreetAddress ? "" : "Farm Street Address is required",
-      totalFarmArea: form.totalFarmArea ? "" : "Total Farm Area is required",
+      totalFarmArea: !form.totalFarmArea
+        ? "Total Farm Area is required"
+        : Number.isNaN(Number(form.totalFarmArea)) || Number(form.totalFarmArea) <= 0
+        ? "Total Farm Area must be greater than 0"
+        : "",
       landOwnership: form.landOwnership ? "" : "Land Ownership Status is required",
       riceVariety: form.riceVariety ? "" : "Rice Variety is required",
       croppingCycles: !form.croppingCycles
         ? "Cropping cycles per year is required"
         : !/^\d+$/.test(form.croppingCycles)
         ? "Accepts whole numbers only"
+        : Number(form.croppingCycles) <= 0
+        ? "Cropping cycles must be greater than 0"
         : "",
     };
     const passed = validate(rules);
@@ -406,9 +673,10 @@ const FarmerRegister = () => {
     }
     setValidationMsg("");
     setRsbsaFile({
+      file,
       name: file.name,
       size: (file.size / (1024 * 1024)).toFixed(1) + " MB",
-      uploadedAt: "Uploaded successfully",
+      uploadedAt: "Ready to submit",
     });
   };
 
@@ -417,25 +685,97 @@ const FarmerRegister = () => {
   };
 
   // Step 4 Submit Registration
-  const handleSubmitRegistration = (e) => {
+  const handleSubmitRegistration = async (e) => {
     e.preventDefault();
-    if (form.rsbsaMethod === "upload" && !rsbsaFile) {
+
+    if (form.rsbsaMethod === "upload" && !rsbsaFile?.file) {
       setValidationMsg("Please upload your RSBSA ID or switch to manual entry.");
       return;
     }
-    if (form.rsbsaMethod === "manual" && !form.rsbsaNumber) {
+
+    if (form.rsbsaMethod === "manual" && !form.rsbsaNumber.trim()) {
       setErrors((prev) => ({ ...prev, rsbsaNumber: "RSBSA Registration Number is required" }));
       setValidationMsg("Please enter your RSBSA Registration Number.");
       return;
     }
+
     if (!form.certifyCompliance) {
       setErrors((prev) => ({ ...prev, certifyCompliance: "Certification required" }));
       setValidationMsg("You must certify that the information provided is correct.");
       return;
     }
 
-    setValidationMsg("");
-    setIsSuccess(true);
+    if (!verificationToken) {
+      setValidationMsg("Please verify your email again before submitting the registration.");
+      setStep(2);
+      return;
+    }
+
+    if (isSubmitting) return;
+
+    const payload = new FormData();
+    const fields = {
+      first_name: form.firstName.trim(),
+      middle_initial: form.middleInitial.trim(),
+      last_name: form.lastName.trim(),
+      suffix: form.suffix === "N/A" ? "" : form.suffix,
+      gender: form.gender,
+      province: form.province,
+      municipality: form.municipality,
+      postal_code: form.postalCode.trim(),
+      barangay: form.barangay,
+      street_address: form.streetAddress.trim(),
+      email: form.email.trim(),
+      contact_number: form.contactNumber.trim(),
+      username: form.username.trim(),
+      password: form.password,
+      confirm_password: form.confirmPassword,
+      agree_terms: String(form.agreeTerms),
+      verification_token: verificationToken,
+      farm_name: form.farmName.trim(),
+      farm_province: form.farmProvince,
+      farm_municipality: form.farmMunicipality,
+      farm_postal_code: form.farmPostalCode.trim(),
+      farm_barangay: form.farmBarangay,
+      farm_street_address: form.farmStreetAddress.trim(),
+      total_farm_area: form.totalFarmArea,
+      land_ownership_status: LAND_OWNERSHIP_VALUES[form.landOwnership] || form.landOwnership.toLowerCase(),
+      rice_variety_currently_planted: form.riceVariety,
+      cropping_cycles_per_year: form.croppingCycles,
+      submission_method: form.rsbsaMethod,
+      rsbsa_number: form.rsbsaNumber.trim(),
+      agree_certify: String(form.certifyCompliance),
+    };
+
+    Object.entries(fields).forEach(([key, value]) => {
+      payload.append(key, value ?? "");
+    });
+
+    if (form.rsbsaMethod === "upload" && rsbsaFile?.file) {
+      payload.append("rsbsa_document", rsbsaFile.file, rsbsaFile.name);
+    }
+
+    setIsSubmitting(true);
+    try {
+      await request("/auth/farmer/register", {
+        method: "POST",
+        body: payload,
+        throwOnError: true,
+      });
+
+      setValidationMsg("");
+      setIsSuccess(true);
+    } catch (error) {
+      setValidationMsg(error.message);
+      showToast({
+        type: "error",
+        title: "Registration Failed",
+        message: error.message,
+        duration: 6000,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // --- Render Stepper Bar ---
@@ -636,10 +976,10 @@ const FarmerRegister = () => {
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                     <div ref={setFieldRef("province")}>
-                      <Dropdown label="Province *" placeholder="Select Province" options={PROVINCES} value={form.province} onChange={handleProvinceChange} error={errors.province} />
+                      <Dropdown label="Province *" placeholder={homeAddress.isLoading && homeAddress.provinceOptions.length === 0 ? "Loading provinces..." : "Select Province"} options={homeAddress.provinceOptions} value={form.province} onChange={handleProvinceChange} error={errors.province} />
                     </div>
                     <div ref={setFieldRef("municipality")}>
-                      <Dropdown label="Municipality *" placeholder="Select City" options={activeMunicipalitiesStep1} value={form.municipality} onChange={handleMunicipalityChange} error={errors.municipality} />
+                      <Dropdown label="Municipality *" placeholder="Select City" options={homeAddress.municipalityOptions} value={form.municipality} onChange={handleMunicipalityChange} error={errors.municipality} />
                     </div>
                   </div>
 
@@ -650,14 +990,16 @@ const FarmerRegister = () => {
                       </label>
                       <input
                         type="text"
-                        disabled
+                        inputMode="numeric"
+                        maxLength={4}
                         value={form.postalCode}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-200 text-gray-500 outline-none cursor-not-allowed text-left"
+                        onChange={(e) => handleInputChange("postalCode", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-700 outline-none focus:border-green-600 text-left"
                       />
                     </div>
 
                     <div ref={setFieldRef("barangay")}>
-                      <Dropdown label="Barangay *" placeholder="Select Barangay" options={activeBarangaysStep1} value={form.barangay} onChange={(val) => handleInputChange("barangay", val)} error={errors.barangay} />
+                      <Dropdown label="Barangay *" placeholder="Select Barangay" options={homeAddress.barangayOptions} value={form.barangay} onChange={(val) => handleInputChange("barangay", val)} error={errors.barangay} />
                     </div>
 
                     <FieldWithError error={errors.streetAddress} fieldRef={setFieldRef("streetAddress")}>
@@ -817,7 +1159,8 @@ const FarmerRegister = () => {
                   <CustomGreenButton
                     text={
                       <span className="flex items-center gap-2 font-bold px-4">
-                        Next Step <ArrowRight size={18} />
+                        {isSendingOtp ? "Sending OTP..." : "Next Step"}
+                        {!isSendingOtp && <ArrowRight size={18} />}
                       </span>
                     }
                     type="submit"
@@ -834,50 +1177,26 @@ const FarmerRegister = () => {
                   VERIFICATION CODE SENT
                 </h3>
 
-                {/* Delivery Method Selector Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-xl mb-3">
-                  <div
-                    onClick={() => handleInputChange("otpDelivery", "contact")}
-                    className={`p-4 rounded-xl border-2 cursor-pointer flex items-center justify-between transition-all ${
-                      form.otpDelivery === "contact"
-                        ? "border-[#08511f] bg-[#eaf5ec]"
-                        : "border-gray-200 bg-white hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="flex flex-col text-left">
-                      <span className="text-xs font-semibold text-gray-500">Contact Number</span>
-                      <span className="text-sm font-bold text-gray-900">{maskContact(form.contactNumber)}</span>
+                {/* Email-only OTP Verification */}
+                <div className="w-full max-w-xl mb-8">
+                  <div className="p-4 rounded-xl border-2 border-[#08511f] bg-[#eaf5ec] flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-left">
+                      <div className="w-10 h-10 rounded-lg bg-white text-[#08511f] flex items-center justify-center shadow-sm">
+                        <Mail size={20} />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold text-gray-500">Email Address</span>
+                        <span className="text-sm font-bold text-gray-900">{maskEmail(form.email)}</span>
+                      </div>
                     </div>
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      form.otpDelivery === "contact" ? "border-[#08511f] bg-[#08511f]" : "border-gray-300"
-                    }`}>
-                      {form.otpDelivery === "contact" && <div className="w-2 h-2 rounded-full bg-white" />}
+                    <div className="w-5 h-5 rounded-full border-2 border-[#08511f] bg-[#08511f] flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-white" />
                     </div>
                   </div>
-
-                  <div
-                    onClick={() => handleInputChange("otpDelivery", "email")}
-                    className={`p-4 rounded-xl border-2 cursor-pointer flex items-center justify-between transition-all ${
-                      form.otpDelivery === "email"
-                        ? "border-[#08511f] bg-[#eaf5ec]"
-                        : "border-gray-200 bg-white hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="flex flex-col text-left">
-                      <span className="text-xs font-semibold text-gray-500">Email Address</span>
-                      <span className="text-sm font-bold text-gray-900 truncate max-w-[180px]">{maskEmail(form.email)}</span>
-                    </div>
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      form.otpDelivery === "email" ? "border-[#08511f] bg-[#08511f]" : "border-gray-300"
-                    }`}>
-                      {form.otpDelivery === "email" && <div className="w-2 h-2 rounded-full bg-white" />}
-                    </div>
-                  </div>
+                  <p className="text-xs text-gray-500 mt-3 font-medium text-center">
+                    Your 6-digit verification code is sent through your registered email address.
+                  </p>
                 </div>
-
-                <p className="text-xs text-gray-500 mb-8 font-medium">
-                  Your verification code will be sent to your selected Email Address or Contact Number.
-                </p>
 
                 {/* 6 OTP Input Boxes */}
                 <div className="flex gap-3 md:gap-4 mb-6">
@@ -916,7 +1235,7 @@ const FarmerRegister = () => {
                     </button>
                   </p>
                   <p className="text-[11px] text-gray-400 max-w-md text-center mt-3">
-                    Your verification code will be sent to your selected Contact Number or Email Address.
+                    Your verification code is sent to your registered email address.
                   </p>
                 </div>
 
@@ -931,7 +1250,7 @@ const FarmerRegister = () => {
                     }
                   />
                   <CustomGreenButton
-                    text="Verify OTP"
+                    text={isVerifyingOtp ? "Verifying..." : "Verify OTP"}
                     onClick={handleVerifyOtp}
                     className="!rounded-full !px-8 !py-3 font-bold shadow-lg"
                   />
@@ -958,8 +1277,8 @@ const FarmerRegister = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
                     <Dropdown
                       label="Province *"
-                      placeholder="Select Province"
-                      options={PROVINCES}
+                      placeholder={farmAddress.isLoading && farmAddress.provinceOptions.length === 0 ? "Loading provinces..." : "Select Province"}
+                      options={farmAddress.provinceOptions}
                       value={form.farmProvince}
                       onChange={handleFarmProvinceChange}
                       error={errors.farmProvince}
@@ -967,7 +1286,7 @@ const FarmerRegister = () => {
                     <Dropdown
                       label="Municipality *"
                       placeholder="Select City"
-                      options={activeMunicipalitiesStep3}
+                      options={farmAddress.municipalityOptions}
                       value={form.farmMunicipality}
                       onChange={handleFarmMunicipalityChange}
                       error={errors.farmMunicipality}
@@ -978,9 +1297,11 @@ const FarmerRegister = () => {
                       </label>
                       <input
                         type="text"
-                        disabled
+                        inputMode="numeric"
+                        maxLength={4}
                         value={form.farmPostalCode}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-200 text-gray-500 outline-none cursor-not-allowed"
+                        onChange={(e) => handleInputChange("farmPostalCode", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-700 outline-none focus:border-green-600"
                       />
                     </div>
                   </div>
@@ -989,7 +1310,7 @@ const FarmerRegister = () => {
                     <Dropdown
                       label="Barangay *"
                       placeholder="Select Barangay"
-                      options={activeBarangaysStep3}
+                      options={farmAddress.barangayOptions}
                       value={form.farmBarangay}
                       onChange={(val) => handleInputChange("farmBarangay", val)}
                       error={errors.farmBarangay}
@@ -1213,7 +1534,7 @@ const FarmerRegister = () => {
                             <FileText size={16} className="text-[#08511f]" />
                             <span>{rsbsaFile.name}</span>
                           </div>
-                          <span className="text-[11px] text-gray-400 block">RSBSA Number</span>
+                          <span className="text-[11px] text-gray-400 block">RSBSA Number (Optional for upload)</span>
                           <input
                             type="text"
                             value={form.rsbsaNumber}
@@ -1247,7 +1568,7 @@ const FarmerRegister = () => {
                     <span>Review Carefully</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed pl-7">
-                    Please ensure all business details match your official registration documents exactly to avoid delays in verification.
+                    Please ensure all farmer and RSBSA information matches your official records to avoid delays in verification.
                   </p>
                   <div className="flex items-center gap-3 pl-7 pt-1">
                     <input
@@ -1278,7 +1599,7 @@ const FarmerRegister = () => {
                     }
                   />
                   <CustomGreenButton
-                    text="Submit Registration"
+                    text={isSubmitting ? "Submitting..." : "Submit Registration"}
                     type="submit"
                     className="!rounded-full !px-8 !py-3 font-bold shadow-lg"
                   />

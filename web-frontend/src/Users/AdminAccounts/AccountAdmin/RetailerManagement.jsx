@@ -1,280 +1,1820 @@
-import { useState, useMemo } from "react";
-import { Search } from "lucide-react";
-import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
-import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
-import Tabs from "../../../Components/Minor-Components/Tabs";
-import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
-import CustomGreenButton from "../../../Components/Minor-Components/CustomGreenButton";
-import CustomAmberButton from "../../../Components/Minor-Components/CustomAmberButton";
-import CustomRedButton from "../../../Components/Minor-Components/CustomRedButton";
-import ArchiveProductModal from "../../../Components/Modals/ArchiveProductModal";
-import RestoreProductModal from "../../../Components/Modals/RestoreProductModal";
-import DeleteProductModal from "../../../Components/Modals/DeleteProductModal";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
-const SORT_OPTIONS = [
-  { value: "name-asc", label: "Retailer Name (A-Z)" },
-  { value: "name-desc", label: "Retailer Name (Z-A)" },
-  { value: "address-asc", label: "Address (A-Z)" },
-];
+import {
+  Check,
+  Eye,
+  FileText,
+  RefreshCw,
+  Search,
+  X,
+  Archive,
+  RotateCcw,
+} from "lucide-react";
 
-// Badge color per tab, matching the reference (To Review = amber, Active = green, Inactive = red)
-const TAB_BADGE_STYLES = {
-  "to-review": "bg-amber-400 text-white",
-  active: "bg-emerald-500 text-white",
-  inactive: "bg-rose-500 text-white",
+import useApi from "../../../Components/hooks/useApi";
+
+
+const normalizeStatus = (value) => {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "_")
+    .replace(/\s+/g, "_");
 };
+
+
+const getDisplayStatus = (status) => {
+
+  const normalized = normalizeStatus(status);
+
+  if (
+    [
+      "pending",
+      "pending_review",
+      "pending_approval",
+      "for_review",
+      "to_review",
+      "inactive",
+    ].includes(normalized)
+  ) {
+    return "To Review";
+  }
+
+  if (
+    [
+      "active",
+      "approved",
+      "verified",
+    ].includes(normalized)
+  ) {
+    return "Active";
+  }
+
+  if (
+    [
+      "rejected",
+      "declined",
+    ].includes(normalized)
+  ) {
+    return "Rejected";
+  }
+
+  return status || "Unknown";
+};
+
+
+const fullName = (retailer) => {
+
+  return [
+    retailer.first_name,
+    retailer.middle_initial,
+    retailer.last_name,
+    retailer.suffix,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+};
+
+
+const fullAddress = (retailer) => {
+
+  return [
+    retailer.street_address,
+    retailer.barangay,
+    retailer.municipality,
+    retailer.province,
+    retailer.postal_code,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+};
+
 
 const RetailerManagement = () => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = 4;
 
-  // Modal state
+  const {
+    request,
+    API_BASE_URL,
+  } = useApi();
+
+
+  const [retailers, setRetailers] = useState([]);
+
+  const [activeTab, setActiveTab] = useState("review");
+
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const [successMessage, setSuccessMessage] = useState("");
+
   const [selectedRetailer, setSelectedRetailer] = useState(null);
-  const [archiveModal, setArchiveModal] = useState(false);
-  const [restoreModal, setRestoreModal] = useState(false);
-  const [deleteModal, setDeleteModal] = useState(false);
 
-  const handleArchive = (row) => { setSelectedRetailer(row); setArchiveModal(true); };
-  const handleRestore = (row) => { setSelectedRetailer(row); setRestoreModal(true); };
-  const handleDelete  = (row) => { setSelectedRetailer(row); setDeleteModal(true); };
+  const [actionLoading, setActionLoading] = useState(null);
 
-  const confirmArchive = () => {
-    console.log("Archive retailer:", selectedRetailer);
-    setArchiveModal(false);
-    setSelectedRetailer(null);
-  };
-  const confirmRestore = () => {
-    console.log("Restore retailer:", selectedRetailer);
-    setRestoreModal(false);
-    setSelectedRetailer(null);
-  };
-  const confirmDelete = () => {
-    console.log("Delete retailer:", selectedRetailer);
-    setDeleteModal(false);
-    setSelectedRetailer(null);
-  };
+  const [documentLoading, setDocumentLoading] = useState("");
 
-  const columns = [
-    { key: "retailer", label: "Retailer Name", width: "24%" },
-    { key: "address", label: "Address", width: "28%" },
-    { key: "email", label: "Email", width: "23%" },
-    {
-      key: "action",
-      label: "Action",
-      headerClassName: "text-center",
-      width: "25%",
-      cellClassName: "text-center",
-      render: (row) => {
-        const s = String(row.status || "").toLowerCase().trim();
 
-        if (s === "to review") {
-          return (
-            <div className="flex justify-center">
-              <CustomAmberButton text="Review" className="whitespace-nowrap px-3 py-1.5 text-[11px] rounded-lg" />
-            </div>
-          );
-        }
+  // =========================================================
+  // LOAD RETAILERS FROM DJANGO
+  // =========================================================
 
-        if (s === "inactive" || s === "archived") {
-          return (
-            <div className="flex items-center justify-center gap-2">
-              <CustomGreenButton
-                text="Restore"
-                className="whitespace-nowrap px-3 py-1.5 text-[11px] rounded-lg"
-                onClick={() => handleRestore(row)}
-              />
-              <CustomRedButton
-                text="Delete"
-                className="whitespace-nowrap px-4 py-1.5 text-[11px] rounded-lg"
-                onClick={() => handleDelete(row)}
-              />
-            </div>
-          );
-        }
+  const loadRetailers = useCallback(
+    async () => {
 
-        if (s === "active") {
-          return (
-            <div className="flex items-center justify-center gap-2">
-              <button
-                type="button"
-                className="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
-              >
-                View Details
-              </button>
-              <CustomAmberButton
-                text="Archive"
-                className="whitespace-nowrap px-3 py-1.5 text-[11px] rounded-lg"
-                onClick={() => handleArchive(row)}
-              />
-            </div>
-          );
-        }
+      setIsLoading(true);
 
-        return (
-          <div className="flex justify-center">
-            <button
-              type="button"
-              className="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
-            >
-              Action
-            </button>
-          </div>
+      setErrorMessage("");
+
+
+      try {
+
+        const response = await request(
+          "/admin/retailers",
+          {
+            method: "GET",
+            throwOnError: true,
+          }
         );
-      },
+
+
+        setRetailers(
+          Array.isArray(response?.retailers)
+            ? response.retailers
+            : []
+        );
+
+
+      } catch (error) {
+
+        setErrorMessage(
+          error.message ||
+          "Unable to load retailer accounts."
+        );
+
+
+      } finally {
+
+        setIsLoading(false);
+
+      }
+
     },
-  ];
+    [request]
+  );
 
-  const rawRows = Array.from({ length: 24 }).map((_, i) => {
-    const status = i % 4 === 0 ? "To Review" : i % 4 === 1 ? "Active" : i % 4 === 2 ? "Inactive" : "Active";
-    return {
-      id: i + 1,
-      retailer: `Retailer ${String.fromCharCode(65 + (i % 26))}`,
-      address: `ABC Address`,
-      email: `abc${i}@email.com`,
-      status,
-    };
-  });
 
-  const tabs = [
-    { id: "to-review", label: "To Review" },
-    { id: "active", label: "Active" },
-    { id: "inactive", label: "Inactive" },
-  ];
+  useEffect(() => {
 
-  const [activeTab, setActiveTab] = useState(tabs[0].id);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("name-asc");
+    loadRetailers();
+
+  }, [loadRetailers]);
+
+
+  // =========================================================
+  // COUNTS
+  // =========================================================
 
   const counts = useMemo(() => {
-    return rawRows.reduce(
-      (acc, r) => {
-        const s = String(r.status).toLowerCase().trim();
-        if (s === "to review") acc.toReview++;
-        else if (s === "inactive" || s === "archived") acc.inactive++;
-        else if (s === "active") acc.active++;
-        return acc;
-      },
-      { toReview: 0, active: 0, inactive: 0 }
-    );
-  }, [rawRows]);
 
-  const filteredRawRows = useMemo(() => {
-    let list = rawRows.filter((r) => {
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase();
-      return (
-        r.retailer.toLowerCase().includes(q) ||
-        r.address.toLowerCase().includes(q) ||
-        r.email.toLowerCase().includes(q)
+    let review = 0;
+    let active = 0;
+    let rejected = 0;
+
+
+    retailers.forEach((retailer) => {
+
+      const displayStatus = getDisplayStatus(
+        retailer.status
       );
-    });
-    if (sortBy === "name-asc") list.sort((a, b) => a.retailer.localeCompare(b.retailer));
-    else if (sortBy === "name-desc") list.sort((a, b) => b.retailer.localeCompare(a.retailer));
-    else if (sortBy === "address-asc") list.sort((a, b) => a.address.localeCompare(b.address));
-    return list;
-  }, [rawRows, searchQuery, sortBy]);
 
-  const sections = useMemo(() => {
-    if (activeTab === "to-review")
-      return [{ rows: filteredRawRows.filter((r) => String(r.status).toLowerCase().trim() === "to review") }];
-    if (activeTab === "inactive")
-      return [{ rows: filteredRawRows.filter((r) => ["inactive", "archived"].includes(String(r.status).toLowerCase().trim())) }];
-    if (activeTab === "active")
-      return [{ rows: filteredRawRows.filter((r) => String(r.status).toLowerCase().trim() === "active") }];
-    return [{ rows: filteredRawRows }];
-  }, [activeTab, filteredRawRows]);
+
+      if (displayStatus === "To Review") {
+        review += 1;
+      }
+
+      if (displayStatus === "Active") {
+        active += 1;
+      }
+
+      if (displayStatus === "Rejected") {
+        rejected += 1;
+      }
+
+    });
+
+
+    return {
+      review,
+      active,
+      rejected,
+    };
+
+  }, [retailers]);
+
+
+  // =========================================================
+  // FILTER
+  // =========================================================
+
+  const filteredRetailers = useMemo(() => {
+
+    const query = searchTerm
+      .trim()
+      .toLowerCase();
+
+
+    return retailers.filter(
+      (retailer) => {
+
+        const displayStatus =
+          getDisplayStatus(
+            retailer.status
+          );
+
+
+        const matchesTab =
+
+          activeTab === "review"
+            ? displayStatus === "To Review"
+
+            : activeTab === "active"
+            ? displayStatus === "Active"
+
+            : activeTab === "rejected"
+            ? displayStatus === "Rejected"
+
+            : true;
+
+
+        if (!matchesTab) {
+          return false;
+        }
+
+
+        if (!query) {
+          return true;
+        }
+
+
+        const searchable = [
+          retailer.id,
+          fullName(retailer),
+          retailer.email,
+          retailer.contact_number,
+          retailer.province,
+          retailer.municipality,
+          retailer.barangay,
+          retailer.status,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+
+        return searchable.includes(query);
+
+      }
+    );
+
+  }, [
+    retailers,
+    activeTab,
+    searchTerm,
+  ]);
+
+
+  // =========================================================
+  // UPDATE STATUS
+  // =========================================================
+
+  const updateStatus = async (
+    retailer,
+    action
+  ) => {
+
+    const retailerId =
+      retailer.id;
+
+
+    if (!retailerId) {
+
+      setErrorMessage(
+        "Retailer user ID is missing."
+      );
+
+      return;
+
+    }
+
+
+    setActionLoading(
+      `${retailerId}-${action}`
+    );
+
+    setErrorMessage("");
+
+    setSuccessMessage("");
+
+
+    try {
+
+      const response = await request(
+        `/admin/retailers/${retailerId}/status`,
+        {
+          method: "PATCH",
+
+          body: {
+            action,
+          },
+
+          throwOnError: true,
+        }
+      );
+
+
+      let message =
+        response?.message ||
+        "Retailer account updated successfully.";
+
+
+      if (response?.warning) {
+
+        message += ` ${response.warning}`;
+
+      }
+
+
+      setSuccessMessage(message);
+
+
+      setSelectedRetailer(null);
+
+
+      await loadRetailers();
+
+
+    } catch (error) {
+
+      setErrorMessage(
+        error.message ||
+        "Unable to update retailer account."
+      );
+
+
+    } finally {
+
+      setActionLoading(null);
+
+    }
+
+  };
+
+
+  // =========================================================
+  // VIEW DOCUMENT
+  // =========================================================
+
+  const viewDocument = async (
+    retailer,
+    documentKind
+  ) => {
+
+    const retailerId =
+      retailer.id;
+
+
+    if (!retailerId) {
+
+      setErrorMessage(
+        "Retailer user ID is missing."
+      );
+
+      return;
+
+    }
+
+
+    setDocumentLoading(
+      `${retailerId}-${documentKind}`
+    );
+
+    setErrorMessage("");
+
+
+    try {
+
+      const token =
+        localStorage.getItem(
+          "grainrise_token"
+        ) ||
+        localStorage.getItem(
+          "access_token"
+        ) ||
+        "";
+
+
+      const response = await fetch(
+        `${API_BASE_URL}/admin/retailers/${retailerId}/documents/${documentKind}`,
+        {
+          method: "GET",
+
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+
+      if (!response.ok) {
+
+        let message =
+          "Unable to open document.";
+
+
+        try {
+
+          const payload =
+            await response.json();
+
+
+          message =
+            payload?.detail ||
+            payload?.message ||
+            message;
+
+
+        } catch {
+
+          // Ignore response parsing failure.
+
+        }
+
+
+        throw new Error(message);
+
+      }
+
+
+      const blob =
+        await response.blob();
+
+
+      const objectUrl =
+        URL.createObjectURL(blob);
+
+
+      window.open(
+        objectUrl,
+        "_blank",
+        "noopener,noreferrer"
+      );
+
+
+      // Give the new browser tab time
+      // to load the blob before cleanup.
+      setTimeout(
+        () => {
+          URL.revokeObjectURL(
+            objectUrl
+          );
+        },
+        60_000
+      );
+
+
+    } catch (error) {
+
+      setErrorMessage(
+        error.message ||
+        "Unable to open document."
+      );
+
+
+    } finally {
+
+      setDocumentLoading("");
+
+    }
+
+  };
+
+
+  // =========================================================
+  // TAB BUTTON
+  // =========================================================
+
+  const tabButton = (
+    key,
+    label,
+    count
+  ) => (
+
+    <button
+      type="button"
+      onClick={() =>
+        setActiveTab(key)
+      }
+      className={`
+        px-5
+        py-3
+        rounded-xl
+        text-sm
+        font-semibold
+        transition-all
+
+        ${
+          activeTab === key
+
+            ? "bg-[#08511f] text-white shadow"
+
+            : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+        }
+      `}
+    >
+
+      {label}
+
+      <span
+        className={`
+          ml-2
+          px-2
+          py-0.5
+          rounded-full
+          text-xs
+
+          ${
+            activeTab === key
+
+              ? "bg-white/20 text-white"
+
+              : "bg-gray-100 text-gray-600"
+          }
+        `}
+      >
+
+        {count}
+
+      </span>
+
+    </button>
+
+  );
+
 
   return (
-    <>
-      <Breadcrumbs items={[{ label: "Management", path: "/admin/retailers" }, { label: "Retailer Management" }]} />
 
-      <div className="mt-4 mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Retailer Management</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage retailer accounts and approvals.</p>
-      </div>
+    <div
+      className="
+        w-full
+        min-h-screen
+        bg-gray-50
+        p-5
+        md:p-8
+      "
+    >
 
-      <Tabs
-        tabs={tabs.map((t) => ({
-          ...t,
-          label: (
-            <>
-              <span>{t.label}</span>
-              <span
-                className={`ml-2 inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold ${TAB_BADGE_STYLES[t.id]}`}
-              >
-                {t.id === "to-review" ? counts.toReview : t.id === "active" ? counts.active : counts.inactive}
-              </span>
-            </>
-          ),
-        }))}
-        activeTab={activeTab}
-        onTabChange={(id) => {
-          setActiveTab(id);
-          setCurrentPage(1);
-        }}
-      />
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="w-full max-w-sm">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search size={16} className="text-gray-400" />
-            </div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              placeholder="Search by retailer, address, or email"
-              className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white placeholder-gray-400 text-gray-700"
-            />
-          </div>
-        </div>
+      {/* =====================================================
+          HEADER
+      ====================================================== */}
+
+      <div
+        className="
+          flex
+          flex-col
+          md:flex-row
+          md:items-center
+          md:justify-between
+          gap-4
+          mb-7
+        "
+      >
 
         <div>
-          <SortByDropdown
-            options={SORT_OPTIONS}
-            value={sortBy}
-            onChange={(v) => {
-              setSortBy(v);
-              setCurrentPage(1);
-            }}
-          />
+
+          <h1
+            className="
+              text-2xl
+              md:text-3xl
+              font-bold
+              text-gray-900
+            "
+          >
+
+            Retailer Management
+
+          </h1>
+
+
+          <p
+            className="
+              text-sm
+              text-gray-500
+              mt-1
+            "
+          >
+
+            Review and manage registered GrainRise retailers.
+
+          </p>
+
         </div>
+
+
+        <button
+          type="button"
+          onClick={loadRetailers}
+          disabled={isLoading}
+          className="
+            inline-flex
+            items-center
+            justify-center
+            gap-2
+            bg-white
+            border
+            border-gray-200
+            rounded-xl
+            px-4
+            py-2.5
+            text-sm
+            font-semibold
+            text-gray-700
+            hover:bg-gray-50
+            disabled:opacity-50
+          "
+        >
+
+          <RefreshCw
+            size={17}
+            className={
+              isLoading
+                ? "animate-spin"
+                : ""
+            }
+          />
+
+          Refresh
+
+        </button>
+
       </div>
 
-      <SectionedTableCard
-        columns={columns}
-        sections={sections}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={(p) => setCurrentPage(p)}
-        footerLabel={`Showing 1-10 of ${sections[0].rows.length} retailers`}
-      />
 
-      {/* Modals */}
-      <ArchiveProductModal
-        isOpen={archiveModal}
-        onClose={() => { setArchiveModal(false); setSelectedRetailer(null); }}
-        onArchive={confirmArchive}
-        productName={selectedRetailer?.retailer ?? "this retailer"}
-      />
-      <RestoreProductModal
-        isOpen={restoreModal}
-        onClose={() => { setRestoreModal(false); setSelectedRetailer(null); }}
-        onRestore={confirmRestore}
-        productName={selectedRetailer?.retailer ?? "this retailer"}
-      />
-      <DeleteProductModal
-        isOpen={deleteModal}
-        onClose={() => { setDeleteModal(false); setSelectedRetailer(null); }}
-        onDelete={confirmDelete}
-        productName={selectedRetailer?.retailer ?? "this retailer"}
-      />
-    </>
+      {/* =====================================================
+          MESSAGES
+      ====================================================== */}
+
+      {
+        errorMessage && (
+
+          <div
+            className="
+              mb-5
+              bg-red-50
+              border
+              border-red-200
+              text-red-700
+              px-4
+              py-3
+              rounded-xl
+              text-sm
+            "
+          >
+
+            {errorMessage}
+
+          </div>
+
+        )
+      }
+
+
+      {
+        successMessage && (
+
+          <div
+            className="
+              mb-5
+              bg-green-50
+              border
+              border-green-200
+              text-green-700
+              px-4
+              py-3
+              rounded-xl
+              text-sm
+            "
+          >
+
+            {successMessage}
+
+          </div>
+
+        )
+      }
+
+
+      {/* =====================================================
+          TABS
+      ====================================================== */}
+
+      <div
+        className="
+          flex
+          flex-wrap
+          gap-3
+          mb-6
+        "
+      >
+
+        {tabButton(
+          "review",
+          "To Review",
+          counts.review
+        )}
+
+        {tabButton(
+          "active",
+          "Active",
+          counts.active
+        )}
+
+        {tabButton(
+          "rejected",
+          "Rejected",
+          counts.rejected
+        )}
+
+      </div>
+
+
+      {/* =====================================================
+          SEARCH
+      ====================================================== */}
+
+      <div
+        className="
+          bg-white
+          border
+          border-gray-100
+          rounded-2xl
+          shadow-sm
+          p-4
+          mb-5
+        "
+      >
+
+        <div
+          className="
+            relative
+            max-w-lg
+          "
+        >
+
+          <Search
+            size={18}
+            className="
+              absolute
+              left-4
+              top-1/2
+              -translate-y-1/2
+              text-gray-400
+            "
+          />
+
+
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(event) =>
+              setSearchTerm(
+                event.target.value
+              )
+            }
+            placeholder="Search retailer name, email, contact, or address..."
+            className="
+              w-full
+              pl-11
+              pr-4
+              py-3
+              border
+              border-gray-200
+              rounded-xl
+              outline-none
+              focus:border-green-600
+              focus:ring-2
+              focus:ring-green-100
+              text-sm
+            "
+          />
+
+        </div>
+
+      </div>
+
+
+      {/* =====================================================
+          TABLE
+      ====================================================== */}
+
+      <div
+        className="
+          bg-white
+          rounded-2xl
+          border
+          border-gray-100
+          shadow-sm
+          overflow-hidden
+        "
+      >
+
+        {
+          isLoading ? (
+
+            <div
+              className="
+                min-h-[300px]
+                flex
+                items-center
+                justify-center
+                text-gray-500
+              "
+            >
+
+              <RefreshCw
+                size={22}
+                className="
+                  animate-spin
+                  mr-3
+                "
+              />
+
+              Loading retailers...
+
+            </div>
+
+          ) : filteredRetailers.length === 0 ? (
+
+            <div
+              className="
+                min-h-[300px]
+                flex
+                flex-col
+                items-center
+                justify-center
+                text-center
+                px-6
+              "
+            >
+
+              <FileText
+                size={38}
+                className="
+                  text-gray-300
+                  mb-3
+                "
+              />
+
+              <p
+                className="
+                  font-semibold
+                  text-gray-700
+                "
+              >
+
+                No retailer records found
+
+              </p>
+
+
+              <p
+                className="
+                  text-sm
+                  text-gray-400
+                  mt-1
+                "
+              >
+
+                Retailer registrations will appear here after submission.
+
+              </p>
+
+            </div>
+
+          ) : (
+
+            <div className="overflow-x-auto">
+
+              <table
+                className="
+                  w-full
+                  min-w-[1000px]
+                "
+              >
+
+                <thead
+                  className="
+                    bg-gray-50
+                    border-b
+                    border-gray-100
+                  "
+                >
+
+                  <tr>
+
+                    <th className="text-left px-5 py-4 text-xs font-bold uppercase tracking-wide text-gray-500">
+                      Retailer
+                    </th>
+
+                    <th className="text-left px-5 py-4 text-xs font-bold uppercase tracking-wide text-gray-500">
+                      Contact
+                    </th>
+
+                    <th className="text-left px-5 py-4 text-xs font-bold uppercase tracking-wide text-gray-500">
+                      Location
+                    </th>
+
+                    <th className="text-left px-5 py-4 text-xs font-bold uppercase tracking-wide text-gray-500">
+                      Status
+                    </th>
+
+                    <th className="text-right px-5 py-4 text-xs font-bold uppercase tracking-wide text-gray-500">
+                      Action
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+
+                <tbody
+                  className="
+                    divide-y
+                    divide-gray-100
+                  "
+                >
+
+                  {
+                    filteredRetailers.map(
+                      (retailer) => {
+
+                        const displayStatus =
+                          getDisplayStatus(
+                            retailer.status
+                          );
+
+
+                        return (
+
+                          <tr
+                            key={retailer.id}
+                            className="
+                              hover:bg-gray-50/70
+                              transition
+                            "
+                          >
+
+                            <td className="px-5 py-4">
+
+                              <p
+                                className="
+                                  font-semibold
+                                  text-gray-900
+                                "
+                              >
+
+                                {fullName(retailer) || "Unnamed Retailer"}
+
+                              </p>
+
+
+                              <p
+                                className="
+                                  text-xs
+                                  text-gray-400
+                                  mt-1
+                                "
+                              >
+
+                                User ID: {retailer.id}
+
+                              </p>
+
+                            </td>
+
+
+                            <td className="px-5 py-4">
+
+                              <p
+                                className="
+                                  text-sm
+                                  text-gray-700
+                                "
+                              >
+
+                                {retailer.email || "—"}
+
+                              </p>
+
+
+                              <p
+                                className="
+                                  text-xs
+                                  text-gray-400
+                                  mt-1
+                                "
+                              >
+
+                                {retailer.contact_number || "—"}
+
+                              </p>
+
+                            </td>
+
+
+                            <td className="px-5 py-4">
+
+                              <p
+                                className="
+                                  text-sm
+                                  text-gray-700
+                                  max-w-[280px]
+                                "
+                              >
+
+                                {
+                                  [
+                                    retailer.municipality,
+                                    retailer.province,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(", ") || "—"
+                                }
+
+                              </p>
+
+                            </td>
+
+
+                            <td className="px-5 py-4">
+
+                              <span
+                                className={`
+                                  inline-flex
+                                  px-3
+                                  py-1
+                                  rounded-full
+                                  text-xs
+                                  font-semibold
+
+                                  ${
+                                    displayStatus === "Active"
+
+                                      ? "bg-green-100 text-green-700"
+
+                                      : displayStatus === "Rejected"
+
+                                      ? "bg-red-100 text-red-700"
+
+                                      : "bg-yellow-100 text-yellow-700"
+                                  }
+                                `}
+                              >
+
+                                {displayStatus}
+
+                              </span>
+
+                            </td>
+
+
+                            <td
+                              className="
+                                px-5
+                                py-4
+                                text-right
+                              "
+                            >
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSelectedRetailer(
+                                    retailer
+                                  )
+                                }
+                                className="
+                                  inline-flex
+                                  items-center
+                                  gap-2
+                                  px-4
+                                  py-2
+                                  rounded-lg
+                                  bg-[#08511f]
+                                  text-white
+                                  text-sm
+                                  font-semibold
+                                  hover:bg-green-800
+                                "
+                              >
+
+                                <Eye size={16} />
+
+                                Review
+
+                              </button>
+
+                            </td>
+
+                          </tr>
+
+                        );
+
+                      }
+                    )
+                  }
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          )
+        }
+
+      </div>
+
+
+      {/* =====================================================
+          REVIEW MODAL
+      ====================================================== */}
+
+      {
+        selectedRetailer && (
+
+          <div
+            className="
+              fixed
+              inset-0
+              z-50
+              bg-black/40
+              flex
+              items-center
+              justify-center
+              p-4
+            "
+          >
+
+            <div
+              className="
+                bg-white
+                rounded-2xl
+                shadow-2xl
+                w-full
+                max-w-2xl
+                max-h-[90vh]
+                overflow-y-auto
+              "
+            >
+
+
+              {/* MODAL HEADER */}
+
+              <div
+                className="
+                  sticky
+                  top-0
+                  bg-white
+                  border-b
+                  border-gray-100
+                  px-6
+                  py-5
+                  flex
+                  items-center
+                  justify-between
+                  z-10
+                "
+              >
+
+                <div>
+
+                  <h2
+                    className="
+                      text-xl
+                      font-bold
+                      text-gray-900
+                    "
+                  >
+
+                    Retailer Application
+
+                  </h2>
+
+
+                  <p
+                    className="
+                      text-sm
+                      text-gray-400
+                      mt-1
+                    "
+                  >
+
+                    User ID: {selectedRetailer.id}
+
+                  </p>
+
+                </div>
+
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedRetailer(null)
+                  }
+                  className="
+                    p-2
+                    rounded-full
+                    hover:bg-gray-100
+                    text-gray-500
+                  "
+                >
+
+                  <X size={20} />
+
+                </button>
+
+              </div>
+
+
+              {/* MODAL CONTENT */}
+
+              <div
+                className="
+                  p-6
+                  space-y-6
+                "
+              >
+
+
+                {/* PERSONAL */}
+
+                <section>
+
+                  <h3
+                    className="
+                      text-sm
+                      font-bold
+                      uppercase
+                      tracking-wide
+                      text-[#08511f]
+                      mb-3
+                    "
+                  >
+
+                    Personal Information
+
+                  </h3>
+
+
+                  <div
+                    className="
+                      grid
+                      grid-cols-1
+                      sm:grid-cols-2
+                      gap-4
+                      text-sm
+                    "
+                  >
+
+                    <InfoItem
+                      label="Full Name"
+                      value={
+                        fullName(
+                          selectedRetailer
+                        )
+                      }
+                    />
+
+                    <InfoItem
+                      label="Email"
+                      value={
+                        selectedRetailer.email
+                      }
+                    />
+
+                    <InfoItem
+                      label="Contact Number"
+                      value={
+                        selectedRetailer.contact_number
+                      }
+                    />
+
+                    <InfoItem
+                      label="Status"
+                      value={
+                        getDisplayStatus(
+                          selectedRetailer.status
+                        )
+                      }
+                    />
+
+                  </div>
+
+                </section>
+
+
+                {/* ADDRESS */}
+
+                <section>
+
+                  <h3
+                    className="
+                      text-sm
+                      font-bold
+                      uppercase
+                      tracking-wide
+                      text-[#08511f]
+                      mb-3
+                    "
+                  >
+
+                    Address
+
+                  </h3>
+
+
+                  <div
+                    className="
+                      bg-gray-50
+                      rounded-xl
+                      p-4
+                      text-sm
+                      text-gray-700
+                    "
+                  >
+
+                    {
+                      fullAddress(
+                        selectedRetailer
+                      ) || "No address available."
+                    }
+
+                  </div>
+
+                </section>
+
+
+                {/* DOCUMENTS */}
+
+                <section>
+
+                  <h3
+                    className="
+                      text-sm
+                      font-bold
+                      uppercase
+                      tracking-wide
+                      text-[#08511f]
+                      mb-3
+                    "
+                  >
+
+                    Submitted Documents
+
+                  </h3>
+
+
+                  <div
+                    className="
+                      grid
+                      grid-cols-1
+                      sm:grid-cols-2
+                      gap-3
+                    "
+                  >
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        viewDocument(
+                          selectedRetailer,
+                          "barangay_permit"
+                        )
+                      }
+                      disabled={
+                        documentLoading ===
+                        `${selectedRetailer.id}-barangay_permit`
+                      }
+                      className="
+                        border
+                        border-gray-200
+                        rounded-xl
+                        p-4
+                        flex
+                        items-center
+                        gap-3
+                        hover:border-green-600
+                        hover:bg-green-50
+                        transition
+                        disabled:opacity-50
+                      "
+                    >
+
+                      <FileText
+                        size={22}
+                        className="
+                          text-[#08511f]
+                        "
+                      />
+
+                      <div className="text-left">
+
+                        <p
+                          className="
+                            text-sm
+                            font-semibold
+                            text-gray-800
+                          "
+                        >
+
+                          Barangay Permit
+
+                        </p>
+
+
+                        <p
+                          className="
+                            text-xs
+                            text-gray-400
+                          "
+                        >
+
+                          View Document
+
+                        </p>
+
+                      </div>
+
+                    </button>
+
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        viewDocument(
+                          selectedRetailer,
+                          "valid_id"
+                        )
+                      }
+                      disabled={
+                        documentLoading ===
+                        `${selectedRetailer.id}-valid_id`
+                      }
+                      className="
+                        border
+                        border-gray-200
+                        rounded-xl
+                        p-4
+                        flex
+                        items-center
+                        gap-3
+                        hover:border-green-600
+                        hover:bg-green-50
+                        transition
+                        disabled:opacity-50
+                      "
+                    >
+
+                      <FileText
+                        size={22}
+                        className="
+                          text-[#08511f]
+                        "
+                      />
+
+                      <div className="text-left">
+
+                        <p
+                          className="
+                            text-sm
+                            font-semibold
+                            text-gray-800
+                          "
+                        >
+
+                          Valid ID
+
+                        </p>
+
+
+                        <p
+                          className="
+                            text-xs
+                            text-gray-400
+                          "
+                        >
+
+                          View Document
+
+                        </p>
+
+                      </div>
+
+                    </button>
+
+                  </div>
+
+                </section>
+
+
+                {/* ACTIONS */}
+
+                <section
+                  className="
+                    pt-5
+                    border-t
+                    border-gray-100
+                  "
+                >
+
+                  {
+                    getDisplayStatus(
+                      selectedRetailer.status
+                    ) === "To Review" && (
+
+                      <div
+                        className="
+                          flex
+                          flex-col
+                          sm:flex-row
+                          gap-3
+                          justify-end
+                        "
+                      >
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateStatus(
+                              selectedRetailer,
+                              "reject"
+                            )
+                          }
+                          disabled={
+                            actionLoading !== null
+                          }
+                          className="
+                            inline-flex
+                            items-center
+                            justify-center
+                            gap-2
+                            px-5
+                            py-3
+                            rounded-xl
+                            border
+                            border-red-200
+                            bg-red-50
+                            text-red-700
+                            font-semibold
+                            text-sm
+                            hover:bg-red-100
+                            disabled:opacity-50
+                          "
+                        >
+
+                          <X size={17} />
+
+                          {
+                            actionLoading ===
+                            `${selectedRetailer.id}-reject`
+
+                              ? "Rejecting..."
+
+                              : "Reject"
+                          }
+
+                        </button>
+
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateStatus(
+                              selectedRetailer,
+                              "approve"
+                            )
+                          }
+                          disabled={
+                            actionLoading !== null
+                          }
+                          className="
+                            inline-flex
+                            items-center
+                            justify-center
+                            gap-2
+                            px-5
+                            py-3
+                            rounded-xl
+                            bg-[#08511f]
+                            text-white
+                            font-semibold
+                            text-sm
+                            hover:bg-green-800
+                            disabled:opacity-50
+                          "
+                        >
+
+                          <Check size={17} />
+
+                          {
+                            actionLoading ===
+                            `${selectedRetailer.id}-approve`
+
+                              ? "Approving..."
+
+                              : "Approve Retailer"
+                          }
+
+                        </button>
+
+                      </div>
+
+                    )
+                  }
+
+
+                  {
+                    getDisplayStatus(
+                      selectedRetailer.status
+                    ) === "Active" && (
+
+                      <div
+                        className="
+                          flex
+                          justify-end
+                        "
+                      >
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateStatus(
+                              selectedRetailer,
+                              "archive"
+                            )
+                          }
+                          disabled={
+                            actionLoading !== null
+                          }
+                          className="
+                            inline-flex
+                            items-center
+                            gap-2
+                            px-5
+                            py-3
+                            rounded-xl
+                            border
+                            border-gray-200
+                            text-gray-700
+                            font-semibold
+                            text-sm
+                            hover:bg-gray-50
+                            disabled:opacity-50
+                          "
+                        >
+
+                          <Archive size={17} />
+
+                          Archive Retailer
+
+                        </button>
+
+                      </div>
+
+                    )
+                  }
+
+
+                  {
+                    getDisplayStatus(
+                      selectedRetailer.status
+                    ) === "Rejected" && (
+
+                      <div
+                        className="
+                          flex
+                          justify-end
+                        "
+                      >
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateStatus(
+                              selectedRetailer,
+                              "restore"
+                            )
+                          }
+                          disabled={
+                            actionLoading !== null
+                          }
+                          className="
+                            inline-flex
+                            items-center
+                            gap-2
+                            px-5
+                            py-3
+                            rounded-xl
+                            bg-[#08511f]
+                            text-white
+                            font-semibold
+                            text-sm
+                            hover:bg-green-800
+                            disabled:opacity-50
+                          "
+                        >
+
+                          <RotateCcw size={17} />
+
+                          Restore / Activate
+
+                        </button>
+
+                      </div>
+
+                    )
+                  }
+
+                </section>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        )
+      }
+
+    </div>
+
   );
+
 };
+
+
+// ===========================================================
+// INFO ITEM
+// ===========================================================
+
+const InfoItem = ({
+  label,
+  value,
+}) => (
+
+  <div>
+
+    <p
+      className="
+        text-xs
+        uppercase
+        tracking-wide
+        font-semibold
+        text-gray-400
+        mb-1
+      "
+    >
+
+      {label}
+
+    </p>
+
+
+    <p
+      className="
+        text-gray-800
+        font-medium
+      "
+    >
+
+      {value || "—"}
+
+    </p>
+
+  </div>
+
+);
+
 
 export default RetailerManagement;
