@@ -1,5 +1,6 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
+import { useLoading } from "../Components/context/LoadingContext";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react";
 
 // Adjust these import paths to match your project structure
@@ -23,6 +24,14 @@ const UserLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
+  const { triggerLoading } = useLoading();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Trigger loading screen while the login resolves / redirects
+    triggerLoading(900);
+    // TODO: add real login API call here
+  };
 
   return (
     <div className="min-h-screen flex flex-col animate-page-fade">
@@ -95,7 +104,7 @@ const UserLogin = () => {
               Sign in to continue managing your rice supply chain operations.
             </p>
 
-            <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-5" onSubmit={handleSubmit}>
               <CustomTextbox
                 label="Email Address"
                 placeholder="youremail@example.com"

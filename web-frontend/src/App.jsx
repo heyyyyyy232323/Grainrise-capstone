@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import React from "react";
+import { LoadingProvider } from "./Components/context/LoadingContext";
 import LandingPage from "./LandingPage";
 import Login from "./Login/UserLogin";
 import AdminLogin from "./Login/AdminLogin";
@@ -86,7 +87,7 @@ import MillerSalesHistory from "./Users/MillerAccounts/MillerSales/MillerSalesHi
 
 function App() {
   return (
-    <>
+    <LoadingProvider>
       <BrowserRouter>
         <GlobalLoadingScreen />
         <Routes>
@@ -215,7 +216,7 @@ function App() {
       {/* Floating chatbot — mounted outside BrowserRouter so position:fixed
           is never broken by a transformed ancestor (animate-page-fade) */}
       <FloatingChatbot />
-    </>
+    </LoadingProvider>
   );
 }
 
