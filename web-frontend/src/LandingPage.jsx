@@ -39,7 +39,7 @@ import phoneImg from './assets/phone.jpg';
 import phone2Img from './assets/phone2.jpg';
 import ctaBgImg from './assets/adminloginBG.png';
 import grainBgImg from './assets/grainnn.jpg';
-import fieldBgImg from './assets/field.jpg';
+import fieldBgImg from './assets/field2.png';
 
 // ─── Animated counter ─────────────────────────────────────────────────────────
 function useCounter(target, duration, trigger) {
@@ -63,16 +63,21 @@ function useCounter(target, duration, trigger) {
 }
 
 // ─── Intersection observer ────────────────────────────────────────────────────
-function useInView(threshold = 0.15) {
+function useInView(threshold = 0.12, rootMargin = '0px 0px -40px 0px') {
   const ref = useRef(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
     const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) setInView(true);
-    }, { threshold });
-    if (ref.current) obs.observe(ref.current);
+      if (e.isIntersecting) {
+        setInView(true);
+        obs.unobserve(el);
+      }
+    }, { threshold, rootMargin });
+    obs.observe(el);
     return () => obs.disconnect();
-  }, [threshold]);
+  }, [threshold, rootMargin]);
   return [ref, inView];
 }
 

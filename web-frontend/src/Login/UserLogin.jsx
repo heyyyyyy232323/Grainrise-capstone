@@ -9,6 +9,7 @@ import CustomWhiteButton from "../Components/Minor-Components/CustomWhiteButton"
 import Footer from "../Components/Minor-Components/CustomFooter";
 import Logo from "../assets/Logo.png";
 import backgroundImage from "../assets/UserloginBG.png";
+import leftPanelBg from "../assets/adminloginBG.png";
 
 const features = [
   "Real-time Inventory Monitoring",
@@ -28,43 +29,53 @@ const UserLogin = () => {
     <div className="min-h-screen flex flex-col animate-page-fade">
       <div className="flex flex-1 flex-col md:flex-row">
         {/* Left panel */}
-        <div className="relative w-full md:w-1/2 bg-gradient-to-b from-green-900 to-yellow-500 px-8 sm:px-12 py-10 flex flex-col justify-between">
-          <CustomWhiteButton
-            icon={
-              <span className="flex items-center gap-2 px-2 text-sm font-medium whitespace-nowrap">
-                <ArrowLeft size={18} />
-                Back to Home
-              </span>
-            }
-            className="self-start !rounded-full w-auto"
-            onClick={() => navigate("/")}
+    <div className="relative w-full md:w-1/2 px-8 sm:px-12 py-10 flex flex-col justify-between overflow-hidden">
+          {/* Background image with reduced opacity */}
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-20"
+            style={{ backgroundImage: `url(${leftPanelBg})` }}
           />
+          {/* Green-to-yellow gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#00580C]/90 via-[#0B5D1E]/80 to-[#E4A81D]/85" />
 
-          <div className="my-10">
-            <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight mb-6">
-              Cultivating the Future of Logistics
-            </h1>
-            <p className="text-white/90 text-lg max-w-md mb-10">
-              Securely access GrainRise to manage inventory, monitor
-              deliveries, and streamline rice supply chain operations through
-              one intelligent platform.
-            </p>
+          <div className="relative z-10 flex flex-col justify-between h-full">
+            <CustomWhiteButton
+              icon={
+                <span className="flex items-center gap-2 px-2 text-sm font-medium whitespace-nowrap">
+                  <ArrowLeft size={18} />
+                  Back to Home
+                </span>
+              }
+              className="self-start !rounded-full w-auto"
+              onClick={() => navigate("/")}
+            />
 
-            <ul className="space-y-4">
-              {features.map((feature) => (
-                <li
-                  key={feature}
-                  className="flex items-center gap-3 text-white"
-                >
-                  <CheckCircle2 size={20} className="shrink-0" />
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
+            <div className="my-10">
+              <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight mb-6">
+                Cultivating the Future of Logistics
+              </h1>
+              <p className="text-white/90 text-lg max-w-md mb-10">
+                Securely access GrainRise to manage inventory, monitor
+                deliveries, and streamline rice supply chain operations through
+                one intelligent platform.
+              </p>
+
+              <ul className="space-y-4">
+                {features.map((feature) => (
+                  <li
+                    key={feature}
+                    className="flex items-center gap-3 text-white"
+                  >
+                    <CheckCircle2 size={20} className="shrink-0" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* spacer to balance justify-between */}
+            <div />
           </div>
-
-          {/* spacer to balance justify-between since there's no bottom-left content */}
-          <div />
         </div>
 
         {/* Right panel */}
