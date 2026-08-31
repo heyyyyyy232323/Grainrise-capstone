@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { Search, X, CheckCircle2, AlertTriangle, ShieldCheck, Download, Clock } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 
@@ -129,7 +129,7 @@ export default function ProcurementReceivingHistory() {
             </thead>
             <tbody>
               {filteredSections.map((section, sIdx) => (
-                <div key={sIdx} className="contents">
+                <Fragment key={sIdx}>
                   {/* Date Section Header */}
                   <tr className="bg-emerald-50/40 border-y border-emerald-100">
                     <td colSpan={7} className="px-6 py-2 text-xs font-bold text-emerald-800">
@@ -160,7 +160,7 @@ export default function ProcurementReceivingHistory() {
                       </td>
                     </tr>
                   ))}
-                </div>
+                </Fragment>
               ))}
 
               {filteredSections.length === 0 && (

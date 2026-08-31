@@ -2,32 +2,19 @@ import React, { useEffect } from "react";
 import Logo from "../../assets/Logo.png";
 import { useLoading } from "../context/LoadingContext";
 
-/**
- * Session-storage key — set to "1" after the very first render so we know
- * subsequent renders within the same browser tab are NOT hard refreshes.
- */
-const SESSION_KEY = "grainrise_session_started";
-
 export default function GlobalLoadingScreen() {
   const { visible, triggerLoading } = useLoading();
 
   useEffect(() => {
-    const isFirstLoad = !sessionStorage.getItem(SESSION_KEY);
-
-    if (isFirstLoad) {
-      // Hard refresh or very first open — show the loader once
-      sessionStorage.setItem(SESSION_KEY, "1");
-      triggerLoading(700);
-    }
-    // All other triggers (login submit) are handled imperatively
-    // via triggerLoading() in the Login components — never on route change.
+    // Triggers whenever the app mounts (browser refresh F5 / initial page visit)
+    triggerLoading(750);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-[#F9FCF9] pointer-events-none">
+    <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-[#F9FCF9] pointer-events-auto select-none animate-in fade-in duration-200">
       {/* Top Logo */}
       <div className="mb-16">
         <img src={Logo} alt="GrainRise Logo" className="h-12 object-contain" />
