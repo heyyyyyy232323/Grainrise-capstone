@@ -16,10 +16,16 @@ import ViewProductModal from "../../../Components/Modals/ViewProductModal";
 const generateProducts = (count, archived = false) =>
   Array.from({ length: count }, (_, i) => {
     const stockOptions = [
-      { qty: "0 kg",    level: "out"  },
-      { qty: "100 kg",  level: "low"  },
-      { qty: "150 kg",  level: "low"  },
+      { qty: "0 kg",     level: "out"  },
+      { qty: "100 kg",   level: "low"  },
+      { qty: "150 kg",   level: "low"  },
       { qty: "2,500 kg", level: "in"   },
+    ];
+    const suppliers = [
+      "AgriGrain Co.",
+      "Golden Harvest Inc.",
+      "Valley Farms Ltd.",
+      "SunRipe Produce",
     ];
     const { qty, level } = stockOptions[i % stockOptions.length];
     const variantBadges = archived
@@ -38,7 +44,7 @@ const generateProducts = (count, archived = false) =>
       variantBadge: variantBadges[i % variantBadges.length],
       stockQty: qty,
       stockLevel: level,
-      description: "Premium rice, locally sourced specialty…",
+      supplier: suppliers[i % suppliers.length],
       archived,
     };
   });
@@ -102,10 +108,10 @@ function VariantBadge({ badge }) {
 }
 
 const COLUMNS = [
-  { label: "Product Code",   width: "16%" },
-  { label: "Variant",        width: "20%" },
-  { label: "Stock Qty (kg)", width: "16%" },
-  { label: "Description",    width: "30%" },
+  { label: "Product Code",   width: "20%" },
+  { label: "Variant",        width: "22%" },
+  { label: "Stock Qty (kg)", width: "18%" },
+  { label: "Supplier",       width: "22%" },
   { label: "Action",         width: "18%", align: "center" },
 ];
 
@@ -171,7 +177,7 @@ export default function MillerEncoderStockManagement() {
         (p) =>
           p.productCode.toLowerCase().includes(q) ||
           p.variant.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q)
+          p.supplier.toLowerCase().includes(q)
       );
     }
     return sortProducts(result, sortBy, stockFilter);
@@ -214,7 +220,7 @@ export default function MillerEncoderStockManagement() {
               type="text"
               value={search}
               onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search product code, variant, or description"
+              placeholder="Search product code, variant, or supplier"
               className="block w-full pl-10 pr-9 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white placeholder-gray-400 text-gray-700"
             />
             {search && (
@@ -347,13 +353,13 @@ export default function MillerEncoderStockManagement() {
       {/* Table Card */}
       <article className="w-full overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.06)]">
         <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse table-fixed">
+          <table className="w-full border-collapse table-auto">
             <thead>
               <tr className="bg-[#EDEDED] text-left text-[11px] font-extrabold uppercase tracking-[0.03em] text-slate-600">
                 {COLUMNS.map((col) => (
                   <th
                     key={col.label}
-                    className={`whitespace-nowrap px-4 py-3.5 align-middle first:pl-5 last:pr-5 ${col.align === "center" ? "text-center" : "text-left"}`}
+                    className={`whitespace-nowrap px-4 py-3.5 align-middle first:pl-6 last:pr-6 ${col.align === "center" ? "text-center" : "text-left"}`}
                     style={{ width: col.width }}
                   >
                     {col.label}
@@ -375,12 +381,12 @@ export default function MillerEncoderStockManagement() {
                     key={product.id}
                     className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70 transition-colors"
                   >
-                    <td className="whitespace-nowrap px-4 py-3 pl-5 text-[13px] font-semibold text-slate-700">
+                    <td className="whitespace-nowrap px-4 py-3 pl-6 text-[13px] font-semibold text-slate-700">
                       {product.productCode}
                     </td>
 
                     <td className="px-4 py-3">
-                      <div className="flex flex-col">
+                      <div className="flex flex-col items-start">
                         <span className="text-[13px] font-semibold text-slate-800">
                           {product.variant}
                         </span>
@@ -390,17 +396,17 @@ export default function MillerEncoderStockManagement() {
                     </td>
 
                     <td className="whitespace-nowrap px-4 py-3">
-                      <span className="flex items-center gap-2 text-[13px] text-slate-700">
+                      <span className="inline-flex items-center gap-2 text-[13px] text-slate-700">
                         <StockDot level={product.stockLevel} />
                         {product.stockQty}
                       </span>
                     </td>
 
-                    <td className="px-4 py-3 text-[13px] text-slate-500 max-w-[220px]">
-                      <span className="line-clamp-2">{product.description}</span>
+                    <td className="px-4 py-3 text-[13px] text-slate-600 whitespace-nowrap">
+                      <span className="font-medium">{product.supplier}</span>
                     </td>
 
-                    <td className="whitespace-nowrap px-4 py-3 pr-5">
+                    <td className="whitespace-nowrap px-4 py-3 pr-6">
                       {activeTab === "active" ? (
                         <div className="flex items-center justify-center gap-2">
                           <button

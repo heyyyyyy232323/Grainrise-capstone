@@ -85,7 +85,7 @@ export default function WarehouseManagerNewsArticle() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6">
       <Breadcrumbs
         items={[
           { label: "Resources" },
@@ -101,7 +101,7 @@ export default function WarehouseManagerNewsArticle() {
         <ArrowLeft size={16} /> Back to News &amp; Updates
       </button>
 
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="max-w-5xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="px-7 pt-7 pb-4 border-b border-slate-100">
           <div className="flex flex-wrap items-center gap-3 mb-3">
             <span className={`text-[11px] font-bold px-2.5 py-1 rounded-md ${article.categoryColor}`}>
@@ -150,7 +150,7 @@ export default function WarehouseManagerNewsArticle() {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm px-7 py-6 space-y-6">
+      <div className="max-w-5xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm px-7 py-6 space-y-6">
         <h3 className="font-bold text-gray-900 text-base">Comments ({comments.length})</h3>
 
         <div className="flex gap-3">

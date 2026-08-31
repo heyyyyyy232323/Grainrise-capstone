@@ -43,11 +43,13 @@ const COLUMNS = [
   {
     key: "action",
     label: "Action",
+    headerClassName: "text-center",
+    cellClassName: "text-center",
     render: (row) => (
-      <div className="flex justify-end">
+      <div className="flex items-center justify-center">
         <button
           onClick={() => console.log("View Details", row)}
-          className="rounded-lg border border-gray-300 px-4 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition"
+          className="rounded-lg border border-gray-300 px-4 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition cursor-pointer"
         >
           View Details
         </button>

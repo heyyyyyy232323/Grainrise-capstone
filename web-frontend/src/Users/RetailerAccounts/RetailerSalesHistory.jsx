@@ -14,39 +14,37 @@ const SORT_OPTIONS = [
 ];
 
 const COLUMNS = [
-  { key: "time", label: "Transaction Time", width: "16%" },
-  { key: "variant", label: "Variant", width: "16%" },
-  { key: "quantity", label: "Quantity", width: "14%" },
-  { key: "totalPayment", label: "Total Payment", width: "16%" },
-  { key: "amountPaid", label: "Amount Paid", width: "14%" },
-  { key: "change", label: "Change", width: "12%" },
-  { key: "action", label: "Action", width: "12%", headerClassName: "text-center", cellClassName: "text-center" },
+  { key: "time", label: "Transaction Time", width: "22%" },
+  { key: "variant", label: "Variant", width: "22%" },
+  { key: "quantity", label: "Quantity", width: "20%" },
+  { key: "totalPayment", label: "Total Payment", width: "20%" },
+  { key: "action", label: "Action", width: "16%", headerClassName: "text-center", cellClassName: "text-center" },
 ];
 
 const IN_STORE_SECTIONS = [
   {
     label: "Today",
     rows: [
-      { id: "t1", receiptNo: "REC-2026-0831", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", amountPaid: "₱23k", change: "₱500", paymentMethod: "Cash", status: "Completed", cashier: "Cashier 01" },
-      { id: "t2", receiptNo: "REC-2026-0830", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", amountPaid: "₱23k", change: "₱500", paymentMethod: "Cash", status: "Completed", cashier: "Cashier 02" },
-      { id: "t3", receiptNo: "REC-2026-0829", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", amountPaid: "₱23k", change: "₱500", paymentMethod: "Card", status: "Completed", cashier: "Cashier 01" },
+      { id: "t1", receiptNo: "REC-2026-0831", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", paymentMethod: "Cash", status: "Completed", cashier: "Cashier 01" },
+      { id: "t2", receiptNo: "REC-2026-0830", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", paymentMethod: "Cash", status: "Completed", cashier: "Cashier 02" },
+      { id: "t3", receiptNo: "REC-2026-0829", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", paymentMethod: "Card", status: "Completed", cashier: "Cashier 01" },
     ],
   },
   {
     label: "Yesterday",
     rows: [
-      { id: "y1", receiptNo: "REC-2026-0828", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", amountPaid: "₱23k", change: "₱500", paymentMethod: "Cash", status: "Completed", cashier: "Cashier 01" },
-      { id: "y2", receiptNo: "REC-2026-0827", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", amountPaid: "₱23k", change: "₱500", paymentMethod: "Cash", status: "Completed", cashier: "Cashier 03" },
-      { id: "y3", receiptNo: "REC-2026-0826", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", amountPaid: "₱23k", change: "₱500", paymentMethod: "Card", status: "Completed", cashier: "Cashier 01" },
-      { id: "y4", receiptNo: "REC-2026-0825", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", amountPaid: "₱23k", change: "₱500", paymentMethod: "Cash", status: "Completed", cashier: "Cashier 02" },
+      { id: "y1", receiptNo: "REC-2026-0828", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", paymentMethod: "Cash", status: "Completed", cashier: "Cashier 01" },
+      { id: "y2", receiptNo: "REC-2026-0827", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", paymentMethod: "Cash", status: "Completed", cashier: "Cashier 03" },
+      { id: "y3", receiptNo: "REC-2026-0826", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", paymentMethod: "Card", status: "Completed", cashier: "Cashier 01" },
+      { id: "y4", receiptNo: "REC-2026-0825", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", paymentMethod: "Cash", status: "Completed", cashier: "Cashier 02" },
     ],
   },
   {
     label: "July 16, 2026",
     rows: [
-      { id: "j1", receiptNo: "REC-2026-0716", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", amountPaid: "₱23k", change: "₱500", paymentMethod: "Cash", status: "Completed", cashier: "Cashier 01" },
-      { id: "j2", receiptNo: "REC-2026-0715", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", amountPaid: "₱23k", change: "₱500", paymentMethod: "Cash", status: "Completed", cashier: "Cashier 02" },
-      { id: "j3", receiptNo: "REC-2026-0714", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", amountPaid: "₱23k", change: "₱500", paymentMethod: "Card", status: "Completed", cashier: "Cashier 01" },
+      { id: "j1", receiptNo: "REC-2026-0716", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", paymentMethod: "Cash", status: "Completed", cashier: "Cashier 01" },
+      { id: "j2", receiptNo: "REC-2026-0715", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", paymentMethod: "Cash", status: "Completed", cashier: "Cashier 02" },
+      { id: "j3", receiptNo: "REC-2026-0714", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", paymentMethod: "Card", status: "Completed", cashier: "Cashier 01" },
     ],
   },
 ];
@@ -162,18 +160,10 @@ const RetailerSalesHistory = () => {
                   <CheckCircle size={12} /> {selectedTransaction.status || "Completed"}
                 </span>
               </div>
-              <div className="border-t border-gray-200 pt-3 space-y-1.5">
+              <div className="border-t border-gray-200 pt-3">
                 <div className="flex justify-between items-center text-gray-600">
                   <span>Total Payment:</span>
                   <span className="font-bold text-gray-900 text-base">{selectedTransaction.totalPayment}</span>
-                </div>
-                <div className="flex justify-between items-center text-gray-600">
-                  <span>Amount Paid:</span>
-                  <span className="font-semibold text-gray-900">{selectedTransaction.amountPaid}</span>
-                </div>
-                <div className="flex justify-between items-center text-gray-600">
-                  <span>Change Given:</span>
-                  <span className="font-semibold text-emerald-700">{selectedTransaction.change}</span>
                 </div>
               </div>
             </div>
