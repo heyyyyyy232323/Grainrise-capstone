@@ -337,6 +337,76 @@ export const getUserSidebarConfig = (role = "admin") => {
         },
       ],
     },
+    warehouse_driver: {
+      panelLabel: "WAREHOUSE DRIVER PANEL",
+      sections: [
+        {
+          title: "MAIN",
+          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/warehouse-driver/dashboard" }],
+        },
+        {
+          title: "OPERATIONS",
+          items: [
+            { label: "My Duties", icon: ClipboardList, path: "/warehouse-driver/my-duties" },
+          ],
+        },
+        {
+          title: "COMMUNICATION",
+          items: [
+            { label: "Messages", icon: Mail, path: "/warehouse-driver/messages" },
+          ],
+        },
+        {
+          title: "FINANCE",
+          items: [
+            { label: "Payment Submission", icon: CreditCard, path: "/warehouse-driver/payment-submission" },
+            { label: "Reimbursement", icon: Wallet, path: "/warehouse-driver/reimbursement" },
+          ],
+        },
+        {
+          title: "HISTORY",
+          items: [
+            { label: "Assigned History", icon: ClipboardList, path: "/warehouse-driver/assigned-history" },
+            { label: "Reimbursement History", icon: History, path: "/warehouse-driver/reimbursement-history" },
+          ],
+        },
+      ],
+    },
+    miller_driver: {
+      panelLabel: "MILLER DRIVER PANEL",
+      sections: [
+        {
+          title: "MAIN",
+          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/miller-driver/dashboard" }],
+        },
+        {
+          title: "OPERATIONS",
+          items: [
+            { label: "My Duties", icon: ClipboardList, path: "/miller-driver/my-duties" },
+          ],
+        },
+        {
+          title: "COMMUNICATION",
+          items: [
+            { label: "Messages", icon: Mail, path: "/miller-driver/messages" },
+          ],
+        },
+        {
+          title: "FINANCE",
+          items: [
+            { label: "Payment Submission", icon: CreditCard, path: "/miller-driver/payment-submission" },
+            { label: "Reimbursement", icon: Wallet, path: "/miller-driver/reimbursement" },
+          ],
+        },
+        {
+          title: "HISTORY",
+          items: [
+            { label: "Assigned History", icon: ClipboardList, path: "/miller-driver/assigned-history" },
+            { label: "Reimbursement History", icon: History, path: "/miller-driver/reimbursement-history" },
+          ],
+        },
+      ],
+    },
     farmer: {
       panelLabel: "FARMER PANEL",
       sections: [
@@ -372,7 +442,7 @@ export const getUserSidebarConfig = (role = "admin") => {
   return menuConfigs[role] || menuConfigs.admin;
 };
 
-export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales", "warehouse_logistics", "warehouse_procurement", "warehouse_finance", "warehouse_manager", "supplier_encoder", "miller_sales", "miller_logistics", "miller_finance", "farmer"];
+export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales", "warehouse_logistics", "warehouse_procurement", "warehouse_finance", "warehouse_manager", "warehouse_driver", "miller_driver", "supplier_encoder", "miller_sales", "miller_logistics", "miller_finance", "farmer"];
 
 const UserSidebar = ({
   role = "admin",
