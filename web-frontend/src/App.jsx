@@ -54,6 +54,12 @@ import ProcurementReceivingHistory from "./Users/WarehouseAccounts/WarehouseMana
 import FinanceManagementHistory from "./Users/WarehouseAccounts/WarehouseManager/FinanceManagementHistory";
 import WarehouseManagerNewsUpdates from "./Users/WarehouseAccounts/WarehouseManager/WarehouseManagerNewsUpdates";
 import WarehouseManagerNewsArticle from "./Users/WarehouseAccounts/WarehouseManager/WarehouseManagerNewsArticle";
+import WarehouseDriverDashboard from "./Users/WarehouseAccounts/WarehouseDriver/WarehouseDriverDashboard";
+import DriverMyDuties from "./Users/WarehouseAccounts/WarehouseDriver/DriverMyDuties";
+import DriverMessages from "./Users/WarehouseAccounts/WarehouseDriver/DriverMessages";
+import DriverPaymentSubmission from "./Users/WarehouseAccounts/WarehouseDriver/DriverPaymentSubmission";
+import DriverReimbursement from "./Users/WarehouseAccounts/WarehouseDriver/DriverReimbursement";
+import DriverReimbursementHistory from "./Users/WarehouseAccounts/WarehouseDriver/DriverReimbursementHistory";
 import MillerEncoderDashboard from "./Users/MillerAccounts/MillerEncoder/MillerEncoderDashboard";
 import MillerEncoderOrderHistory from "./Users/MillerAccounts/MillerEncoder/MillerEncoderOrderHistory";
 import MillerEncoderRequestOrders from "./Users/MillerAccounts/MillerEncoder/MillerEncoderRequestOrders";
@@ -105,6 +111,15 @@ import MillerOnlineOrders from "./Users/MillerAccounts/MillerSales/MillerOnlineO
 import MillerPOS from "./Users/MillerAccounts/MillerSales/MillerPOS";
 import MillerSalesDashboard from "./Users/MillerAccounts/MillerSales/MillerSalesDashboard";
 import MillerSalesHistory from "./Users/MillerAccounts/MillerSales/MillerSalesHistory";
+
+// Miller Driver
+import MillerDriverDashboard from "./Users/MillerAccounts/MillerDriver/MillerDriverDashboard";
+import MillerDriverMyDuties from "./Users/MillerAccounts/MillerDriver/MillerDriverMyDuties";
+import MillerDriverMessages from "./Users/MillerAccounts/MillerDriver/MillerDriverMessages";
+import MillerDriverPaymentSubmission from "./Users/MillerAccounts/MillerDriver/MillerDriverPaymentSubmission";
+import MillerDriverReimbursement from "./Users/MillerAccounts/MillerDriver/MillerDriverReimbursement";
+import MillerDriverReimbursementHistory from "./Users/MillerAccounts/MillerDriver/MillerDriverReimbursementHistory";
+import MillerDriverAssignedHistory from "./Users/MillerAccounts/MillerDriver/MillerDriverAssignedHistory";
 
 function App() {
   return (
@@ -184,6 +199,17 @@ function App() {
           <Route path="/warehouse-manager/news-updates/:id" element={<WarehouseManagerNewsArticle />} />
         </Route>
 
+        {/* Warehouse Driver pages */}
+        <Route element={<WarehouseEncoderLayout role="warehouse_driver" />}>
+          <Route path="/warehouse-driver/dashboard" element={<WarehouseDriverDashboard />} />
+          <Route path="/warehouse-driver/my-duties" element={<DriverMyDuties />} />
+          <Route path="/warehouse-driver/messages" element={<DriverMessages />} />
+          <Route path="/warehouse-driver/payment-submission" element={<DriverPaymentSubmission />} />
+          <Route path="/warehouse-driver/reimbursement" element={<DriverReimbursement />} />
+          <Route path="/warehouse-driver/assigned-history" element={<DriverMyDuties />} />
+          <Route path="/warehouse-driver/reimbursement-history" element={<DriverReimbursementHistory />} />
+        </Route>
+
         {/* Supplier Encoder pages */}
         <Route element={<WarehouseEncoderLayout role="supplier_encoder" />}>
           <Route path="/supplier-encoder/dashboard" element={<MillerEncoderDashboard />} />
@@ -218,6 +244,17 @@ function App() {
           <Route path="/miller-finance/taxes" element={<MillerTaxes />} />
           <Route path="/miller-finance/reimburse" element={<MillerReimburse />} />
           <Route path="/miller-finance/payment-history" element={<MillerFinancePaymentHistory />} />
+        </Route>
+
+        {/* Miller Driver pages */}
+        <Route element={<WarehouseEncoderLayout role="miller_driver" />}>
+          <Route path="/miller-driver/dashboard" element={<MillerDriverDashboard />} />
+          <Route path="/miller-driver/my-duties" element={<MillerDriverMyDuties />} />
+          <Route path="/miller-driver/messages" element={<MillerDriverMessages />} />
+          <Route path="/miller-driver/payment-submission" element={<MillerDriverPaymentSubmission />} />
+          <Route path="/miller-driver/reimbursement" element={<MillerDriverReimbursement />} />
+          <Route path="/miller-driver/assigned-history" element={<MillerDriverAssignedHistory />} />
+          <Route path="/miller-driver/reimbursement-history" element={<MillerDriverReimbursementHistory />} />
         </Route>
 
         {/* Retailer pages */}
