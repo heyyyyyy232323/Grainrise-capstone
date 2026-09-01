@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Building2, MapPin, Mail, Phone, X, CheckCircle2 } from "lucide-react";
+import { Search, Plus, Building2, X, CheckCircle2, Eye } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
+import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
 export const MOCK_BRANCHES = [
   { id: "branch-a", name: "Warehouse Distribution A", address: "Address 1, Balagtas, Bulacan", email: "whdistributiona@gmail.com", phone: "09123456789", activeEmployees: 28, archivedEmployees: 12 },
@@ -27,15 +29,49 @@ export default function BranchManagement() {
   const [newBranch, setNewBranch] = useState({ name: "", address: "", email: "", phone: "" });
   const [successToast, setSuccessToast] = useState(false);
 
-  const filtered = branches.filter((b) =>
-    b.name.toLowerCase().includes(search.toLowerCase()) ||
-    b.address.toLowerCase().includes(search.toLowerCase()) ||
-    b.email.toLowerCase().includes(search.toLowerCase())
+  // Column configs use `render` so SectionedTableCard doesn't apply its own
+  // built-in action-button styling on top of ours.
+  const TABLE_COLUMNS = useMemo(
+    () => [
+      { key: "name", label: "Warehouse Name", width: "25%" },
+      { key: "address", label: "Warehouse Address", width: "30%" },
+      { key: "email", label: "Official Email", width: "25%" },
+      {
+        key: "action",
+        label: "Action",
+        width: "20%",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
+        render: (row) => (
+          <button
+            type="button"
+            onClick={() => navigate(`/warehouse-manager/branches/${row.id}/employees`)}
+            className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:bg-emerald-50/40 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 cursor-pointer"
+            title="View Details"
+          >
+            <span>View Branch</span>
+          </button>
+        ),
+      },
+    ],
+    [navigate]
   );
 
-  const itemsPerPage = 10;
-  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
-  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  // Filter raw rows for SectionedTableCard — action rendering is handled by
+  // the column's `render` function above, so rows stay unformatted here.
+  const filteredSections = useMemo(() => {
+    const list = branches.filter(
+      (b) =>
+        b.name.toLowerCase().includes(search.toLowerCase()) ||
+        b.address.toLowerCase().includes(search.toLowerCase()) ||
+        b.email.toLowerCase().includes(search.toLowerCase())
+    );
+
+    return [{ rows: list }];
+  }, [branches, search]);
+
+  const rawCount = filteredSections[0]?.rows.length || 0;
+  const TOTAL_PAGES = Math.max(1, Math.ceil(rawCount / 10));
 
   const handleRegister = (e) => {
     e.preventDefault();
@@ -63,7 +99,7 @@ export default function BranchManagement() {
       {/* ── Breadcrumbs & Title ──────────────────────────────────────────────── */}
       <div className="space-y-1">
         <Breadcrumbs items={[{ label: "Management" }, { label: "Branch Management" }]} />
-        <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-extrabold tracking-[-0.03em] text-slate-900">
+        <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-bold tracking-[-0.03em] text-slate-900">
           Branch Management
         </h2>
         <p className="text-sm text-slate-500">
@@ -99,172 +135,110 @@ export default function BranchManagement() {
         </div>
       )}
 
-      {/* ── Table Card ──────────────────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50/80 border-b border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider">
-              <tr>
-                <th className="px-6 py-4 text-left">Warehouse Name</th>
-                <th className="px-6 py-4 text-left">Warehouse Address</th>
-                <th className="px-6 py-4 text-left">Official Email</th>
-                <th className="px-6 py-4 text-center">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {paginated.map((b) => (
-                <tr key={b.id} className="hover:bg-gray-50/60 transition-colors">
-                  <td className="px-6 py-4 font-semibold text-gray-900">{b.name}</td>
-                  <td className="px-6 py-4 text-gray-600">{b.address}</td>
-                  <td className="px-6 py-4 text-gray-600">{b.email}</td>
-                  <td className="px-6 py-4 text-center">
-                    <button
-                      onClick={() => navigate(`/warehouse-manager/branches/${b.id}/employees`)}
-                      className="px-4 py-1.5 rounded-full border border-gray-300 hover:border-emerald-600 hover:text-emerald-700 hover:bg-emerald-50/50 text-xs font-semibold text-gray-600 transition cursor-pointer"
-                    >
-                      View Details
-                    </button>
-                  </td>
-                </tr>
-              ))}
+      {/* ── Shared SectionedTableCard Component ─────────────────────────────── */}
+      <SectionedTableCard
+        columns={TABLE_COLUMNS}
+        sections={filteredSections}
+        currentPage={currentPage}
+        totalPages={TOTAL_PAGES}
+        onPageChange={setCurrentPage}
+        footerLabel={`Showing branch records — Page ${currentPage} of ${TOTAL_PAGES}`}
+        emptyStateTitle="No branches found"
+        emptyStateDescription="No branches matched your search. Try adjusting your search terms."
+      />
 
-              {paginated.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="text-center py-12 text-sm text-gray-400">
-                    No branches found matching your search.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Footer */}
-        <div className="flex items-center justify-between border-t border-gray-100 px-6 py-3.5 bg-slate-50/40">
-          <p className="text-xs text-gray-500">
-            Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} branches
-          </p>
-          <div className="flex gap-1">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1 border border-gray-200 text-gray-400 rounded-lg text-xs disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            {Array.from({ length: totalPages }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentPage(i + 1)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium ${
-                  currentPage === i + 1
-                    ? "bg-[#0B5D1E] text-white"
-                    : "border border-gray-200 text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="px-3 py-1 border border-gray-200 text-gray-700 hover:bg-gray-100 rounded-lg text-xs disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Register New Branch Modal ───────────────────────────────────────── */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 space-y-4 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                  <Building2 size={18} />
+      {/* ── Register New Branch Modal (Portaled to document.body) ─────────────── */}
+      {showModal &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                    <Building2 size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base">Register New Branch</h3>
+                    <p className="text-xs text-gray-500">Add a new warehouse storage facility</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-base">Register New Branch</h3>
-                  <p className="text-xs text-gray-500">Add a new warehouse storage facility</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleRegister} className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-gray-700 block mb-1">Warehouse Branch Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Warehouse Distribution M"
-                  value={newBranch.name}
-                  onChange={(e) => setNewBranch({ ...newBranch, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-gray-700 block mb-1">Warehouse Address</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Barangay Poblacion, Marilao, Bulacan"
-                  value={newBranch.address}
-                  onChange={(e) => setNewBranch({ ...newBranch, address: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-gray-700 block mb-1">Official Email Address</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="e.g. whdistributionm@gmail.com"
-                  value={newBranch.email}
-                  onChange={(e) => setNewBranch({ ...newBranch, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-gray-700 block mb-1">Contact Phone Number</label>
-                <input
-                  type="tel"
-                  placeholder="e.g. 09123456789"
-                  value={newBranch.phone}
-                  onChange={(e) => setNewBranch({ ...newBranch, phone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-3">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition"
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 bg-[#0B5D1E] hover:bg-[#094d19] text-white rounded-xl text-xs font-semibold transition"
-                >
-                  Save &amp; Register
+                  <X size={18} />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+
+              <form onSubmit={handleRegister} className="space-y-3">
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">Warehouse Branch Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Warehouse Distribution M"
+                    value={newBranch.name}
+                    onChange={(e) => setNewBranch({ ...newBranch, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">Warehouse Address</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Barangay Poblacion, Marilao, Bulacan"
+                    value={newBranch.address}
+                    onChange={(e) => setNewBranch({ ...newBranch, address: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">Official Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. whdistributionm@gmail.com"
+                    value={newBranch.email}
+                    onChange={(e) => setNewBranch({ ...newBranch, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">Contact Phone Number</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 09123456789"
+                    value={newBranch.phone}
+                    onChange={(e) => setNewBranch({ ...newBranch, phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 bg-[#0B5D1E] hover:bg-[#094d19] text-white rounded-xl text-xs font-semibold transition cursor-pointer"
+                  >
+                    Save &amp; Register
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

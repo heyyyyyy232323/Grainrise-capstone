@@ -5,7 +5,6 @@ import SearchFilter from "../../Components/Minor-Components/SearchFilter";
 import DateRangePicker from "../../Components/Minor-Components/DateRangePicker";
 import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 import SectionedTableCard from "../../Components/Minor-Components/SectionedTableCard";
-import ProductPlaceholder from "../../assets/Logo.png";
 
 const TABS = [
   { id: "all", label: "All Records" },
@@ -24,28 +23,25 @@ const COLUMNS = [
     key: "variant",
     label: "Variant",
     render: (row) => (
-      <div className="flex items-center gap-3">
-        <div className="h-8 w-8 overflow-hidden rounded bg-gray-100 border border-gray-200">
-          <img src={ProductPlaceholder} alt={row.variantTitle} className="h-full w-full object-cover" />
-        </div>
-        <div>
-          <p className="text-xs font-bold text-gray-900">{row.variantTitle}</p>
-          <p className="text-[9px] text-gray-400 max-w-[120px] truncate">Premium rice, locally sourced specialty...</p>
-        </div>
+      <div>
+        <p className="text-[13px] font-bold text-gray-900">{row.variantTitle}</p>
+        <p className="text-[10px] text-gray-500">{row.batch}</p>
       </div>
     ),
   },
-  { key: "warehouse", label: "Warehouse", render: (row) => <span className="text-gray-700 text-xs">{row.warehouse}</span> },
-  { key: "quantity", label: "Quantity", render: (row) => <span className="font-medium text-gray-900 text-xs">{row.quantity}</span> },
-  { key: "status", label: "Status", render: (row) => <span className="font-medium text-gray-700 text-xs">{row.status}</span> },
+  { key: "warehouse", label: "Warehouse", render: (row) => <span className="text-gray-700 text-[13px]">{row.warehouse}</span> },
+  { key: "quantity", label: "Quantity", render: (row) => <span className="font-medium text-gray-900 text-[13px]">{row.quantity}</span> },
+  { key: "status", label: "Status", render: (row) => <span className="font-medium text-gray-700 text-[13px]">{row.status}</span> },
   {
     key: "action",
     label: "Action",
+    headerClassName: "text-center",
+    cellClassName: "text-center",
     render: (row) => (
-      <div className="flex justify-end">
+      <div className="flex items-center justify-center">
         <button
           onClick={() => console.log("View Details", row)}
-          className="rounded-lg border border-gray-300 px-4 py-1 text-[10px] font-semibold text-gray-600 hover:bg-gray-50 transition"
+          className="rounded-lg border border-gray-300 px-4 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition cursor-pointer"
         >
           View Details
         </button>
@@ -58,26 +54,26 @@ const MOCK_SECTIONS = [
   {
     label: "Today",
     rows: [
-      { id: 1, variantTitle: "Dinorado", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
-      { id: 2, variantTitle: "Dinorado", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
-      { id: 3, variantTitle: "Dinorado", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
+      { id: 1, variantTitle: "Dinorado", batch: "Batch 2026 - 001", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
+      { id: 2, variantTitle: "Dinorado", batch: "Batch 2026 - 001", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
+      { id: 3, variantTitle: "Dinorado", batch: "Batch 2026 - 001", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
     ],
   },
   {
     label: "Yesterday",
     rows: [
-      { id: 4, variantTitle: "Dinorado", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
-      { id: 5, variantTitle: "Dinorado", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
-      { id: 6, variantTitle: "Dinorado", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
-      { id: 7, variantTitle: "Dinorado", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
+      { id: 4, variantTitle: "Dinorado", batch: "Batch 2026 - 001", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
+      { id: 5, variantTitle: "Dinorado", batch: "Batch 2026 - 001", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
+      { id: 6, variantTitle: "Dinorado", batch: "Batch 2026 - 001", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
+      { id: 7, variantTitle: "Dinorado", batch: "Batch 2026 - 001", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
     ],
   },
   {
     label: "July 18, 2026",
     rows: [
-      { id: 8, variantTitle: "Dinorado", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
-      { id: 9, variantTitle: "Dinorado", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
-      { id: 10, variantTitle: "Dinorado", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
+      { id: 8, variantTitle: "Dinorado", batch: "Batch 2026 - 001", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
+      { id: 9, variantTitle: "Dinorado", batch: "Batch 2026 - 001", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
+      { id: 10, variantTitle: "Dinorado", batch: "Batch 2026 - 001", warehouse: "Warehouse ABC", quantity: "500 kg", status: "Resolved" },
     ],
   },
 ];

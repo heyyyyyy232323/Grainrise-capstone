@@ -26,7 +26,7 @@ export default function PerformanceMonitoring() {
       {/* ── Breadcrumbs & Header ─────────────────────────────────────────────── */}
       <div className="space-y-1">
         <Breadcrumbs items={[{ label: "Analytics" }, { label: "Performance Monitoring" }]} />
-        <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-extrabold tracking-[-0.03em] text-slate-900">
+        <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-bold tracking-[-0.03em] text-slate-900">
           Performance Monitoring
         </h2>
         <p className="text-sm text-slate-500">

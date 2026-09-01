@@ -6,19 +6,18 @@ import {
   MapPin,
   Mail,
   Phone,
-  Plus,
-  X,
   UserPlus,
   CheckCircle2,
-  Trash2,
-  RotateCcw,
-  Edit2,
-  Archive,
+  X,
 } from "lucide-react";
+import { createPortal } from "react-dom";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import CustomGreenButton from "../../../Components/Minor-Components/CustomGreenButton";
 import CustomAmberButton from "../../../Components/Minor-Components/CustomAmberButton";
 import CustomRedButton from "../../../Components/Minor-Components/CustomRedButton";
+import ArchiveProductModal from "../../../Components/Modals/ArchiveProductModal";
+import RestoreProductModal from "../../../Components/Modals/RestoreProductModal";
+import DeleteProductModal from "../../../Components/Modals/DeleteProductModal";
 import { MOCK_BRANCHES } from "./BranchManagement";
 
 const MOCK_ACTIVE_EMPLOYEES = [
@@ -57,14 +56,15 @@ export default function EmployeeManagement() {
 
   const branch = MOCK_BRANCHES.find((b) => b.id === branchId) || MOCK_BRANCHES[0];
 
-  const [activeTab, setActiveTab] = useState("active"); // "active" | "archived"
+  const [activeTab, setActiveTab] = useState("active");
   const [activeEmployees, setActiveEmployees] = useState(MOCK_ACTIVE_EMPLOYEES);
   const [archivedEmployees, setArchivedEmployees] = useState(MOCK_ARCHIVED_EMPLOYEES);
   const [search, setSearch] = useState("");
   const [selectedRole, setSelectedRole] = useState("All Roles");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Modals state
+  // Modals state management
+  const [modalState, setModalState] = useState({ type: null, employee: null });
   const [showAddModal, setShowAddModal] = useState(false);
   const [newEmp, setNewEmp] = useState({ name: "", role: "Driver", email: "", phone: "" });
   const [toastMsg, setToastMsg] = useState("");
@@ -90,22 +90,31 @@ export default function EmployeeManagement() {
   const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
   const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // Handlers
-  const handleArchive = (emp) => {
+  // Handlers for modal actions
+  const handleArchive = () => {
+    const emp = modalState.employee;
+    if (!emp) return;
     setActiveEmployees((prev) => prev.filter((e) => e.id !== emp.id));
     setArchivedEmployees((prev) => [{ ...emp, status: "Archived" }, ...prev]);
     showToast(`Archived ${emp.name} successfully.`);
+    setModalState({ type: null, employee: null });
   };
 
-  const handleRestore = (emp) => {
+  const handleRestore = () => {
+    const emp = modalState.employee;
+    if (!emp) return;
     setArchivedEmployees((prev) => prev.filter((e) => e.id !== emp.id));
     setActiveEmployees((prev) => [{ ...emp, status: "Active" }, ...prev]);
     showToast(`Restored ${emp.name} to active list.`);
+    setModalState({ type: null, employee: null });
   };
 
-  const handleDeletePermanent = (emp) => {
+  const handleDeletePermanent = () => {
+    const emp = modalState.employee;
+    if (!emp) return;
     setArchivedEmployees((prev) => prev.filter((e) => e.id !== emp.id));
     showToast(`Permanently deleted ${emp.name}.`);
+    setModalState({ type: null, employee: null });
   };
 
   const handleAddEmployee = (e) => {
@@ -129,7 +138,7 @@ export default function EmployeeManagement() {
 
   return (
     <div className="space-y-6">
-      {/* ── Breadcrumbs ──────────────────────────────────────────────────────── */}
+      {/* Breadcrumbs */}
       <Breadcrumbs
         items={[
           { label: "Management" },
@@ -138,7 +147,7 @@ export default function EmployeeManagement() {
         ]}
       />
 
-      {/* ── Back Button ──────────────────────────────────────────────────────── */}
+      {/* Back Button */}
       <button
         onClick={() => navigate("/warehouse-manager/branches")}
         className="flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-emerald-700 transition cursor-pointer"
@@ -146,9 +155,9 @@ export default function EmployeeManagement() {
         <ArrowLeft size={14} /> Back to Branch Management
       </button>
 
-      {/* ── Header ───────────────────────────────────────────────────────────── */}
+      {/* Header */}
       <div className="space-y-1">
-        <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-extrabold tracking-[-0.03em] text-slate-900">
+        <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-bold tracking-[-0.03em] text-slate-900">
           Employee Management
         </h2>
         <p className="text-sm text-slate-500">
@@ -156,7 +165,7 @@ export default function EmployeeManagement() {
         </p>
       </div>
 
-      {/* ── Branch Info Banner (Green) ────────────────────────────────────────── */}
+      {/* Branch Info Banner */}
       <div className="bg-[#0B5D1E] rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h3 className="text-2xl font-extrabold tracking-tight mb-2">
@@ -183,14 +192,14 @@ export default function EmployeeManagement() {
         </button>
       </div>
 
-      {/* ── Toast Notification ────────────────────────────────────────────────── */}
+      {/* Toast Notification */}
       {toastMsg && (
         <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
           <CheckCircle2 size={16} /> {toastMsg}
         </div>
       )}
 
-      {/* ── Active / Archived Tabs ───────────────────────────────────────────── */}
+      {/* Active / Archived Tabs */}
       <div className="flex items-center gap-6 border-b border-gray-200 text-sm font-semibold">
         <button
           onClick={() => { setActiveTab("active"); setCurrentPage(1); }}
@@ -215,7 +224,7 @@ export default function EmployeeManagement() {
         </button>
       </div>
 
-      {/* ── Search & Filter Controls ─────────────────────────────────────────── */}
+      {/* Search & Filter Controls */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
@@ -239,7 +248,7 @@ export default function EmployeeManagement() {
         </select>
       </div>
 
-      {/* ── Employees Table ───────────────────────────────────────────────────── */}
+      {/* Employees Table */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -261,31 +270,28 @@ export default function EmployeeManagement() {
                         <>
                           <button
                             onClick={() => showToast(`Editing ${emp.name}...`)}
-                            className="px-4 py-1 rounded-md bg-[#0B5D1E] text-white text-xs font-semibold hover:bg-[#094d19] transition cursor-pointer"
+                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
                           >
                             Edit
                           </button>
-                          <button
-                            onClick={() => handleArchive(emp)}
-                            className="px-4 py-1 rounded-md bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition cursor-pointer"
-                          >
-                            Archive
-                          </button>
+                          <CustomAmberButton
+                            text="Archive"
+                            className="px-3 py-1.5 text-[11px] rounded-lg"
+                            onClick={() => setModalState({ type: "archive", employee: emp })}
+                          />
                         </>
                       ) : (
                         <>
-                          <button
-                            onClick={() => handleRestore(emp)}
-                            className="px-4 py-1 rounded-md bg-[#0B5D1E] text-white text-xs font-semibold hover:bg-[#094d19] transition cursor-pointer"
-                          >
-                            Restore
-                          </button>
-                          <button
-                            onClick={() => handleDeletePermanent(emp)}
-                            className="px-4 py-1 rounded-md bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 transition cursor-pointer"
-                          >
-                            Delete
-                          </button>
+                          <CustomGreenButton
+                            text="Restore"
+                            className="px-3 py-1.5 text-[11px] rounded-lg"
+                            onClick={() => setModalState({ type: "restore", employee: emp })}
+                          />
+                          <CustomRedButton
+                            text="Delete"
+                            className="px-4 py-1.5 text-[11px] rounded-lg"
+                            onClick={() => setModalState({ type: "delete", employee: emp })}
+                          />
                         </>
                       )}
                     </div>
@@ -341,99 +347,122 @@ export default function EmployeeManagement() {
         </div>
       </div>
 
-      {/* ── Add Employee Modal ────────────────────────────────────────────────── */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 space-y-4 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                  <UserPlus size={18} />
+      {/* Add Employee Modal */}
+      {showAddModal &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                    <UserPlus size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base">Add Branch Employee</h3>
+                    <p className="text-xs text-gray-500">Assign new staff to {branch.name}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-base">Add Branch Employee</h3>
-                  <p className="text-xs text-gray-500">Assign new staff to {branch.name}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddEmployee} className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-gray-700 block mb-1">Employee Full Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Juan Dela Cruz"
-                  value={newEmp.name}
-                  onChange={(e) => setNewEmp({ ...newEmp, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-gray-700 block mb-1">Employee Role</label>
-                <select
-                  value={newEmp.role}
-                  onChange={(e) => setNewEmp({ ...newEmp, role: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none bg-white"
-                >
-                  <option value="Driver">Driver</option>
-                  <option value="Finance">Finance</option>
-                  <option value="Fulfillment & Logistics">Fulfillment &amp; Logistics</option>
-                  <option value="Encoder">Encoder</option>
-                  <option value="Procurement">Procurement</option>
-                  <option value="Sales">Sales</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-gray-700 block mb-1">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="e.g. employee@grainrise.com"
-                  value={newEmp.email}
-                  onChange={(e) => setNewEmp({ ...newEmp, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-gray-700 block mb-1">Contact Phone</label>
-                <input
-                  type="tel"
-                  placeholder="e.g. 09123456789"
-                  value={newEmp.phone}
-                  onChange={(e) => setNewEmp({ ...newEmp, phone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-3">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition"
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 bg-[#0B5D1E] hover:bg-[#094d19] text-white rounded-xl text-xs font-semibold transition"
-                >
-                  Save Employee
+                  <X size={18} />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+
+              <form onSubmit={handleAddEmployee} className="space-y-3">
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">Employee Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Juan Dela Cruz"
+                    value={newEmp.name}
+                    onChange={(e) => setNewEmp({ ...newEmp, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">Employee Role</label>
+                  <select
+                    value={newEmp.role}
+                    onChange={(e) => setNewEmp({ ...newEmp, role: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none bg-white"
+                  >
+                    <option value="Driver">Driver</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Fulfillment & Logistics">Fulfillment &amp; Logistics</option>
+                    <option value="Encoder">Encoder</option>
+                    <option value="Procurement">Procurement</option>
+                    <option value="Sales">Sales</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. employee@grainrise.com"
+                    value={newEmp.email}
+                    onChange={(e) => setNewEmp({ ...newEmp, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">Contact Phone</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 09123456789"
+                    value={newEmp.phone}
+                    onChange={(e) => setNewEmp({ ...newEmp, phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="flex-1 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 bg-[#0B5D1E] hover:bg-[#094d19] text-white rounded-xl text-xs font-semibold transition cursor-pointer"
+                  >
+                    Save Employee
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* Confirmation Modals */}
+      <ArchiveProductModal
+        isOpen={modalState.type === "archive"}
+        onClose={() => setModalState({ type: null, employee: null })}
+        productName={modalState.employee?.name || "Employee"}
+        onArchive={handleArchive}
+      />
+      <RestoreProductModal
+        isOpen={modalState.type === "restore"}
+        onClose={() => setModalState({ type: null, employee: null })}
+        productName={modalState.employee?.name || "Employee"}
+        onRestore={handleRestore}
+      />
+      <DeleteProductModal
+        isOpen={modalState.type === "delete"}
+        onClose={() => setModalState({ type: null, employee: null })}
+        productName={modalState.employee?.name || "Employee"}
+        onDelete={handleDeletePermanent}
+      />
     </div>
   );
 }

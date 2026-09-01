@@ -7,7 +7,12 @@ import SectionedTableCard from "../../Components/Minor-Components/SectionedTable
 import CustomGreenButton from "../../Components/Minor-Components/CustomGreenButton";
 import CustomAmberButton from "../../Components/Minor-Components/CustomAmberButton";
 import CustomRedButton from "../../Components/Minor-Components/CustomRedButton";
-import ProductPlaceholder from "../../assets/Logo.png"; // Using logo as a placeholder image
+
+// Import Modals
+import ArchiveProductModal from "../../Components/Modals/ArchiveProductModal";
+import RestoreProductModal from "../../Components/Modals/RestoreProductModal";
+import DeleteProductModal from "../../Components/Modals/DeleteProductModal";
+import ViewProductModal from "../../Components/Modals/ViewProductModal";
 
 const TABS = [
   { id: "active", label: "Active" },
@@ -35,33 +40,67 @@ const getStatusStyle = (status) => {
 };
 
 const StatusPill = ({ status }) => (
-  <span className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-bold ${getStatusStyle(status)}`}>
-    <span className={`h-1.5 w-1.5 rounded-full ${status === 'In Stock' ? 'bg-green-500' : status === 'Low Stock' ? 'bg-amber-500' : 'bg-red-500'}`}></span>
+  <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-bold capitalize ${getStatusStyle(status)}`}>
     {status}
   </span>
 );
 
 const MOCK_DATA = [
-  { id: 1, variant: "Dinorado", code: "WR-001", expiration: "Oct 17, 2026", stock: 0, price: 1500, status: "Out of Stock", isArchived: false },
-  { id: 2, variant: "Dinorado", code: "WR-001", expiration: "Oct 17, 2026", stock: 100, price: 1500, status: "Low Stock", isArchived: false },
-  { id: 3, variant: "Dinorado", code: "WR-001", expiration: "Jul 24, 2026", stock: 100, price: 1500, status: "Low Stock", isArchived: false },
-  { id: 4, variant: "Dinorado", code: "WR-001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: false },
-  { id: 5, variant: "Dinorado", code: "WR-001", expiration: "May 25, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: false },
-  { id: 6, variant: "Dinorado", code: "WR-001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: false },
-  { id: 7, variant: "Dinorado", code: "WR-001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: false },
-  { id: 8, variant: "Dinorado", code: "WR-001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: true },
-  { id: 9, variant: "Dinorado", code: "WR-001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: true },
+  { id: 1, variant: "Dinorado", code: "WR - 001", expiration: "Oct 17, 2026", stock: 0, price: 1500, status: "Out of Stock", isArchived: false, description: "Batch 2026 - 001" },
+  { id: 2, variant: "Dinorado", code: "WR - 001", expiration: "Oct 17, 2026", stock: 100, price: 1500, status: "Low Stock", isArchived: false, description: "Batch 2026 - 001" },
+  { id: 3, variant: "Dinorado", code: "WR - 001", expiration: "Jul 24, 2026", stock: 100, price: 1500, status: "Low Stock", isArchived: false, description: "Batch 2026 - 001" },
+  { id: 4, variant: "Dinorado", code: "WR - 001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: false, description: "Batch 2026 - 001" },
+  { id: 5, variant: "Dinorado", code: "WR - 001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: false, description: "Batch 2026 - 001" },
+  { id: 6, variant: "Dinorado", code: "WR - 001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: false, description: "Batch 2026 - 001" },
+  { id: 7, variant: "Dinorado", code: "WR - 001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: false, description: "Batch 2026 - 001" },
+  { id: 8, variant: "Dinorado", code: "WR - 001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: true, description: "Batch 2026 - 001" },
+  { id: 9, variant: "Dinorado", code: "WR - 001", expiration: "May 20, 2027", stock: 2500, price: 1500, status: "In Stock", isArchived: true, description: "Batch 2026 - 001" },
 ];
 
 const RetailerInventory = () => {
+  const [dataList, setDataList] = useState(MOCK_DATA);
   const [activeTab, setActiveTab] = useState("active");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("name-asc");
   const [currentPage, setCurrentPage] = useState(1);
   const TOTAL_PAGES = 3;
 
-  const handleAction = (action, row) => {
-    console.log(`${action} clicked for:`, row);
+  // Modal State Management
+  const [modalState, setModalState] = useState({ type: null, product: null });
+
+  // Handler Functions for Modal Actions
+  const handleArchive = () => {
+    if (modalState.product) {
+      setDataList((prev) =>
+        prev.map((item) =>
+          item.id === modalState.product.id ? { ...item, isArchived: true } : item
+        )
+      );
+    }
+    setModalState({ type: null, product: null });
+  };
+
+  const handleRestore = () => {
+    if (modalState.product) {
+      setDataList((prev) =>
+        prev.map((item) =>
+          item.id === modalState.product.id ? { ...item, isArchived: false } : item
+        )
+      );
+    }
+    setModalState({ type: null, product: null });
+  };
+
+  const handleDelete = () => {
+    if (modalState.product) {
+      setDataList((prev) => prev.filter((item) => item.id !== modalState.product.id));
+    }
+    setModalState({ type: null, product: null });
+  };
+
+  const handleSaveProduct = (updatedProduct) => {
+    console.log("Saved Product Details:", updatedProduct);
+    setModalState({ type: null, product: null });
   };
 
   const COLUMNS = [
@@ -69,46 +108,74 @@ const RetailerInventory = () => {
       key: "variant",
       label: "Variant",
       render: (row) => (
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 overflow-hidden rounded-md bg-gray-100 border border-gray-200">
-            <img src={ProductPlaceholder} alt={row.variant} className="h-full w-full object-cover" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-gray-900">{row.variant}</p>
-            <p className="text-[10px] text-gray-400 max-w-[120px] truncate">Premium rice, locally sourced specialty...</p>
-          </div>
+        <div>
+          <p className="text-[13px] font-bold text-gray-900">{row.variant}</p>
+          <p className="text-[10px] text-gray-500">{row.description}</p>
         </div>
       ),
     },
-    { key: "code", label: "Product Code", render: (row) => <span className="font-semibold text-gray-700">{row.code}</span> },
+    {
+      key: "code",
+      label: "Product Code",
+      render: (row) => <span className="text-gray-900 font-medium text-[13px]">{row.code}</span>,
+    },
     {
       key: "expiration",
       label: "Expiration",
+      render: (row) => <span className="text-gray-700 text-[13px]">Exp: {row.expiration}</span>,
+    },
+    {
+      key: "stock",
+      label: "Stock Qty (kg)",
+      render: (row) => <span className="font-medium text-gray-900 text-[13px]">{row.stock.toLocaleString()} kg</span>,
+    },
+    {
+      key: "price",
+      label: "Price",
       render: (row) => (
-        <span className={row.status === "Out of Stock" || row.status === "Low Stock" ? "text-gray-400" : "text-gray-600"}>
-          Exp: {row.expiration}
+        <span className="font-medium text-gray-900 text-[13px]">
+          ₱{row.price.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
       ),
     },
-    { key: "stock", label: "Stock Qty (kg)", render: (row) => <span className="font-medium text-gray-900">{row.stock} kg</span> },
-    { key: "price", label: "Price", render: (row) => <span className="font-medium text-gray-900">₱{row.price.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span> },
-    { key: "status", label: "Status", render: (row) => <StatusPill status={row.status} /> },
+    {
+      key: "status",
+      label: "Status",
+      render: (row) => <StatusPill status={row.status} />,
+    },
     {
       key: "action",
       label: "Action",
+      headerClassName: "text-center",
+      cellClassName: "text-center",
       render: (row) => (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-center gap-2">
           {activeTab === "active" ? (
             <>
-              <button onClick={() => handleAction("View Details", row)} className="rounded-lg border border-gray-300 px-4 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition cursor-pointer">
+              <button
+                onClick={() => setModalState({ type: "view", product: row })}
+                className="rounded-lg border border-gray-300 px-4 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition cursor-pointer"
+              >
                 View Details
               </button>
-              <CustomAmberButton text="Archive" onClick={() => handleAction("Archive", row)} className="!rounded-lg !px-4 !py-1 !text-xs cursor-pointer" />
+              <CustomAmberButton
+                text="Archive"
+                onClick={() => setModalState({ type: "archive", product: row })}
+                className="!rounded-lg !px-4 !py-1.5 !text-xs cursor-pointer"
+              />
             </>
           ) : (
             <>
-              <CustomGreenButton text="Restore" onClick={() => handleAction("Restore", row)} className="!rounded-lg !px-4 !py-1 !text-xs cursor-pointer" />
-              <CustomRedButton text="Delete Permanently" onClick={() => handleAction("Delete Permanently", row)} className="!rounded-lg !px-4 !py-1 !text-xs cursor-pointer" />
+              <CustomGreenButton
+                text="Restore"
+                onClick={() => setModalState({ type: "restore", product: row })}
+                className="!rounded-lg !px-4 !py-1.5 !text-xs cursor-pointer"
+              />
+              <CustomRedButton
+                text="Delete"
+                onClick={() => setModalState({ type: "delete", product: row })}
+                className="!rounded-lg !px-4 !py-1.5 !text-xs cursor-pointer"
+              />
             </>
           )}
         </div>
@@ -116,7 +183,7 @@ const RetailerInventory = () => {
     },
   ];
 
-  const filteredData = MOCK_DATA.filter((item) => {
+  const filteredData = dataList.filter((item) => {
     const matchesTab = activeTab === "active" ? !item.isArchived : item.isArchived;
     if (!matchesTab) return false;
 
@@ -169,6 +236,32 @@ const RetailerInventory = () => {
         totalPages={TOTAL_PAGES}
         onPageChange={setCurrentPage}
         footerLabel={`Showing 1-${Math.min(10, filteredData.length)} of ${filteredData.length} ${activeTab === "archive" ? "archived " : ""}products`}
+      />
+
+      {/* Modals Integration */}
+      <ViewProductModal
+        isOpen={modalState.type === "view"}
+        onClose={() => setModalState({ type: null, product: null })}
+        product={modalState.product}
+        onSave={handleSaveProduct}
+      />
+      <ArchiveProductModal
+        isOpen={modalState.type === "archive"}
+        onClose={() => setModalState({ type: null, product: null })}
+        productName={modalState.product?.variant || "Product"}
+        onArchive={handleArchive}
+      />
+      <RestoreProductModal
+        isOpen={modalState.type === "restore"}
+        onClose={() => setModalState({ type: null, product: null })}
+        productName={modalState.product?.variant || "Product"}
+        onRestore={handleRestore}
+      />
+      <DeleteProductModal
+        isOpen={modalState.type === "delete"}
+        onClose={() => setModalState({ type: null, product: null })}
+        productName={modalState.product?.variant || "Product"}
+        onDelete={handleDelete}
       />
     </>
   );

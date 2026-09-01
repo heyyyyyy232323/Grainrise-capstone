@@ -122,7 +122,7 @@ export default function RetailerNewsArticle() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6">
       {/* ── Breadcrumbs ──────────────────────────────────────────────── */}
       <Breadcrumbs
         items={[
@@ -141,7 +141,7 @@ export default function RetailerNewsArticle() {
       </button>
 
       {/* ── Article card ─────────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="max-w-5xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         {/* Category + meta */}
         <div className="px-7 pt-7 pb-4 border-b border-slate-100">
           <div className="flex flex-wrap items-center gap-3 mb-3">
@@ -209,7 +209,7 @@ export default function RetailerNewsArticle() {
       </div>
 
       {/* ── Comments ─────────────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm px-7 py-6 space-y-6">
+      <div className="max-w-5xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm px-7 py-6 space-y-6">
         <h3 className="font-bold text-gray-900 text-base">Comments ({comments.length})</h3>
 
         {/* New comment input */}

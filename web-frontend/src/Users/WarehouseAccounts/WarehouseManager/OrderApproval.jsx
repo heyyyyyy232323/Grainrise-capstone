@@ -1,6 +1,8 @@
-import { useState } from "react";
-import { Search, ClipboardList, CheckCircle2, XCircle, Clock, Truck, Eye, X, AlertCircle, Check } from "lucide-react";
+import { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
+import { Search, ClipboardList, CheckCircle2, XCircle, Clock, X, Check, Eye } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
+import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
 export const MOCK_ORDERS = [
   { id: "ORD-001", variant: "Dinorado", batchNo: "Batch 2026 - 001", supplier: "ABC Rice Trading", status: "Requested", qty: "10,000 kg", totalAmount: "₱450,000", date: "Aug 29, 2026", grade: "Premium", bay: "Bay A-3" },
@@ -17,13 +19,24 @@ export const MOCK_ORDERS = [
   { id: "ORD-012", variant: "Jasmine Rice", batchNo: "Batch 2026 - 003", supplier: "Nueva Ecija Millers", status: "Approved", qty: "11,000 kg", totalAmount: "₱572,000", date: "Aug 28, 2026", grade: "Premium", bay: "Bay B-3" },
 ];
 
+// Solid (non-transparent) backgrounds — avoids the rounded-corner background
+// bleed you get when combining bg-*/opacity utilities with rounded-full borders.
 const STATUS_PILL_STYLES = {
-  Requested: "bg-amber-100/80 text-amber-700 border border-amber-200",
-  Approved: "bg-emerald-100/80 text-emerald-700 border border-emerald-200",
-  Processing: "bg-sky-100/80 text-sky-700 border border-sky-200",
-  "In Transit": "bg-purple-100/80 text-purple-700 border border-purple-200",
-  Declined: "bg-rose-100/80 text-rose-700 border border-rose-200",
+  Requested: "bg-amber-100 text-amber-700 border border-amber-200",
+  Approved: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+  Processing: "bg-sky-100 text-sky-700 border border-sky-200",
+  "In Transit": "bg-purple-100 text-purple-700 border border-purple-200",
+  Declined: "bg-rose-100 text-rose-700 border border-rose-200",
 };
+
+/* ── Table Column Configurations for SectionedTableCard ───────────────────────── */
+const TABLE_COLUMNS = [
+  { key: "variant", label: "Variant", width: "20%" },
+  { key: "batchNo", label: "Batch No.", width: "20%" },
+  { key: "supplier", label: "Supplier", width: "25%" },
+  { key: "status", label: "Status", width: "20%", headerClassName: "text-center", cellClassName: "text-center" },
+  { key: "action", label: "Action", width: "15%", headerClassName: "text-center", cellClassName: "text-center" },
+];
 
 export default function OrderApproval() {
   const [orders, setOrders] = useState(MOCK_ORDERS);
@@ -38,23 +51,50 @@ export default function OrderApproval() {
     setTimeout(() => setToastMsg(""), 3000);
   };
 
-  const filtered = orders.filter((o) => {
-    if (search) {
-      const q = search.toLowerCase();
-      const matchV = o.variant.toLowerCase().includes(q);
-      const matchB = o.batchNo.toLowerCase().includes(q);
-      const matchS = o.supplier.toLowerCase().includes(q);
-      if (!matchV && !matchB && !matchS) return false;
-    }
-    if (selectedStatus !== "Status" && selectedStatus !== "All Statuses") {
-      if (o.status !== selectedStatus) return false;
-    }
-    return true;
-  });
+  // Format and filter sectioned data for SectionedTableCard
+  const filteredSections = useMemo(() => {
+    const list = orders.filter((o) => {
+      if (search) {
+        const q = search.toLowerCase();
+        const matchV = o.variant.toLowerCase().includes(q);
+        const matchB = o.batchNo.toLowerCase().includes(q);
+        const matchS = o.supplier.toLowerCase().includes(q);
+        if (!matchV && !matchB && !matchS) return false;
+      }
+      if (selectedStatus !== "Status" && selectedStatus !== "All Statuses") {
+        if (o.status !== selectedStatus) return false;
+      }
+      return true;
+    });
 
-  const itemsPerPage = 10;
-  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
-  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const formattedRows = list.map((row) => ({
+      ...row,
+      variant: row.variant,
+      batchNo: row.batchNo,
+      supplier: row.supplier,
+      // Pass the raw status string only — SectionedTableCard renders the
+      // pill itself. Wrapping it in our own <span> here caused a pill
+      // nested inside a pill, which is what was leaking background color
+      // outside the rounded border.
+      status: row.status,
+      action: (
+        <button
+          type="button"
+          onClick={() => setSelectedOrder(row)}
+          className="p-1.5 rounded-lg text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition inline-flex items-center gap-1 text-xs cursor-pointer"
+          title="View Details"
+        >
+          <Eye size={15} />
+          <span>View</span>
+        </button>
+      ),
+    }));
+
+    return [{ rows: formattedRows }];
+  }, [orders, search, selectedStatus]);
+
+  const rawCount = filteredSections[0]?.rows.length || 0;
+  const TOTAL_PAGES = Math.max(1, Math.ceil(rawCount / 10));
 
   const handleUpdateStatus = (id, newStatus) => {
     setOrders((prev) =>
@@ -71,7 +111,7 @@ export default function OrderApproval() {
       {/* ── Breadcrumbs & Header ─────────────────────────────────────────────── */}
       <div className="space-y-1">
         <Breadcrumbs items={[{ label: "Management" }, { label: "Order Approval" }]} />
-        <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-extrabold tracking-[-0.03em] text-slate-900">
+        <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-bold tracking-[-0.03em] text-slate-900">
           Order Approval
         </h2>
         <p className="text-sm text-slate-500">
@@ -110,7 +150,7 @@ export default function OrderApproval() {
 
         <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-full text-xs font-semibold text-gray-700 self-start sm:self-auto">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-          <span>{filtered.length} orders</span>
+          <span>{rawCount} orders</span>
         </div>
       </div>
 
@@ -121,178 +161,107 @@ export default function OrderApproval() {
         </div>
       )}
 
-      {/* ── Orders Table ─────────────────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50/80 border-b border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider">
-              <tr>
-                <th className="px-6 py-4 text-left">Variant</th>
-                <th className="px-6 py-4 text-left">Batch No.</th>
-                <th className="px-6 py-4 text-left">Supplier</th>
-                <th className="px-6 py-4 text-center">Status</th>
-                <th className="px-6 py-4 text-center">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {paginated.map((o) => (
-                <tr key={o.id} className="hover:bg-gray-50/60 transition-colors">
-                  <td className="px-6 py-4 font-semibold text-gray-900">{o.variant}</td>
-                  <td className="px-6 py-4 text-gray-600 font-mono text-xs">{o.batchNo}</td>
-                  <td className="px-6 py-4 text-gray-600">{o.supplier}</td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${STATUS_PILL_STYLES[o.status] || "bg-gray-100 text-gray-700"}`}>
-                      {o.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button
-                      onClick={() => setSelectedOrder(o)}
-                      className="px-4 py-1.5 rounded-full border border-gray-300 hover:border-emerald-600 hover:text-emerald-700 hover:bg-emerald-50/50 text-xs font-semibold text-gray-600 transition cursor-pointer"
-                    >
-                      View Details
-                    </button>
-                  </td>
-                </tr>
-              ))}
+      {/* ── Shared SectionedTableCard Component ─────────────────────────────── */}
+      <SectionedTableCard
+        columns={TABLE_COLUMNS}
+        sections={filteredSections}
+        currentPage={currentPage}
+        totalPages={TOTAL_PAGES}
+        onPageChange={setCurrentPage}
+        footerLabel={`Showing order records — Page ${currentPage} of ${TOTAL_PAGES}`}
+      />
 
-              {paginated.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="text-center py-12 text-sm text-gray-400">
-                    No supplier orders found matching your filters.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Footer */}
-        <div className="flex items-center justify-between border-t border-gray-100 px-6 py-3.5 bg-slate-50/40">
-          <p className="text-xs text-gray-500">
-            Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} orders
-          </p>
-          <div className="flex gap-1">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1 border border-gray-200 text-gray-400 rounded-lg text-xs disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            {Array.from({ length: totalPages }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentPage(i + 1)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium ${
-                  currentPage === i + 1
-                    ? "bg-[#0B5D1E] text-white"
-                    : "border border-gray-200 text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="px-3 py-1 border border-gray-200 text-gray-700 hover:bg-gray-100 rounded-lg text-xs disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Order Review & Approval Modal ────────────────────────────────────── */}
-      {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl p-6 space-y-4 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                  <ClipboardList size={18} />
+      {/* ── Order Review & Approval Modal (Portaled to document.body) ────────── */}
+      {selectedOrder &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                    <ClipboardList size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base">Order Review &amp; Approval</h3>
+                    <p className="text-xs text-gray-500">Order ID: {selectedOrder.id}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-base">Order Review &amp; Approval</h3>
-                  <p className="text-xs text-gray-500">Order ID: {selectedOrder.id}</p>
+                <button
+                  onClick={() => setSelectedOrder(null)}
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-2.5 bg-gray-50 p-4 rounded-xl text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Rice Variant:</span>
+                  <span className="font-bold text-gray-900">{selectedOrder.variant} ({selectedOrder.grade})</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Batch Number:</span>
+                  <span className="font-mono text-gray-800">{selectedOrder.batchNo}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Supplier Name:</span>
+                  <span className="font-semibold text-gray-900">{selectedOrder.supplier}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Order Quantity:</span>
+                  <span className="font-bold text-gray-900">{selectedOrder.qty}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Total Purchase Value:</span>
+                  <span className="font-extrabold text-emerald-700 text-sm">{selectedOrder.totalAmount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Assigned Storage Bay:</span>
+                  <span className="font-semibold text-gray-800">{selectedOrder.bay}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Current Status:</span>
+                  <span className={`px-2.5 py-0.5 rounded-full font-bold ${STATUS_PILL_STYLES[selectedOrder.status]}`}>
+                    {selectedOrder.status}
+                  </span>
                 </div>
               </div>
+
+              {/* Status action buttons */}
+              <div className="space-y-2 pt-2">
+                <p className="text-xs font-semibold text-gray-600">Update Order Status:</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => handleUpdateStatus(selectedOrder.id, "Approved")}
+                    className="py-2 px-3 bg-[#0B5D1E] hover:bg-[#094d19] text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Check size={14} /> Approve
+                  </button>
+                  <button
+                    onClick={() => handleUpdateStatus(selectedOrder.id, "Processing")}
+                    className="py-2 px-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Clock size={14} /> Processing
+                  </button>
+                  <button
+                    onClick={() => handleUpdateStatus(selectedOrder.id, "Declined")}
+                    className="py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <XCircle size={14} /> Decline
+                  </button>
+                </div>
+              </div>
+
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                className="w-full py-2.5 border border-gray-200 text-gray-600 font-semibold text-xs rounded-xl hover:bg-gray-50 transition cursor-pointer"
               >
-                <X size={18} />
+                Close Details
               </button>
             </div>
-
-            <div className="space-y-2.5 bg-gray-50 p-4 rounded-xl text-xs">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Rice Variant:</span>
-                <span className="font-bold text-gray-900">{selectedOrder.variant} ({selectedOrder.grade})</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Batch Number:</span>
-                <span className="font-mono text-gray-800">{selectedOrder.batchNo}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Supplier Name:</span>
-                <span className="font-semibold text-gray-900">{selectedOrder.supplier}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Order Quantity:</span>
-                <span className="font-bold text-gray-900">{selectedOrder.qty}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Total Purchase Value:</span>
-                <span className="font-extrabold text-emerald-700 text-sm">{selectedOrder.totalAmount}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Assigned Storage Bay:</span>
-                <span className="font-semibold text-gray-800">{selectedOrder.bay}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Current Status:</span>
-                <span className={`px-2.5 py-0.5 rounded-full font-bold ${STATUS_PILL_STYLES[selectedOrder.status]}`}>
-                  {selectedOrder.status}
-                </span>
-              </div>
-            </div>
-
-            {/* Status action buttons */}
-            <div className="space-y-2 pt-2">
-              <p className="text-xs font-semibold text-gray-600">Update Order Status:</p>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => handleUpdateStatus(selectedOrder.id, "Approved")}
-                  className="py-2 px-3 bg-[#0B5D1E] hover:bg-[#094d19] text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
-                >
-                  <Check size={14} /> Approve
-                </button>
-                <button
-                  onClick={() => handleUpdateStatus(selectedOrder.id, "Processing")}
-                  className="py-2 px-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
-                >
-                  <Clock size={14} /> Processing
-                </button>
-                <button
-                  onClick={() => handleUpdateStatus(selectedOrder.id, "Declined")}
-                  className="py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
-                >
-                  <XCircle size={14} /> Decline
-                </button>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setSelectedOrder(null)}
-              className="w-full py-2.5 border border-gray-200 text-gray-600 font-semibold text-xs rounded-xl hover:bg-gray-50 transition"
-            >
-              Close Details
-            </button>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
