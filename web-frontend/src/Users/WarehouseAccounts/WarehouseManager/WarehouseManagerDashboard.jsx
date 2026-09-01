@@ -65,7 +65,7 @@ export default function WarehouseManagerDashboard() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-1">
           <Breadcrumbs items={[{ label: "Main" }, { label: "Dashboard" }]} />
-          <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-extrabold tracking-[-0.03em] text-slate-900">
+          <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-bold tracking-[-0.03em] text-slate-900">
             Warehouse Manager Dashboard
           </h2>
           <p className="text-sm text-slate-500">
