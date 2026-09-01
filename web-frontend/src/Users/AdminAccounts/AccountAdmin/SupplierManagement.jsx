@@ -1,17 +1,33 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import Tabs from "../../../Components/Minor-Components/Tabs";
 import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
+
 import CustomGreenButton from "../../../Components/Minor-Components/CustomGreenButton";
 import CustomAmberButton from "../../../Components/Minor-Components/CustomAmberButton";
 import CustomRedButton from "../../../Components/Minor-Components/CustomRedButton";
-import ArchiveProductModal from "../../../Components/Modals/ArchiveProductModal";
-import RestoreProductModal from "../../../Components/Modals/RestoreProductModal";
-import DeleteProductModal from "../../../Components/Modals/DeleteProductModal";
 
-// Badge color per tab, matching the reference (To Review = amber, Active = green, Inactive = red)
+import Toast from "../../../Components/Minor-Components/Toast";
+
+import ArchiveAccountModal from "../../../Components/Modals/ArchiveAccountModal";
+import AccountActionConfirmModal from "../../../Components/Modals/AccountActionConfirmModal";
+
+import MillerReviewModal from "./MillerReviewModal";
+
+import useToast from "../../../Components/hooks/useToast";
+import useMillerManagement from "../../../Components/hooks/accountadmin/useMillerManagement";
+
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+
+const ITEMS_PER_PAGE = 10;
+
 const TAB_BADGE_STYLES = {
   "to-review": "bg-amber-400 text-white",
   active: "bg-emerald-500 text-white",
@@ -19,268 +35,1305 @@ const TAB_BADGE_STYLES = {
 };
 
 const SORT_OPTIONS = [
-  { value: "name-asc", label: "Supplier (A-Z)" },
-  { value: "name-desc", label: "Supplier (Z-A)" },
-  { value: "company-asc", label: "Company (A-Z)" },
+  {
+    value: "name-asc",
+    label: "Miller (A-Z)",
+  },
+  {
+    value: "name-desc",
+    label: "Miller (Z-A)",
+  },
+  {
+    value: "company-asc",
+    label: "Company (A-Z)",
+  },
 ];
 
+const TABS = [
+  {
+    id: "to-review",
+    label: "To Review",
+  },
+  {
+    id: "active",
+    label: "Active",
+  },
+  {
+    id: "inactive",
+    label: "Inactive",
+  },
+];
+
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+const displayValue = (value, fallback = "—") => {
+  const cleaned = String(value ?? "").trim();
+
+  return cleaned || fallback;
+};
+
+
+// ============================================================
+// MILLER MANAGEMENT
+// FILE NAME REMAINS SupplierManagement.jsx
+// ============================================================
+
 const SupplierManagement = () => {
+  const navigate = useNavigate();
+
+
+  // =========================================================
+  // PAGE STATE
+  // ============================================================
+
+  const [activeTab, setActiveTab] = useState("to-review");
+
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = 4;
 
-  // Modal state
-  const [selectedSupplier, setSelectedSupplier] = useState(null);
-  const [archiveModal, setArchiveModal] = useState(false);
-  const [restoreModal, setRestoreModal] = useState(false);
-  const [deleteModal, setDeleteModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const handleArchive = (row) => { setSelectedSupplier(row); setArchiveModal(true); };
-  const handleRestore = (row) => { setSelectedSupplier(row); setRestoreModal(true); };
-  const handleDelete  = (row) => { setSelectedSupplier(row); setDeleteModal(true); };
+  const [sortBy, setSortBy] = useState("name-asc");
 
-  const confirmArchive = () => {
-    console.log("Archive supplier:", selectedSupplier);
-    setArchiveModal(false);
-    setSelectedSupplier(null);
+
+  // =========================================================
+  // API
+  // ============================================================
+
+  const {
+    millers,
+    counts,
+
+    isLoading,
+    isLoadingDetails,
+
+    isConfirming,
+    isArchiving,
+    isRestoring,
+    isDeleting,
+
+    error,
+
+    getMillerDetails,
+
+    confirmMiller,
+    archiveMiller,
+    restoreMiller,
+    deleteMiller,
+  } = useMillerManagement(activeTab);
+
+
+  // =========================================================
+  // TOAST
+  // ============================================================
+
+  const {
+    toasts,
+    showToast,
+    removeToast,
+  } = useToast();
+
+
+  // =========================================================
+  // SELECTED MILLER
+  // ============================================================
+
+  const [
+    selectedMiller,
+    setSelectedMiller,
+  ] = useState(null);
+
+
+  const [
+    selectedMillerDetails,
+    setSelectedMillerDetails,
+  ] = useState(null);
+
+
+  // =========================================================
+  // MODALS
+  // ============================================================
+
+  const [
+    reviewModal,
+    setReviewModal,
+  ] = useState(false);
+
+
+  const [
+    archiveModal,
+    setArchiveModal,
+  ] = useState(false);
+
+
+  const [
+    restoreModal,
+    setRestoreModal,
+  ] = useState(false);
+
+
+  const [
+    deleteModal,
+    setDeleteModal,
+  ] = useState(false);
+
+
+  // =========================================================
+  // REVIEW APPLICATION
+  // ============================================================
+
+  const handleReview = async (row) => {
+    setSelectedMiller(row);
+
+    setSelectedMillerDetails(null);
+
+    setReviewModal(true);
+
+    try {
+      const details =
+        await getMillerDetails(
+          row.id
+        );
+
+      setSelectedMillerDetails(
+        details
+      );
+    } catch (requestError) {
+      showToast({
+        type: "error",
+
+        title:
+          "Unable to Load Application",
+
+        message:
+          requestError?.message ||
+          "The Miller application details could not be loaded.",
+
+        duration: 5000,
+      });
+    }
   };
-  const confirmRestore = () => {
-    console.log("Restore supplier:", selectedSupplier);
-    setRestoreModal(false);
-    setSelectedSupplier(null);
+
+
+  const closeReviewModal = () => {
+    if (isConfirming) {
+      return;
+    }
+
+    setReviewModal(false);
+
+    setSelectedMiller(null);
+
+    setSelectedMillerDetails(null);
   };
-  const confirmDelete = () => {
-    console.log("Delete supplier:", selectedSupplier);
-    setDeleteModal(false);
-    setSelectedSupplier(null);
+
+
+  // =========================================================
+  // CONFIRM APPLICATION
+  // ============================================================
+
+  const handleConfirmApplication = async () => {
+    const userId =
+      selectedMillerDetails?.user_id ||
+      selectedMiller?.id;
+
+    if (!userId) {
+      showToast({
+        type: "error",
+
+        title:
+          "Confirmation Failed",
+
+        message:
+          "The Miller account could not be identified.",
+
+        duration: 4500,
+      });
+
+      return;
+    }
+
+    try {
+      const response =
+        await confirmMiller(
+          userId
+        );
+
+      const result =
+        response?.data ||
+        {};
+
+      setReviewModal(false);
+
+      setSelectedMiller(null);
+
+      setSelectedMillerDetails(null);
+
+      if (result.email_sent) {
+        showToast({
+          type: "success",
+
+          title:
+            "Miller Application Confirmed",
+
+          message:
+            "The account is now active and the confirmation email was sent successfully.",
+
+          duration: 5000,
+        });
+      } else {
+        showToast({
+          type: "warning",
+
+          title:
+            "Account Activated",
+
+          message:
+            "The Miller account is active, but the confirmation email could not be sent.",
+
+          duration: 6000,
+        });
+      }
+    } catch (requestError) {
+      showToast({
+        type: "error",
+
+        title:
+          "Confirmation Failed",
+
+        message:
+          requestError?.message ||
+          "The Miller application could not be confirmed.",
+
+        duration: 5500,
+      });
+    }
   };
 
-  const columns = [
-    { key: "supplier", label: "Supplier Name", width: "24%" },
-    { key: "company", label: "Company Name", width: "24%" },
-    { key: "email", label: "Email", width: "24%" },
-    { key: "contact", label: "Contact", width: "16%" },
-    {
-      key: "action",
-      label: "Action",
-      width: "20%",
-      cellClassName: "text-center",
-      render: (row) => {
-        if (!row.status) return null;
-        const s = String(row.status).toLowerCase().trim();
 
-        if (s === "to review") {
-          return (
-            <div className="flex justify-center">
-              <CustomAmberButton text="Review" className="px-3 py-1.5 text-[11px] rounded-lg" />
-            </div>
-          );
-        }
+  // =========================================================
+  // MESSAGE MILLER
+  // ============================================================
 
-        if (s === "inactive" || s === "archived") {
-          return (
+  const handleMessage = () => {
+    const account =
+      selectedMillerDetails
+        ?.account_information;
+
+    const personal =
+      selectedMillerDetails
+        ?.personal_information;
+
+    const business =
+      selectedMillerDetails
+        ?.business_information;
+
+    navigate(
+      "/admin/email-users",
+      {
+        state: {
+          recipient: {
+            userId:
+              selectedMillerDetails
+                ?.user_id ||
+              selectedMiller
+                ?.id,
+
+            email:
+              account?.email ||
+              selectedMiller
+                ?.email ||
+              "",
+
+            firstName:
+              personal
+                ?.first_name ||
+              "",
+
+            lastName:
+              personal
+                ?.last_name ||
+              "",
+
+            businessName:
+              business
+                ?.business_name ||
+              selectedMiller
+                ?.company ||
+              "",
+
+            source:
+              "miller-management",
+          },
+        },
+      }
+    );
+  };
+
+
+  // =========================================================
+  // ARCHIVE MILLER
+  // ============================================================
+
+  const handleArchive = (row) => {
+    setSelectedMiller(row);
+
+    setArchiveModal(true);
+  };
+
+
+  const confirmArchive = async (reason) => {
+    if (!selectedMiller?.id) {
+      return;
+    }
+
+    try {
+      await archiveMiller(
+        selectedMiller.id,
+        reason
+      );
+
+      setArchiveModal(false);
+
+      setSelectedMiller(null);
+
+      showToast({
+        type: "success",
+
+        title:
+          "Miller Account Archived",
+
+        message:
+          "The Miller account was archived successfully.",
+
+        duration: 5000,
+      });
+    } catch (requestError) {
+      showToast({
+        type: "error",
+
+        title:
+          "Archive Failed",
+
+        message:
+          requestError?.message ||
+          "The Miller account could not be archived.",
+
+        duration: 5000,
+      });
+    }
+  };
+
+
+  // =========================================================
+  // RESTORE MILLER
+  // ============================================================
+
+  const handleRestore = (row) => {
+    setSelectedMiller(row);
+
+    setRestoreModal(true);
+  };
+
+
+  const confirmRestore = async () => {
+    if (!selectedMiller?.id) {
+      return;
+    }
+
+    try {
+      await restoreMiller(
+        selectedMiller.id
+      );
+
+      setRestoreModal(false);
+
+      setSelectedMiller(null);
+
+      showToast({
+        type: "success",
+
+        title:
+          "Miller Account Restored",
+
+        message:
+          "The Miller account is active again.",
+
+        duration: 5000,
+      });
+    } catch (requestError) {
+      showToast({
+        type: "error",
+
+        title:
+          "Restore Failed",
+
+        message:
+          requestError?.message ||
+          "The Miller account could not be restored.",
+
+        duration: 5000,
+      });
+    }
+  };
+
+
+  // =========================================================
+  // DELETE MILLER
+  // ============================================================
+
+  const handleDelete = (row) => {
+    setSelectedMiller(row);
+
+    setDeleteModal(true);
+  };
+
+
+  const confirmDelete = async () => {
+    if (!selectedMiller?.id) {
+      return;
+    }
+
+    try {
+      await deleteMiller(
+        selectedMiller.id
+      );
+
+      setDeleteModal(false);
+
+      setSelectedMiller(null);
+
+      showToast({
+        type: "success",
+
+        title:
+          "Miller Account Deleted",
+
+        message:
+          "The Miller account was permanently deleted.",
+
+        duration: 5000,
+      });
+    } catch (requestError) {
+      showToast({
+        type: "error",
+
+        title:
+          "Delete Failed",
+
+        message:
+          requestError?.message ||
+          "The Miller account could not be permanently deleted.",
+
+        duration: 5000,
+      });
+    }
+  };
+
+
+  // =========================================================
+  // TABLE COLUMNS
+  // ============================================================
+
+  const columns = useMemo(() => {
+    // ========================================================
+    // INACTIVE
+    // ========================================================
+
+    if (activeTab === "inactive") {
+      return [
+        {
+          key: "miller",
+          label: "Miller Name",
+          width: "20%",
+        },
+
+        {
+          key: "company",
+          label: "Company Name",
+          width: "20%",
+        },
+
+        {
+          key: "email",
+          label: "Email",
+          width: "20%",
+        },
+
+        {
+          key: "archiveReason",
+          label: "Archive Reason",
+          width: "22%",
+
+          render: (row) =>
+            displayValue(
+              row?.archiveReason,
+              "No reason recorded"
+            ),
+        },
+
+        {
+          key: "action",
+          label: "Action",
+          width: "18%",
+
+          cellClassName:
+            "text-center",
+
+          render: (row) => (
             <div className="flex items-center justify-center gap-2">
               <CustomGreenButton
                 text="Restore"
                 className="px-3 py-1.5 text-[11px] rounded-lg"
-                onClick={() => handleRestore(row)}
+                onClick={() =>
+                  handleRestore(
+                    row
+                  )
+                }
               />
+
               <CustomRedButton
                 text="Delete"
                 className="px-4 py-1.5 text-[11px] rounded-lg"
-                onClick={() => handleDelete(row)}
+                onClick={() =>
+                  handleDelete(
+                    row
+                  )
+                }
               />
             </div>
+          ),
+        },
+      ];
+    }
+
+
+    // ========================================================
+    // TO REVIEW + ACTIVE
+    // ========================================================
+
+    return [
+      {
+        key: "miller",
+        label: "Miller Name",
+        width: "24%",
+      },
+
+      {
+        key: "company",
+        label: "Company Name",
+        width: "24%",
+      },
+
+      {
+        key: "email",
+        label: "Email",
+        width: "24%",
+      },
+
+      {
+        key: "contact",
+        label: "Contact",
+        width: "16%",
+      },
+
+      {
+        key: "action",
+        label: "Action",
+        width: "20%",
+
+        cellClassName:
+          "text-center",
+
+        render: (row) => {
+          if (
+            activeTab ===
+            "to-review"
+          ) {
+            return (
+              <div className="flex justify-center">
+                <CustomAmberButton
+                  text="Review"
+                  className="px-3 py-1.5 text-[11px] rounded-lg"
+                  onClick={() =>
+                    handleReview(
+                      row
+                    )
+                  }
+                />
+              </div>
+            );
+          }
+
+
+          if (
+            activeTab ===
+            "active"
+          ) {
+            return (
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  className="
+                    whitespace-nowrap
+                    rounded-lg
+                    border
+                    border-slate-300
+                    px-3
+                    py-1.5
+                    text-[11px]
+                    font-semibold
+                    text-slate-500
+                    transition
+                    hover:border-emerald-300
+                    hover:text-emerald-700
+                    cursor-pointer
+                  "
+                  onClick={() =>
+                    navigate(
+                      `/admin/millers/${row.id}`,
+                      {
+                        state: {
+                          miller: row,
+                        },
+                      }
+                    )
+                  }
+                >
+                  View Details
+                </button>
+
+                <CustomAmberButton
+                  text="Archive"
+                  className="whitespace-nowrap px-3 py-1.5 text-[11px] rounded-lg"
+                  onClick={() =>
+                    handleArchive(
+                      row
+                    )
+                  }
+                />
+              </div>
+            );
+          }
+
+          return null;
+        },
+      },
+    ];
+  }, [
+    activeTab,
+    navigate,
+  ]);
+
+
+  // =========================================================
+  // FILTER + SORT
+  // ============================================================
+
+  const filteredRows =
+    useMemo(
+      () => {
+        const query =
+          searchQuery
+            .trim()
+            .toLowerCase();
+
+        const list =
+          millers.filter(
+            (row) => {
+              if (!query) {
+                return true;
+              }
+
+              return (
+                String(
+                  row.miller ||
+                  ""
+                )
+                  .toLowerCase()
+                  .includes(query) ||
+
+                String(
+                  row.company ||
+                  ""
+                )
+                  .toLowerCase()
+                  .includes(query) ||
+
+                String(
+                  row.email ||
+                  ""
+                )
+                  .toLowerCase()
+                  .includes(query)
+              );
+            }
+          );
+
+        const sorted = [
+          ...list,
+        ];
+
+        if (
+          sortBy ===
+          "name-asc"
+        ) {
+          sorted.sort(
+            (a, b) =>
+              String(
+                a.miller ||
+                ""
+              ).localeCompare(
+                String(
+                  b.miller ||
+                  ""
+                )
+              )
           );
         }
 
-        if (s === "active") {
-          return (
-            <div className="flex items-center justify-center gap-2">
-              <button
-                type="button"
-                className="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
-              >
-                View Details
-              </button>
-              <CustomAmberButton
-                text="Archive"
-                className="whitespace-nowrap px-3 py-1.5 text-[11px] rounded-lg"
-                onClick={() => handleArchive(row)}
-              />
-            </div>
+        if (
+          sortBy ===
+          "name-desc"
+        ) {
+          sorted.sort(
+            (a, b) =>
+              String(
+                b.miller ||
+                ""
+              ).localeCompare(
+                String(
+                  a.miller ||
+                  ""
+                )
+              )
           );
         }
 
-        return (
-          <div className="flex justify-center">
-            <button
-              type="button"
-              className="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
-            >
-              Action
-            </button>
-          </div>
+        if (
+          sortBy ===
+          "company-asc"
+        ) {
+          sorted.sort(
+            (a, b) =>
+              String(
+                a.company ||
+                ""
+              ).localeCompare(
+                String(
+                  b.company ||
+                  ""
+                )
+              )
+          );
+        }
+
+        return sorted;
+      },
+      [
+        millers,
+        searchQuery,
+        sortBy,
+      ]
+    );
+
+
+  // =========================================================
+  // PAGINATION
+  // ============================================================
+
+  const totalPages =
+    Math.max(
+      1,
+      Math.ceil(
+        filteredRows.length /
+        ITEMS_PER_PAGE
+      )
+    );
+
+
+  const safeCurrentPage =
+    Math.min(
+      currentPage,
+      totalPages
+    );
+
+
+  const paginatedRows =
+    useMemo(
+      () => {
+        const startIndex =
+          (
+            safeCurrentPage -
+            1
+          ) *
+          ITEMS_PER_PAGE;
+
+        return filteredRows.slice(
+          startIndex,
+          startIndex +
+          ITEMS_PER_PAGE
         );
       },
-    },
-  ];
-
-  // sample rows with statuses that match screenshot states
-  const rawRows = Array.from({ length: 24 }).map((_, i) => {
-    const status = i % 4 === 0 ? "To Review" : i % 4 === 1 ? "Active" : i % 4 === 2 ? "Inactive" : "Active";
-    const isToReview = status === "To Review";
-    return {
-      id: i + 1,
-      supplier: `Supplier ${String.fromCharCode(65 + (i % 26))}`,
-      company: `ABC Rice Trading`,
-      email: `abc${i}@email.com`,
-      contact: isToReview ? "0917-XXX-XXXX" : "0917 000 0001",
-      joined: "Mar 12, 2026",
-      status,
-    };
-  });
-
-  const tabs = [
-    { id: "to-review", label: "To Review" },
-    { id: "active", label: "Active" },
-    { id: "inactive", label: "Inactive" },
-  ];
-
-  const [activeTab, setActiveTab] = useState(tabs[0].id);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("name-asc");
-
-  // counts for badges
-  const counts = useMemo(() => {
-    return rawRows.reduce(
-      (acc, r) => {
-        const s = String(r.status).toLowerCase().trim();
-        if (s === "to review") acc.toReview++;
-        else if (s === "inactive" || s === "archived") acc.inactive++;
-        else if (s === "active") acc.active++;
-        return acc;
-      },
-      { toReview: 0, active: 0, inactive: 0 }
+      [
+        filteredRows,
+        safeCurrentPage,
+      ]
     );
-  }, [rawRows]);
 
-  const filteredRawRows = useMemo(() => {
-    let list = rawRows.filter((r) => {
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase();
-      return (
-        r.supplier.toLowerCase().includes(q) ||
-        r.company.toLowerCase().includes(q) ||
-        r.email.toLowerCase().includes(q)
-      );
-    });
-    if (sortBy === "name-asc") list.sort((a, b) => a.supplier.localeCompare(b.supplier));
-    else if (sortBy === "name-desc") list.sort((a, b) => b.supplier.localeCompare(a.supplier));
-    else if (sortBy === "company-asc") list.sort((a, b) => a.company.localeCompare(b.company));
-    return list;
-  }, [rawRows, searchQuery, sortBy]);
 
-  const sections = useMemo(() => {
-    if (activeTab === "to-review")
-      return [{ rows: filteredRawRows.filter((r) => String(r.status).toLowerCase().trim() === "to review") }];
-    if (activeTab === "inactive")
-      return [{ rows: filteredRawRows.filter((r) => ["inactive", "archived"].includes(String(r.status).toLowerCase().trim())) }];
-    if (activeTab === "active")
-      return [{ rows: filteredRawRows.filter((r) => String(r.status).toLowerCase().trim() === "active") }];
-    return [{ rows: filteredRawRows }];
-  }, [activeTab, filteredRawRows]);
+  const sections =
+    useMemo(
+      () => [
+        {
+          rows:
+            paginatedRows,
+        },
+      ],
+      [
+        paginatedRows,
+      ]
+    );
+
+
+  const firstVisible =
+    filteredRows.length === 0
+      ? 0
+      : (
+          safeCurrentPage -
+          1
+        ) *
+          ITEMS_PER_PAGE +
+        1;
+
+
+  const lastVisible =
+    filteredRows.length === 0
+      ? 0
+      : Math.min(
+          safeCurrentPage *
+          ITEMS_PER_PAGE,
+
+          filteredRows.length
+        );
+
+
+  // =========================================================
+  // TAB COUNTS
+  // ============================================================
+
+  const tabsWithCounts =
+    TABS.map(
+      (tab) => ({
+        ...tab,
+
+        label: (
+          <>
+            <span>
+              {tab.label}
+            </span>
+
+            <span
+              className={`
+                ml-2
+                inline-flex
+                items-center
+                justify-center
+                rounded-full
+                px-2
+                py-0.5
+                text-xs
+                font-semibold
+                ${TAB_BADGE_STYLES[
+                  tab.id
+                ]}
+              `}
+            >
+              {
+                tab.id ===
+                "to-review"
+                  ? counts.to_review
+
+                  : tab.id ===
+                    "active"
+                    ? counts.active
+
+                    : counts.inactive
+              }
+            </span>
+          </>
+        ),
+      })
+    );
+
+
+  // =========================================================
+  // RENDER
+  // ============================================================
 
   return (
     <>
-      <Breadcrumbs items={[{ label: "Management", path: "/admin/dashboard" }, { label: "Supplier Management" }]} />
+      <Toast
+        toasts={
+          toasts
+        }
+        removeToast={
+          removeToast
+        }
+      />
+
+
+      {/* =====================================================
+          BREADCRUMBS
+      ===================================================== */}
+
+      <Breadcrumbs
+        items={[
+          {
+            label:
+              "Management",
+
+            path:
+              "/admin/dashboard",
+          },
+
+          {
+            label:
+              "Miller Management",
+          },
+        ]}
+      />
+
+
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
       <div className="mt-4 mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Supplier Management</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage supplier accounts and approvals.</p>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+          Miller Management
+        </h1>
+
+        <p className="text-sm text-gray-500 mt-1">
+          Manage Miller accounts, application reviews, and account status.
+        </p>
       </div>
 
+
+      {/* =====================================================
+          TABS
+      ===================================================== */}
+
       <Tabs
-        tabs={tabs.map((t) => ({
-          ...t,
-          label: (
-            <>
-              <span>{t.label}</span>
-              <span
-                className={`ml-2 inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold ${TAB_BADGE_STYLES[t.id]}`}
-              >
-                {t.id === "to-review" ? counts.toReview : t.id === "active" ? counts.active : counts.inactive}
-              </span>
-            </>
-          ),
-        }))}
-        activeTab={activeTab}
-        onTabChange={(id) => {
-          setActiveTab(id);
-          setCurrentPage(1);
+        tabs={
+          tabsWithCounts
+        }
+        activeTab={
+          activeTab
+        }
+        onTabChange={(tabId) => {
+          setActiveTab(
+            tabId
+          );
+
+          setCurrentPage(
+            1
+          );
+
+          setSearchQuery(
+            ""
+          );
         }}
       />
+
+
+      {/* =====================================================
+          SEARCH + SORT
+      ===================================================== */}
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="w-full max-w-sm">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search size={16} className="text-gray-400" />
+              <Search
+                size={16}
+                className="text-gray-400"
+              />
             </div>
+
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
+              value={
+                searchQuery
+              }
+              onChange={(event) => {
+                setSearchQuery(
+                  event.target.value
+                );
+
+                setCurrentPage(
+                  1
+                );
               }}
-              placeholder="Search by supplier, company, or email"
-              className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white placeholder-gray-400 text-gray-700"
+              placeholder="Search by Miller, company, or email"
+              className="
+                block
+                w-full
+                pl-10
+                pr-3
+                py-2
+                border
+                border-gray-200
+                rounded-lg
+                text-sm
+                focus:outline-none
+                focus:ring-1
+                focus:ring-emerald-500
+                focus:border-emerald-500
+                bg-white
+                placeholder-gray-400
+                text-gray-700
+              "
             />
           </div>
         </div>
 
         <div>
           <SortByDropdown
-            options={SORT_OPTIONS}
-            value={sortBy}
-            onChange={(v) => {
-              setSortBy(v);
-              setCurrentPage(1);
+            options={
+              SORT_OPTIONS
+            }
+            value={
+              sortBy
+            }
+            onChange={(value) => {
+              setSortBy(
+                value
+              );
+
+              setCurrentPage(
+                1
+              );
             }}
           />
         </div>
       </div>
 
-      <SectionedTableCard
-        columns={columns}
-        sections={sections}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={(p) => setCurrentPage(p)}
-        footerLabel={`Showing 1-10 of ${sections[0].rows.length} suppliers`}
+
+      {/* =====================================================
+          ERROR
+      ===================================================== */}
+
+      {
+        error &&
+        !isLoading && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm font-semibold text-red-700">
+              Unable to load Miller Management.
+            </p>
+
+            <p className="mt-1 text-xs text-red-600">
+              {error}
+            </p>
+          </div>
+        )
+      }
+
+
+      {/* =====================================================
+          LOADING / TABLE
+      ===================================================== */}
+
+      {
+        isLoading ? (
+          <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-gray-200 bg-white">
+            <div className="text-center">
+              <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-[#08511f]" />
+
+              <p className="text-sm font-semibold text-gray-700">
+                Loading Miller accounts...
+              </p>
+            </div>
+          </div>
+        ) : (
+          <SectionedTableCard
+            columns={
+              columns
+            }
+            sections={
+              sections
+            }
+            currentPage={
+              safeCurrentPage
+            }
+            totalPages={
+              totalPages
+            }
+            onPageChange={(page) =>
+              setCurrentPage(
+                page
+              )
+            }
+            footerLabel={
+              `Showing ${firstVisible}-${lastVisible} of ${filteredRows.length} Millers`
+            }
+          />
+        )
+      }
+
+
+      {/* =====================================================
+          REVIEW APPLICATION MODAL
+      ===================================================== */}
+
+      <MillerReviewModal
+        isOpen={
+          reviewModal
+        }
+        onClose={
+          closeReviewModal
+        }
+        miller={
+          selectedMillerDetails
+        }
+        isLoading={
+          isLoadingDetails
+        }
+        isConfirming={
+          isConfirming
+        }
+        onMessage={
+          handleMessage
+        }
+        onConfirm={
+          handleConfirmApplication
+        }
       />
 
-      {/* Modals */}
-      <ArchiveProductModal
-        isOpen={archiveModal}
-        onClose={() => { setArchiveModal(false); setSelectedSupplier(null); }}
-        onArchive={confirmArchive}
-        productName={selectedSupplier?.supplier ?? "this supplier"}
+
+      {/* =====================================================
+          ARCHIVE MILLER
+      ===================================================== */}
+
+      <ArchiveAccountModal
+        isOpen={
+          archiveModal
+        }
+        onClose={() => {
+          if (
+            isArchiving
+          ) {
+            return;
+          }
+
+          setArchiveModal(
+            false
+          );
+
+          setSelectedMiller(
+            null
+          );
+        }}
+        onArchive={
+          confirmArchive
+        }
+        accountName={
+          selectedMiller?.company ||
+          selectedMiller?.miller ||
+          "this Miller"
+        }
+        accountType="Miller Account"
+        isArchiving={
+          isArchiving
+        }
       />
-      <RestoreProductModal
-        isOpen={restoreModal}
-        onClose={() => { setRestoreModal(false); setSelectedSupplier(null); }}
-        onRestore={confirmRestore}
-        productName={selectedSupplier?.supplier ?? "this supplier"}
+
+
+      {/* =====================================================
+          RESTORE MILLER
+      ===================================================== */}
+
+      <AccountActionConfirmModal
+        isOpen={
+          restoreModal
+        }
+        title="Restore Miller Account"
+        message="This Miller account will become active again and return to the Active tab."
+        accountName={
+          selectedMiller?.company ||
+          selectedMiller?.miller ||
+          ""
+        }
+        confirmText="Restore"
+        variant="primary"
+        isProcessing={
+          isRestoring
+        }
+        onClose={() => {
+          if (
+            isRestoring
+          ) {
+            return;
+          }
+
+          setRestoreModal(
+            false
+          );
+
+          setSelectedMiller(
+            null
+          );
+        }}
+        onConfirm={
+          confirmRestore
+        }
       />
-      <DeleteProductModal
-        isOpen={deleteModal}
-        onClose={() => { setDeleteModal(false); setSelectedSupplier(null); }}
-        onDelete={confirmDelete}
-        productName={selectedSupplier?.supplier ?? "this supplier"}
+
+
+      {/* =====================================================
+          DELETE MILLER
+      ===================================================== */}
+
+      <AccountActionConfirmModal
+        isOpen={
+          deleteModal
+        }
+        title="Delete Miller Account"
+        message="This Miller account and its related account data will be permanently removed from GrainRise."
+        accountName={
+          selectedMiller?.company ||
+          selectedMiller?.miller ||
+          ""
+        }
+        confirmText="Delete"
+        variant="danger"
+        isProcessing={
+          isDeleting
+        }
+        onClose={() => {
+          if (
+            isDeleting
+          ) {
+            return;
+          }
+
+          setDeleteModal(
+            false
+          );
+
+          setSelectedMiller(
+            null
+          );
+        }}
+        onConfirm={
+          confirmDelete
+        }
       />
     </>
   );
 };
+
 
 export default SupplierManagement;

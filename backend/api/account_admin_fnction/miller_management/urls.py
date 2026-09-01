@@ -1,0 +1,122 @@
+from django.urls import path
+
+from . import views
+
+
+app_name = "miller_management"
+
+
+urlpatterns = [
+
+    # ========================================================
+    # MILLER MANAGEMENT LIST
+    # ========================================================
+
+    path(
+        "",
+        views.miller_management_list,
+        name="list",
+    ),
+
+
+    # ========================================================
+    # MILLER VIEW DETAILS
+    # ========================================================
+
+    path(
+        "<int:user_id>/view-details/",
+        views.miller_management_view_details,
+        name="view-details",
+    ),
+
+
+    # ========================================================
+    # CONFIRM APPLICATION
+    # ========================================================
+
+    path(
+        "<int:user_id>/confirm/",
+        views.confirm_miller_management_application,
+        name="confirm",
+    ),
+
+
+    # ========================================================
+    # ARCHIVE MILLER ACCOUNT
+    # ========================================================
+
+    path(
+        "<int:user_id>/archive/",
+        views.archive_miller_management_account,
+        name="archive",
+    ),
+
+
+    # ========================================================
+    # RESTORE MILLER ACCOUNT
+    # ========================================================
+
+    path(
+        "<int:user_id>/restore/",
+        views.restore_miller_management_account,
+        name="restore",
+    ),
+
+
+    # ========================================================
+    # DELETE MILLER ACCOUNT
+    # ========================================================
+
+    path(
+        "<int:user_id>/delete/",
+        views.delete_miller_management_account,
+        name="delete",
+    ),
+
+
+    # ========================================================
+    # ARCHIVE MILLER EMPLOYEE
+    # ========================================================
+
+    path(
+        "<int:user_id>/employees/<int:employee_id>/archive/",
+        views.archive_miller_management_employee,
+        name="archive-employee",
+    ),
+
+
+    # ========================================================
+    # RESTORE / RETRIEVE MILLER EMPLOYEE
+    # ========================================================
+
+    path(
+        "<int:user_id>/employees/<int:employee_id>/restore/",
+        views.restore_miller_management_employee,
+        name="restore-employee",
+    ),
+
+
+    # ========================================================
+    # DELETE MILLER EMPLOYEE
+    # ========================================================
+
+    path(
+        "<int:user_id>/employees/<int:employee_id>/delete/",
+        views.delete_miller_management_employee,
+        name="delete-employee",
+    ),
+
+
+    # ========================================================
+    # MILLER REGISTRATION / OWNER DETAILS
+    # IMPORTANT:
+    # Keep this LAST so it does not conflict with
+    # view-details / confirm / archive / restore / delete.
+    # ========================================================
+
+    path(
+        "<int:user_id>/",
+        views.miller_management_detail,
+        name="detail",
+    ),
+]

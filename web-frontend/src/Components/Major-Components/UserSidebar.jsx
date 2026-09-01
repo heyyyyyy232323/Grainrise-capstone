@@ -1,5 +1,27 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Truck, Warehouse, Store, Users, FileBarChart, ShoppingCart, Package, CornerUpLeft, CreditCard, History, X, ClipboardList, PackageCheck, Wallet, BookOpen, Receipt, RefreshCcw, Archive, Mail, Newspaper } from "lucide-react";
+import {
+  LayoutDashboard,
+  Truck,
+  Warehouse,
+  Store,
+  Users,
+  FileBarChart,
+  ShoppingCart,
+  Package,
+  CornerUpLeft,
+  CreditCard,
+  History,
+  X,
+  ClipboardList,
+  PackageCheck,
+  Wallet,
+  BookOpen,
+  Receipt,
+  RefreshCcw,
+  Archive,
+  Mail,
+  Newspaper,
+} from "lucide-react";
 import Logo from "../../assets/Logo.png";
 
 export const getUserSidebarConfig = (role = "admin") => {
@@ -9,432 +31,864 @@ export const getUserSidebarConfig = (role = "admin") => {
       sections: [
         {
           title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/admin/dashboard" }],
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/admin/dashboard",
+            },
+          ],
         },
         {
           title: "MANAGEMENT",
           items: [
-            { label: "Supplier Management", icon: Truck, path: "/admin/suppliers" },
-            { label: "Warehouse Management", icon: Warehouse, path: "/admin/warehouses" },
-            { label: "Retailer Management", icon: Store, path: "/admin/retailers" },
+            {
+              label: "Miller Management",
+              icon: Truck,
+              path: "/admin/suppliers",
+            },
+            {
+              label: "Warehouse Management",
+              icon: Warehouse,
+              path: "/admin/warehouses",
+            },
+            {
+              label: "Retailer Management",
+              icon: Store,
+              path: "/admin/retailers",
+            },
+            {
+              label: "Farmer Management",
+              icon: Users,
+              path: "/admin/farmers",
+            },
           ],
         },
         {
           title: "COMMUNICATION",
           items: [
-            { label: "Email Users", icon: Mail, path: "/admin/email-users" },
+            {
+              label: "Email Users",
+              icon: Mail,
+              path: "/admin/email-users",
+            },
           ],
         },
       ],
     },
+
     supplier: {
       panelLabel: "Supplier Panel",
       sections: [
         {
           title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/supplier/dashboard" }],
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/supplier/dashboard",
+            },
+          ],
         },
         {
           title: "MANAGEMENT",
           items: [
-            { label: "Products", icon: Package, path: "/supplier/products" },
-            { label: "Orders", icon: ShoppingCart, path: "/supplier/orders" },
+            {
+              label: "Products",
+              icon: Package,
+              path: "/supplier/products",
+            },
+            {
+              label: "Orders",
+              icon: ShoppingCart,
+              path: "/supplier/orders",
+            },
           ],
         },
       ],
     },
+
     retailer: {
       panelLabel: "Retailer Panel",
       sections: [
         {
           title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/retailer/dashboard" }],
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/retailer/dashboard",
+            },
+          ],
         },
         {
           title: "SALES",
           items: [
-            { label: "Point of Sale", icon: CreditCard, path: "/retailer/point-of-sale" },
-            { label: "Sales History", icon: History, path: "/retailer/sales-history" },
+            {
+              label: "Point of Sale",
+              icon: CreditCard,
+              path: "/retailer/point-of-sale",
+            },
+            {
+              label: "Sales History",
+              icon: History,
+              path: "/retailer/sales-history",
+            },
           ],
         },
         {
           title: "INVENTORY",
           items: [
-            { label: "Inventory", icon: Package, path: "/retailer/inventory" },
-            { label: "Warehouse Marketplace", icon: Warehouse, path: "/retailer/warehouse-marketplace" },
+            {
+              label: "Inventory",
+              icon: Package,
+              path: "/retailer/inventory",
+            },
+            {
+              label: "Warehouse Marketplace",
+              icon: Warehouse,
+              path: "/retailer/warehouse-marketplace",
+            },
           ],
         },
         {
           title: "ORDERS",
           items: [
-            { label: "Order Tracking", icon: Truck, path: "/retailer/order-tracking" },
-            { label: "My Purchases", icon: ShoppingCart, path: "/retailer/my-purchases" },
+            {
+              label: "Order Tracking",
+              icon: Truck,
+              path: "/retailer/order-tracking",
+            },
+            {
+              label: "My Purchases",
+              icon: ShoppingCart,
+              path: "/retailer/my-purchases",
+            },
           ],
         },
         {
           title: "SUPPORT",
           items: [
-            { label: "Product Returns Issue", icon: CornerUpLeft, path: "/retailer/product-returns" },
-            { label: "Messages", icon: Mail, path: "/retailer/messages" },
+            {
+              label: "Product Returns Issue",
+              icon: CornerUpLeft,
+              path: "/retailer/product-returns",
+            },
+            {
+              label: "Messages",
+              icon: Mail,
+              path: "/retailer/messages",
+            },
           ],
         },
         {
           title: "RESOURCES",
           items: [
-            { label: "News & Updates", icon: Newspaper, path: "/retailer/news-updates" },
+            {
+              label: "News & Updates",
+              icon: Newspaper,
+              path: "/retailer/news-updates",
+            },
           ],
         },
       ],
     },
-     warehouse_encoder: {
+
+    warehouse_encoder: {
       panelLabel: "Warehouse Encoder Panel",
       sections: [
         {
           title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/warehouse-encoder/dashboard" }],
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/warehouse-encoder/dashboard",
+            },
+          ],
         },
         {
           title: "MANAGEMENT",
           items: [
-            { label: "Order History", icon: ShoppingCart, path: "/warehouse-encoder/orders" },
-            { label: "Request Order", icon: CornerUpLeft, path: "/warehouse-encoder/requests" },
-            { label: "Stock Management", icon: Package , path: "/warehouse-encoder/stock" },
+            {
+              label: "Order History",
+              icon: ShoppingCart,
+              path: "/warehouse-encoder/orders",
+            },
+            {
+              label: "Request Order",
+              icon: CornerUpLeft,
+              path: "/warehouse-encoder/requests",
+            },
+            {
+              label: "Stock Management",
+              icon: Package,
+              path: "/warehouse-encoder/stock",
+            },
           ],
         },
       ],
     },
+
     warehouse_sales: {
       panelLabel: "Warehouse Sales Panel",
       sections: [
         {
           title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/warehouse-sales/dashboard" }],
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/warehouse-sales/dashboard",
+            },
+          ],
         },
         {
           title: "SALES",
           items: [
-            { label: "Point of Sale", icon: CreditCard, path: "/warehouse-sales/point-of-sale" },
-            { label: "Sales History", icon: History, path: "/warehouse-sales/sales-history" },
+            {
+              label: "Point of Sale",
+              icon: CreditCard,
+              path: "/warehouse-sales/point-of-sale",
+            },
+            {
+              label: "Sales History",
+              icon: History,
+              path: "/warehouse-sales/sales-history",
+            },
           ],
         },
         {
           title: "ORDERS",
           items: [
-            { label: "Online Orders", icon: ShoppingCart, path: "/warehouse-sales/online-orders" },
+            {
+              label: "Online Orders",
+              icon: ShoppingCart,
+              path: "/warehouse-sales/online-orders",
+            },
           ],
         },
       ],
     },
+
     warehouse_logistics: {
       panelLabel: "Warehouse Logistics Panel",
       sections: [
         {
           title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/warehouse-logistics/dashboard" }],
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/warehouse-logistics/dashboard",
+            },
+          ],
         },
         {
           title: "DELIVERY OPERATIONS",
           items: [
-            { label: "Delivery Management", icon: Truck, path: "/warehouse-logistics/delivery-management" },
-            { label: "Product Returns", icon: CornerUpLeft, path: "/warehouse-logistics/product-returns" },
+            {
+              label: "Delivery Management",
+              icon: Truck,
+              path: "/warehouse-logistics/delivery-management",
+            },
+            {
+              label: "Product Returns",
+              icon: CornerUpLeft,
+              path: "/warehouse-logistics/product-returns",
+            },
           ],
         },
         {
           title: "RECORDS",
           items: [
-            { label: "Assigned History", icon: ClipboardList, path: "/warehouse-logistics/assigned-history" },
-            { label: "Fulfillment History", icon: PackageCheck, path: "/warehouse-logistics/fulfillment-history" },
+            {
+              label: "Assigned History",
+              icon: ClipboardList,
+              path: "/warehouse-logistics/assigned-history",
+            },
+            {
+              label: "Fulfillment History",
+              icon: PackageCheck,
+              path: "/warehouse-logistics/fulfillment-history",
+            },
           ],
         },
         {
           title: "FINANCE",
           items: [
-            { label: "Reimbursement", icon: Wallet, path: "/warehouse-logistics/reimbursement" },
-            { label: "Reimbursement History", icon: History, path: "/warehouse-logistics/reimbursement-history" },
+            {
+              label: "Reimbursement",
+              icon: Wallet,
+              path: "/warehouse-logistics/reimbursement",
+            },
+            {
+              label: "Reimbursement History",
+              icon: History,
+              path: "/warehouse-logistics/reimbursement-history",
+            },
           ],
         },
       ],
     },
+
     warehouse_procurement: {
       panelLabel: "Warehouse Procurement Panel",
       sections: [
         {
           title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/warehouse-procurement/dashboard" }],
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/warehouse-procurement/dashboard",
+            },
+          ],
         },
         {
           title: "OPERATIONS",
           items: [
-            { label: "Receiving Orders", icon: Truck, path: "/warehouse-procurement/receiving-orders" },
-            { label: "Goods Receipt", icon: Package, path: "/warehouse-procurement/goods-receipt" },
-            { label: "Returns", icon: CornerUpLeft, path: "/warehouse-procurement/returns" },
-            { label: "Receiving History", icon: History, path: "/warehouse-procurement/receiving-history" },
+            {
+              label: "Receiving Orders",
+              icon: Truck,
+              path: "/warehouse-procurement/receiving-orders",
+            },
+            {
+              label: "Goods Receipt",
+              icon: Package,
+              path: "/warehouse-procurement/goods-receipt",
+            },
+            {
+              label: "Returns",
+              icon: CornerUpLeft,
+              path: "/warehouse-procurement/returns",
+            },
+            {
+              label: "Receiving History",
+              icon: History,
+              path: "/warehouse-procurement/receiving-history",
+            },
           ],
         },
         {
           title: "MASTER DATA",
           items: [
-            { label: "Suppliers", icon: Truck, path: "/warehouse-procurement/suppliers" },
+            {
+              label: "Suppliers",
+              icon: Truck,
+              path: "/warehouse-procurement/suppliers",
+            },
           ],
         },
+        {
+          title: "PAYMENT",
+          items: [
             {
-              title: "PAYMENT",
-              items: [
-                { label: "Procurement Payment History", icon: CreditCard, path: "/warehouse-procurement/payment-history" },
-              ],
+              label: "Procurement Payment History",
+              icon: CreditCard,
+              path: "/warehouse-procurement/payment-history",
             },
+          ],
+        },
       ],
     },
+
     warehouse_finance: {
       panelLabel: "Warehouse Finance Panel",
       sections: [
         {
           title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/warehouse-finance/dashboard" }],
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/warehouse-finance/dashboard",
+            },
+          ],
         },
         {
           title: "FINANCE",
           items: [
-            { label: "Payables", icon: BookOpen, path: "/warehouse-finance/payables" },
-            { label: "Taxes", icon: Receipt, path: "/warehouse-finance/taxes" },
-            { label: "Reimburse", icon: RefreshCcw, path: "/warehouse-finance/reimburse" },
+            {
+              label: "Payables",
+              icon: BookOpen,
+              path: "/warehouse-finance/payables",
+            },
+            {
+              label: "Taxes",
+              icon: Receipt,
+              path: "/warehouse-finance/taxes",
+            },
+            {
+              label: "Reimburse",
+              icon: RefreshCcw,
+              path: "/warehouse-finance/reimburse",
+            },
           ],
         },
         {
           title: "RECORDS",
           items: [
-            { label: "Payment History", icon: History, path: "/warehouse-finance/payment-history" },
+            {
+              label: "Payment History",
+              icon: History,
+              path: "/warehouse-finance/payment-history",
+            },
           ],
         },
       ],
     },
+
     supplier_encoder: {
       panelLabel: "Miller Encoder Panel",
       sections: [
         {
           title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/supplier-encoder/dashboard" }],
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/supplier-encoder/dashboard",
+            },
+          ],
         },
         {
           title: "MANAGEMENT",
           items: [
-            { label: "Order History", icon: History, path: "/supplier-encoder/orders" },
-            { label: "Request Orders", icon: CornerUpLeft, path: "/supplier-encoder/requests" },
-            { label: "Stock Management", icon: Archive, path: "/supplier-encoder/stock" },
+            {
+              label: "Order History",
+              icon: History,
+              path: "/supplier-encoder/orders",
+            },
+            {
+              label: "Request Orders",
+              icon: CornerUpLeft,
+              path: "/supplier-encoder/requests",
+            },
+            {
+              label: "Stock Management",
+              icon: Archive,
+              path: "/supplier-encoder/stock",
+            },
           ],
         },
       ],
     },
+
     miller_sales: {
       panelLabel: "Miller Sales Panel",
       sections: [
         {
           title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/miller-sales/dashboard" }],
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/miller-sales/dashboard",
+            },
+          ],
         },
         {
           title: "SALES",
           items: [
-            { label: "Point of Sale", icon: CreditCard, path: "/miller-sales/point-of-sale" },
-            { label: "Sales History", icon: History, path: "/miller-sales/sales-history" },
+            {
+              label: "Point of Sale",
+              icon: CreditCard,
+              path: "/miller-sales/point-of-sale",
+            },
+            {
+              label: "Sales History",
+              icon: History,
+              path: "/miller-sales/sales-history",
+            },
           ],
         },
         {
           title: "ORDERS",
           items: [
-            { label: "Online Orders", icon: ShoppingCart, path: "/miller-sales/online-orders" },
+            {
+              label: "Online Orders",
+              icon: ShoppingCart,
+              path: "/miller-sales/online-orders",
+            },
           ],
         },
       ],
     },
+
     miller_logistics: {
       panelLabel: "Miller Logistics Panel",
       sections: [
         {
           title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/miller-logistics/dashboard" }],
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/miller-logistics/dashboard",
+            },
+          ],
         },
         {
           title: "DELIVERY OPERATIONS",
           items: [
-            { label: "Delivery Management", icon: Truck, path: "/miller-logistics/delivery-management" },
-            { label: "Product Returns", icon: CornerUpLeft, path: "/miller-logistics/product-returns" },
+            {
+              label: "Delivery Management",
+              icon: Truck,
+              path: "/miller-logistics/delivery-management",
+            },
+            {
+              label: "Product Returns",
+              icon: CornerUpLeft,
+              path: "/miller-logistics/product-returns",
+            },
           ],
         },
         {
           title: "RECORDS",
           items: [
-            { label: "Assigned History", icon: ClipboardList, path: "/miller-logistics/assigned-history" },
-            { label: "Fulfillment History", icon: PackageCheck, path: "/miller-logistics/fulfillment-history" },
+            {
+              label: "Assigned History",
+              icon: ClipboardList,
+              path: "/miller-logistics/assigned-history",
+            },
+            {
+              label: "Fulfillment History",
+              icon: PackageCheck,
+              path: "/miller-logistics/fulfillment-history",
+            },
           ],
         },
         {
           title: "FINANCE",
           items: [
-            { label: "Reimbursement", icon: Wallet, path: "/miller-logistics/reimbursement" },
-            { label: "Reimbursement History", icon: History, path: "/miller-logistics/reimbursement-history" },
+            {
+              label: "Reimbursement",
+              icon: Wallet,
+              path: "/miller-logistics/reimbursement",
+            },
+            {
+              label: "Reimbursement History",
+              icon: History,
+              path: "/miller-logistics/reimbursement-history",
+            },
           ],
         },
       ],
     },
+
     miller_finance: {
       panelLabel: "Miller Finance Panel",
       sections: [
         {
           title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/miller-finance/dashboard" }],
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/miller-finance/dashboard",
+            },
+          ],
         },
         {
           title: "FINANCE",
           items: [
-            { label: "Payables", icon: BookOpen, path: "/miller-finance/payables" },
-            { label: "Taxes", icon: Receipt, path: "/miller-finance/taxes" },
-            { label: "Reimburse", icon: RefreshCcw, path: "/miller-finance/reimburse" },
+            {
+              label: "Payables",
+              icon: BookOpen,
+              path: "/miller-finance/payables",
+            },
+            {
+              label: "Taxes",
+              icon: Receipt,
+              path: "/miller-finance/taxes",
+            },
+            {
+              label: "Reimburse",
+              icon: RefreshCcw,
+              path: "/miller-finance/reimburse",
+            },
           ],
         },
         {
           title: "RECORDS",
           items: [
-            { label: "Payment History", icon: History, path: "/miller-finance/payment-history" },
+            {
+              label: "Payment History",
+              icon: History,
+              path: "/miller-finance/payment-history",
+            },
           ],
         },
       ],
     },
+
     warehouse_manager: {
       panelLabel: "WAREHOUSE MANAGER PANEL",
       sections: [
         {
           title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/warehouse-manager/dashboard" }],
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/warehouse-manager/dashboard",
+            },
+          ],
         },
         {
           title: "MANAGEMENT",
           items: [
-            { label: "Branch Management", icon: Warehouse, path: "/warehouse-manager/branches" },
-            { label: "Order Approval", icon: ClipboardList, path: "/warehouse-manager/order-approval" },
+            {
+              label: "Branch Management",
+              icon: Warehouse,
+              path: "/warehouse-manager/branches",
+            },
+            {
+              label: "Order Approval",
+              icon: ClipboardList,
+              path: "/warehouse-manager/order-approval",
+            },
           ],
         },
         {
           title: "ANALYTICS",
           items: [
-            { label: "Performance Monitoring", icon: FileBarChart, path: "/warehouse-manager/performance" },
+            {
+              label: "Performance Monitoring",
+              icon: FileBarChart,
+              path: "/warehouse-manager/performance",
+            },
           ],
         },
         {
           title: "HISTORY",
           items: [
-            { label: "Fulfillment History", icon: PackageCheck, path: "/warehouse-manager/fulfillment-history" },
-            { label: "Sales History", icon: History, path: "/warehouse-manager/sales-history" },
-            { label: "Procurement Receiving History", icon: Truck, path: "/warehouse-manager/procurement-history" },
-            { label: "Finance Management History", icon: CreditCard, path: "/warehouse-manager/finance-history" },
+            {
+              label: "Fulfillment History",
+              icon: PackageCheck,
+              path: "/warehouse-manager/fulfillment-history",
+            },
+            {
+              label: "Sales History",
+              icon: History,
+              path: "/warehouse-manager/sales-history",
+            },
+            {
+              label: "Procurement Receiving History",
+              icon: Truck,
+              path: "/warehouse-manager/procurement-history",
+            },
+            {
+              label: "Finance Management History",
+              icon: CreditCard,
+              path: "/warehouse-manager/finance-history",
+            },
           ],
         },
         {
           title: "RESOURCES",
           items: [
-            { label: "News & Updates", icon: Newspaper, path: "/warehouse-manager/news-updates" },
+            {
+              label: "News & Updates",
+              icon: Newspaper,
+              path: "/warehouse-manager/news-updates",
+            },
           ],
         },
       ],
     },
+
     warehouse_driver: {
       panelLabel: "WAREHOUSE DRIVER PANEL",
       sections: [
         {
           title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/warehouse-driver/dashboard" }],
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/warehouse-driver/dashboard",
+            },
+          ],
         },
         {
           title: "OPERATIONS",
           items: [
-            { label: "My Duties", icon: ClipboardList, path: "/warehouse-driver/my-duties" },
+            {
+              label: "My Duties",
+              icon: ClipboardList,
+              path: "/warehouse-driver/my-duties",
+            },
           ],
         },
         {
           title: "COMMUNICATION",
           items: [
-            { label: "Messages", icon: Mail, path: "/warehouse-driver/messages" },
+            {
+              label: "Messages",
+              icon: Mail,
+              path: "/warehouse-driver/messages",
+            },
           ],
         },
         {
           title: "FINANCE",
           items: [
-            { label: "Payment Submission", icon: CreditCard, path: "/warehouse-driver/payment-submission" },
-            { label: "Reimbursement", icon: Wallet, path: "/warehouse-driver/reimbursement" },
+            {
+              label: "Payment Submission",
+              icon: CreditCard,
+              path: "/warehouse-driver/payment-submission",
+            },
+            {
+              label: "Reimbursement",
+              icon: Wallet,
+              path: "/warehouse-driver/reimbursement",
+            },
           ],
         },
         {
           title: "HISTORY",
           items: [
-            { label: "Assigned History", icon: ClipboardList, path: "/warehouse-driver/assigned-history" },
-            { label: "Reimbursement History", icon: History, path: "/warehouse-driver/reimbursement-history" },
+            {
+              label: "Assigned History",
+              icon: ClipboardList,
+              path: "/warehouse-driver/assigned-history",
+            },
+            {
+              label: "Reimbursement History",
+              icon: History,
+              path: "/warehouse-driver/reimbursement-history",
+            },
           ],
         },
       ],
     },
+
     miller_driver: {
       panelLabel: "MILLER DRIVER PANEL",
       sections: [
         {
           title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/miller-driver/dashboard" }],
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/miller-driver/dashboard",
+            },
+          ],
         },
         {
           title: "OPERATIONS",
           items: [
-            { label: "My Duties", icon: ClipboardList, path: "/miller-driver/my-duties" },
+            {
+              label: "My Duties",
+              icon: ClipboardList,
+              path: "/miller-driver/my-duties",
+            },
           ],
         },
         {
           title: "COMMUNICATION",
           items: [
-            { label: "Messages", icon: Mail, path: "/miller-driver/messages" },
+            {
+              label: "Messages",
+              icon: Mail,
+              path: "/miller-driver/messages",
+            },
           ],
         },
         {
           title: "FINANCE",
           items: [
-            { label: "Payment Submission", icon: CreditCard, path: "/miller-driver/payment-submission" },
-            { label: "Reimbursement", icon: Wallet, path: "/miller-driver/reimbursement" },
+            {
+              label: "Payment Submission",
+              icon: CreditCard,
+              path: "/miller-driver/payment-submission",
+            },
+            {
+              label: "Reimbursement",
+              icon: Wallet,
+              path: "/miller-driver/reimbursement",
+            },
           ],
         },
         {
           title: "HISTORY",
           items: [
-            { label: "Assigned History", icon: ClipboardList, path: "/miller-driver/assigned-history" },
-            { label: "Reimbursement History", icon: History, path: "/miller-driver/reimbursement-history" },
+            {
+              label: "Assigned History",
+              icon: ClipboardList,
+              path: "/miller-driver/assigned-history",
+            },
+            {
+              label: "Reimbursement History",
+              icon: History,
+              path: "/miller-driver/reimbursement-history",
+            },
           ],
         },
       ],
     },
+
     farmer: {
       panelLabel: "FARMER PANEL",
       sections: [
         {
           title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/farmer/dashboard" }],
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/farmer/dashboard",
+            },
+          ],
         },
         {
           title: "FARM",
           items: [
-            { label: "Farm Management", icon: Package, path: "/farmer/farm-management" },
-            { label: "Forecasting", icon: FileBarChart, path: "/farmer/forecasting" },
+            {
+              label: "Farm Management",
+              icon: Package,
+              path: "/farmer/farm-management",
+            },
+            {
+              label: "Forecasting",
+              icon: FileBarChart,
+              path: "/farmer/forecasting",
+            },
           ],
         },
         {
           title: "BUSINESS",
           items: [
-            { label: "Contracts", icon: ClipboardList, path: "/farmer/contracts" },
-            { label: "Point of Sale", icon: CreditCard, path: "/farmer/point-of-sale" },
-            { label: "Transaction History", icon: History, path: "/farmer/transaction-history" },
+            {
+              label: "Contracts",
+              icon: ClipboardList,
+              path: "/farmer/contracts",
+            },
+            {
+              label: "Point of Sale",
+              icon: CreditCard,
+              path: "/farmer/point-of-sale",
+            },
+            {
+              label: "Transaction History",
+              icon: History,
+              path: "/farmer/transaction-history",
+            },
           ],
         },
         {
           title: "RESOURCES",
           items: [
-            { label: "News & Updates", icon: Newspaper, path: "/farmer/news-updates" },
+            {
+              label: "News & Updates",
+              icon: Newspaper,
+              path: "/farmer/news-updates",
+            },
           ],
-        }
+        },
       ],
     },
   };
@@ -442,7 +896,24 @@ export const getUserSidebarConfig = (role = "admin") => {
   return menuConfigs[role] || menuConfigs.admin;
 };
 
-export const userSidebarRoles = ["admin", "supplier", "retailer", "warehouse_encoder", "warehouse_sales", "warehouse_logistics", "warehouse_procurement", "warehouse_finance", "warehouse_manager", "warehouse_driver", "miller_driver", "supplier_encoder", "miller_sales", "miller_logistics", "miller_finance", "farmer"];
+export const userSidebarRoles = [
+  "admin",
+  "supplier",
+  "retailer",
+  "warehouse_encoder",
+  "warehouse_sales",
+  "warehouse_logistics",
+  "warehouse_procurement",
+  "warehouse_finance",
+  "warehouse_manager",
+  "warehouse_driver",
+  "miller_driver",
+  "supplier_encoder",
+  "miller_sales",
+  "miller_logistics",
+  "miller_finance",
+  "farmer",
+];
 
 const UserSidebar = ({
   role = "admin",
@@ -466,9 +937,11 @@ const UserSidebar = ({
       `}
     >
       {/* Logo + Mobile close button */}
-      <div className={`h-16 flex items-center border-b border-gray-100 px-5 transition-all duration-300 ease-in-out shrink-0 ${
-        isMinimized ? "md:justify-center md:px-0" : "justify-start"
-      }`}>
+      <div
+        className={`h-16 flex items-center border-b border-gray-100 px-5 transition-all duration-300 ease-in-out shrink-0 ${
+          isMinimized ? "md:justify-center md:px-0" : "justify-start"
+        }`}
+      >
         <img
           src={logo}
           alt="GrainRise Logo"
@@ -490,7 +963,9 @@ const UserSidebar = ({
       {/* Panel label */}
       <div
         className={`bg-linear-to-r from-[#0B5D1E] to-[#D6A62D] transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
-          isMinimized ? "md:h-0 md:py-0 md:opacity-0" : "h-10 py-2.5 px-4 opacity-100 flex items-center"
+          isMinimized
+            ? "md:h-0 md:py-0 md:opacity-0"
+            : "h-10 py-2.5 px-4 opacity-100 flex items-center"
         }`}
       >
         <span className="text-white font-bold text-xs tracking-wider uppercase whitespace-nowrap truncate">
@@ -505,7 +980,9 @@ const UserSidebar = ({
             {/* Section title — smoothly collapses height + opacity without layout jumps */}
             <div
               className={`px-5 mb-1.5 transition-all duration-300 ease-in-out overflow-hidden ${
-                isMinimized ? "md:h-0 md:mb-0 md:opacity-0" : "h-4 opacity-100"
+                isMinimized
+                  ? "md:h-0 md:mb-0 md:opacity-0"
+                  : "h-4 opacity-100"
               }`}
             >
               <p className="text-[11px] font-bold text-amber-500 tracking-wider uppercase whitespace-nowrap">
@@ -525,7 +1002,9 @@ const UserSidebar = ({
                     onClick={onClose}
                     title={isMinimized ? item.label : ""}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out ${
-                      isMinimized ? "md:justify-center md:px-0" : "justify-start"
+                      isMinimized
+                        ? "md:justify-center md:px-0"
+                        : "justify-start"
                     } ${
                       isActive
                         ? "bg-[#0B5D1E] text-white shadow-sm"
@@ -533,6 +1012,7 @@ const UserSidebar = ({
                     }`}
                   >
                     {Icon && <Icon size={19} className="shrink-0" />}
+
                     <span
                       className={`whitespace-nowrap transition-all duration-300 ease-in-out ${
                         isMinimized
