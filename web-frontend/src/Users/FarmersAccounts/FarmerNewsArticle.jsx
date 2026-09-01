@@ -13,16 +13,16 @@ const ARTICLES = {
     id: 1,
     category: "Market Trends",
     categoryColor: "bg-yellow-100 text-yellow-700",
-    source: "Green Agrinews",
-    date: "Aug 29, 2026 · 10:00 AM",
+    source: "Agrinews",
+    date: "Aug 24, 2026 · 10:30 AM",
     title: "Global Rice Prices Hit 15-Year High Amid Export Restrictions",
     image: field1,
     content: `
-      Rice prices have surged to their highest levels in 15 years, driven by a confluence of severe weather events in major producing regions and newly implemented export restrictions by key Southeast Asian suppliers. The benchmark Thai white rice FOB price has climbed sharply, signaling tightening global supplies and triggering concerns that food security in import-dependent nations may face severe strains.
+      Global rice prices have surged to their highest levels in 15 years, driven by a confluence of severe weather events in major producing regions and newly implemented export restrictions by key Southeast Asian suppliers. The benchmark Thai white rice 5% broken has climbed sharply, signaling tightening global supplies and triggering concerns over food security in import-dependent nations.
 
-      For local farmers, this global supply shock presents a complex scenario. While farmgate prices for domestically produced rice are expected to see upward pressure, the potential windfall for farmers comes with significant caveats. Input costs like fertilizer, fuel, and post-harvest logistics are also rising. Key headwinds include soil degradation from climate-stressed cropping, elevated chemical dependency to maintain yields, regulatory hurdles, legal penalties affecting non-certified crop insurance applications, and fuel which are often tied to wider global macro trends, remain stubbornly high, potentially affecting the gains from improved crop pricing.
+      For local farmers, this global supply shock presents a complex scenario. While farmgate prices for domestically produced rice are expected to see upward pressure, providing a potential boost to short-term revenues, the broader economic implications are significant. Input costs, particularly fertilizers and fuel which are often tied to similar global macro-trends, remain stubbornly high, potentially offsetting the gains from improved crop pricing.
 
-      Analysts suggest that the export bans are a precautionary measure by governments looking to stabilize their domestic markets. Industry veterans are urging farmers to capitalize on the favorable crop cycle, adjust resource allocation, and embrace market intelligence. The community remains in a state of heightened volatility, requiring meticulous crop planning, efficient resource allocation, and robust market intelligence.
+      Analysts suggest that the export bans are a precautionary measure by governments aiming to stabilize their domestic markets ahead of continued global uncertainty. Industry veterans are urging farmers to capitalize on the favorable crop cycle, adjust resource allocation, and embrace market intelligence. The community remains in a state of heightened volatility, requiring meticulous crop planning, efficient resource allocation, and robust market intelligence.
 
       To navigate the impact of these fluctuations, experts recommend adopting more resilient farming practices, such as investing in drought-tolerant seed varieties and improving water management systems. Additionally, diversifying crops and accessing agricultural credit and expanding agri-insurance coverage can help cushion the blow of unpredictable market dynamics. As the situation evolves, staying informed and adaptable will be crucial for farmers seeking to thrive in an increasingly competitive agricultural landscape.
     `,
@@ -77,7 +77,7 @@ const ARTICLES = {
 
       The National Agriculture Board has allocated ₱2.5 billion for this initiative, which is expected to benefit over 500,000 registered farmers nationwide. Applicants must have an updated Farm Registration Certificate and a valid government-issued ID. The discount covers up to 40% of fertilizer costs, capped at ₱5,000 per hectare.
 
-      Registration can be done online through the DA eServces portal or at any Regional Field Office. The program runs until October 31, 2026, or until funds are exhausted. Farmers are urged to apply early to secure their allocation.
+      Registration can be done online through the DA eServices portal or at any Regional Field Office. The program runs until October 31, 2026, or until funds are exhausted. Farmers are urged to apply early to secure their allocation.
     `,
     likes: 112,
     comments: [],
@@ -117,7 +117,7 @@ export default function FarmerNewsArticle() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6">
       {/* ── Breadcrumbs ──────────────────────────────────────────────── */}
       <Breadcrumbs
         items={[
@@ -136,7 +136,7 @@ export default function FarmerNewsArticle() {
       </button>
 
       {/* ── Article card ─────────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="max-w-5xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         {/* Category + meta */}
         <div className="px-7 pt-7 pb-4 border-b border-slate-100">
           <div className="flex flex-wrap items-center gap-3 mb-3">
@@ -202,7 +202,7 @@ export default function FarmerNewsArticle() {
       </div>
 
       {/* ── Comments ─────────────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm px-7 py-6 space-y-6">
+      <div className="max-w-5xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm px-7 py-6 space-y-6">
         <h3 className="font-bold text-gray-900 text-base">Comments ({comments.length})</h3>
 
         {/* New comment input */}

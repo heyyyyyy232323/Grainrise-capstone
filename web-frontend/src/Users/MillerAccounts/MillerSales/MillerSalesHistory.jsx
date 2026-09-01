@@ -3,6 +3,7 @@ import { Search, Calendar, ChevronDown, X } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import Tabs from "../../../Components/Minor-Components/Tabs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
+import SalesHistoryDetailsModal from "../../../Components/Modals/SalesHistoryDetailsModal";
 
 const TABS = [
   { id: "in-store", label: "In-Store Transactions" },
@@ -13,45 +14,54 @@ const SORT_OPTIONS = [
   { value: "date-desc",   label: "Newest First" },
   { value: "date-asc",    label: "Oldest First" },
   { value: "variant-asc", label: "Variant (A-Z)" },
-  { value: "qty-desc",    label: "Quantity (High to Low)" },
-  { value: "qty-asc",     label: "Quantity (Low to High)" },
-  { value: "total-desc",  label: "Total Payment (High to Low)" },
+  { value: "qty-desc",    label: "Quantity / Price (High to Low)" },
+  { value: "qty-asc",     label: "Quantity / Price (Low to High)" },
 ];
 
-const COLUMNS = [
-  { key: "time",         label: "Transaction Time", width: "16%" },
-  { key: "variant",      label: "Variant",          width: "16%" },
-  { key: "quantity",     label: "Quantity",         width: "14%" },
-  { key: "totalPayment", label: "Total Payment",    width: "16%" },
-  { key: "amountPaid",   label: "Amount Paid",      width: "14%" },
-  { key: "change",       label: "Change",           width: "12%" },
-  { key: "action",       label: "ACTION",           width: "12%", headerClassName: "text-center", cellClassName: "text-center" },
+// ─── Column Definitions ────────────────────────────────────────────────────────
+const IN_STORE_COLUMNS = [
+  { key: "time",         label: "Transaction Time", width: "24%" },
+  { key: "variant",      label: "Variant",          width: "24%" },
+  { key: "quantity",     label: "Quantity",         width: "20%" },
+  { key: "totalPayment", label: "Total Payment",    width: "20%" },
+  { key: "action",       label: "Action",           width: "12%", headerClassName: "text-center", cellClassName: "text-center" },
 ];
 
+const ONLINE_COLUMNS = [
+  { key: "batchNo",        label: "Batch No.",       width: "18%" },
+  { key: "retailer",       label: "Retailer",        width: "15%" },
+  { key: "variant",        label: "Variant",         width: "15%" },
+  { key: "totalPrice",     label: "Total Price",     width: "15%" },
+  { key: "paymentStatus",  label: "Payment Status",  width: "15%" },
+  { key: "deliveryStatus", label: "Delivery Status", width: "15%" },
+  { key: "action",         label: "Action",          width: "12%", headerClassName: "text-center", cellClassName: "text-center" },
+];
+
+// ─── Static Data ───────────────────────────────────────────────────────────────
 const IN_STORE_SECTIONS = [
   {
     label: "Today",
     rows: [
-      { id: "t1", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", amountPaid: "₱23,000.00", change: "₱500.00" },
-      { id: "t2", time: "11:45 AM", variant: "Sinandomeng", quantity: "480 kg", totalPayment: "₱22,500.00", amountPaid: "₱23,000.00", change: "₱500.00" },
-      { id: "t3", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", amountPaid: "₱23,000.00", change: "₱500.00" },
+      { id: "t1", transactionId: "TXN-2026-101", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱25,000.00", change: "₱2,500.00", paymentMethod: "Cash", status: "Paid" },
+      { id: "t2", transactionId: "TXN-2026-102", time: "11:45 AM", variant: "Sinandomeng", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱22,500.00", change: "₱0.00", paymentMethod: "Gcash", status: "Paid" },
+      { id: "t3", transactionId: "TXN-2026-103", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱20,000.00", change: "₱0.00", paymentMethod: "Cash", status: "Pending" },
     ],
   },
   {
     label: "Yesterday",
     rows: [
-      { id: "y1", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", amountPaid: "₱23,000.00", change: "₱500.00" },
-      { id: "y2", time: "11:45 AM", variant: "Sinandomeng", quantity: "480 kg", totalPayment: "₱22,500.00", amountPaid: "₱23,000.00", change: "₱500.00" },
-      { id: "y3", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", amountPaid: "₱23,000.00", change: "₱500.00" },
-      { id: "y4", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", amountPaid: "₱23,000.00", change: "₱500.00" },
+      { id: "y1", transactionId: "TXN-2026-104", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱22,500.00", change: "₱0.00", paymentMethod: "Cash", status: "Paid" },
+      { id: "y2", transactionId: "TXN-2026-105", time: "11:45 AM", variant: "Sinandomeng", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱25,000.00", change: "₱2,500.00", paymentMethod: "Cash", status: "Paid" },
+      { id: "y3", transactionId: "TXN-2026-106", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱22,500.00", change: "₱0.00", paymentMethod: "Bank Transfer", status: "Paid" },
+      { id: "y4", transactionId: "TXN-2026-107", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱18,000.00", change: "₱0.00", paymentMethod: "Cash", status: "Pending" },
     ],
   },
   {
     label: "July 18, 2026",
     rows: [
-      { id: "j1", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", amountPaid: "₱23,000.00", change: "₱500.00" },
-      { id: "j2", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", amountPaid: "₱23,000.00", change: "₱500.00" },
-      { id: "j3", time: "11:45 AM", variant: "Sinandomeng", quantity: "480 kg", totalPayment: "₱22,500.00", amountPaid: "₱23,000.00", change: "₱500.00" },
+      { id: "j1", transactionId: "TXN-2026-108", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱22,500.00", change: "₱0.00", paymentMethod: "Cash", status: "Paid" },
+      { id: "j2", transactionId: "TXN-2026-109", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱25,000.00", change: "₱2,500.00", paymentMethod: "Cash", status: "Paid" },
+      { id: "j3", transactionId: "TXN-2026-110", time: "11:45 AM", variant: "Sinandomeng", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱20,000.00", change: "₱0.00", paymentMethod: "Gcash", status: "Pending" },
     ],
   },
 ];
@@ -60,17 +70,51 @@ const ONLINE_SECTIONS = [
   {
     label: "Today",
     rows: [
-      { id: "o1", time: "10:05 AM", variant: "Sinandomeng", quantity: "320 kg", totalPayment: "₱18,500.00", amountPaid: "₱20,000.00", change: "₱1,500.00" },
-      { id: "o2", time: "09:30 AM", variant: "Sinandomeng", quantity: "160 kg", totalPayment: "₱9,200.00", amountPaid: "₱10,000.00", change: "₱800.00" },
+      { id: "o1", batchNo: "Batch 2026-001", retailer: "Retailer A", variant: "Dinorado", totalPrice: "₱1,500", paymentStatus: "Paid", deliveryStatus: "Completed" },
+      { id: "o2", batchNo: "Batch 2026-001", retailer: "Retailer A", variant: "Dinorado", totalPrice: "₱1,500", paymentStatus: "Pending", deliveryStatus: "Preparing" },
+      { id: "o3", batchNo: "Batch 2026-001", retailer: "Retailer A", variant: "Dinorado", totalPrice: "₱1,500", paymentStatus: "Failed", deliveryStatus: "Cancelled" },
     ],
   },
   {
     label: "Yesterday",
     rows: [
-      { id: "o3", time: "03:00 PM", variant: "Dinorado", quantity: "200 kg", totalPayment: "₱11,500.00", amountPaid: "₱12,000.00", change: "₱500.00" },
+      { id: "o4", batchNo: "Batch 2026-001", retailer: "Retailer A", variant: "Dinorado", totalPrice: "₱1,500", paymentStatus: "Paid", deliveryStatus: "Ready for Pickup" },
+      { id: "o5", batchNo: "Batch 2026-001", retailer: "Retailer A", variant: "Dinorado", totalPrice: "₱1,500", paymentStatus: "Pending", deliveryStatus: "Preparing" },
+      { id: "o6", batchNo: "Batch 2026-001", retailer: "Retailer A", variant: "Dinorado", totalPrice: "₱1,500", paymentStatus: "Pending", deliveryStatus: "Preparing" },
+      { id: "o7", batchNo: "Batch 2026-001", retailer: "Retailer A", variant: "Dinorado", totalPrice: "₱1,500", paymentStatus: "Paid", deliveryStatus: "Completed" },
+    ],
+  },
+  {
+    label: "July 18, 2026",
+    rows: [
+      { id: "o8", batchNo: "Batch 2026-001", retailer: "Retailer A", variant: "Dinorado", totalPrice: "₱1,500", paymentStatus: "Paid", deliveryStatus: "Completed" },
     ],
   },
 ];
+
+// ─── Status Badge Helpers ─────────────────────────────────────────────────────
+const PAYMENT_STATUS_STYLES = {
+  Paid:    "bg-emerald-100 text-emerald-700",
+  Pending: "bg-amber-100 text-amber-700",
+  Failed:  "bg-rose-100 text-rose-700",
+};
+
+const DELIVERY_STATUS_STYLES = {
+  Completed:        "bg-emerald-100 text-emerald-700",
+  Preparing:        "bg-amber-100 text-amber-700",
+  Cancelled:        "bg-rose-100 text-rose-700",
+  "Ready for Pickup": "bg-blue-100 text-blue-700",
+};
+
+function StatusBadge({ status, styleMap }) {
+  if (!status) return null;
+  const style = styleMap[status] || "bg-slate-100 text-slate-600";
+  return (
+    <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${style}`}>
+      {status}
+    </span>
+  );
+}
 
 const MillerSalesHistory = () => {
   const [activeTab,      setActiveTab]      = useState("in-store");
@@ -79,6 +123,8 @@ const MillerSalesHistory = () => {
   const [tempDateRange,  setTempDateRange]  = useState({ startDate: "", endDate: "" });
   const [sortBy,         setSortBy]         = useState("date-desc");
   const [currentPage,    setCurrentPage]    = useState(1);
+  const [isModalOpen,    setIsModalOpen]    = useState(false);
+  const [selectedSale,    setSelectedSale]   = useState(null);
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showSortDrop,   setShowSortDrop]   = useState(false);
@@ -115,16 +161,44 @@ const MillerSalesHistory = () => {
     setShowDatePicker(false);
   };
 
-  const sections = activeTab === "in-store" ? IN_STORE_SECTIONS : ONLINE_SECTIONS;
+  const isOnline = activeTab === "online";
+  const columns  = isOnline ? ONLINE_COLUMNS : IN_STORE_COLUMNS;
+  const sections = isOnline ? ONLINE_SECTIONS : IN_STORE_SECTIONS;
 
   const filteredSections = useMemo(() => {
     return sections
       .map((section) => ({
         ...section,
         rows: section.rows
+          .map((row) => {
+            if (isOnline) {
+              return {
+                ...row,
+                paymentStatus: (
+                  <StatusBadge status={row.paymentStatus} styleMap={PAYMENT_STATUS_STYLES} />
+                ),
+                deliveryStatus: (
+                  <StatusBadge status={row.deliveryStatus} styleMap={DELIVERY_STATUS_STYLES} />
+                ),
+                _rawPaymentStatus: row.paymentStatus,
+                _rawDeliveryStatus: row.deliveryStatus,
+              };
+            }
+            return row;
+          })
           .filter((row) => {
             if (!searchQuery.trim()) return true;
             const q = searchQuery.toLowerCase();
+            if (isOnline) {
+              return (
+                row.batchNo.toLowerCase().includes(q) ||
+                row.retailer.toLowerCase().includes(q) ||
+                row.variant.toLowerCase().includes(q) ||
+                row.totalPrice.toLowerCase().includes(q) ||
+                (row._rawPaymentStatus && row._rawPaymentStatus.toLowerCase().includes(q)) ||
+                (row._rawDeliveryStatus && row._rawDeliveryStatus.toLowerCase().includes(q))
+              );
+            }
             return (
               row.variant.toLowerCase().includes(q) ||
               row.quantity.toLowerCase().includes(q) ||
@@ -134,18 +208,21 @@ const MillerSalesHistory = () => {
           })
           .sort((a, b) => {
             if (sortBy === "variant-asc") return a.variant.localeCompare(b.variant);
-            if (sortBy === "qty-desc") return parseFloat(b.quantity) - parseFloat(a.quantity);
-            if (sortBy === "qty-asc") return parseFloat(a.quantity) - parseFloat(b.quantity);
-            if (sortBy === "total-desc") {
-              const numA = parseFloat(a.totalPayment.replace(/[^0-9.]/g, ""));
-              const numB = parseFloat(b.totalPayment.replace(/[^0-9.]/g, ""));
+            if (sortBy === "qty-desc") {
+              const numA = parseFloat((isOnline ? a.totalPrice : a.quantity).replace(/[^0-9.]/g, ""));
+              const numB = parseFloat((isOnline ? b.totalPrice : b.quantity).replace(/[^0-9.]/g, ""));
               return numB - numA;
+            }
+            if (sortBy === "qty-asc") {
+              const numA = parseFloat((isOnline ? a.totalPrice : a.quantity).replace(/[^0-9.]/g, ""));
+              const numB = parseFloat((isOnline ? b.totalPrice : b.quantity).replace(/[^0-9.]/g, ""));
+              return numA - numB;
             }
             return 0;
           }),
       }))
       .filter((section) => section.rows.length > 0);
-  }, [sections, searchQuery, sortBy]);
+  }, [sections, searchQuery, sortBy, isOnline]);
 
   return (
     <div className="space-y-5">
@@ -173,7 +250,7 @@ const MillerSalesHistory = () => {
         }}
       />
 
-      {/* ── Toolbar (Procurement Design) ────────────────────────────────────── */}
+      {/* ── Toolbar ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4 items-center">
         {/* Search */}
         <div className="relative flex-1 max-w-md w-full">
@@ -312,14 +389,27 @@ const MillerSalesHistory = () => {
 
       {/* ── Transactions Table ──────────────────────────────────────────────── */}
       <SectionedTableCard
-        columns={COLUMNS}
+        columns={columns}
         sections={filteredSections}
         currentPage={currentPage}
         totalPages={TOTAL_PAGES}
         onPageChange={setCurrentPage}
-        onViewDetails={(row) => console.log("View details:", row)}
+        onViewDetails={(row) => {
+          setSelectedSale(row);
+          setIsModalOpen(true);
+        }}
         viewDetailsLabel="View Details"
         footerLabel={`Showing transactions — Page ${currentPage} of ${TOTAL_PAGES}`}
+      />
+
+      <SalesHistoryDetailsModal
+        isOpen={isModalOpen}
+        sale={selectedSale}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedSale(null);
+        }}
+        type={activeTab}
       />
     </div>
   );

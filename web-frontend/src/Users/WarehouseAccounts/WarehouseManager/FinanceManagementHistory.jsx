@@ -1,22 +1,26 @@
-import { useState } from "react";
-import { Search, FileText, Download, X, CheckCircle2, Calendar, DollarSign } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Search, FileText, Download, X, CheckCircle2, Eye } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
+import Tabs from "../../../Components/Minor-Components/Tabs";
+import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
-/* ── Tab 1: Procurement Payables (Screenshot 3) ────────────────────────────── */
+/* ── Tab Constants ───────────────────────────────────────────────────────────── */
+const TABS = [
+  { id: "procurement", label: "Procurement Payables" },
+  { id: "tax",         label: "Tax Compliance Record" },
+  { id: "reimbursement", label: "Reimbursement" },
+];
+
+/* ── Mock Data Generators ────────────────────────────────────────────────────── */
 const MOCK_PROCUREMENT_PAYABLES = Array.from({ length: 24 }).map((_, i) => ({
   id: `pp-${i + 1}`,
   batchNo: "Batch 2026 - 001",
   branch: "Warehouse ABC",
   supplier: "Supplier A",
   variant: "Dinorado",
-  stockQty: "200 kg",
-  unitPrice: "₱45.00",
   total: "₱9,000.00",
-  paidBy: "Finance A",
-  paidAt: "Sep 30, 2026",
 }));
 
-/* ── Tab 2: Tax Compliance Record (Screenshot 2) ───────────────────────────── */
 const MOCK_TAX_RECORDS = Array.from({ length: 24 }).map((_, i) => {
   const isPercentage = i % 2 === 0;
   return {
@@ -27,12 +31,10 @@ const MOCK_TAX_RECORDS = Array.from({ length: 24 }).map((_, i) => {
       : "Local tax imposed by the LGU on commercial warehouse operations...",
     costValue: isPercentage ? "₱1.00" : "₱10,310.20",
     taxPeriod: isPercentage ? "Quarterly" : "Yearly",
-    paidBy: "Finance A",
     dueDate: "Sep 30, 2026",
   };
 });
 
-/* ── Tab 3: Reimbursement (Screenshot 1) ───────────────────────────────────── */
 const MOCK_REIMBURSEMENTS = Array.from({ length: 24 }).map((_, i) => {
   if (i % 3 === 0) {
     return {
@@ -43,7 +45,6 @@ const MOCK_REIMBURSEMENTS = Array.from({ length: 24 }).map((_, i) => {
       description: "Fuel reimbursement for delivery truck",
       cost: "₱2,300.00",
       requestedBy: "Logistics A",
-      paidBy: "Finance A",
     };
   } else if (i % 3 === 1) {
     return {
@@ -54,7 +55,6 @@ const MOCK_REIMBURSEMENTS = Array.from({ length: 24 }).map((_, i) => {
       description: "Warehouse supply expense",
       cost: "₱150.00",
       requestedBy: "Driver A",
-      paidBy: "Finance A",
     };
   } else {
     return {
@@ -65,11 +65,11 @@ const MOCK_REIMBURSEMENTS = Array.from({ length: 24 }).map((_, i) => {
       description: "Weekly salary payout",
       cost: "₱150.00",
       requestedBy: "Finance A",
-      paidBy: "Finance A",
     };
   }
 });
 
+/* ── Style Mappings ──────────────────────────────────────────────────────────── */
 const CATEGORY_STYLES = {
   logistic: "bg-sky-100/90 text-sky-700 border border-sky-200",
   operation: "bg-amber-100/90 text-amber-700 border border-amber-200",
@@ -81,12 +81,44 @@ const PERIOD_STYLES = {
   Yearly: "bg-purple-100/90 text-purple-700 border border-purple-200",
 };
 
+/* ── Table Column Configurations for SectionedTableCard ───────────────────────── */
+const PROCUREMENT_COLUMNS = [
+  { key: "batchNo",   label: "Batch No.",     width: "20%" },
+  { key: "branch",    label: "Branch",        width: "20%" },
+  { key: "supplier",  label: "Supplier",      width: "20%" },
+  { key: "variant",   label: "Variant",       width: "18%" },
+  { key: "total",     label: "Total",         width: "12%" },
+  { key: "action",    label: "Action",        width: "10%", headerClassName: "text-center", cellClassName: "text-center" },
+];
+
+const TAX_COLUMNS = [
+  { key: "nameOfTax",   label: "Name of Tax",     width: "22%" },
+  { key: "description", label: "Description",     width: "32%" },
+  { key: "costValue",   label: "Cost Value",      width: "16%" },
+  { key: "taxPeriod",   label: "Tax Period",      width: "12%", headerClassName: "text-center", cellClassName: "text-center" },
+  { key: "dueDate",     label: "Due Date",        width: "10%" },
+  { key: "action",      label: "Action",          width: "8%", headerClassName: "text-center", cellClassName: "text-center" },
+];
+
+const REIMBURSEMENT_COLUMNS = [
+  { key: "category",    label: "Expense Category", width: "25%" },
+  { key: "description", label: "Description",      width: "32%" },
+  { key: "cost",        label: "Cost",             width: "18%" },
+  { key: "requestedBy", label: "Requested By",     width: "15%" },
+  { key: "action",      label: "Action",           width: "10%", headerClassName: "text-center", cellClassName: "text-center" },
+];
+
 export default function FinanceManagementHistory() {
-  const [activeTab, setActiveTab] = useState("procurement"); // "procurement" | "tax" | "reimbursement"
+  const [activeTab, setActiveTab] = useState("procurement");
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportGenerated, setReportGenerated] = useState(false);
+
+  const handleViewDetails = (item) => {
+    // Replace with your view modal or navigation logic
+    console.log("Viewing record details:", item);
+  };
 
   const getPlaceholder = () => {
     switch (activeTab) {
@@ -114,234 +146,168 @@ export default function FinanceManagementHistory() {
     }
   };
 
-  const filteredData = getRawData().filter((item) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return Object.values(item).some(
-      (val) => typeof val === "string" && val.toLowerCase().includes(q)
-    );
-  });
+  // Select column schemas dynamically based on the active tab
+  const activeColumns = useMemo(() => {
+    switch (activeTab) {
+      case "procurement":
+        return PROCUREMENT_COLUMNS;
+      case "tax":
+        return TAX_COLUMNS;
+      case "reimbursement":
+        return REIMBURSEMENT_COLUMNS;
+      default:
+        return [];
+    }
+  }, [activeTab]);
 
-  const itemsPerPage = 10;
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
-  const paginatedData = filteredData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // Format data for SectionedTableCard
+  const filteredSections = useMemo(() => {
+    const list = getRawData().filter((item) => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return Object.values(item).some(
+        (val) => typeof val === "string" && val.toLowerCase().includes(q)
+      );
+    });
+
+    if (list.length === 0) return [];
+
+    const actionButton = (item) => (
+      <button
+        type="button"
+        onClick={() => handleViewDetails(item)}
+        className="p-1.5 rounded-lg text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition inline-flex items-center gap-1 text-xs cursor-pointer"
+        title="View Details"
+      >
+        <Eye size={15} />
+        <span>View</span>
+      </button>
+    );
+
+    const formattedRows = list.map((item) => {
+      if (activeTab === "procurement") {
+        return {
+          ...item,
+          batchNo: item.batchNo,
+          supplier: item.supplier,
+          total: item.total,
+          action: actionButton(item),
+        };
+      }
+      if (activeTab === "tax") {
+        return {
+          ...item,
+          nameOfTax: item.nameOfTax,
+          description: <span className="max-w-sm truncate block">{item.description}</span>,
+          costValue: item.costValue,
+          taxPeriod: (
+            <span className={`inline-block px-3 py-0.5 rounded-full text-xs ${PERIOD_STYLES[item.taxPeriod]}`}>
+              {item.taxPeriod}
+            </span>
+          ),
+          dueDate: item.dueDate,
+          action: actionButton(item),
+        };
+      }
+      if (activeTab === "reimbursement") {
+        return {
+          ...item,
+          category: (
+            <div>
+              <span className={`inline-block px-2.5 py-0.5 rounded-md text-xs ${CATEGORY_STYLES[item.categoryType] || "bg-gray-100 text-gray-700"}`}>
+                {item.category}
+              </span>
+              <p className="text-[11px] text-slate-400 mt-0.5">{item.date}</p>
+            </div>
+          ),
+          description: item.description,
+          cost: item.cost,
+          action: actionButton(item),
+        };
+      }
+      return item;
+    });
+
+    return [{ rows: formattedRows }];
+  }, [activeTab, search]);
+
+  const rawCount = getRawData().length;
+  const TOTAL_PAGES = Math.max(1, Math.ceil(rawCount / 10));
 
   return (
-    <div className="space-y-6">
-      {/* ── Breadcrumbs & Header ─────────────────────────────────────────────── */}
+    <div className="space-y-5">
+      {/* ── Breadcrumb & Page Header ────────────────────────────────────────── */}
       <div className="space-y-1">
         <Breadcrumbs items={[{ label: "History" }, { label: "Finance Management History" }]} />
-        <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-extrabold tracking-[-0.03em] text-slate-900">
+        <h1 className="text-[clamp(1.75rem,3vw,2.25rem)] font-bold tracking-[-0.03em] text-slate-900">
           Finance Management History
-        </h2>
+        </h1>
         <p className="text-sm text-slate-500">
           All paid records across procurement, taxes, and reimbursements.
         </p>
       </div>
 
-      {/* ── Tabs (Procurement Payables / Tax Compliance Record / Reimbursement) ─ */}
-      <div className="flex items-center gap-6 border-b border-gray-200 text-sm font-semibold">
-        <button
-          onClick={() => { setActiveTab("procurement"); setCurrentPage(1); }}
-          className={`pb-3 transition relative cursor-pointer ${
-            activeTab === "procurement"
-              ? "text-gray-900 border-b-2 border-emerald-700 font-bold"
-              : "text-gray-500 hover:text-gray-800"
-          }`}
-        >
-          Procurement Payables
-        </button>
+      {/* ── Shared Tabs Component ───────────────────────────────────────────── */}
+      <Tabs
+        tabs={TABS}
+        activeTab={activeTab}
+        onTabChange={(id) => {
+          setActiveTab(id);
+          setCurrentPage(1);
+        }}
+      />
 
-        <button
-          onClick={() => { setActiveTab("tax"); setCurrentPage(1); }}
-          className={`pb-3 transition relative cursor-pointer ${
-            activeTab === "tax"
-              ? "text-gray-900 border-b-2 border-emerald-700 font-bold"
-              : "text-gray-500 hover:text-gray-800"
-          }`}
-        >
-          Tax Compliance Record
-        </button>
-
-        <button
-          onClick={() => { setActiveTab("reimbursement"); setCurrentPage(1); }}
-          className={`pb-3 transition relative cursor-pointer ${
-            activeTab === "reimbursement"
-              ? "text-gray-900 border-b-2 border-emerald-700 font-bold"
-              : "text-gray-500 hover:text-gray-800"
-          }`}
-        >
-          Reimbursement
-        </button>
-      </div>
-
-      {/* ── Search Bar & Generate Financial Reports Action ───────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+      {/* ── Toolbar ─────────────────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4 items-center justify-between">
+        {/* Search */}
+        <div className="relative flex-1 max-w-md w-full">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search size={16} className="text-gray-400" />
+          </div>
           <input
             type="text"
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder={getPlaceholder()}
-            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none bg-white placeholder-gray-400 text-gray-700"
+            className="block w-full pl-10 pr-9 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 bg-white placeholder-gray-400 text-gray-700"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setCurrentPage(1);
+              }}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+            >
+              <X size={15} />
+            </button>
+          )}
         </div>
 
+        {/* Generate Financial Reports Button */}
         <button
+          type="button"
           onClick={() => setShowReportModal(true)}
-          className="flex items-center justify-center gap-2 bg-[#0B5D1E] hover:bg-[#094d19] text-white text-xs font-bold px-5 py-2.5 rounded-full shadow-sm transition cursor-pointer self-start sm:self-auto whitespace-nowrap"
+          className="rounded-lg bg-[#0B5D1E] px-4 py-2 text-xs font-normal text-white transition hover:bg-[#084b18] flex items-center gap-1.5 cursor-pointer whitespace-nowrap ml-auto"
         >
-          <FileText size={15} /> Generate Financial Reports
+          <FileText size={15} strokeWidth={2.5} />
+          Generate Financial Reports
         </button>
       </div>
 
-      {/* ── Table Card ──────────────────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          {/* TAB 1: Procurement Payables Table (Screenshot 3) */}
-          {activeTab === "procurement" && (
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50/80 border-b border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider">
-                <tr>
-                  <th className="px-5 py-4 text-left">Batch No.</th>
-                  <th className="px-5 py-4 text-left">Branch</th>
-                  <th className="px-5 py-4 text-left">Supplier</th>
-                  <th className="px-5 py-4 text-left">Variant</th>
-                  <th className="px-5 py-4 text-left">Stock Qty (KG)</th>
-                  <th className="px-5 py-4 text-left">Unit Price</th>
-                  <th className="px-5 py-4 text-left">Total</th>
-                  <th className="px-5 py-4 text-left">Paid By</th>
-                  <th className="px-5 py-4 text-left">Paid At</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {paginatedData.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="px-5 py-4 font-mono text-xs text-gray-700">{row.batchNo}</td>
-                    <td className="px-5 py-4 text-gray-700">{row.branch}</td>
-                    <td className="px-5 py-4 font-medium text-gray-900">{row.supplier}</td>
-                    <td className="px-5 py-4 text-gray-800">{row.variant}</td>
-                    <td className="px-5 py-4 text-gray-700">{row.stockQty}</td>
-                    <td className="px-5 py-4 text-gray-700">{row.unitPrice}</td>
-                    <td className="px-5 py-4 font-bold text-gray-900">{row.total}</td>
-                    <td className="px-5 py-4 text-gray-600">{row.paidBy}</td>
-                    <td className="px-5 py-4 text-gray-500 text-xs">{row.paidAt}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          {/* TAB 2: Tax Compliance Record Table (Screenshot 2) */}
-          {activeTab === "tax" && (
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50/80 border-b border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider">
-                <tr>
-                  <th className="px-5 py-4 text-left">Name of Tax</th>
-                  <th className="px-5 py-4 text-left">Description</th>
-                  <th className="px-5 py-4 text-left">Cost Value</th>
-                  <th className="px-5 py-4 text-center">Tax Period</th>
-                  <th className="px-5 py-4 text-left">Paid By</th>
-                  <th className="px-5 py-4 text-left">Due Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {paginatedData.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="px-5 py-4 font-bold text-gray-900">{row.nameOfTax}</td>
-                    <td className="px-5 py-4 text-gray-600 max-w-sm truncate">{row.description}</td>
-                    <td className="px-5 py-4 font-bold text-gray-900">{row.costValue}</td>
-                    <td className="px-5 py-4 text-center">
-                      <span className={`inline-block px-3 py-0.5 rounded-full text-xs font-bold ${PERIOD_STYLES[row.taxPeriod]}`}>
-                        {row.taxPeriod}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-gray-600">{row.paidBy}</td>
-                    <td className="px-5 py-4 text-gray-500 text-xs">{row.dueDate}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          {/* TAB 3: Reimbursement Table (Screenshot 1) */}
-          {activeTab === "reimbursement" && (
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50/80 border-b border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider">
-                <tr>
-                  <th className="px-5 py-4 text-left">Expense Category</th>
-                  <th className="px-5 py-4 text-left">Description</th>
-                  <th className="px-5 py-4 text-left">Cost</th>
-                  <th className="px-5 py-4 text-left">Requested By</th>
-                  <th className="px-5 py-4 text-left">Paid By</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {paginatedData.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="px-5 py-4">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-md text-xs font-semibold ${CATEGORY_STYLES[row.categoryType] || "bg-gray-100 text-gray-700"}`}>
-                        {row.category}
-                      </span>
-                      <p className="text-[11px] text-gray-400 mt-1">{row.date}</p>
-                    </td>
-                    <td className="px-5 py-4 text-gray-700 font-medium">{row.description}</td>
-                    <td className="px-5 py-4 font-bold text-gray-900">{row.cost}</td>
-                    <td className="px-5 py-4 text-gray-700">{row.requestedBy}</td>
-                    <td className="px-5 py-4 text-gray-600">{row.paidBy}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          {paginatedData.length === 0 && (
-            <div className="text-center py-12 text-sm text-gray-400">
-              No financial records found matching your query.
-            </div>
-          )}
-        </div>
-
-        {/* Pagination Footer */}
-        <div className="flex items-center justify-between border-t border-gray-100 px-6 py-3.5 bg-slate-50/40">
-          <p className="text-xs text-gray-500">
-            Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length} {activeTab === "tax" ? "tax" : "payment"} records
-          </p>
-          <div className="flex gap-1">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1 border border-gray-200 text-gray-400 rounded-lg text-xs disabled:opacity-40"
-            >
-              Previous
-            </button>
-            {Array.from({ length: totalPages }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentPage(i + 1)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium ${
-                  currentPage === i + 1
-                    ? "bg-[#0B5D1E] text-white"
-                    : "border border-gray-200 text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="px-3 py-1 border border-gray-200 text-gray-700 hover:bg-gray-100 rounded-lg text-xs disabled:opacity-40"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* ── Shared SectionedTableCard Component ─────────────────────────────── */}
+      <SectionedTableCard
+        columns={activeColumns}
+        sections={filteredSections}
+        currentPage={currentPage}
+        totalPages={TOTAL_PAGES}
+        onPageChange={setCurrentPage}
+        footerLabel={`Showing financial records — Page ${currentPage} of ${TOTAL_PAGES}`}
+      />
 
       {/* ── Generate Financial Reports Modal ─────────────────────────────────── */}
       {showReportModal && (
@@ -353,11 +319,12 @@ export default function FinanceManagementHistory() {
                   <FileText size={18} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900 text-base">Generate Financial Statement</h3>
+                  <h3 className="font-normal text-gray-900 text-base">Generate Financial Statement</h3>
                   <p className="text-xs text-gray-500">Export audited warehouse finance summaries</p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => { setShowReportModal(false); setReportGenerated(false); }}
                 className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
               >
@@ -367,7 +334,7 @@ export default function FinanceManagementHistory() {
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-semibold text-gray-700 block mb-1">Select Report Category</label>
+                <label className="text-xs font-normal text-gray-700 block mb-1">Select Report Category</label>
                 <select className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none bg-white">
                   <option>Procurement Payables &amp; Supplier Invoices</option>
                   <option>Tax Compliance &amp; LGU Withholdings</option>
@@ -377,7 +344,7 @@ export default function FinanceManagementHistory() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-gray-700 block mb-1">Fiscal Reporting Period</label>
+                <label className="text-xs font-normal text-gray-700 block mb-1">Fiscal Reporting Period</label>
                 <select className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none bg-white">
                   <option>Current Fiscal Month (August 2026)</option>
                   <option>Q3 2026 (July - September)</option>
@@ -386,12 +353,12 @@ export default function FinanceManagementHistory() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-gray-700 block mb-1">Export Format</label>
+                <label className="text-xs font-normal text-gray-700 block mb-1">Export Format</label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button type="button" className="py-2 border border-emerald-600 bg-emerald-50 text-emerald-800 rounded-xl text-xs font-bold">
+                  <button type="button" className="py-2 border border-emerald-600 bg-emerald-50 text-emerald-800 rounded-xl text-xs font-normal">
                     PDF Statement
                   </button>
-                  <button type="button" className="py-2 border border-gray-200 text-gray-600 rounded-xl text-xs font-semibold hover:bg-gray-50">
+                  <button type="button" className="py-2 border border-gray-200 text-gray-600 rounded-xl text-xs font-normal hover:bg-gray-50">
                     CSV / Excel
                   </button>
                 </div>
@@ -399,7 +366,7 @@ export default function FinanceManagementHistory() {
             </div>
 
             {reportGenerated ? (
-              <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2">
+              <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl text-xs font-normal flex items-center gap-2">
                 <CheckCircle2 size={16} /> Financial statement generated! Download initiated.
               </div>
             ) : null}
@@ -408,7 +375,7 @@ export default function FinanceManagementHistory() {
               <button
                 type="button"
                 onClick={() => { setShowReportModal(false); setReportGenerated(false); }}
-                className="flex-1 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition"
+                className="flex-1 py-2.5 border border-gray-200 rounded-xl text-xs font-normal text-gray-600 hover:bg-gray-50 transition cursor-pointer"
               >
                 Cancel
               </button>
@@ -421,7 +388,7 @@ export default function FinanceManagementHistory() {
                     setReportGenerated(false);
                   }, 1500);
                 }}
-                className="flex-1 py-2.5 bg-[#0B5D1E] hover:bg-[#094d19] text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 bg-[#0B5D1E] hover:bg-[#094d19] text-white rounded-xl text-xs font-normal transition flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Download size={14} /> Export Report
               </button>

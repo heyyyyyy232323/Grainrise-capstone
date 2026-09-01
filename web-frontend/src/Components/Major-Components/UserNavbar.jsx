@@ -1,23 +1,19 @@
 import { useState, useRef, useEffect } from "react";
-import { PanelLeft, Search, Bell, ChevronDown, UserPlus, CircleUserRound, Moon, CircleHelp, LogOut, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  PanelLeft,
+  Search,
+  Bell,
+  ChevronDown,
+  CircleUserRound,
+  Moon,
+  CircleHelp,
+  LogOut,
+  AlertCircle,
+} from "lucide-react";
 
 /**
  * Reusable top navbar for all user roles.
- *
- * Props:
- * - user: { name, email, avatarUrl }
- * - notificationCount: number
- * - onToggleSidebar: () => void   (optional, e.g. to collapse the sidebar)
- * - onSearch: (query: string) => void  (optional)
- * - menuItems: [{ label, onClick }]  (optional dropdown items under the user's name, e.g. "Profile", "Log Out")
- *
- * Usage:
- * <Navbar
- *   user={{ name: "Kerbie Hector Abanid", email: "Abanid1@gmail.com", avatarUrl: avatar }}
- *   notificationCount={1}
- *   onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
- *   menuItems={[{ label: "Profile", onClick: () => navigate("/profile") }, { label: "Log Out", onClick: handleLogout }]}
- * />
  */
 export const getUserNavbarMenuItems = (navigate) => [
   { label: "Help Center", onClick: () => alert("Open Help Center") },
@@ -67,12 +63,14 @@ const UserNavbar = ({
   menuItems = [],
   notificationItems = [],
   onMarkAllAsRead,
+  onProfileClick, // Optional custom click handler for profile navigation
 }) => {
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [notifications, setNotifications] = useState(
-    notificationItems.length > 0 ? notificationItems : getUserNavbarNotifications(),
+    notificationItems.length > 0 ? notificationItems : getUserNavbarNotifications()
   );
   const menuRef = useRef(null);
   const notificationRef = useRef(null);
@@ -83,7 +81,7 @@ const UserNavbar = ({
     }
   }, [notificationItems]);
 
-  // Initialize theme from localStorage. Default to light when no saved preference exists.
+  // Initialize theme from localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem("theme");
@@ -108,11 +106,9 @@ const UserNavbar = ({
       const next = !prev;
       try {
         if (next) {
-          // dark -> remove light class
           document.documentElement.classList.remove("light");
           localStorage.setItem("theme", "dark");
         } else {
-          // light -> add light class
           document.documentElement.classList.add("light");
           localStorage.setItem("theme", "light");
         }
@@ -136,7 +132,8 @@ const UserNavbar = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const effectiveMenuItems = menuItems.length > 0 ? menuItems : getUserNavbarMenuItems(() => { });
+  const effectiveMenuItems =
+    menuItems.length > 0 ? menuItems : getUserNavbarMenuItems(navigate);
   const unreadCount = notifications.filter((item) => !item.read).length;
   const badgeCount = notificationCount || unreadCount;
 
@@ -145,17 +142,26 @@ const UserNavbar = ({
     onMarkAllAsRead?.();
   };
 
+  const handleMyAccountClick = () => {
+    setMenuOpen(false);
+    if (onProfileClick) {
+      onProfileClick();
+    } else {
+      navigate("/account-profile");
+    }
+  };
+
   return (
     <header className="h-18.25 w-full bg-white border-b border-gray-200 flex items-center gap-2 sm:gap-4 px-4 sm:px-6 z-30">
       {/* Sidebar toggle */}
       <button
         onClick={onToggleSidebar}
-        className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition shrink-0"
+        className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition shrink-0 cursor-pointer"
       >
         <PanelLeft size={18} />
       </button>
 
-      {/* Search - Hidden on small mobile */}
+      {/* Search */}
       <div className="relative flex-1 max-w-xl hidden sm:flex">
         <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
@@ -168,14 +174,14 @@ const UserNavbar = ({
 
       <div className="flex-1" />
 
-      {/* Notification */}
+      {/* Notification Button & Panel */}
       <div className="relative" ref={notificationRef}>
         <button
           onClick={() => {
             setNotificationOpen((prev) => !prev);
             setMenuOpen(false);
           }}
-          className="relative w-10 h-10 flex items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 transition shrink-0"
+          className="relative w-10 h-10 flex items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 transition shrink-0 cursor-pointer"
         >
           <Bell size={18} />
           {badgeCount > 0 && (
@@ -191,7 +197,7 @@ const UserNavbar = ({
               <h3 className="text-sm leading-none font-bold text-gray-900">Notification</h3>
               <button
                 onClick={handleMarkAllAsRead}
-                className="text-[11px] font-semibold text-[#0B7A2A] hover:text-[#096322] transition"
+                className="text-[11px] font-semibold text-[#0B7A2A] hover:text-[#096322] transition cursor-pointer"
               >
                 Mark all as read
               </button>
@@ -201,7 +207,9 @@ const UserNavbar = ({
               {notifications.map((item) => (
                 <div
                   key={item.id}
-                  className={`p-3 border-b border-slate-100 last:border-b-0 ${item.read ? "bg-white" : "bg-[#F0F8F1]"}`}
+                  className={`p-3 border-b border-slate-100 last:border-b-0 ${
+                    item.read ? "bg-white" : "bg-[#F0F8F1]"
+                  }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-full bg-amber-400 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
@@ -224,7 +232,7 @@ const UserNavbar = ({
 
                       <button
                         onClick={() => item.onView?.(item)}
-                        className="mt-2.5 inline-flex items-center rounded-full bg-[#007A1F] px-3 py-1 text-[11px] font-bold text-white hover:bg-[#006218] transition"
+                        className="mt-2.5 inline-flex items-center rounded-full bg-[#007A1F] px-3 py-1 text-[11px] font-bold text-white hover:bg-[#006218] transition cursor-pointer"
                       >
                         View Stock
                       </button>
@@ -237,11 +245,11 @@ const UserNavbar = ({
         )}
       </div>
 
-      {/* User */}
+      {/* User Dropdown */}
       <div className="relative" ref={menuRef}>
         <button
           onClick={() => setMenuOpen((prev) => !prev)}
-          className="flex items-center gap-2 sm:gap-3 pl-2 pr-1 py-1 rounded-full hover:bg-gray-50 transition"
+          className="flex items-center gap-2 sm:gap-3 pl-2 pr-1 py-1 rounded-full hover:bg-gray-50 transition cursor-pointer"
         >
           {user.avatarUrl ? (
             <img
@@ -250,7 +258,7 @@ const UserNavbar = ({
               className="w-9 h-9 rounded-full object-cover"
             />
           ) : (
-            <div className="w-9 h-9 rounded-full bg-linear-to-br from-green-600 to-yellow-400 flex items-center justify-center text-white text-sm font-bold">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-600 to-yellow-400 flex items-center justify-center text-white text-sm font-bold">
               {user.name?.charAt(0) || "U"}
             </div>
           )}
@@ -262,17 +270,26 @@ const UserNavbar = ({
 
           <ChevronDown
             size={16}
-            className={`text-gray-400 transition-transform hidden sm:block ${menuOpen ? "rotate-180" : ""}`}
+            className={`text-gray-400 transition-transform hidden sm:block ${
+              menuOpen ? "rotate-180" : ""
+            }`}
           />
         </button>
 
         {menuOpen && (
           <div className="absolute right-0 mt-2 w-[min(80vw,15rem)] rounded-xl border border-gray-200 bg-[#EDF4EE] shadow-2xl z-50 overflow-hidden p-2">
-            <div className="rounded-lg bg-[#DDE7DF] px-2.5 py-1.5 flex items-center gap-1.5 text-[#006A1E] mb-1.5">
-              <CircleUserRound size={16} className="shrink-0" />
+            
+            {/* Clickable "My Account" Profile Link */}
+            <button
+              type="button"
+              onClick={handleMyAccountClick}
+              className="w-full rounded-lg bg-[#DDE7DF] hover:bg-[#d0dfd3] px-2.5 py-2 flex items-center gap-2 text-[#006A1E] mb-1.5 transition cursor-pointer"
+            >
+              <CircleUserRound size={18} className="shrink-0" />
               <span className="text-sm leading-none font-bold">My Account</span>
-            </div>
+            </button>
 
+            {/* Dark Mode Toggle */}
             <div className="w-full flex items-center justify-between px-1.5 py-1.5 text-left text-gray-500">
               <span className="flex items-center gap-1.5 text-sm leading-none">
                 <Moon size={16} />
@@ -282,19 +299,24 @@ const UserNavbar = ({
                 type="button"
                 aria-label="Toggle dark mode"
                 onClick={toggleTheme}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition ${darkModeEnabled ? "bg-[#0B7A2A]" : "bg-gray-300"
-                  }`}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition cursor-pointer ${
+                  darkModeEnabled ? "bg-[#0B7A2A]" : "bg-gray-300"
+                }`}
               >
                 <span
-                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition ${darkModeEnabled ? "translate-x-4.5" : "translate-x-1"
-                    }`}
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition ${
+                    darkModeEnabled ? "translate-x-4.5" : "translate-x-1"
+                  }`}
                 />
               </button>
             </div>
 
+            {/* Additional Menu Items (Help Center, Logout, etc.) */}
             <div className="space-y-0.5">
               {effectiveMenuItems.map((item) => {
-                const isLogout = item.label.toLowerCase().includes("logout") || item.label.toLowerCase().includes("log out");
+                const isLogout =
+                  item.label.toLowerCase().includes("logout") ||
+                  item.label.toLowerCase().includes("log out");
 
                 return (
                   <button
@@ -303,10 +325,11 @@ const UserNavbar = ({
                       item.onClick?.();
                       setMenuOpen(false);
                     }}
-                    className={`w-full flex items-center gap-1.5 px-1.5 py-1.5 text-left transition ${isLogout
-                      ? "mt-0.5 pt-2 border-t border-gray-300 text-red-600 hover:text-red-700"
-                      : "text-gray-500 hover:text-gray-700"
-                      }`}
+                    className={`w-full flex items-center gap-1.5 px-1.5 py-1.5 text-left transition cursor-pointer ${
+                      isLogout
+                        ? "mt-0.5 pt-2 border-t border-gray-300 text-red-600 hover:text-red-700"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
                   >
                     {isLogout ? <LogOut size={16} /> : <CircleHelp size={16} />}
                     <span className="text-sm leading-none">{item.label}</span>
