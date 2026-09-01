@@ -40,6 +40,14 @@ from .serializers import (
     SiloSerializer,
     SiloUpdateSerializer,
     UserLoginSerializer,
+    WarehouseOCRSerializer,
+    WarehouseRegistrationSerializer,
+    WarehouseSendOTPSerializer,
+    WarehouseVerifyOTPSerializer,
+    SupplierOCRSerializer,
+    SupplierRegistrationSerializer,
+    SupplierSendOTPSerializer,
+    SupplierVerifyOTPSerializer,
 )
 
 from .utils import (
@@ -69,6 +77,28 @@ from .farmer_registration import (
     issue_farmer_email_otp,
     verify_farmer_email_otp,
     verify_farmer_email_verification_token,
+)
+
+
+from .warehouse_registration import (
+    create_warehouse_email_verification_token,
+    create_warehouse_registration,
+    extract_warehouse_documents_ocr,
+    issue_warehouse_email_otp,
+    verify_warehouse_email_otp,
+    verify_warehouse_email_verification_token,
+    warehouse_user_value_exists,
+)
+
+
+from .supplier_registration import (
+    create_supplier_email_verification_token,
+    create_supplier_registration,
+    extract_supplier_documents_ocr,
+    issue_supplier_email_otp,
+    supplier_user_value_exists,
+    verify_supplier_email_otp,
+    verify_supplier_email_verification_token,
 )
 
 
@@ -1422,6 +1452,707 @@ def register_farmer(request):
                     (
                         "Farmer registration could not be "
                         f"saved to PostgreSQL: {exc}"
+                    )
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+
+# ============================================================
+# WAREHOUSE MANAGER — SEND OTP
+# ============================================================
+
+@api_view(["POST"])
+def send_warehouse_otp(request):
+    serializer = WarehouseSendOTPSerializer(
+        data=request.data
+    )
+
+    if not serializer.is_valid():
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    data = serializer.validated_data
+    email = data["email"].strip().lower()
+    username = str(data.get("username", "") or "").strip()
+
+    try:
+        if warehouse_user_value_exists(
+            "email",
+            email,
+        ):
+            return Response(
+                {
+                    "detail":
+                        "This email address is already registered."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if (
+            username
+            and warehouse_user_value_exists(
+                "username",
+                username,
+            )
+        ):
+            return Response(
+                {
+                    "detail":
+                        "This username is already registered."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        retry_after = issue_warehouse_email_otp(
+            email
+        )
+
+        if retry_after == 0:
+            return Response(
+                {
+                    "detail":
+                        (
+                            "An OTP was recently sent. "
+                            "Please wait before requesting "
+                            "another verification code."
+                        ),
+                    "retry_after": 60,
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        return Response(
+            {
+                "message":
+                    "OTP sent successfully.",
+                "retry_after":
+                    retry_after,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    except ValueError as exc:
+        return Response(
+            {
+                "detail": str(exc)
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    except Exception as exc:
+        return Response(
+            {
+                "detail":
+                    (
+                        "Unable to send Warehouse Manager "
+                        f"OTP email. {exc}"
+                    )
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+# ============================================================
+# WAREHOUSE MANAGER — VERIFY OTP
+# ============================================================
+
+@api_view(["POST"])
+def verify_warehouse_otp(request):
+    serializer = WarehouseVerifyOTPSerializer(
+        data=request.data
+    )
+
+    if not serializer.is_valid():
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    email = (
+        serializer
+        .validated_data["email"]
+        .strip()
+        .lower()
+    )
+
+    otp = serializer.validated_data["otp"]
+
+    if not verify_warehouse_email_otp(
+        email,
+        otp,
+    ):
+        return Response(
+            {
+                "detail":
+                    (
+                        "Invalid or expired OTP. "
+                        "Please request a new "
+                        "verification code."
+                    )
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    verification_token = (
+        create_warehouse_email_verification_token(
+            email
+        )
+    )
+
+    return Response(
+        {
+            "message":
+                "Email verified successfully.",
+            "verification_token":
+                verification_token,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+# ============================================================
+# WAREHOUSE MANAGER — OCR DOCUMENTS
+# ============================================================
+
+@api_view(["POST"])
+@parser_classes(
+    [
+        MultiPartParser,
+        FormParser,
+    ]
+)
+def extract_warehouse_documents(request):
+    serializer = WarehouseOCRSerializer(
+        data=request.data
+    )
+
+    if not serializer.is_valid():
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    data = serializer.validated_data
+
+    documents = {
+        "government_issued_id":
+            data["government_issued_id"],
+        "business_permit":
+            data["business_permit"],
+        "business_registration":
+            data["business_registration"],
+        "warehouse_license":
+            data["warehouse_license"],
+    }
+
+    try:
+        autofill = extract_warehouse_documents_ocr(
+            documents
+        )
+
+        return Response(
+            {
+                "message":
+                    (
+                        "Documents processed successfully. "
+                        "Please review and edit the detected "
+                        "business information before submitting."
+                    ),
+                "autofill": autofill,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    except ValueError as exc:
+        return Response(
+            {
+                "detail": str(exc)
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    except RuntimeError as exc:
+        return Response(
+            {
+                "detail": str(exc)
+            },
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    except Exception as exc:
+        return Response(
+            {
+                "detail":
+                    (
+                        "Warehouse document OCR failed. "
+                        f"{exc}"
+                    )
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+# ============================================================
+# WAREHOUSE MANAGER — REGISTER
+# ============================================================
+
+@api_view(["POST"])
+@parser_classes(
+    [
+        MultiPartParser,
+        FormParser,
+    ]
+)
+def register_warehouse(request):
+    serializer = WarehouseRegistrationSerializer(
+        data=request.data
+    )
+
+    if not serializer.is_valid():
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    data = serializer.validated_data
+    email = data["email"].strip().lower()
+
+    if not verify_warehouse_email_verification_token(
+        data["verification_token"],
+        email,
+    ):
+        return Response(
+            {
+                "detail":
+                    (
+                        "Email verification is invalid "
+                        "or expired. Please verify "
+                        "your email again."
+                    )
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    documents = {
+        "government_issued_id":
+            data["government_issued_id"],
+        "business_permit":
+            data["business_permit"],
+        "business_registration":
+            data["business_registration"],
+        "warehouse_license":
+            data["warehouse_license"],
+    }
+
+    try:
+        result = create_warehouse_registration(
+            data,
+            documents,
+        )
+
+        return Response(
+            {
+                "message":
+                    (
+                        "Warehouse Manager registration "
+                        "submitted successfully."
+                    ),
+                "user_id":
+                    result["user_id"],
+                "warehouse_profile_id":
+                    result["warehouse_profile_id"],
+                "warehouse_document_id":
+                    result["warehouse_document_id"],
+                "user_role":
+                    result["user_role"],
+                "status":
+                    result["status"],
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    except ValueError as exc:
+        return Response(
+            {
+                "detail": str(exc)
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    except IntegrityError as exc:
+        return Response(
+            {
+                "detail":
+                    (
+                        "Warehouse Manager registration "
+                        f"could not be saved: {exc}"
+                    )
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    except Exception as exc:
+        return Response(
+            {
+                "detail":
+                    (
+                        "Warehouse Manager registration "
+                        "could not be saved to PostgreSQL: "
+                        f"{exc}"
+                    )
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+# ============================================================
+# SUPPLIER / MILLER — SEND OTP
+# ============================================================
+
+@api_view(["POST"])
+def send_supplier_otp(request):
+    serializer = SupplierSendOTPSerializer(
+        data=request.data
+    )
+
+    if not serializer.is_valid():
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    data = serializer.validated_data
+    email = data["email"].strip().lower()
+    username = str(data.get("username", "") or "").strip()
+
+    try:
+        if supplier_user_value_exists(
+            "email",
+            email,
+        ):
+            return Response(
+                {
+                    "detail":
+                        "This email address is already registered."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if (
+            username
+            and supplier_user_value_exists(
+                "username",
+                username,
+            )
+        ):
+            return Response(
+                {
+                    "detail":
+                        "This username is already registered."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        retry_after = issue_supplier_email_otp(
+            email
+        )
+
+        if retry_after == 0:
+            return Response(
+                {
+                    "detail":
+                        (
+                            "An OTP was recently sent. "
+                            "Please wait before requesting "
+                            "another verification code."
+                        ),
+                    "retry_after": 60,
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        return Response(
+            {
+                "message":
+                    "OTP sent successfully.",
+                "retry_after":
+                    retry_after,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    except ValueError as exc:
+        return Response(
+            {
+                "detail": str(exc)
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    except Exception as exc:
+        return Response(
+            {
+                "detail":
+                    (
+                        "Unable to send Supplier / Miller "
+                        f"OTP email. {exc}"
+                    )
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+# ============================================================
+# SUPPLIER / MILLER — VERIFY OTP
+# ============================================================
+
+@api_view(["POST"])
+def verify_supplier_otp(request):
+    serializer = SupplierVerifyOTPSerializer(
+        data=request.data
+    )
+
+    if not serializer.is_valid():
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    email = (
+        serializer
+        .validated_data["email"]
+        .strip()
+        .lower()
+    )
+
+    otp = serializer.validated_data["otp"]
+
+    if not verify_supplier_email_otp(
+        email,
+        otp,
+    ):
+        return Response(
+            {
+                "detail":
+                    (
+                        "Invalid or expired OTP. "
+                        "Please request a new "
+                        "verification code."
+                    )
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    verification_token = (
+        create_supplier_email_verification_token(
+            email
+        )
+    )
+
+    return Response(
+        {
+            "message":
+                "Email verified successfully.",
+            "verification_token":
+                verification_token,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+# ============================================================
+# SUPPLIER / MILLER — OCR DOCUMENTS
+# ============================================================
+
+@api_view(["POST"])
+@parser_classes(
+    [
+        MultiPartParser,
+        FormParser,
+    ]
+)
+def extract_supplier_documents(request):
+    serializer = SupplierOCRSerializer(
+        data=request.data
+    )
+
+    if not serializer.is_valid():
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    data = serializer.validated_data
+
+    documents = {
+        "government_issued_id":
+            data["government_issued_id"],
+        "business_permit":
+            data["business_permit"],
+        "business_registration":
+            data["business_registration"],
+        "milling_license":
+            data["milling_license"],
+    }
+
+    try:
+        autofill = extract_supplier_documents_ocr(
+            documents
+        )
+
+        return Response(
+            {
+                "message":
+                    (
+                        "Documents processed successfully. "
+                        "Please review and edit the detected "
+                        "business information before submitting."
+                    ),
+                "autofill": autofill,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    except ValueError as exc:
+        return Response(
+            {
+                "detail": str(exc)
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    except RuntimeError as exc:
+        return Response(
+            {
+                "detail": str(exc)
+            },
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    except Exception as exc:
+        return Response(
+            {
+                "detail":
+                    (
+                        "Supplier / Miller document OCR failed. "
+                        f"{exc}"
+                    )
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+# ============================================================
+# SUPPLIER / MILLER — REGISTER
+# ============================================================
+
+@api_view(["POST"])
+@parser_classes(
+    [
+        MultiPartParser,
+        FormParser,
+    ]
+)
+def register_supplier(request):
+    serializer = SupplierRegistrationSerializer(
+        data=request.data
+    )
+
+    if not serializer.is_valid():
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    data = serializer.validated_data
+    email = data["email"].strip().lower()
+
+    if not verify_supplier_email_verification_token(
+        data["verification_token"],
+        email,
+    ):
+        return Response(
+            {
+                "detail":
+                    (
+                        "Email verification is invalid "
+                        "or expired. Please verify "
+                        "your email again."
+                    )
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    documents = {
+        "government_issued_id":
+            data["government_issued_id"],
+        "business_permit":
+            data["business_permit"],
+        "business_registration":
+            data["business_registration"],
+        "milling_license":
+            data["milling_license"],
+    }
+
+    try:
+        result = create_supplier_registration(
+            data,
+            documents,
+        )
+
+        return Response(
+            {
+                "message":
+                    (
+                        "Supplier / Miller registration "
+                        "submitted successfully."
+                    ),
+                "user_id":
+                    result["user_id"],
+                "supplier_profile_id":
+                    result["supplier_profile_id"],
+                "supplier_document_id":
+                    result["supplier_document_id"],
+                "user_role":
+                    result["user_role"],
+                "status":
+                    result["status"],
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    except ValueError as exc:
+        return Response(
+            {
+                "detail": str(exc)
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    except IntegrityError as exc:
+        return Response(
+            {
+                "detail":
+                    (
+                        "Supplier / Miller registration "
+                        f"could not be saved: {exc}"
+                    )
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    except Exception as exc:
+        return Response(
+            {
+                "detail":
+                    (
+                        "Supplier / Miller registration "
+                        "could not be saved to PostgreSQL: "
+                        f"{exc}"
                     )
             },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
