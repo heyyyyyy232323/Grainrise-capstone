@@ -1,6 +1,5 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
-import { useLoading } from "../Components/context/LoadingContext";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react";
 
 import CustomTextbox from "../Components/Minor-Components/CustomTextbox";
@@ -9,6 +8,7 @@ import CustomWhiteButton from "../Components/Minor-Components/CustomWhiteButton"
 import Footer from "../Components/Minor-Components/CustomFooter";
 import Logo from "../assets/Logo.png";
 import backgroundImage from "../assets/UserloginBG.png";
+
 import useApi from "../Components/hooks/useApi";
 import useAuth from "../Components/hooks/useAuth";
 
@@ -28,98 +28,82 @@ const UserLogin = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const navigate = useNavigate();
-
   const { request } = useApi();
-
   const { login } = useAuth();
 
-
   const handleSubmit = async (e) => {
-
     e.preventDefault();
 
     if (isLoggingIn) {
       return;
     }
 
+    if (!email.trim()) {
+      setLoginError("Email or username is required.");
+      return;
+    }
+
+    if (!password) {
+      setLoginError("Password is required.");
+      return;
+    }
 
     setLoginError("");
-
     setIsLoggingIn(true);
 
-
     try {
+      const response = await request("/auth/login", {
+        method: "POST",
 
-      const response = await request(
-        "/auth/login",
-        {
-          method: "POST",
+        body: {
+          identifier: email.trim(),
+          password,
+        },
 
-          body: {
-            identifier: email.trim(),
-            password,
-          },
-
-          throwOnError: true,
-        }
-      );
-
+        throwOnError: true,
+      });
 
       login(
         response.access_token,
         response.user
       );
 
-
       const role = response.user?.role;
 
+      const roleRoutes = {
+        farmer: "/farmer/dashboard",
 
-      if (role === "retailer") {
+        retailer: "/retailer/point-of-sale",
 
-        navigate(
-          "/retailer/point-of-sale"
-        );
+        warehouse_manager:
+          "/warehouse-manager/dashboard",
 
-      } else if (role === "farmer") {
+        supplier:
+          "/miller/dashboard",
+      };
 
-        navigate(
-          "/farmer/dashboard"
-        );
+      const destination =
+        roleRoutes[role] || "/dashboard-preview";
 
-      } else {
-
-        navigate(
-          "/dashboard-preview"
-        );
-
-      }
-
+      navigate(destination);
 
     } catch (error) {
-
       setLoginError(
-        error.message
+        error?.message ||
+        "Unable to log in. Please check your credentials."
       );
 
-
     } finally {
-
       setIsLoggingIn(false);
-
     }
-
   };
 
-
   return (
-
     <div className="min-h-screen flex flex-col animate-page-fade">
 
       <div className="flex flex-1 flex-col md:flex-row">
 
-
         {/* LEFT PANEL */}
-
         <div
           className="
             relative
@@ -136,11 +120,8 @@ const UserLogin = () => {
             justify-between
           "
         >
-
           <CustomWhiteButton
-
             icon={
-
               <span
                 className="
                   flex
@@ -152,13 +133,9 @@ const UserLogin = () => {
                   whitespace-nowrap
                 "
               >
-
                 <ArrowLeft size={18} />
-
                 Back to Home
-
               </span>
-
             }
 
             className="
@@ -170,9 +147,7 @@ const UserLogin = () => {
             onClick={() =>
               navigate("/")
             }
-
           />
-
 
           <div className="my-10">
 
@@ -186,11 +161,8 @@ const UserLogin = () => {
                 mb-6
               "
             >
-
               Cultivating the Future of Logistics
-
             </h1>
-
 
             <p
               className="
@@ -200,23 +172,16 @@ const UserLogin = () => {
                 mb-10
               "
             >
-
               Securely access GrainRise to manage inventory,
               monitor deliveries, and streamline rice supply
               chain operations through one intelligent platform.
-
             </p>
 
-
             <ul className="space-y-4">
-
               {features.map(
                 (feature) => (
-
                   <li
-
                     key={feature}
-
                     className="
                       flex
                       items-center
@@ -224,7 +189,6 @@ const UserLogin = () => {
                       text-white
                     "
                   >
-
                     <CheckCircle2
                       size={20}
                       className="shrink-0"
@@ -233,24 +197,18 @@ const UserLogin = () => {
                     <span>
                       {feature}
                     </span>
-
                   </li>
-
                 )
               )}
-
             </ul>
 
           </div>
-
 
           <div />
 
         </div>
 
-
         {/* RIGHT PANEL */}
-
         <div
           className="
             relative
@@ -264,23 +222,18 @@ const UserLogin = () => {
             overflow-hidden
           "
         >
-
           <div
-
             className="
               absolute
               inset-0
               bg-cover
               bg-center
             "
-
             style={{
               backgroundImage:
                 `url(${backgroundImage})`,
             }}
-
           />
-
 
           <div
             className="
@@ -290,7 +243,6 @@ const UserLogin = () => {
               opacity-70
             "
           />
-
 
           <div
             className="
@@ -305,7 +257,6 @@ const UserLogin = () => {
               sm:p-10
             "
           >
-
             <div
               className="
                 flex
@@ -314,22 +265,15 @@ const UserLogin = () => {
                 mb-6
               "
             >
-
               <img
-
                 src={Logo}
-
                 alt="GrainRise Logo"
-
                 className="
                   h-12
                   object-contain
                 "
-
               />
-
             </div>
-
 
             <h1
               className="
@@ -340,11 +284,8 @@ const UserLogin = () => {
                 mb-2
               "
             >
-
               Welcome Back
-
             </h1>
-
 
             <p
               className="
@@ -354,43 +295,33 @@ const UserLogin = () => {
                 mb-8
               "
             >
-
               Sign in to continue managing your rice supply
               chain operations.
-
             </p>
-
 
             <form
               className="space-y-5"
               onSubmit={handleSubmit}
             >
-
               <CustomTextbox
-
                 label="Email Address"
-
                 placeholder="youremail@example.com"
-
                 type="email"
-
                 value={email}
 
-                onChange={(e) =>
-                  setEmail(
-                    e.target.value
-                  )
-                }
+                onChange={(e) => {
+                  setEmail(e.target.value);
 
+                  if (loginError) {
+                    setLoginError("");
+                  }
+                }}
               />
-
 
               <div className="relative">
 
                 <CustomTextbox
-
                   label="Password"
-
                   placeholder="Enter your Password"
 
                   type={
@@ -401,17 +332,16 @@ const UserLogin = () => {
 
                   value={password}
 
-                  onChange={(e) =>
-                    setPassword(
-                      e.target.value
-                    )
-                  }
+                  onChange={(e) => {
+                    setPassword(e.target.value);
 
+                    if (loginError) {
+                      setLoginError("");
+                    }
+                  }}
                 />
 
-
                 <button
-
                   type="button"
 
                   onClick={() =>
@@ -430,19 +360,15 @@ const UserLogin = () => {
                   "
 
                   tabIndex={-1}
-
                 >
-
                   {
                     showPassword
                       ? <EyeOff size={18} />
                       : <Eye size={18} />
                   }
-
                 </button>
 
               </div>
-
 
               <div
                 className="
@@ -452,7 +378,6 @@ const UserLogin = () => {
                   text-sm
                 "
               >
-
                 <label
                   className="
                     flex
@@ -462,11 +387,8 @@ const UserLogin = () => {
                     cursor-pointer
                   "
                 >
-
                   <input
-
                     type="checkbox"
-
                     checked={rememberMe}
 
                     onChange={(e) =>
@@ -483,33 +405,30 @@ const UserLogin = () => {
                       text-green-600
                       focus:ring-green-500
                     "
-
                   />
 
                   Remember Me
-
                 </label>
-
 
                 <a
                   href="#"
+
+                  onClick={(e) =>
+                    e.preventDefault()
+                  }
+
                   className="
                     text-green-700
                     font-medium
                     hover:underline
                   "
                 >
-
                   Forgot Password?
-
                 </a>
-
               </div>
-
 
               {
                 loginError && (
-
                   <p
                     className="
                       text-sm
@@ -517,17 +436,12 @@ const UserLogin = () => {
                       text-red-600
                     "
                   >
-
                     {loginError}
-
                   </p>
-
                 )
               }
 
-
               <CustomGreenButton
-
                 text={
                   isLoggingIn
                     ? "Logging In..."
@@ -540,11 +454,9 @@ const UserLogin = () => {
                   w-full
                   !py-3
                 "
-
               />
 
             </form>
-
 
             <p
               className="
@@ -554,11 +466,9 @@ const UserLogin = () => {
                 mt-6
               "
             >
-
               Don't have an account?{" "}
 
               <Link
-
                 to="/register"
 
                 className="
@@ -567,13 +477,9 @@ const UserLogin = () => {
                   hover:underline
                 "
               >
-
                 Register
-
               </Link>
-
             </p>
-
 
             <p
               className="
@@ -583,37 +489,41 @@ const UserLogin = () => {
                 mt-4
               "
             >
-
               By signing in, you agree to our{" "}
 
               <a
                 href="#"
+
+                onClick={(e) =>
+                  e.preventDefault()
+                }
+
                 className="
                   text-green-700
                   font-semibold
                   hover:underline
                 "
               >
-
                 Terms
-
               </a>
 
               {" "}and acknowledge our{" "}
 
               <a
                 href="#"
+
+                onClick={(e) =>
+                  e.preventDefault()
+                }
+
                 className="
                   text-green-700
                   font-semibold
                   hover:underline
                 "
               >
-
                 Privacy Policy.
-
               </a>
-
             </p>
 
           </div>
@@ -622,14 +532,10 @@ const UserLogin = () => {
 
       </div>
 
-
       <Footer />
 
     </div>
-
   );
-
 };
-
 
 export default UserLogin;

@@ -156,6 +156,17 @@ CORS_ALLOWED_ORIGINS = list(
 CORS_ALLOW_CREDENTIALS = True
 
 
+CSRF_TRUSTED_ORIGINS = list(
+    dict.fromkeys(
+        [
+            FRONTEND_URL,
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ]
+    )
+)
+
+
 # ============================================================
 # URL / TEMPLATE / WSGI
 # ============================================================
@@ -436,3 +447,4 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
     ],
 }
+

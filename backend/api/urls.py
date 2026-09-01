@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 
 from . import views
 from . import auth_views
@@ -178,6 +178,15 @@ urlpatterns = [
         name="supplier-register",
     ),
 
+
+    # ========================================================
+    # ACCOUNT ADMIN MANAGEMENT
+    # ========================================================
+
+    path(
+        "admin/",
+        include("api.account_admin_fnction.accountadmin_urls"),
+    ),
 
 
     # ========================================================

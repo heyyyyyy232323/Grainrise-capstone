@@ -8,20 +8,21 @@ import Dropdown from "../Components/Minor-Components/Dropdown";
 import Footer from "../Components/Minor-Components/CustomFooter";
 import Toast from "../Components/Minor-Components/Toast";
 import useToast from "../Components/hooks/useToast";
+import useApi from "../Components/hooks/useApi";
 import logo from "../assets/Logo.png";
 import backgroundImage from "../assets/smudge.jpg";
 import useFormValidation from "../Components/hooks/useFormValidation";
 
-const PROVINCES = ["Bulacan", "Metro Manila (NCR)"];
-const MUNICIPALITIES_MAP = {
-  "Bulacan": ["Baliuag", "Balagtas", "Bocaue", "Bulakan", "Bustos", "Calumpit", "Doña Remedios Trinidad", "Guiguinto", "Hagonoy", "Malolos City", "Marilao"],
-  "Metro Manila (NCR)": ["Valenzuela City", "Quezon City", "Manila", "Makati", "Pasig", "Taguig"]
-};
-const BARANGAYS_MAP = {
-  "Baliuag": ["Bagong Nayon", "Barangca", "Calantipay", "Catulinan", "Concepcion", "Hinukay", "Makinabang", "Matangtubig", "Pagala", "Paitan", "Piel"]
-};
 const SUFFIXES = ["N/A", "Jr.", "Sr.", "II", "III", "IV", "V"];
 const GENDERS = ["Male", "Female", "Others", "Preferred Not To Say"];
+
+const normalizeApiResults = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.results)) return payload.results;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  return [];
+};
 
 // Small helper: wraps CustomTextbox so we can show a field-level error message
 // underneath it, since CustomTextbox itself has no built-in error state.
@@ -34,6 +35,7 @@ const FieldWithError = ({ error, children, fieldRef }) => (
 
 const WarehouseManagerRegister = () => {
   const navigate = useNavigate();
+  const { request } = useApi();
 
   // Wizard State
   const [step, setStep] = useState(1);
@@ -48,7 +50,7 @@ const WarehouseManagerRegister = () => {
     gender: "",
     province: "",
     municipality: "",
-    postalCode: "1423",
+    postalCode: "",
     barangay: "",
     streetAddress: "",
     email: "",
@@ -58,16 +60,16 @@ const WarehouseManagerRegister = () => {
     confirmPassword: "",
     agreeTerms: false,
 
-    // Step 4 Business Information (Read-only prefilled)
-    businessName: "ABC Warehouse Trading",
-    organizationName: "ABC Warehouse Organization",
-    businessProvince: "Bulacan",
-    businessMunicipality: "Baliuag",
-    businessPostalCode: "1423",
-    businessBarangay: "Bagong Nayon",
-    businessStreetAddress: "123 Lot 4 Santolan",
+    // Step 4 Business Information (OCR suggestions, always editable)
+    businessName: "",
+    organizationName: "",
+    businessProvince: "",
+    businessMunicipality: "",
+    businessPostalCode: "",
+    businessBarangay: "",
+    businessStreetAddress: "",
 
-    // Step 4 Official Contact Information (User editable)
+    // Step 4 Official Contact Information (OCR may suggest; user can edit)
     officialEmail: "",
     officialContactNumber: "",
     certifyBusinessInfo: false,
@@ -75,12 +77,39 @@ const WarehouseManagerRegister = () => {
 
   // Step 2 States (OTP)
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [otpTimer, setOtpTimer] = useState(60);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [verificationToken, setVerificationToken] = useState("");
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const otpRefs = useRef([]);
 
   // Step 3 States (Documents)
-  const [files, setFiles] = useState({ doc1: null, doc2: null });
+  const [files, setFiles] = useState({
+    governmentIssuedId: null,
+    businessPermit: null,
+    businessRegistration: null,
+    warehouseLicense: null,
+  });
   const [agreeCertify, setAgreeCertify] = useState(false);
+  const [isExtractingDocuments, setIsExtractingDocuments] = useState(false);
+
+  // Submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Shared PSGC/location state from the GrainRise backend
+  const [provinceOptions, setProvinceOptions] = useState([]);
+  const [municipalityOptions, setMunicipalityOptions] = useState([]);
+  const [barangayOptions, setBarangayOptions] = useState([]);
+  const [provinceRecords, setProvinceRecords] = useState({});
+  const [municipalityRecords, setMunicipalityRecords] = useState({});
+  const [isAddressLoading, setIsAddressLoading] = useState(false);
+
+  // Step 4 business-address PSGC state.
+  // Separate from Step 1 so the home address is preserved.
+  const [businessMunicipalityOptions, setBusinessMunicipalityOptions] = useState([]);
+  const [businessBarangayOptions, setBusinessBarangayOptions] = useState([]);
+  const [businessMunicipalityRecords, setBusinessMunicipalityRecords] = useState({});
+  const [isBusinessAddressLoading, setIsBusinessAddressLoading] = useState(false);
 
   // UI States
   const [showPassword, setShowPassword] = useState(false);
@@ -95,12 +124,20 @@ const WarehouseManagerRegister = () => {
 
   const STEP1_FIELD_ORDER = [
     "firstName", "lastName", "gender",
-    "province", "municipality", "barangay", "streetAddress",
+    "province", "municipality", "postalCode", "barangay", "streetAddress",
     "email", "contactNumber", "password", "confirmPassword", "agreeTerms",
   ];
 
   const STEP4_FIELD_ORDER = [
-    "officialEmail", "officialContactNumber", "certifyBusinessInfo"
+    "businessName",
+    "businessProvince",
+    "businessMunicipality",
+    "businessPostalCode",
+    "businessBarangay",
+    "businessStreetAddress",
+    "officialEmail",
+    "officialContactNumber",
+    "certifyBusinessInfo",
   ];
 
   const scrollToFirstError = useCallback((errorMap, fieldOrder) => {
@@ -114,8 +151,53 @@ const WarehouseManagerRegister = () => {
     }
   }, []);
 
-  const activeMunicipalities = form.province ? (MUNICIPALITIES_MAP[form.province] || []) : [];
-  const activeBarangays = form.municipality ? (BARANGAYS_MAP[form.municipality] || ["Barangay 1", "Barangay 2", "Barangay 3"]) : [];
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProvinces = async () => {
+      setIsAddressLoading(true);
+
+      try {
+        const payload = await request("/locations/provinces", {
+          throwOnError: true,
+        });
+
+        if (cancelled) return;
+
+        const rows = normalizeApiResults(payload);
+        const records = {};
+        const options = rows
+          .filter((row) => row?.name && row?.code)
+          .map((row) => {
+            records[row.name] = row;
+            return row.name;
+          })
+          .sort((a, b) => a.localeCompare(b));
+
+        setProvinceRecords(records);
+        setProvinceOptions(options);
+      } catch (error) {
+        if (!cancelled) {
+          const message = error.message || "Unable to load Philippine address data.";
+          setValidationMsg(message);
+          showToast({
+            type: "error",
+            title: "Address Data Error",
+            message,
+            duration: 5000,
+          });
+        }
+      } finally {
+        if (!cancelled) setIsAddressLoading(false);
+      }
+    };
+
+    loadProvinces();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [request, showToast]);
 
   const handleInputChange = (field, value) => {
     let processedValue = value;
@@ -127,10 +209,18 @@ const WarehouseManagerRegister = () => {
       // Auto-uppercase and cap to 2 chars for middle initial
       processedValue = value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 2);
     } else if (field === "contactNumber" || field === "officialContactNumber") {
-      // Allow digits, spaces, and a leading + for +63 format, max 13 chars
-      processedValue = value.replace(/[^0-9+\s]/g, "").slice(0, 13);
+      processedValue = value.replace(/[^0-9+\s-]/g, "").slice(0, 16);
+    } else if (field === "postalCode" || field === "businessPostalCode") {
+      processedValue = value.replace(/\D/g, "").slice(0, 4);
     }
     setForm((prev) => ({ ...prev, [field]: processedValue }));
+
+    if (field === "email") {
+      setVerificationToken("");
+      setOtp(["", "", "", "", "", ""]);
+      setOtpTimer(0);
+    }
+
     validateField(field, processedValue);
   };
 
@@ -144,7 +234,7 @@ const WarehouseManagerRegister = () => {
       case "streetAddress":   errorMsg = validators.streetAddress(value);                          break;
       case "email":           errorMsg = validators.email(value);                                  break;
       case "contactNumber":   errorMsg = validators.contactNumber(value);                          break;
-      case "username":        errorMsg = validators.username(value);                               break;
+      case "username":        errorMsg = value.trim() ? validators.username(value) : "";           break;
       case "confirmPassword": errorMsg = validators.confirmPassword(form.password, value);         break;
       case "password":
         errorMsg = validators.password(value);
@@ -166,36 +256,311 @@ const WarehouseManagerRegister = () => {
       case "barangay":
         errorMsg = value ? "" : form.municipality ? "Barangay is required" : "Please select a municipality first";
         break;
-      case "officialEmail":   errorMsg = validators.email(value);                                  break;
-      case "officialContactNumber": errorMsg = validators.contactNumber(value);                      break;
+      case "postalCode":
+        errorMsg = value && !/^\d{4}$/.test(value) ? "Postal code must contain exactly 4 digits" : "";
+        break;
+      case "businessName": errorMsg = value.trim() ? "" : "Business Name is required"; break;
+      case "businessProvince": errorMsg = value.trim() ? "" : "Province is required"; break;
+      case "businessMunicipality": errorMsg = value.trim() ? "" : "Municipality/City is required"; break;
+      case "businessPostalCode":
+        errorMsg = value && !/^\d{4}$/.test(value) ? "Postal code must contain exactly 4 digits" : "";
+        break;
+      case "businessBarangay": errorMsg = value.trim() ? "" : "Barangay is required"; break;
+      case "businessStreetAddress": errorMsg = value.trim() ? "" : "Street Address is required"; break;
+      case "officialEmail": errorMsg = validators.email(value); break;
+      case "officialContactNumber": errorMsg = validators.contactNumber(value); break;
       default: break;
     }
     setErrors((prev) => ({ ...prev, [field]: errorMsg }));
   };
 
-  const handleProvinceChange = (provinceValue) => {
+  const handleProvinceChange = async (provinceValue) => {
     setForm((prev) => ({
       ...prev,
       province: provinceValue,
       municipality: "",
       barangay: "",
-      postalCode: provinceValue === "Bulacan" ? "3006" : "1423",
+      postalCode: "",
     }));
+    setMunicipalityOptions([]);
+    setMunicipalityRecords({});
+    setBarangayOptions([]);
     setErrors((prev) => ({
       ...prev,
       province: provinceValue ? "" : "Province is required",
       municipality: "",
       barangay: "",
     }));
+    setValidationMsg("");
+
+    if (!provinceValue) return;
+
+    const record = provinceRecords[provinceValue];
+    if (!record?.code) return;
+
+    setIsAddressLoading(true);
+
+    try {
+      const payload = await request(
+        `/locations/provinces/${encodeURIComponent(record.code)}/cities-municipalities`,
+        { throwOnError: true },
+      );
+
+      const rows = normalizeApiResults(payload);
+      const records = {};
+      const options = rows
+        .filter((row) => row?.name && row?.code)
+        .map((row) => {
+          records[row.name] = row;
+          return row.name;
+        })
+        .sort((a, b) => a.localeCompare(b));
+
+      setMunicipalityRecords(records);
+      setMunicipalityOptions(options);
+    } catch (error) {
+      const message = error.message || "Unable to load cities and municipalities.";
+      setValidationMsg(message);
+      showToast({
+        type: "error",
+        title: "Address Data Error",
+        message,
+        duration: 5000,
+      });
+    } finally {
+      setIsAddressLoading(false);
+    }
   };
 
-  const handleMunicipalityChange = (municipalityValue) => {
-    setForm((prev) => ({ ...prev, municipality: municipalityValue, barangay: "" }));
+  const handleMunicipalityChange = async (municipalityValue) => {
+    setForm((prev) => ({
+      ...prev,
+      municipality: municipalityValue,
+      barangay: "",
+      postalCode: "",
+    }));
+    setBarangayOptions([]);
     setErrors((prev) => ({
       ...prev,
       municipality: municipalityValue ? "" : "Municipality is required",
       barangay: "",
     }));
+    setValidationMsg("");
+
+    if (!municipalityValue) return;
+
+    const record = municipalityRecords[municipalityValue];
+    if (!record?.code) return;
+
+    setIsAddressLoading(true);
+
+    try {
+      const [barangayPayload, localityPayload] = await Promise.all([
+        request(
+          `/locations/cities-municipalities/${encodeURIComponent(record.code)}/barangays`,
+          { throwOnError: true },
+        ),
+        request(
+          `/locations/cities-municipalities/${encodeURIComponent(record.code)}`,
+          { throwOnError: true },
+        ),
+      ]);
+
+      const barangays = normalizeApiResults(barangayPayload)
+        .filter((row) => row?.name)
+        .map((row) => row.name)
+        .sort((a, b) => a.localeCompare(b));
+
+      setBarangayOptions(barangays);
+
+      const postalCode = String(localityPayload?.postal_code || "");
+      setForm((prev) => (
+        prev.municipality === municipalityValue
+          ? { ...prev, postalCode }
+          : prev
+      ));
+    } catch (error) {
+      const message = error.message || "Unable to load barangays or postal code.";
+      setValidationMsg(message);
+      showToast({
+        type: "error",
+        title: "Address Data Error",
+        message,
+        duration: 5000,
+      });
+    } finally {
+      setIsAddressLoading(false);
+    }
+  };
+
+  const normalizeAddressName = (value) => (
+    String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/^city\s+of\s+/, "")
+      .replace(/\s+city$/, "")
+      .replace(/\s+/g, " ")
+  );
+
+  const findAddressOption = (options, value) => {
+    const target = normalizeAddressName(value);
+    if (!target) return "";
+
+    return options.find(
+      (option) => normalizeAddressName(option) === target
+    ) || "";
+  };
+
+  const loadBusinessMunicipalities = async (provinceValue) => {
+    const record = provinceRecords[provinceValue];
+
+    if (!record?.code) {
+      setBusinessMunicipalityOptions([]);
+      setBusinessMunicipalityRecords({});
+      return { options: [], records: {} };
+    }
+
+    const payload = await request(
+      `/locations/provinces/${encodeURIComponent(record.code)}/cities-municipalities`,
+      { throwOnError: true },
+    );
+
+    const rows = normalizeApiResults(payload);
+    const records = {};
+    const options = rows
+      .filter((row) => row?.name && row?.code)
+      .map((row) => {
+        records[row.name] = row;
+        return row.name;
+      })
+      .sort((a, b) => a.localeCompare(b));
+
+    setBusinessMunicipalityRecords(records);
+    setBusinessMunicipalityOptions(options);
+
+    return { options, records };
+  };
+
+  const loadBusinessLocality = async (
+    municipalityValue,
+    records = businessMunicipalityRecords,
+  ) => {
+    const record = records[municipalityValue];
+
+    if (!record?.code) {
+      setBusinessBarangayOptions([]);
+      return { barangays: [], postalCode: "" };
+    }
+
+    const [barangayPayload, localityPayload] = await Promise.all([
+      request(
+        `/locations/cities-municipalities/${encodeURIComponent(record.code)}/barangays`,
+        { throwOnError: true },
+      ),
+      request(
+        `/locations/cities-municipalities/${encodeURIComponent(record.code)}`,
+        { throwOnError: true },
+      ),
+    ]);
+
+    const barangays = normalizeApiResults(barangayPayload)
+      .filter((row) => row?.name)
+      .map((row) => row.name)
+      .sort((a, b) => a.localeCompare(b));
+
+    const postalCode = String(localityPayload?.postal_code || "");
+
+    setBusinessBarangayOptions(barangays);
+
+    return { barangays, postalCode };
+  };
+
+  const handleBusinessProvinceChange = async (provinceValue) => {
+    setForm((prev) => ({
+      ...prev,
+      businessProvince: provinceValue,
+      businessMunicipality: "",
+      businessPostalCode: "",
+      businessBarangay: "",
+    }));
+
+    setBusinessMunicipalityOptions([]);
+    setBusinessMunicipalityRecords({});
+    setBusinessBarangayOptions([]);
+
+    setErrors((prev) => ({
+      ...prev,
+      businessProvince: provinceValue ? "" : "Province is required",
+      businessMunicipality: "",
+      businessPostalCode: "",
+      businessBarangay: "",
+    }));
+
+    setValidationMsg("");
+
+    if (!provinceValue) return;
+
+    setIsBusinessAddressLoading(true);
+
+    try {
+      await loadBusinessMunicipalities(provinceValue);
+    } catch (error) {
+      const message = error.message || "Unable to load business cities and municipalities.";
+      setValidationMsg(message);
+      showToast({
+        type: "error",
+        title: "Address Data Error",
+        message,
+        duration: 5000,
+      });
+    } finally {
+      setIsBusinessAddressLoading(false);
+    }
+  };
+
+  const handleBusinessMunicipalityChange = async (municipalityValue) => {
+    setForm((prev) => ({
+      ...prev,
+      businessMunicipality: municipalityValue,
+      businessPostalCode: "",
+      businessBarangay: "",
+    }));
+
+    setBusinessBarangayOptions([]);
+
+    setErrors((prev) => ({
+      ...prev,
+      businessMunicipality: municipalityValue ? "" : "Municipality/City is required",
+      businessPostalCode: "",
+      businessBarangay: "",
+    }));
+
+    setValidationMsg("");
+
+    if (!municipalityValue) return;
+
+    setIsBusinessAddressLoading(true);
+
+    try {
+      const { postalCode } = await loadBusinessLocality(municipalityValue);
+
+      setForm((prev) => (
+        prev.businessMunicipality === municipalityValue
+          ? { ...prev, businessPostalCode: postalCode }
+          : prev
+      ));
+    } catch (error) {
+      const message = error.message || "Unable to load business barangays or postal code.";
+      setValidationMsg(message);
+      showToast({
+        type: "error",
+        title: "Address Data Error",
+        message,
+        duration: 5000,
+      });
+    } finally {
+      setIsBusinessAddressLoading(false);
+    }
   };
 
   // Step 1 Validation — uses useFormValidation hook's validate()
@@ -216,10 +581,13 @@ const WarehouseManagerRegister = () => {
                          : form.municipality
                          ? "Barangay is required"
                          : "Please select a municipality first",
+      postalCode:       form.postalCode && !/^\d{4}$/.test(form.postalCode)
+                         ? "Postal code must contain exactly 4 digits"
+                         : "",
       streetAddress:   validators.streetAddress(form.streetAddress),
       email:           validators.email(form.email),
       contactNumber:   validators.contactNumber(form.contactNumber),
-      username:        validators.username(form.username),
+      username:        form.username.trim() ? validators.username(form.username) : "",
       password:        validators.password(form.password),
       confirmPassword: validators.confirmPassword(form.password, form.confirmPassword),
       agreeTerms:      validators.checkbox(
@@ -244,16 +612,55 @@ const WarehouseManagerRegister = () => {
     return passed;
   };
 
-  const handleNextStep1 = (e) => {
+  const handleNextStep1 = async (e) => {
     e.preventDefault();
-    if (validateStep1()) setStep(2);
+
+    if (!validateStep1() || isSendingOtp) return;
+
+    setIsSendingOtp(true);
+
+    try {
+      const response = await request("/auth/warehouse-manager/send-otp", {
+        method: "POST",
+        body: {
+          email: form.email.trim(),
+          username: form.username.trim(),
+        },
+        throwOnError: true,
+      });
+
+      setOtp(["", "", "", "", "", ""]);
+      setVerificationToken("");
+      setOtpTimer(response?.retry_after ?? 60);
+      setStep(2);
+      setValidationMsg("");
+
+      showToast({
+        type: "success",
+        title: "OTP Sent",
+        message: "A 6-digit verification code was sent to your email.",
+        duration: 3500,
+      });
+    } catch (error) {
+      const message = error.message || "Unable to send OTP.";
+      setValidationMsg(message);
+
+      showToast({
+        type: "error",
+        title: "Unable to Send OTP",
+        message,
+        duration: 5000,
+      });
+    } finally {
+      setIsSendingOtp(false);
+    }
   };
 
   // Step 2 Logic (OTP Timer & Input)
   useEffect(() => {
     let timer;
     if (step === 2 && otpTimer > 0) {
-      timer = setInterval(() => setOtpTimer((prev) => prev - 1), 1000);
+      timer = setInterval(() => setOtpTimer((prev) => Math.max(prev - 1, 0)), 1000);
     }
     return () => clearInterval(timer);
   }, [step, otpTimer]);
@@ -263,21 +670,54 @@ const WarehouseManagerRegister = () => {
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
-    if (value && index < 5) otpRefs.current[index + 1].focus();
+    if (value && index < 5) otpRefs.current[index + 1]?.focus();
     if (errors.otp) setErrors((prev) => ({ ...prev, otp: "" }));
   };
 
   const handleOtpKeyDown = (index, e) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
-      otpRefs.current[index - 1].focus();
+      otpRefs.current[index - 1]?.focus();
     }
   };
 
-  const handleResendOtp = () => {
-    if (otpTimer === 0) {
-      setOtpTimer(60);
+  const handleResendOtp = async () => {
+    if (otpTimer > 0 || isSendingOtp) return;
+
+    setIsSendingOtp(true);
+
+    try {
+      const response = await request("/auth/warehouse-manager/send-otp", {
+        method: "POST",
+        body: {
+          email: form.email.trim(),
+          username: form.username.trim(),
+        },
+        throwOnError: true,
+      });
+
       setOtp(["", "", "", "", "", ""]);
+      setVerificationToken("");
+      setOtpTimer(response?.retry_after ?? 60);
       setValidationMsg("");
+
+      showToast({
+        type: "success",
+        title: "OTP Resent",
+        message: "A new verification code was sent to your email.",
+        duration: 3500,
+      });
+    } catch (error) {
+      const message = error.message || "Unable to resend OTP.";
+      setValidationMsg(message);
+
+      showToast({
+        type: "error",
+        title: "Unable to Resend OTP",
+        message,
+        duration: 5000,
+      });
+    } finally {
+      setIsSendingOtp(false);
     }
   };
 
@@ -289,15 +729,54 @@ const WarehouseManagerRegister = () => {
     return `${maskedName}@${domain}`;
   };
 
-  const handleVerifyOtp = () => {
-    if (otp.some(digit => digit === "")) {
-      setErrors({ otp: "Please enter the complete 6-digit code." });
+  const handleVerifyOtp = async () => {
+    if (verificationToken) {
+      setStep(3);
+      setValidationMsg("");
+      return;
+    }
+
+    if (otp.some((digit) => digit === "")) {
+      setErrors((prev) => ({
+        ...prev,
+        otp: "Please enter the complete 6-digit code.",
+      }));
       setValidationMsg("Please enter the complete 6-digit code.");
       return;
     }
-    setErrors({});
-    setValidationMsg("");
-    setStep(3);
+
+    if (isVerifyingOtp) return;
+
+    setIsVerifyingOtp(true);
+
+    try {
+      const response = await request("/auth/warehouse-manager/verify-otp", {
+        method: "POST",
+        body: {
+          email: form.email.trim(),
+          otp: otp.join(""),
+        },
+        throwOnError: true,
+      });
+
+      setVerificationToken(response.verification_token);
+      setErrors((prev) => ({ ...prev, otp: "" }));
+      setValidationMsg("");
+      setStep(3);
+
+      showToast({
+        type: "success",
+        title: "Email Verified",
+        message: "Your email address has been verified.",
+        duration: 3000,
+      });
+    } catch (error) {
+      const message = error.message || "Unable to verify OTP.";
+      setErrors((prev) => ({ ...prev, otp: message }));
+      setValidationMsg(message);
+    } finally {
+      setIsVerifyingOtp(false);
+    }
   };
 
   // Step 3 Logic (File Uploads)
@@ -314,79 +793,434 @@ const WarehouseManagerRegister = () => {
 
   const validateAndProcessFile = (file, docId) => {
     if (!file) return;
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-    if (!allowedTypes.includes(file.type)) {
-      setValidationMsg('Invalid file type. Only JPG, PNG, WEBP, and PDF are allowed.');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setValidationMsg('File is too large. Maximum size is 5MB.');
-      return;
-    }
-    setValidationMsg("");
 
-    // Optional: read as base64 for later submission
-    const reader = new FileReader();
-    reader.onload = () => {
-      setFiles((prev) => ({
-        ...prev,
-        [docId]: {
-          name: file.name,
-          size: (file.size / (1024 * 1024)).toFixed(2) + " MB",
-          type: file.type,
-          base64: reader.result
-        }
-      }));
-    };
-    reader.readAsDataURL(file);
-    if (errors.files) setErrors((prev) => ({ ...prev, files: "" }));
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "application/pdf",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      const message = "Invalid file type. Only JPG, JPEG, PNG, WEBP, and PDF are allowed.";
+      setValidationMsg(message);
+      showToast({
+        type: "error",
+        title: "Invalid Document",
+        message,
+        duration: 4500,
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      const message = "File is too large. Maximum size is 5MB.";
+      setValidationMsg(message);
+      showToast({
+        type: "error",
+        title: "File Too Large",
+        message,
+        duration: 4500,
+      });
+      return;
+    }
+
+    setValidationMsg("");
+    setFiles((prev) => ({
+      ...prev,
+      [docId]: {
+        file,
+        name: file.name,
+        size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+        type: file.type,
+      },
+    }));
+
+    if (errors.files) {
+      setErrors((prev) => ({ ...prev, files: "" }));
+    }
   };
 
   const removeFile = (docId) => {
     setFiles((prev) => ({ ...prev, [docId]: null }));
   };
 
-  const handleNextStep3 = () => {
-    if (!files.doc1) {
-      setValidationMsg("Required Document 1 is missing.");
-      setErrors({ files: "Missing document" });
-      return;
-    }
-    if (!agreeCertify) {
-      setValidationMsg("You must certify that the given information is true and accurate.");
-      setErrors({ certify: "Required" });
-      return;
-    }
-    setErrors({});
-    setValidationMsg("");
-    setStep(4);
+  const getMissingDocumentLabels = () => {
+    const requiredDocuments = [
+      ["governmentIssuedId", "Valid Government-Issued ID"],
+      ["businessPermit", "Mayor's / Business Permit"],
+      ["businessRegistration", "DTI / SEC / CDA Registration"],
+      ["warehouseLicense", "BPI License to Operate / Warehouse License"],
+    ];
+
+    return requiredDocuments
+      .filter(([key]) => !files[key])
+      .map(([, label]) => label);
   };
 
-  const handleSubmitRegistration = (e) => {
+  const handleNextStep3 = async () => {
+    const missingDocuments = getMissingDocumentLabels();
+
+    if (missingDocuments.length > 0) {
+      const message = `Please upload all required documents: ${missingDocuments.join(", ")}.`;
+      setValidationMsg(message);
+      setErrors((prev) => ({ ...prev, files: "All four documents are required." }));
+
+      showToast({
+        type: "error",
+        title: "Missing Documents",
+        message,
+        duration: 5500,
+      });
+      return;
+    }
+
+    if (!agreeCertify) {
+      const message = "You must certify that the uploaded documents are true and accurate.";
+      setValidationMsg(message);
+      setErrors((prev) => ({ ...prev, certify: "Required" }));
+
+      showToast({
+        type: "error",
+        title: "Certification Required",
+        message,
+        duration: 4500,
+      });
+      return;
+    }
+
+    if (!verificationToken) {
+      const message = "Please verify your email again before continuing.";
+      setValidationMsg(message);
+      setStep(2);
+      return;
+    }
+
+    if (isExtractingDocuments) return;
+
+    const payload = new FormData();
+    payload.append(
+      "government_issued_id",
+      files.governmentIssuedId.file,
+      files.governmentIssuedId.name,
+    );
+    payload.append(
+      "business_permit",
+      files.businessPermit.file,
+      files.businessPermit.name,
+    );
+    payload.append(
+      "business_registration",
+      files.businessRegistration.file,
+      files.businessRegistration.name,
+    );
+    payload.append(
+      "warehouse_license",
+      files.warehouseLicense.file,
+      files.warehouseLicense.name,
+    );
+    payload.append("agree_documents_certify", String(agreeCertify));
+
+    setIsExtractingDocuments(true);
+
+    try {
+      const response = await request("/auth/warehouse-manager/extract-documents", {
+        method: "POST",
+        body: payload,
+        throwOnError: true,
+      });
+
+      const autofill = response?.autofill || {};
+
+      const matchedProvince = (
+        findAddressOption(provinceOptions, autofill.province)
+        || autofill.province
+        || ""
+      );
+
+      let matchedMunicipality = autofill.municipality || "";
+      let matchedBarangay = autofill.barangay || "";
+      let resolvedPostalCode = String(autofill.postal_code || "").replace(/\D/g, "").slice(0, 4);
+
+      // Step 4 address follows the same PSGC flow as Step 1.
+      if (matchedProvince && provinceRecords[matchedProvince]) {
+        setIsBusinessAddressLoading(true);
+
+        try {
+          const municipalityResult = await loadBusinessMunicipalities(matchedProvince);
+
+          matchedMunicipality = (
+            findAddressOption(municipalityResult.options, autofill.municipality)
+            || ""
+          );
+
+          if (matchedMunicipality) {
+            const localityResult = await loadBusinessLocality(
+              matchedMunicipality,
+              municipalityResult.records,
+            );
+
+            resolvedPostalCode = localityResult.postalCode || resolvedPostalCode;
+            matchedBarangay = (
+              findAddressOption(localityResult.barangays, autofill.barangay)
+              || ""
+            );
+          } else {
+            setBusinessBarangayOptions([]);
+          }
+        } finally {
+          setIsBusinessAddressLoading(false);
+        }
+      } else {
+        setBusinessMunicipalityOptions([]);
+        setBusinessMunicipalityRecords({});
+        setBusinessBarangayOptions([]);
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        businessName: autofill.business_name || "",
+        organizationName: autofill.organization_name || "",
+        businessProvince: matchedProvince,
+        businessMunicipality: matchedMunicipality,
+        businessPostalCode: resolvedPostalCode,
+        businessBarangay: matchedBarangay,
+        businessStreetAddress: autofill.street_address || "",
+        officialEmail: autofill.official_email || prev.officialEmail || "",
+        officialContactNumber: autofill.official_contact_number || prev.officialContactNumber || "",
+      }));
+
+      setErrors({});
+      setValidationMsg("");
+      setStep(4);
+
+      showToast({
+        type: "success",
+        title: "Documents Processed",
+        message: "OCR suggestions are ready. Please review and edit the business information before submitting.",
+        duration: 5000,
+      });
+    } catch (error) {
+      const message = error.message || "Unable to process the uploaded documents.";
+      setValidationMsg(message);
+
+      showToast({
+        type: "error",
+        title: "Document Processing Failed",
+        message,
+        duration: 6000,
+      });
+    } finally {
+      setIsExtractingDocuments(false);
+    }
+  };
+
+  const handleSubmitRegistration = async (e) => {
     if (e) e.preventDefault();
+
     const rules = {
+      businessName: form.businessName.trim() ? "" : "Business Name is required",
+      businessProvince: form.businessProvince.trim() ? "" : "Province is required",
+      businessMunicipality: form.businessMunicipality.trim() ? "" : "Municipality/City is required",
+      businessPostalCode: form.businessPostalCode && !/^\d{4}$/.test(form.businessPostalCode) ? "Postal code must contain exactly 4 digits" : "",
+      businessBarangay: form.businessBarangay.trim() ? "" : "Barangay is required",
+      businessStreetAddress: form.businessStreetAddress.trim() ? "" : "Street Address is required",
       officialEmail: validators.email(form.officialEmail),
       officialContactNumber: validators.contactNumber(form.officialContactNumber),
       certifyBusinessInfo: validators.checkbox(
         form.certifyBusinessInfo,
-        "You must certify that the provided business details are correct"
-      )
+        "You must certify that the provided business details are correct",
+      ),
     };
+
     const passed = validate(rules);
 
     if (!passed) {
       setValidationMsg("Please correct the errors in the form before proceeding.");
       scrollToFirstError(rules, STEP4_FIELD_ORDER);
+
       showToast({
         type: "error",
         title: "Validation Error",
         message: "Please correct the highlighted fields before proceeding.",
         duration: 4000,
       });
-    } else {
+      return;
+    }
+
+    const missingDocuments = getMissingDocumentLabels();
+
+    if (missingDocuments.length > 0) {
+      setStep(3);
+      setValidationMsg("All four verification documents are required.");
+      return;
+    }
+
+    if (!verificationToken) {
+      setStep(2);
+      setValidationMsg("Please verify your email again before submitting.");
+      return;
+    }
+
+    if (isSubmitting) return;
+
+    const payload = new FormData();
+
+    const fields = {
+      first_name: form.firstName.trim(),
+      middle_initial: form.middleInitial.trim(),
+      last_name: form.lastName.trim(),
+      suffix: form.suffix === "N/A" ? "" : form.suffix,
+      gender: form.gender,
+
+      province: form.province,
+      municipality: form.municipality,
+      postal_code: form.postalCode,
+      barangay: form.barangay,
+      street_address: form.streetAddress.trim(),
+
+      email: form.email.trim(),
+      contact_number: form.contactNumber.trim(),
+      username: form.username.trim(),
+      password: form.password,
+      confirm_password: form.confirmPassword,
+      agree_terms: String(form.agreeTerms),
+
+      verification_token: verificationToken,
+
+      agree_documents_certify: String(agreeCertify),
+
+      business_name: form.businessName.trim(),
+      organization_name: form.organizationName.trim(),
+      business_province: form.businessProvince.trim(),
+      business_municipality: form.businessMunicipality.trim(),
+      business_postal_code: form.businessPostalCode.trim(),
+      business_barangay: form.businessBarangay.trim(),
+      business_street_address: form.businessStreetAddress.trim(),
+      official_email: form.officialEmail.trim(),
+      official_contact_number: form.officialContactNumber.trim(),
+      agree_business_certify: String(form.certifyBusinessInfo),
+    };
+
+    Object.entries(fields).forEach(([key, value]) => {
+      payload.append(key, value);
+    });
+
+    payload.append(
+      "government_issued_id",
+      files.governmentIssuedId.file,
+      files.governmentIssuedId.name,
+    );
+    payload.append(
+      "business_permit",
+      files.businessPermit.file,
+      files.businessPermit.name,
+    );
+    payload.append(
+      "business_registration",
+      files.businessRegistration.file,
+      files.businessRegistration.name,
+    );
+    payload.append(
+      "warehouse_license",
+      files.warehouseLicense.file,
+      files.warehouseLicense.name,
+    );
+
+    setIsSubmitting(true);
+
+    try {
+      await request("/auth/warehouse-manager/register", {
+        method: "POST",
+        body: payload,
+        throwOnError: true,
+      });
+
       setValidationMsg("");
       setIsSuccess(true);
+
+      showToast({
+        type: "success",
+        title: "Registration Submitted",
+        message: "Your Warehouse Manager registration has been submitted for administrator review.",
+        duration: 4500,
+      });
+    } catch (error) {
+      const message = error.message || "Registration could not be submitted.";
+      setValidationMsg(message);
+
+      showToast({
+        type: "error",
+        title: "Registration Failed",
+        message,
+        duration: 6000,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const renderDocumentUpload = (docId, label) => {
+    const uploaded = files[docId];
+    const inputId = `warehouse-document-${docId}`;
+
+    return (
+      <div
+        className={`border-2 border-dashed border-gray-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-green-50/50 hover:border-green-400 transition-colors relative ${!uploaded ? "cursor-pointer" : ""}`}
+        onClick={() => !uploaded && document.getElementById(inputId)?.click()}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => handleFileDrop(event, docId)}
+      >
+        <label className="absolute top-[-10px] left-4 bg-white px-2 text-xs font-semibold text-gray-600 z-10">
+          {label} <span className="text-red-500">*</span>
+        </label>
+
+        {!uploaded ? (
+          <>
+            <div className="w-12 h-12 bg-white rounded-full shadow flex items-center justify-center mb-4 text-[#08511f]">
+              <Upload size={20} />
+            </div>
+            <span className="text-sm font-bold text-[#08511f] mb-2">
+              Upload File
+            </span>
+            <p className="text-xs text-gray-500">
+              JPG, JPEG, PNG, WEBP, PDF (Max 5MB)
+            </p>
+            <input
+              id={inputId}
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp,.pdf"
+              className="hidden"
+              onChange={(event) => handleFileChange(event, docId)}
+            />
+          </>
+        ) : (
+          <div className="flex flex-col items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 w-full relative">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                removeFile(docId);
+              }}
+              className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+            >
+              <X size={16} />
+            </button>
+
+            <FileText size={32} className="text-[#08511f] mb-2" />
+            <span
+              className="text-sm font-semibold text-gray-800 truncate w-full px-2"
+              title={uploaded.name}
+            >
+              {uploaded.name}
+            </span>
+            <span className="text-xs text-gray-500 mt-1">
+              {uploaded.size}
+            </span>
+          </div>
+        )}
+      </div>
+    );
   };
 
   // --- Sub-components for Stepper ---
@@ -509,7 +1343,7 @@ const WarehouseManagerRegister = () => {
 
             {/* Trust Quote */}
             <p className="text-[11px] md:text-xs text-gray-500 italic max-w-sm mb-8 leading-relaxed">
-              "Thank you for choosing GrainRise. We appreciate your interest in becoming one of our verified retail partners."
+              "Thank you for choosing GrainRise. We appreciate your interest in becoming one of our verified warehouse distribution partners."
             </p>
 
             {/* Button */}
@@ -543,7 +1377,7 @@ const WarehouseManagerRegister = () => {
               <p className="text-gray-500 text-sm md:text-base mt-2 max-w-lg">
                 {step === 1 && "Complete your personal information to begin your registration."}
                 {step === 2 && "Enter the verification code sent to your registered email to continue your registration."}
-                {step === 3 && "Upload the required document(s) to complete your registration. Your application will be reviewed before approval."}
+                {step === 3 && "Upload all four required verification documents. GrainRise will use OCR to suggest your Step 4 business information."}
                 {step === 4 && "Provide the details of your warehouse operation."}
               </p>
             </div>
@@ -605,28 +1439,35 @@ const WarehouseManagerRegister = () => {
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                     <div ref={setFieldRef("province")}>
-                      <Dropdown label="Province *" placeholder="Select Province" options={PROVINCES} value={form.province} onChange={handleProvinceChange} error={errors.province} />
+                      <Dropdown label="Province *" placeholder={isAddressLoading && provinceOptions.length === 0 ? "Loading provinces..." : "Select Province"} options={provinceOptions} value={form.province} onChange={handleProvinceChange} error={errors.province} />
                     </div>
                     <div ref={setFieldRef("municipality")}>
-                      <Dropdown label="Municipality *" placeholder="Select City" options={activeMunicipalities} value={form.municipality} onChange={handleMunicipalityChange} error={errors.municipality} />
+                      <Dropdown label="Municipality *" placeholder={isAddressLoading && form.province && municipalityOptions.length === 0 ? "Loading cities/municipalities..." : "Select City/Municipality"} options={municipalityOptions} value={form.municipality} onChange={handleMunicipalityChange} error={errors.municipality} />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
+                    <div ref={setFieldRef("postalCode")}>
                       <label className="block mb-2 text-sm font-medium text-gray-700">
-                        Postal Code <span className="text-gray-400 font-normal text-xs">(Auto Generated)</span>
+                        Postal Code <span className="text-gray-400 font-normal text-xs">(Auto Generated / Editable)</span>
                       </label>
                       <input
                         type="text"
-                        disabled
+                        inputMode="numeric"
+                        maxLength={4}
                         value={form.postalCode}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-200 text-gray-500 outline-none cursor-not-allowed"
+                        onChange={(e) => handleInputChange("postalCode", e.target.value)}
+                        className={`w-full px-4 py-3 rounded-xl border bg-white text-gray-700 outline-none focus:border-green-600 ${errors.postalCode ? "border-red-500" : "border-gray-200"}`}
                       />
+                      {errors.postalCode && (
+                        <span className="text-xs text-red-500 mt-1 block">
+                          {errors.postalCode}
+                        </span>
+                      )}
                     </div>
 
                     <div ref={setFieldRef("barangay")}>
-                      <Dropdown label="Barangay *" placeholder="Select Barangay" options={activeBarangays} value={form.barangay} onChange={(val) => handleInputChange("barangay", val)} error={errors.barangay} />
+                      <Dropdown label="Barangay *" placeholder={isAddressLoading && form.municipality && barangayOptions.length === 0 ? "Loading barangays..." : "Select Barangay"} options={barangayOptions} value={form.barangay} onChange={(val) => handleInputChange("barangay", val)} error={errors.barangay} />
                     </div>
 
                     <FieldWithError error={errors.streetAddress} fieldRef={setFieldRef("streetAddress")}>
@@ -790,7 +1631,8 @@ const WarehouseManagerRegister = () => {
                   <CustomGreenButton
                     text={
                       <span className="flex items-center gap-2">
-                        Next Step <ArrowRight size={18} />
+                        {isSendingOtp ? "Sending OTP..." : "Next Step"}
+                        {!isSendingOtp && <ArrowRight size={18} />}
                       </span>
                     }
                     type="submit"
@@ -821,6 +1663,12 @@ const WarehouseManagerRegister = () => {
                   ))}
                 </div>
 
+                {errors.otp && (
+                  <p className="text-xs text-red-500 -mt-2 mb-5 text-center">
+                    {errors.otp}
+                  </p>
+                )}
+
                 <div className="flex flex-col items-center mb-10">
                   <span className="text-sm text-gray-500 font-medium">
                     Resend available in <strong className="text-gray-800">00:{otpTimer.toString().padStart(2, '0')}</strong>
@@ -836,7 +1684,7 @@ const WarehouseManagerRegister = () => {
                     </button>
                   </p>
                   <p className="text-xs text-gray-400 max-w-sm text-center mt-4">
-                    Upon resending, you may choose to receive the verification code through your registered Email Address or Contact Number.
+                    The new verification code will be sent to your registered email address.
                   </p>
                 </div>
 
@@ -851,7 +1699,7 @@ const WarehouseManagerRegister = () => {
                     }
                   />
                   <CustomGreenButton
-                    text="Verify OTP"
+                    text={verificationToken ? "Continue" : isVerifyingOtp ? "Verifying..." : "Verify OTP"}
                     onClick={handleVerifyOtp}
                     className="!rounded-full !px-8 !py-3 shadow-lg"
                   />
@@ -867,70 +1715,29 @@ const WarehouseManagerRegister = () => {
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  {/* Document 1 (Required) */}
-                  <div
-                    className={`border-2 border-dashed border-gray-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-green-50/50 hover:border-green-400 transition-colors relative ${!files.doc1 ? 'cursor-pointer' : ''}`}
-                    onClick={() => !files.doc1 && document.getElementById('file-doc1').click()}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => handleFileDrop(e, 'doc1')}
-                  >
-                    <label className="absolute top-[-10px] left-4 bg-white px-2 text-xs font-semibold text-gray-600 z-10">
-                      Required Document 1 <span className="text-red-500">*</span>
-                    </label>
-
-                    {!files.doc1 ? (
-                      <>
-                        <div className="w-12 h-12 bg-white rounded-full shadow flex items-center justify-center mb-4 cursor-pointer text-[#08511f]">
-                          <label htmlFor="file-doc1" className="cursor-pointer">
-                            <Upload size={20} />
-                          </label>
-                        </div>
-                        <label htmlFor="file-doc1" className="text-sm font-bold text-[#08511f] cursor-pointer hover:underline mb-2">Upload File</label>
-                        <p className="text-xs text-gray-500">JPG, PNG, WEBP, PDF (Max 5MB)</p>
-                        <input id="file-doc1" type="file" accept=".jpg, .jpeg, .png, .webp, .pdf" className="hidden" onChange={(e) => handleFileChange(e, 'doc1')} />
-                      </>
-                    ) : (
-                      <div className="flex flex-col items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 w-full relative">
-                        <button onClick={() => removeFile('doc1')} className="absolute top-2 right-2 text-gray-400 hover:text-red-500"><X size={16} /></button>
-                        <FileText size={32} className="text-[#08511f] mb-2" />
-                        <span className="text-sm font-semibold text-gray-800 truncate w-full px-2" title={files.doc1.name}>{files.doc1.name}</span>
-                        <span className="text-xs text-gray-500 mt-1">{files.doc1.size}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Document 2 (Optional) */}
-                  <div
-                    className={`border-2 border-dashed border-gray-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-green-50/50 hover:border-green-400 transition-colors relative ${!files.doc2 ? 'cursor-pointer' : ''}`}
-                    onClick={() => !files.doc2 && document.getElementById('file-doc2').click()}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => handleFileDrop(e, 'doc2')}
-                  >
-                    <label className="absolute top-[-10px] left-4 bg-white px-2 text-xs font-semibold text-gray-600 z-10">
-                      Required Document 2 <span className="text-gray-400 font-normal">(Optional)</span>
-                    </label>
-
-                    {!files.doc2 ? (
-                      <>
-                        <div className="w-12 h-12 bg-white rounded-full shadow flex items-center justify-center mb-4 cursor-pointer text-[#08511f]">
-                          <label htmlFor="file-doc2" className="cursor-pointer">
-                            <Upload size={20} />
-                          </label>
-                        </div>
-                        <label htmlFor="file-doc2" className="text-sm font-bold text-[#08511f] cursor-pointer hover:underline mb-2">Upload File</label>
-                        <p className="text-xs text-gray-500">JPG, PNG, WEBP, PDF (Max 5MB)</p>
-                        <input id="file-doc2" type="file" accept=".jpg, .jpeg, .png, .webp, .pdf" className="hidden" onChange={(e) => handleFileChange(e, 'doc2')} />
-                      </>
-                    ) : (
-                      <div className="flex flex-col items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 w-full relative">
-                        <button onClick={() => removeFile('doc2')} className="absolute top-2 right-2 text-gray-400 hover:text-red-500"><X size={16} /></button>
-                        <FileText size={32} className="text-[#08511f] mb-2" />
-                        <span className="text-sm font-semibold text-gray-800 truncate w-full px-2" title={files.doc2.name}>{files.doc2.name}</span>
-                        <span className="text-xs text-gray-500 mt-1">{files.doc2.size}</span>
-                      </div>
-                    )}
-                  </div>
+                  {renderDocumentUpload(
+                    "governmentIssuedId",
+                    "Valid Government-Issued ID",
+                  )}
+                  {renderDocumentUpload(
+                    "businessPermit",
+                    "Mayor's / Business Permit",
+                  )}
+                  {renderDocumentUpload(
+                    "businessRegistration",
+                    "DTI / SEC / CDA Registration",
+                  )}
+                  {renderDocumentUpload(
+                    "warehouseLicense",
+                    "BPI License to Operate / Warehouse License",
+                  )}
                 </div>
+
+                {errors.files && (
+                  <p className="text-xs text-red-500 -mt-5 mb-6">
+                    {errors.files}
+                  </p>
+                )}
 
                 <div className="bg-[#eaf5ec] border border-[#bce8c4] rounded-xl p-4 flex items-start gap-3 mb-6">
                   <Info className="text-[#08511f] shrink-0 mt-0.5" size={20} />
@@ -955,6 +1762,12 @@ const WarehouseManagerRegister = () => {
                   </label>
                 </div>
 
+                {errors.certify && (
+                  <p className="text-xs text-red-500 -mt-5 mb-6">
+                    You must certify that the uploaded documents are true and accurate.
+                  </p>
+                )}
+
                 <div className="w-full flex justify-between">
                   <CustomWhiteButton
                     onClick={() => setStep(2)}
@@ -968,7 +1781,8 @@ const WarehouseManagerRegister = () => {
                   <CustomGreenButton
                     text={
                       <span className="flex items-center gap-2">
-                        Next Step <ArrowRight size={18} />
+                        {isExtractingDocuments ? "Processing Documents..." : "Next Step"}
+                        {!isExtractingDocuments && <ArrowRight size={18} />}
                       </span>
                     }
                     onClick={handleNextStep3}
@@ -994,90 +1808,106 @@ const WarehouseManagerRegister = () => {
                   <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
                     Business Information
                   </h3>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <label className="block mb-2 text-sm font-bold text-gray-700 text-left">
-                        Business Name
-                      </label>
-                      <input
-                        type="text"
-                        disabled
+                    <FieldWithError
+                      error={errors.businessName}
+                      fieldRef={setFieldRef("businessName")}
+                    >
+                      <CustomTextbox
+                        label={<>Business Name <span className="text-red-500">*</span></>}
+                        placeholder="Enter registered business or warehouse name"
                         value={form.businessName}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-100 text-gray-500 font-semibold border border-gray-200 outline-none cursor-not-allowed text-left"
+                        onChange={(e) => handleInputChange("businessName", e.target.value)}
                       />
-                    </div>
-                    <div>
-                      <label className="block mb-2 text-sm font-bold text-gray-700 text-left">
-                        Organization Name
-                      </label>
-                      <input
-                        type="text"
-                        disabled
+                    </FieldWithError>
+
+                    <FieldWithError error={errors.organizationName}>
+                      <CustomTextbox
+                        label={<>Organization Name <span className="text-gray-400 font-normal text-xs">(Optional)</span></>}
+                        placeholder="Enter organization / registered entity name"
                         value={form.organizationName}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-100 text-gray-500 font-semibold border border-gray-200 outline-none cursor-not-allowed text-left"
+                        onChange={(e) => handleInputChange("organizationName", e.target.value)}
                       />
-                    </div>
+                    </FieldWithError>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <label className="block mb-2 text-sm font-bold text-gray-700 text-left">
-                        Province
-                      </label>
-                      <input
-                        type="text"
-                        disabled
+                    <div ref={setFieldRef("businessProvince")}>
+                      <Dropdown
+                        label="Province *"
+                        placeholder={isBusinessAddressLoading && provinceOptions.length === 0 ? "Loading provinces..." : "Select Province"}
+                        options={provinceOptions}
                         value={form.businessProvince}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-100 text-gray-500 font-semibold border border-gray-200 outline-none cursor-not-allowed text-left"
+                        onChange={handleBusinessProvinceChange}
+                        error={errors.businessProvince}
                       />
                     </div>
-                    <div>
-                      <label className="block mb-2 text-sm font-bold text-gray-700 text-left">
-                        Municipality
-                      </label>
-                      <input
-                        type="text"
-                        disabled
+
+                    <div ref={setFieldRef("businessMunicipality")}>
+                      <Dropdown
+                        label="Municipality / City *"
+                        placeholder={
+                          isBusinessAddressLoading
+                          && form.businessProvince
+                          && businessMunicipalityOptions.length === 0
+                            ? "Loading cities/municipalities..."
+                            : "Select City/Municipality"
+                        }
+                        options={businessMunicipalityOptions}
                         value={form.businessMunicipality}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-100 text-gray-500 font-semibold border border-gray-200 outline-none cursor-not-allowed text-left"
+                        onChange={handleBusinessMunicipalityChange}
+                        error={errors.businessMunicipality}
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                      <label className="block mb-2 text-sm font-bold text-gray-700 text-left">
+                    <div ref={setFieldRef("businessPostalCode")}>
+                      <label className="block mb-2 text-sm font-medium text-gray-700 text-left">
                         Postal Code <span className="text-gray-400 font-normal text-xs">(Auto Generated)</span>
                       </label>
                       <input
                         type="text"
                         disabled
                         value={form.businessPostalCode}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-100 text-gray-500 font-semibold border border-gray-200 outline-none cursor-not-allowed text-left"
+                        className={`w-full px-4 py-3 rounded-xl bg-gray-200 text-gray-500 outline-none cursor-not-allowed ${errors.businessPostalCode ? "border border-red-500" : ""}`}
                       />
+                      {errors.businessPostalCode && (
+                        <span className="text-xs text-red-500 mt-1 block">
+                          {errors.businessPostalCode}
+                        </span>
+                      )}
                     </div>
-                    <div>
-                      <label className="block mb-2 text-sm font-bold text-gray-700 text-left">
-                        Barangay
-                      </label>
-                      <input
-                        type="text"
-                        disabled
+
+                    <div ref={setFieldRef("businessBarangay")}>
+                      <Dropdown
+                        label="Barangay *"
+                        placeholder={
+                          isBusinessAddressLoading
+                          && form.businessMunicipality
+                          && businessBarangayOptions.length === 0
+                            ? "Loading barangays..."
+                            : "Select Barangay"
+                        }
+                        options={businessBarangayOptions}
                         value={form.businessBarangay}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-100 text-gray-500 font-semibold border border-gray-200 outline-none cursor-not-allowed text-left"
+                        onChange={(val) => handleInputChange("businessBarangay", val)}
+                        error={errors.businessBarangay}
                       />
                     </div>
-                    <div>
-                      <label className="block mb-2 text-sm font-bold text-gray-700 text-left">
-                        Street Address
-                      </label>
-                      <input
-                        type="text"
-                        disabled
+
+                    <FieldWithError
+                      error={errors.businessStreetAddress}
+                      fieldRef={setFieldRef("businessStreetAddress")}
+                    >
+                      <CustomTextbox
+                        label={<>Street Address <span className="text-red-500">*</span></>}
+                        placeholder="Unit/Bldg, Street Name"
                         value={form.businessStreetAddress}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-100 text-gray-500 font-semibold border border-gray-200 outline-none cursor-not-allowed text-left"
+                        onChange={(e) => handleInputChange("businessStreetAddress", e.target.value)}
                       />
-                    </div>
+                    </FieldWithError>
                   </div>
                 </div>
 
@@ -1087,7 +1917,7 @@ const WarehouseManagerRegister = () => {
                     Official Contact Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FieldWithError error={errors.officialEmail}>
+                    <FieldWithError error={errors.officialEmail} fieldRef={setFieldRef("officialEmail")}>
                       <CustomTextbox
                         label={<>Official Email Address <span className="text-red-500">*</span></>}
                         placeholder="company@gmail.com"
@@ -1097,7 +1927,7 @@ const WarehouseManagerRegister = () => {
                       />
                     </FieldWithError>
 
-                    <FieldWithError error={errors.officialContactNumber}>
+                    <FieldWithError error={errors.officialContactNumber} fieldRef={setFieldRef("officialContactNumber")}>
                       <CustomTextbox
                         label={<>Official Contact Number <span className="text-red-500">*</span></>}
                         placeholder="+63 9XX XXX XXXX"
@@ -1122,7 +1952,12 @@ const WarehouseManagerRegister = () => {
                       id="certifyBusinessInfo"
                       type="checkbox"
                       checked={form.certifyBusinessInfo}
-                      onChange={(e) => handleInputChange("certifyBusinessInfo", e.target.checked)}
+                      onChange={(e) => {
+                        handleInputChange("certifyBusinessInfo", e.target.checked);
+                        if (e.target.checked) {
+                          setErrors((prev) => ({ ...prev, certifyBusinessInfo: "" }));
+                        }
+                      }}
                       className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer"
                     />
                     <label htmlFor="certifyBusinessInfo" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
@@ -1146,7 +1981,7 @@ const WarehouseManagerRegister = () => {
                     }
                   />
                   <CustomGreenButton
-                    text="Submit Registration"
+                    text={isSubmitting ? "Submitting..." : "Submit Registration"}
                     type="submit"
                     className="!rounded-full !px-8 !py-3 shadow-lg"
                   />
