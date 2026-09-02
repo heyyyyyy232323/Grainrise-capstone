@@ -951,6 +951,7 @@ export const userSidebarRoles = [
   "miller_sales",
   "miller_logistics",
   "miller_finance",
+  "miller_manager",
   "farmer",
 ];
 
