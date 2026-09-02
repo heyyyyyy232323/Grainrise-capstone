@@ -1,3 +1,5 @@
+import { Star, ChevronDown } from "lucide-react";
+
 const defaultGridColor = "rgba(148, 163, 184, 0.16)";
 const defaultLineColor = "#0B7A2A";
 const defaultFillColor = "rgba(34, 197, 94, 0.12)";
@@ -17,24 +19,41 @@ const formatAxisValue = (value, formatter) => {
   return formatCurrency(value);
 };
 
+/**
+ * Builds a smooth, continuous cubic Bezier path through a list of points.
+ */
 const buildSmoothPath = (points) => {
   if (points.length === 0) return "";
   if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
 
   let path = `M ${points[0].x} ${points[0].y}`;
 
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const current = points[index];
-    const next = points[index + 1];
-    const controlX = (current.x + next.x) / 2;
-    path += ` Q ${current.x} ${current.y}, ${controlX} ${(current.y + next.y) / 2}`;
-    path += ` T ${next.x} ${next.y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const current = points[i];
+    const next = points[i + 1];
+
+    // Smooth control points calculated based on neighboring points
+    const prev = points[i - 1] || current;
+    const afterNext = points[i + 2] || next;
+
+    const tension = 0.2; // Adjust tension for curvature aggressiveness (0.15 - 0.25 works best)
+
+    const cp1x = current.x + (next.x - prev.x) * tension;
+    const cp1y = current.y + (next.y - prev.y) * tension;
+
+    const cp2x = next.x - (afterNext.x - current.x) * tension;
+    const cp2y = next.y - (afterNext.y - current.y) * tension;
+
+    path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${next.x} ${next.y}`;
   }
 
   return path;
 };
 
-function ChartEmptyState({ title = "No data available", description = "There isn't enough data to display this chart. Check back later or adjust your filters." }) {
+function ChartEmptyState({
+  title = "No data available",
+  description = "There isn't enough data to display this chart. Check back later or adjust your filters.",
+}) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
       <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
@@ -86,9 +105,10 @@ export default function SalesTrendCard({
   }));
   const isEmpty = safeData.length === 0;
 
-  const chartMax = typeof maxValue === "number" && maxValue > 0
-    ? maxValue
-    : Math.max(...safeData.map((item) => item.value), 100);
+  const chartMax =
+    typeof maxValue === "number" && maxValue > 0
+      ? maxValue
+      : Math.max(...safeData.map((item) => item.value), 100);
   const chartMin = Math.max(minValue, 0);
   const chartRange = Math.max(chartMax - chartMin, 1);
   const ticks = 4;
@@ -97,18 +117,20 @@ export default function SalesTrendCard({
   const paddingY = 8;
 
   const points = safeData.map((item, index) => {
-    const x = safeData.length === 1 ? 50 : paddingX + (index / (safeData.length - 1)) * (width - paddingX * 2);
+    const x =
+      safeData.length === 1 ? 50 : paddingX + (index / (safeData.length - 1)) * (width - paddingX * 2);
     const normalized = clamp((item.value - chartMin) / chartRange, 0, 1);
     const y = paddingY + (1 - normalized) * (100 - paddingY * 2);
     return { ...item, x, y };
   });
 
   const linePath = buildSmoothPath(points);
-  const areaPath = points.length > 0
-    ? `${linePath} L ${points[points.length - 1].x} 100 L ${points[0].x} 100 Z`
-    : "";
+  const areaPath =
+    points.length > 0
+      ? `${linePath} L ${points[points.length - 1].x} 100 L ${points[0].x} 100 Z`
+      : "";
 
-  const ticksList = Array.from({ length: ticks + 1 }, (_, index) => chartMin + ((chartRange * index) / ticks));
+  const ticksList = Array.from({ length: ticks + 1 }, (_, index) => chartMin + (chartRange * index) / ticks);
 
   return (
     <article
@@ -125,7 +147,7 @@ export default function SalesTrendCard({
               <select
                 value={selectedRange ?? selectedValue}
                 onChange={(event) => onRangeChange?.(event.target.value)}
-                className="appearance-none rounded-xl border border-slate-200 bg-white px-3 py-1.5 pr-8 text-sm font-semibold text-slate-600 outline-none transition focus:border-emerald-500"
+                className="appearance-none rounded-xl border border-slate-200 bg-white px-3 py-1.5 pr-8 text-sm font-semibold text-slate-600 outline-none transition focus:border-emerald-500 cursor-pointer"
               >
                 {rangeOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -164,7 +186,16 @@ export default function SalesTrendCard({
               })}
 
               {areaPath ? <path d={areaPath} fill={fillColor} /> : null}
-              {linePath ? <path d={linePath} fill="none" stroke={lineColor} strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" /> : null}
+              {linePath ? (
+                <path
+                  d={linePath}
+                  fill="none"
+                  stroke={lineColor}
+                  strokeWidth="1.8"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+              ) : null}
             </svg>
 
             {points.map((point) => (
@@ -195,20 +226,23 @@ export default function SalesTrendCard({
             </div>
 
             <div className="absolute -left-12 top-0 h-full w-[42px] pr-2 text-right text-[10px] font-medium text-slate-400 sm:w-[48px] sm:text-[11px]">
-              {ticksList.slice().reverse().map((tickValue, index) => {
-                const tickRatio = ticks > 0 ? index / ticks : 0;
-                const top = `${paddingY + tickRatio * (100 - paddingY * 2)}%`;
+              {ticksList
+                .slice()
+                .reverse()
+                .map((tickValue, index) => {
+                  const tickRatio = ticks > 0 ? index / ticks : 0;
+                  const top = `${paddingY + tickRatio * (100 - paddingY * 2)}%`;
 
-                return (
-                  <div
-                    key={tickValue}
-                    className="absolute right-1 -translate-y-1/2"
-                    style={{ top }}
-                  >
-                    {formatAxisValue(tickValue, axisFormatter)}
-                  </div>
-                );
-              })}
+                  return (
+                    <div
+                      key={tickValue}
+                      className="absolute right-1 -translate-y-1/2"
+                      style={{ top }}
+                    >
+                      {formatAxisValue(tickValue, axisFormatter)}
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </div>

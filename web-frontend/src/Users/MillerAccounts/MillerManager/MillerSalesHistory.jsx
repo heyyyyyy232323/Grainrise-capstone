@@ -1,34 +1,33 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { X, Receipt, Clock, Calendar, ChevronDown, Search } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
 const SORT_OPTIONS = [
-  { value: "date-desc", label: "Newest First" },
+  { value: "date-desc", label: "Sort By" },
   { value: "date-asc", label: "Oldest First" },
   { value: "amount-desc", label: "Amount (High to Low)" },
   { value: "amount-asc", label: "Amount (Low to High)" },
 ];
 
-/* ── Columns for In-Store Transactions ── */
+/* ── Columns for In-Store Transactions (Matches Image 2) ── */
 const IN_STORE_COLUMNS = [
-  { key: "time", label: "Transaction Time", width: "20%" },
-  { key: "branch", label: "Branch", width: "20%" },
+  { key: "time", label: "Transaction Time", width: "25%" },
+  { key: "branch", label: "Branch", width: "25%" },
   { key: "variant", label: "Variant", width: "20%" },
-  { key: "quantity", label: "Quantity", width: "15%" },
-  { key: "totalPayment", label: "Total Payment", width: "15%" },
+  { key: "quantity", label: "Quantity", width: "18%" },
   {
     key: "action",
     label: "Action",
-    width: "10%",
+    width: "12%",
     headerClassName: "text-center",
     cellClassName: "text-center",
-    render: (row) => (
+    renderCell: (row) => (
       <button
         type="button"
         onClick={() => row.onView?.(row)}
-        className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 transition hover:border-[#0B5D1E] hover:bg-emerald-50/30 hover:text-[#0B5D1E] cursor-pointer"
+        className="rounded-full border border-slate-200 bg-white px-3.5 py-1 text-xs font-medium text-gray-700 transition hover:bg-slate-50 cursor-pointer"
       >
         View Details
       </button>
@@ -50,12 +49,12 @@ const IN_STORE_SECTIONS = [
     rows: [
       { id: "isy-1", time: "11:45 AM", branch: "Warehouse ABC", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-004" },
       { id: "isy-2", time: "11:45 AM", branch: "Warehouse ABC", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-005" },
-      { id: "isy-3", time: "11:45 AM", variant: "Dinorado", branch: "Warehouse ABC", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-006" },
-      { id: "isy-4", time: "11:45 AM", variant: "Dinorado", branch: "Warehouse ABC", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-007" },
+      { id: "isy-3", time: "11:45 AM", branch: "Warehouse ABC", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-006" },
+      { id: "isy-4", time: "11:45 AM", branch: "Warehouse ABC", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-007" },
     ],
   },
   {
-    label: "July 16, 2026",
+    label: "July 18, 2026",
     rows: [
       { id: "isj-1", time: "11:45 AM", branch: "Warehouse ABC", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-008" },
       { id: "isj-2", time: "11:45 AM", branch: "Warehouse ABC", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-009" },
@@ -64,21 +63,21 @@ const IN_STORE_SECTIONS = [
   },
 ];
 
-/* ── Columns for Online Orders Transactions ── */
+/* ── Columns for Online Orders Transactions (Matches Image 1) ── */
 const ONLINE_COLUMNS = [
-  { key: "retailer", label: "Retailer", width: "18%" },
+  { key: "retailer", label: "Retailer", width: "16%" },
   { key: "branch", label: "Branch", width: "18%" },
   { key: "batchNo", label: "Batch No.", width: "18%" },
   { key: "variant", label: "Variant", width: "16%" },
-  { key: "totalPrice", label: "Total Price", width: "14%" },
+  { key: "totalPrice", label: "Total Price", width: "12%", renderCell: (row) => <span className="font-bold text-gray-900">{row.totalPrice}</span> },
   {
     key: "deliveryStatus",
     label: "Delivery Status",
     width: "12%",
     headerClassName: "text-center",
     cellClassName: "text-center",
-    render: (row) => (
-      <span className="inline-block px-3 py-0.5 rounded-full text-xs font-semibold bg-emerald-100/90 text-emerald-800">
+    renderCell: (row) => (
+      <span className="inline-block px-3 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
         {row.deliveryStatus}
       </span>
     ),
@@ -86,14 +85,14 @@ const ONLINE_COLUMNS = [
   {
     key: "action",
     label: "Action",
-    width: "10%",
+    width: "8%",
     headerClassName: "text-center",
     cellClassName: "text-center",
-    render: (row) => (
+    renderCell: (row) => (
       <button
         type="button"
         onClick={() => row.onView?.(row)}
-        className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 transition hover:border-[#0B5D1E] hover:bg-emerald-50/30 hover:text-[#0B5D1E] cursor-pointer"
+        className="rounded-full border border-slate-200 bg-white px-3.5 py-1 text-xs font-medium text-gray-700 transition hover:bg-slate-50 cursor-pointer"
       >
         View Details
       </button>
@@ -120,7 +119,7 @@ const ONLINE_SECTIONS = [
     ],
   },
   {
-    label: "July 16, 2026",
+    label: "July 18, 2026",
     rows: [
       { id: "onj-1", retailer: "Retailer A", branch: "Warehouse ABC", batchNo: "Batch 2026-001", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
       { id: "onj-2", retailer: "Retailer A", branch: "Warehouse ABC", batchNo: "Batch 2026-001", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
@@ -130,7 +129,7 @@ const ONLINE_SECTIONS = [
 ];
 
 export default function MillerSalesHistory() {
-  const [activeTab, setActiveTab] = useState("online"); // default to "online" to match screenshot 5
+  const [activeTab, setActiveTab] = useState("online");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("date-desc");
   const [currentPage, setCurrentPage] = useState(1);
@@ -140,28 +139,30 @@ export default function MillerSalesHistory() {
   const currentColumns = activeTab === "in-store" ? IN_STORE_COLUMNS : ONLINE_COLUMNS;
   const totalPages = activeTab === "in-store" ? 26 : 13;
 
-  const filteredSections = rawSections
-    .map((section) => ({
-      ...section,
-      rows: section.rows
-        .filter((row) => {
-          if (!searchQuery) return true;
-          const q = searchQuery.toLowerCase();
-          return (
-            row.variant?.toLowerCase().includes(q) ||
-            row.branch?.toLowerCase().includes(q) ||
-            row.retailer?.toLowerCase().includes(q) ||
-            row.batchNo?.toLowerCase().includes(q) ||
-            row.totalPayment?.toLowerCase().includes(q) ||
-            row.totalPrice?.toLowerCase().includes(q)
-          );
-        })
-        .map((row) => ({
-          ...row,
-          onView: (r) => setSelectedTransaction(r),
-        })),
-    }))
-    .filter((section) => section.rows.length > 0);
+  const filteredSections = useMemo(() => {
+    return rawSections
+      .map((section) => ({
+        ...section,
+        rows: section.rows
+          .filter((row) => {
+            if (!searchQuery) return true;
+            const q = searchQuery.toLowerCase();
+            return (
+              row.variant?.toLowerCase().includes(q) ||
+              row.branch?.toLowerCase().includes(q) ||
+              row.retailer?.toLowerCase().includes(q) ||
+              row.batchNo?.toLowerCase().includes(q) ||
+              row.totalPayment?.toLowerCase().includes(q) ||
+              row.totalPrice?.toLowerCase().includes(q)
+            );
+          })
+          .map((row) => ({
+            ...row,
+            onView: (r) => setSelectedTransaction(r),
+          })),
+      }))
+      .filter((section) => section.rows.length > 0);
+  }, [rawSections, searchQuery]);
 
   return (
     <div className="space-y-6">
@@ -179,6 +180,7 @@ export default function MillerSalesHistory() {
       {/* ── Tabs (In-Store Transactions / Online Orders Transactions) ────────── */}
       <div className="flex items-center gap-6 border-b border-gray-200 text-xs font-semibold">
         <button
+          type="button"
           onClick={() => { setActiveTab("in-store"); setCurrentPage(1); }}
           className={`pb-2.5 transition relative cursor-pointer ${
             activeTab === "in-store"
@@ -190,6 +192,7 @@ export default function MillerSalesHistory() {
         </button>
 
         <button
+          type="button"
           onClick={() => { setActiveTab("online"); setCurrentPage(1); }}
           className={`pb-2.5 transition relative cursor-pointer ${
             activeTab === "online"
@@ -204,13 +207,13 @@ export default function MillerSalesHistory() {
       {/* ── Filter Row ──────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[240px] max-w-sm">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search receipt no., variant, customer, or amount"
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-[#0B5D1E] outline-none bg-white placeholder-gray-400 text-gray-700"
+            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-xs focus:ring-1 focus:ring-[#0B5D1E] outline-none bg-white placeholder-gray-400 text-gray-700"
           />
         </div>
 

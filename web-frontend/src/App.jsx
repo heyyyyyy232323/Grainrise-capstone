@@ -173,6 +173,7 @@ import MillerDriverAssignedHistory from "./Users/MillerAccounts/MillerDriver/Mil
 // Miller Manager
 import MillerManagerDashboard from "./Users/MillerAccounts/MillerManager/MillerManagerDashboard";
 import MillerBranchManagement from "./Users/MillerAccounts/MillerManager/MillerBranchManagement";
+import MillerEmployeeManagement from "./Users/MillerAccounts/MillerManager/MillerEmployeeManagement";
 import MillerContracts from "./Users/MillerAccounts/MillerManager/MillerContracts";
 import MillerOrderApproval from "./Users/MillerAccounts/MillerManager/MillerOrderApproval";
 import MillerPassFeeManagement from "./Users/MillerAccounts/MillerManager/MillerPassFeeManagement";
@@ -870,6 +871,7 @@ function App() {
           <Route element={<WarehouseEncoderLayout role="miller_manager" />}>
             <Route path="/miller-manager/dashboard" element={<MillerManagerDashboard />} />
             <Route path="/miller-manager/branches" element={<MillerBranchManagement />} />
+            <Route path="/miller-manager/branches/:branchId/employees" element={<MillerEmployeeManagement />} />
             <Route path="/miller-manager/branch-management" element={<MillerBranchManagement />} />
             <Route path="/miller-manager/contracts" element={<MillerContracts />} />
             <Route path="/miller-manager/order-approval" element={<MillerOrderApproval />} />
