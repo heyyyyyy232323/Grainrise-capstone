@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
-import { Search, Plus, Building2, X, CheckCircle2, MapPin, Mail, Phone, Users } from "lucide-react";
+import { Search, Plus, Building2, X, CheckCircle2 } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
@@ -20,19 +21,19 @@ export const MOCK_MILLER_BRANCHES = [
 ];
 
 export default function MillerBranchManagement() {
+  const navigate = useNavigate();
   const [branches, setBranches] = useState(MOCK_MILLER_BRANCHES);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
-  const [selectedBranch, setSelectedBranch] = useState(null);
   const [newBranch, setNewBranch] = useState({ name: "", address: "", email: "", phone: "", capacity: "" });
   const [successToast, setSuccessToast] = useState(false);
 
   const TABLE_COLUMNS = useMemo(
     () => [
-      { key: "name", label: "Warehouse Name", width: "28%" },
-      { key: "address", label: "Warehouse Address", width: "28%" },
-      { key: "email", label: "Official Email", width: "28%" },
+      { key: "name", label: "Warehouse Name", width: "24%" },
+      { key: "address", label: "Warehouse Address", width: "24%" },
+      { key: "email", label: "Official Email", width: "24%" },
       {
         key: "action",
         label: "Action",
@@ -42,7 +43,7 @@ export default function MillerBranchManagement() {
         render: (row) => (
           <button
             type="button"
-            onClick={() => setSelectedBranch(row)}
+            onClick={() => navigate(`/miller-manager/branches/${row.id}/employees`)}
             className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 transition hover:border-[#0B5D1E] hover:bg-emerald-50/30 hover:text-[#0B5D1E] cursor-pointer"
             title="View Details"
           >
@@ -51,7 +52,7 @@ export default function MillerBranchManagement() {
         ),
       },
     ],
-    []
+    [navigate]
   );
 
   const filteredBranches = useMemo(() => {
@@ -143,90 +144,6 @@ export default function MillerBranchManagement() {
         emptyStateTitle="No branches found"
         emptyStateDescription="No branches matched your search. Try adjusting your search query."
       />
-
-      {/* ── View Details Modal ────────────────────────────────────────────── */}
-      {selectedBranch &&
-        createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-xs px-4">
-            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 space-y-5 animate-in fade-in zoom-in duration-200">
-              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#0B5D1E] flex items-center justify-center">
-                    <Building2 size={20} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-base">{selectedBranch.name}</h3>
-                    <p className="text-xs text-gray-500">Branch Details & Overview</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedBranch(null)}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="space-y-3.5 text-sm">
-                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
-                  <MapPin size={18} className="text-slate-400 mt-0.5 shrink-0" />
-                  <div>
-                    <span className="text-xs font-medium text-slate-500 block">Warehouse Address</span>
-                    <span className="font-semibold text-slate-800">{selectedBranch.address}</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
-                    <Mail size={18} className="text-slate-400 mt-0.5 shrink-0" />
-                    <div>
-                      <span className="text-xs font-medium text-slate-500 block">Official Email</span>
-                      <span className="font-semibold text-slate-800 break-all">{selectedBranch.email}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
-                    <Phone size={18} className="text-slate-400 mt-0.5 shrink-0" />
-                    <div>
-                      <span className="text-xs font-medium text-slate-500 block">Contact Number</span>
-                      <span className="font-semibold text-slate-800">{selectedBranch.phone}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
-                    <Users size={18} className="text-slate-400 mt-0.5 shrink-0" />
-                    <div>
-                      <span className="text-xs font-medium text-slate-500 block">Active Staff</span>
-                      <span className="font-semibold text-slate-800">{selectedBranch.activeEmployees} Assigned Staff</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
-                    <Building2 size={18} className="text-slate-400 mt-0.5 shrink-0" />
-                    <div>
-                      <span className="text-xs font-medium text-slate-500 block">Storage Capacity</span>
-                      <span className="font-semibold text-slate-800">{selectedBranch.capacity}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedBranch(null)}
-                  className="px-5 py-2 bg-[#0B5D1E] hover:bg-[#094d19] text-white rounded-xl text-xs font-semibold transition cursor-pointer"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
 
       {/* ── Register New Branch Modal ────────────────────────────────────────── */}
       {showModal &&

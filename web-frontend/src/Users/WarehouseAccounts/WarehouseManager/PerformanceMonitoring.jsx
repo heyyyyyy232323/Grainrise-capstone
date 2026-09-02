@@ -1,15 +1,41 @@
 import { useState } from "react";
-import { Star, ChevronDown, CalendarDays, TrendingUp, CheckCircle2 } from "lucide-react";
+import { Star, ChevronDown } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
+import SalesTrendCard from "../../../Components/Graphs/LineGraphsCard";
+import DistributionCard from "../../../Components/Graphs/PieChartCard";
 
 const REVIEWS = [
-  { id: 1, customer: "Customer A", rating: 5, comment: "Excellent turnaround time on the last rice shipment. Quality verified upon delivery.", date: "Apr 12, 2026" },
-  { id: 2, customer: "Customer A", rating: 5, comment: "Excellent turnaround time on the last rice shipment. Quality verified upon delivery.", date: "Apr 12, 2026" },
-  { id: 3, customer: "Customer A", rating: 5, comment: "Excellent turnaround time on the last rice shipment. Quality verified upon delivery.", date: "Apr 12, 2026" },
-  { id: 4, customer: "Customer A", rating: 5, comment: "Excellent turnaround time on the last rice shipment. Quality verified upon delivery.", date: "Apr 12, 2026" },
-  { id: 5, customer: "Customer A", rating: 5, comment: "Excellent turnaround time on the last rice shipment. Quality verified upon delivery.", date: "Apr 12, 2026" },
-  { id: 6, customer: "Customer B", rating: 4, comment: "Fast dispatch and clean sacks. Minor delay on logistics handover but handled well.", date: "Apr 10, 2026" },
-  { id: 7, customer: "Customer C", rating: 5, comment: "Great communication with the warehouse encoder and logistics coordinator.", date: "Apr 08, 2026" },
+  { id: 1, customer: "Customer A", rating: 4.5, comment: "Excellent turnaround time on the last rice shipment. Quality verified upon delivery.", date: "Apr 12, 2026" },
+  { id: 2, customer: "Customer A", rating: 4.5, comment: "Excellent turnaround time on the last rice shipment. Quality verified upon delivery.", date: "Apr 12, 2026" },
+  { id: 3, customer: "Customer A", rating: 4.5, comment: "Excellent turnaround time on the last rice shipment. Quality verified upon delivery.", date: "Apr 12, 2026" },
+  { id: 4, customer: "Customer A", rating: 4.5, comment: "Excellent turnaround time on the last rice shipment. Quality verified upon delivery.", date: "Apr 12, 2026" },
+  { id: 5, customer: "Customer A", rating: 4.5, comment: "Excellent turnaround time on the last rice shipment. Quality verified upon delivery.", date: "Apr 12, 2026" },
+  { id: 6, customer: "Customer B", rating: 4.0, comment: "Fast dispatch and clean sacks. Minor delay on logistics handover but handled well.", date: "Apr 10, 2026" },
+  { id: 7, customer: "Customer C", rating: 5.0, comment: "Great communication with the warehouse encoder and logistics coordinator.", date: "Apr 08, 2026" },
+  { id: 8, customer: "Customer D", rating: 4.5, comment: "Very satisfied with overall milling cleanliness and packaging.", date: "Apr 05, 2026" },
+  { id: 9, customer: "Customer E", rating: 4.0, comment: "Smooth transaction and transparent weight monitoring.", date: "Apr 02, 2026" },
+];
+
+// Mock Data for Graph 1: Sales Overtime (12 Months)
+const SALES_OVERTIME_DATA = [
+  { label: "Aug 26", value: 5000 },
+  { label: "Sept 26", value: 14000 },
+  { label: "Oct 26", value: 11000 },
+  { label: "Nov 26", value: 18000 },
+];
+
+// Mock Data for Graph 2: Purchase Breakdown Donut
+const PURCHASE_BREAKDOWN_DATA = [
+  { label: "Completed (Online Sales)", value: 8, color: "#0B5D1E" },
+  { label: "Pending (Online Sales)", value: 4, color: "#EAB308" },
+];
+
+// Mock Data for Graph 3: Demand Forecasting
+const DEMAND_FORECAST_DATA = [
+  { label: "Jun 26", value: 4 },
+  { label: "Jul 26", value: 12 },
+  { label: "Aug 26", value: 9 },
+  { label: "Sept 26", value: 16 },
 ];
 
 export default function PerformanceMonitoring() {
@@ -26,7 +52,7 @@ export default function PerformanceMonitoring() {
       {/* ── Breadcrumbs & Header ─────────────────────────────────────────────── */}
       <div className="space-y-1">
         <Breadcrumbs items={[{ label: "Analytics" }, { label: "Performance Monitoring" }]} />
-        <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-bold tracking-[-0.03em] text-slate-900">
+        <h2 className="text-[clamp(1.75rem,2.5vw,2.25rem)] font-bold tracking-tight text-slate-900">
           Performance Monitoring
         </h2>
         <p className="text-sm text-slate-500">
@@ -35,85 +61,91 @@ export default function PerformanceMonitoring() {
       </div>
 
       {/* ── Top Section: Branch Customer Reviews ─────────────────────────────── */}
-      <div className="space-y-3">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <h3 className="font-bold text-gray-900 text-lg">Branch Monitoring</h3>
+          <h3 className="font-bold text-gray-900 text-base">Branch Monitoring</h3>
 
-          <div className="flex items-center gap-2">
+          <div className="relative">
             <select
               value={selectedBranch}
               onChange={(e) => setSelectedBranch(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-xl text-xs font-semibold bg-white text-gray-700 focus:ring-1 focus:ring-emerald-600 outline-none"
+              className="appearance-none pr-8 pl-4 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold bg-white text-gray-700 focus:ring-1 focus:ring-[#0B5D1E] outline-none cursor-pointer"
             >
               <option value="Warehouse ABC">Warehouse ABC</option>
               <option value="Warehouse Distribution A">Warehouse Distribution A</option>
               <option value="Warehouse Distribution B">Warehouse Distribution B</option>
               <option value="Warehouse Distribution C">Warehouse Distribution C</option>
             </select>
+            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           </div>
         </div>
 
         {/* Customer Ratings Card */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-5">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+        <div className="border border-slate-200/80 rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 bg-white">
             <p className="text-xs font-semibold text-gray-500">Customers Ratings and Reviews</p>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-500">
+            <div className="flex items-center gap-1.5 text-xs font-bold">
               <div className="flex text-amber-400">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={14} fill="currentColor" />
+                  <Star key={i} size={13} fill="currentColor" />
                 ))}
               </div>
-              <span className="text-gray-900">4.5</span>
-              <span className="text-gray-400 font-normal">/ 5 (9 reviews)</span>
+              <span className="text-amber-500 font-bold">4.5 / 5</span>
+              <span className="text-gray-400 font-normal">({REVIEWS.length} reviews)</span>
             </div>
           </div>
 
           {/* Review Rows */}
-          <div className="space-y-4 divide-y divide-gray-100">
+          <div className="divide-y divide-slate-100 bg-white px-4">
             {paginatedReviews.map((rev) => (
-              <div key={rev.id} className="pt-3 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div key={rev.id} className="py-3.5 flex items-start justify-between gap-4">
                 <div className="space-y-1">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <div className="flex text-amber-400">
-                      {[...Array(rev.rating)].map((_, i) => (
-                        <Star key={i} size={13} fill="currentColor" />
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} size={12} fill={i < Math.floor(rev.rating) ? "currentColor" : "none"} stroke="currentColor" />
                       ))}
                     </div>
-                    <span className="font-bold text-gray-900 text-sm">{rev.customer}</span>
+                    <span className="font-bold text-gray-900 text-xs">{rev.customer}</span>
                   </div>
-                  <p className="text-xs text-gray-600 leading-relaxed">{rev.comment}</p>
+                  <p className="text-xs text-gray-500 leading-relaxed">{rev.comment}</p>
                 </div>
-                <span className="text-[11px] text-gray-400 whitespace-nowrap self-end sm:self-center">
-                  {rev.date}
-                </span>
+                <span className="text-[10px] text-gray-400 whitespace-nowrap">{rev.date}</span>
               </div>
             ))}
           </div>
 
-          {/* Reviews Pagination */}
-          <div className="flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-500">
-            <span>Showing {(reviewPage - 1) * reviewsPerPage + 1}-{Math.min(reviewPage * reviewsPerPage, REVIEWS.length)} of {REVIEWS.length} reviews</span>
-            <div className="flex gap-1">
+          {/* Reviews Pagination Footer */}
+          <div className="flex items-center justify-between bg-slate-50/70 px-4 py-2.5 border-t border-slate-200 text-xs text-gray-500">
+            <span>
+              Showing {(reviewPage - 1) * reviewsPerPage + 1}–{Math.min(reviewPage * reviewsPerPage, REVIEWS.length)} of {REVIEWS.length} reviews
+            </span>
+            <div className="flex items-center gap-1">
               <button
+                type="button"
                 disabled={reviewPage === 1}
                 onClick={() => setReviewPage((p) => Math.max(1, p - 1))}
-                className="px-2.5 py-1 border border-gray-200 rounded text-gray-400 disabled:opacity-40"
+                className="px-2.5 py-1 border border-gray-200 bg-white rounded-lg text-xs text-gray-600 disabled:opacity-40 hover:bg-slate-50 cursor-pointer"
               >
                 Previous
               </button>
               {Array.from({ length: totalReviewPages }).map((_, i) => (
                 <button
                   key={i}
+                  type="button"
                   onClick={() => setReviewPage(i + 1)}
-                  className={`px-2.5 py-1 rounded font-semibold ${reviewPage === i + 1 ? "bg-[#0B5D1E] text-white" : "border border-gray-200 text-gray-700"}`}
+                  className={`h-6 w-6 rounded-lg text-xs font-bold cursor-pointer ${
+                    reviewPage === i + 1 ? "bg-[#0B5D1E] text-white" : "border border-gray-200 bg-white text-gray-600 hover:bg-slate-50"
+                  }`}
                 >
                   {i + 1}
                 </button>
               ))}
               <button
+                type="button"
                 disabled={reviewPage === totalReviewPages}
                 onClick={() => setReviewPage((p) => Math.min(totalReviewPages, p + 1))}
-                className="px-2.5 py-1 border border-gray-200 rounded text-gray-700 disabled:opacity-40"
+                className="px-2.5 py-1 border border-gray-200 bg-white rounded-lg text-xs text-gray-600 disabled:opacity-40 hover:bg-slate-50 cursor-pointer"
               >
                 Next
               </button>
@@ -123,147 +155,68 @@ export default function PerformanceMonitoring() {
       </div>
 
       {/* ── Bottom Section: Product Trends & Forecasting ─────────────────────── */}
-      <div className="space-y-3 pt-2">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <h3 className="font-bold text-gray-900 text-lg">Branch Monitoring</h3>
+          <h3 className="font-bold text-gray-900 text-base">Branch Monitoring</h3>
 
-          <div className="flex items-center gap-2">
+          <div className="relative">
             <select
               value={selectedVariant}
               onChange={(e) => setSelectedVariant(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-xl text-xs font-semibold bg-white text-gray-700 focus:ring-1 focus:ring-emerald-600 outline-none"
+              className="appearance-none pr-8 pl-4 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold bg-white text-gray-700 focus:ring-1 focus:ring-[#0B5D1E] outline-none cursor-pointer"
             >
               <option value="Dinorado">Dinorado</option>
               <option value="Sinandomeng">Sinandomeng</option>
               <option value="Jasmine Rice">Jasmine Rice</option>
               <option value="RC222 Tubigan">RC222 Tubigan</option>
             </select>
+            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           </div>
         </div>
 
-        {/* Metric summary badges */}
+        {/* Metric Summary Cards */}
         <div className="flex justify-end gap-2 text-xs">
-          <div className="bg-slate-100 border border-gray-200 rounded-xl px-4 py-2 text-gray-700 font-bold">
-            This Month: <span className="text-emerald-700">₱1,101,000.00</span>
+          <div className="border border-slate-200 rounded-xl px-3 py-1.5 text-gray-700 font-medium bg-slate-50/50">
+            This Month: <span className="font-bold text-gray-900">₱1,101,000.00</span>
           </div>
-          <div className="bg-slate-100 border border-gray-200 rounded-xl px-4 py-2 text-gray-700 font-bold">
-            This Month: <span className="text-emerald-700">₱1,101,000.00</span>
+          <div className="border border-slate-200 rounded-xl px-3 py-1.5 text-gray-700 font-medium bg-slate-50/50">
+            This Month: <span className="font-bold text-gray-900">₱1,101,000.00</span>
           </div>
         </div>
 
-        {/* 3 Graphs Grid */}
+        {/* 3 Component Graphs Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* 1. Sales Overtime (12 Months) Line Chart */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
-            <h4 className="text-xs font-bold text-gray-800">Sales Overtime <span className="text-gray-400 font-normal">(12 Months)</span></h4>
-            <div className="w-full h-44 relative">
-              <svg viewBox="0 0 320 140" className="w-full h-full overflow-visible">
-                <defs>
-                  <linearGradient id="chartGrad1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10B981" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#10B981" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                {/* Y Axis text */}
-                <text x="0" y="25" className="text-[9px] fill-gray-400">₱100k</text>
-                <text x="0" y="70" className="text-[9px] fill-gray-400">₱50k</text>
-                <text x="0" y="115" className="text-[9px] fill-gray-400">0</text>
-                {/* Gridlines */}
-                <line x1="30" y1="25" x2="310" y2="25" stroke="#f1f5f9" />
-                <line x1="30" y1="70" x2="310" y2="70" stroke="#f1f5f9" />
-                <line x1="30" y1="115" x2="310" y2="115" stroke="#f1f5f9" />
-                {/* Area Fill */}
-                <path d="M 40,105 Q 80,45 130,55 T 220,70 T 300,30 L 300,115 L 40,115 Z" fill="url(#chartGrad1)" />
-                {/* Curve */}
-                <path d="M 40,105 Q 80,45 130,55 T 220,70 T 300,30" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" />
-                <circle cx="300" cy="30" r="3.5" fill="#059669" />
-                {/* X Axis */}
-                <text x="45" y="132" className="text-[8px] fill-gray-400" textAnchor="middle">Aug 25</text>
-                <text x="130" y="132" className="text-[8px] fill-gray-400" textAnchor="middle">Sep 25</text>
-                <text x="215" y="132" className="text-[8px] fill-gray-400" textAnchor="middle">Oct 25</text>
-                <text x="295" y="132" className="text-[8px] fill-gray-400" textAnchor="middle">Nov 25</text>
-              </svg>
-            </div>
-            <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-500 font-semibold pt-1">
-              <span className="w-2.5 h-2.5 bg-emerald-600 rounded-sm"></span> Expected Revenue
-            </div>
-          </div>
+          <SalesTrendCard
+            title="Sales Overtime (12 Months)"
+            data={SALES_OVERTIME_DATA}
+            height={200}
+            maxValue={20000}
+            lineColor="#0B5D1E"
+            fillColor="rgba(11, 93, 30, 0.12)"
+            axisFormatter={(v) => (v === 0 ? "0" : `₱${v / 1000}k`)}
+            valueFormatter={() => ""}
+          />
 
           {/* 2. Purchase Breakdown Donut Chart */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3 flex flex-col justify-between">
-            <h4 className="text-xs font-bold text-gray-800">Purchase Breakdown</h4>
-            <div className="flex items-center justify-center gap-5 py-2">
-              {/* Donut SVG */}
-              <div className="w-28 h-28 relative">
-                <svg viewBox="0 0 36 36" className="w-full h-full">
-                  {/* Background Circle */}
-                  <path
-                    className="text-amber-500"
-                    strokeWidth="4.5"
-                    stroke="currentColor"
-                    fill="none"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  {/* Completed slice (67% = 8 / 12) */}
-                  <path
-                    className="text-emerald-700"
-                    strokeDasharray="67, 100"
-                    strokeWidth="4.5"
-                    strokeLinecap="round"
-                    stroke="currentColor"
-                    fill="none"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                </svg>
-              </div>
+          <DistributionCard
+            title="Purchase Breakdown"
+            items={PURCHASE_BREAKDOWN_DATA}
+            donutSize={160}
+            holeSize={80}
+          />
 
-              {/* Legend List */}
-              <div className="space-y-2 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-700 shrink-0"></span>
-                  <span className="text-gray-600 text-[11px]">Completed (Online Sales)</span>
-                  <span className="font-bold text-gray-900 ml-auto">8</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0"></span>
-                  <span className="text-gray-600 text-[11px]">Pending (Online Sales)</span>
-                  <span className="font-bold text-gray-900 ml-auto">4</span>
-                </div>
-              </div>
-            </div>
-            <div className="text-[10px] text-center text-gray-400">Total: 12 Active Orders</div>
-          </div>
-
-          {/* 3. Demand Forecasting Line Chart */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
-            <h4 className="text-xs font-bold text-gray-800">Sales Overtime <span className="text-gray-400 font-normal">(12 Months)</span></h4>
-            <div className="w-full h-44 relative">
-              <svg viewBox="0 0 320 140" className="w-full h-full overflow-visible">
-                {/* Y Axis text */}
-                <text x="0" y="25" className="text-[9px] fill-gray-400">25kg</text>
-                <text x="0" y="70" className="text-[9px] fill-gray-400">10kg</text>
-                <text x="0" y="115" className="text-[9px] fill-gray-400">0kg</text>
-                {/* Gridlines */}
-                <line x1="30" y1="25" x2="310" y2="25" stroke="#f1f5f9" />
-                <line x1="30" y1="70" x2="310" y2="70" stroke="#f1f5f9" />
-                <line x1="30" y1="115" x2="310" y2="115" stroke="#f1f5f9" />
-                {/* Curve 1: Actual */}
-                <path d="M 40,100 Q 90,40 140,50 T 230,75 T 300,30" fill="none" stroke="#047857" strokeWidth="2.5" strokeLinecap="round" />
-                <circle cx="140" cy="50" r="3" fill="#fff" stroke="#047857" strokeWidth="2" />
-                <circle cx="230" cy="75" r="3" fill="#fff" stroke="#047857" strokeWidth="2" />
-                <circle cx="300" cy="30" r="3" fill="#047857" />
-                {/* X Axis */}
-                <text x="45" y="132" className="text-[8px] fill-gray-400" textAnchor="middle">Jul 25</text>
-                <text x="130" y="132" className="text-[8px] fill-gray-400" textAnchor="middle">Jul 28</text>
-                <text x="215" y="132" className="text-[8px] fill-gray-400" textAnchor="middle">Aug 01</text>
-                <text x="295" y="132" className="text-[8px] fill-gray-400" textAnchor="middle">Sept 01</text>
-              </svg>
-            </div>
-            <div className="flex items-center justify-center gap-4 text-[10px] text-gray-500 font-semibold pt-1">
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-emerald-700 rounded-sm"></span> Actual (kg)</span>
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-amber-400 rounded-sm"></span> Forecast (kg)</span>
-            </div>
-          </div>
+          {/* 3. Demand Forecasting Spline Chart */}
+          <SalesTrendCard
+            title="Sales Overtime (12 Months)"
+            data={DEMAND_FORECAST_DATA}
+            height={200}
+            maxValue={20}
+            lineColor="#0B5D1E"
+            fillColor="rgba(11, 93, 30, 0.12)"
+            axisFormatter={(v) => `${v}kg`}
+            valueFormatter={() => ""}
+          />
         </div>
       </div>
     </div>

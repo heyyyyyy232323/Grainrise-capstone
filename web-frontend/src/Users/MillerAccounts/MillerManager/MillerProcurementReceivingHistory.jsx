@@ -11,15 +11,15 @@ const QC_STATUS_PILLS = {
 };
 
 const TABLE_COLUMNS = [
-  { key: "batchNo", label: "Batch No.", width: "18%" },
-  { key: "branch", label: "Branch", width: "18%" },
-  { key: "supplier", label: "Supplier", width: "18%" },
-  { key: "variant", label: "Variant", width: "16%" },
-  { key: "qty", label: "Received Qty (kg)", width: "16%" },
+  { key: "batchNo", label: "Batch No.", width: "16%" },
+  { key: "branch", label: "Branch", width: "16%" },
+  { key: "supplier", label: "Supplier", width: "16%" },
+  { key: "variant", label: "Variant", width: "14%" },
+  { key: "qty", label: "Received Qty (kg)", width: "14%" },
   {
     key: "qcStatus",
     label: "QC Status",
-    width: "12%",
+    width: "10%",
     headerClassName: "text-center",
     cellClassName: "text-center",
     render: (row) => (
@@ -31,14 +31,14 @@ const TABLE_COLUMNS = [
   {
     key: "action",
     label: "Action",
-    width: "10%",
+    width: "14%", // Increased from 10% to prevent text wrapping
     headerClassName: "text-center",
     cellClassName: "text-center",
     render: (row) => (
       <button
         type="button"
         onClick={() => row.onView?.(row)}
-        className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 transition hover:border-[#0B5D1E] hover:bg-emerald-50/30 hover:text-[#0B5D1E] cursor-pointer"
+        className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 transition hover:border-[#0B5D1E] hover:bg-emerald-50/30 hover:text-[#0B5D1E] cursor-pointer"
       >
         View Details
       </button>

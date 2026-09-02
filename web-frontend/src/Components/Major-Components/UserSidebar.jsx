@@ -831,6 +831,92 @@ export const getUserSidebarConfig = (role = "admin") => {
       ],
     },
 
+    miller_manager: {
+      panelLabel: "MILLER MANAGER PANEL",
+      sections: [
+        {
+          title: "MAIN",
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/miller-manager/dashboard",
+            },
+          ],
+        },
+        {
+          title: "MANAGEMENT",
+          items: [
+            {
+              label: "Branch Management",
+              icon: Warehouse,
+              path: "/miller-manager/branches",
+            },
+            {
+              label: "Contracts",
+              icon: ClipboardList,
+              path: "/miller-manager/contracts",
+            },
+            {
+              label: "Order Approval",
+              icon: ClipboardList,
+              path: "/miller-manager/order-approval",
+            },
+            {
+              label: "Pass Fee Management",
+              icon: Receipt,
+              path: "/miller-manager/pass-fee",
+            },
+          ],
+        },
+        {
+          title: "ANALYTICS",
+          items: [
+            {
+              label: "Performance Monitoring",
+              icon: FileBarChart,
+              path: "/miller-manager/performance",
+            },
+          ],
+        },
+        {
+          title: "HISTORY",
+          items: [
+            {
+              label: "Fulfillment History",
+              icon: PackageCheck,
+              path: "/miller-manager/fulfillment-history",
+            },
+            {
+              label: "Sales History",
+              icon: History,
+              path: "/miller-manager/sales-history",
+            },
+            {
+              label: "Procurement Receiving History",
+              icon: Truck,
+              path: "/miller-manager/procurement-history",
+            },
+            {
+              label: "Finance Management History",
+              icon: CreditCard,
+              path: "/miller-manager/finance-history",
+            },
+          ],
+        },
+        {
+          title: "WORKSPACE",
+          items: [
+            {
+              label: "News & Updates",
+              icon: Newspaper,
+              path: "/miller-manager/news-updates",
+            },
+          ],
+        },
+      ],
+    },
+
     farmer: {
       panelLabel: "FARMER PANEL",
       sections: [
@@ -912,6 +998,7 @@ export const userSidebarRoles = [
   "miller_sales",
   "miller_logistics",
   "miller_finance",
+  "miller_manager",
   "farmer",
 ];
 
@@ -936,7 +1023,6 @@ const UserSidebar = ({
         ${isMinimized ? "md:w-20" : "md:w-72"} w-72
       `}
     >
-      {/* Logo + Mobile close button */}
       <div
         className={`h-16 flex items-center border-b border-gray-100 px-5 transition-all duration-300 ease-in-out shrink-0 ${
           isMinimized ? "md:justify-center md:px-0" : "justify-start"
@@ -950,7 +1036,6 @@ const UserSidebar = ({
           }`}
         />
 
-        {/* Close button visible only on small screens when sidebar is open */}
         <button
           onClick={onClose}
           aria-label="Close sidebar"
@@ -960,7 +1045,6 @@ const UserSidebar = ({
         </button>
       </div>
 
-      {/* Panel label */}
       <div
         className={`bg-linear-to-r from-[#0B5D1E] to-[#D6A62D] transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
           isMinimized
@@ -973,11 +1057,9 @@ const UserSidebar = ({
         </span>
       </div>
 
-      {/* Nav sections */}
       <nav className="flex-1 overflow-y-auto py-4">
         {resolvedSections.map((section) => (
           <div key={section.title} className="mb-5">
-            {/* Section title — smoothly collapses height + opacity without layout jumps */}
             <div
               className={`px-5 mb-1.5 transition-all duration-300 ease-in-out overflow-hidden ${
                 isMinimized

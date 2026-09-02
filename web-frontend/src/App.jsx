@@ -115,7 +115,7 @@ import DriverReimbursementHistory from "./Users/WarehouseAccounts/WarehouseDrive
 
 
 // ============================================================
-// MILLER ACCOUNTS
+// MILLER ENCODER
 // ============================================================
 
 import MillerEncoderDashboard from "./Users/MillerAccounts/MillerEncoder/MillerEncoderDashboard";
@@ -169,6 +169,25 @@ import MillerDriverPaymentSubmission from "./Users/MillerAccounts/MillerDriver/M
 import MillerDriverReimbursement from "./Users/MillerAccounts/MillerDriver/MillerDriverReimbursement";
 import MillerDriverReimbursementHistory from "./Users/MillerAccounts/MillerDriver/MillerDriverReimbursementHistory";
 import MillerDriverAssignedHistory from "./Users/MillerAccounts/MillerDriver/MillerDriverAssignedHistory";
+
+
+// ============================================================
+// MILLER MANAGER
+// ============================================================
+
+import MillerManagerDashboard from "./Users/MillerAccounts/MillerManager/MillerManagerDashboard";
+import MillerBranchManagement from "./Users/MillerAccounts/MillerManager/MillerBranchManagement";
+import MillerEmployeeManagement from "./Users/MillerAccounts/MillerManager/MillerEmployeeManagement";
+import MillerContracts from "./Users/MillerAccounts/MillerManager/MillerContracts";
+import MillerOrderApproval from "./Users/MillerAccounts/MillerManager/MillerOrderApproval";
+import MillerPassFeeManagement from "./Users/MillerAccounts/MillerManager/MillerPassFeeManagement";
+import MillerPerformanceMonitoring from "./Users/MillerAccounts/MillerManager/MillerPerformanceMonitoring";
+import MillerManagerFulfillmentHistory from "./Users/MillerAccounts/MillerManager/MillerFulfillmentHistory";
+import MillerManagerSalesHistory from "./Users/MillerAccounts/MillerManager/MillerSalesHistory";
+import MillerProcurementReceivingHistory from "./Users/MillerAccounts/MillerManager/MillerProcurementReceivingHistory";
+import MillerFinanceManagementHistory from "./Users/MillerAccounts/MillerManager/MillerFinanceManagementHistory";
+import MillerManagerNewsUpdates from "./Users/MillerAccounts/MillerManager/MillerManagerNewsUpdates";
+import MillerManagerNewsArticle from "./Users/MillerAccounts/MillerManager/MillerManagerNewsArticle";
 
 
 // ============================================================
@@ -234,25 +253,10 @@ function App() {
               PUBLIC
           ================================================== */}
 
-          <Route
-            path="/"
-            element={<LandingPage />}
-          />
-
-          <Route
-            path="/login"
-            element={<Login />}
-          />
-
-          <Route
-            path="/admin-login"
-            element={<AdminLogin />}
-          />
-
-          <Route
-            path="/register"
-            element={<Register />}
-          />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="/register" element={<Register />} />
 
           <Route
             path="/register/supplier-warehouse"
@@ -289,11 +293,7 @@ function App() {
               DIRECT PROFILE FALLBACK
           ================================================== */}
 
-          <Route
-            element={
-              <WarehouseEncoderLayout role="retailer" />
-            }
-          >
+          <Route element={<WarehouseEncoderLayout role="retailer" />}>
             <Route
               path="/account-profile"
               element={<UserAccountProfile />}
@@ -305,11 +305,7 @@ function App() {
               WAREHOUSE ENCODER
           ================================================== */}
 
-          <Route
-            element={
-              <WarehouseEncoderLayout role="warehouse_encoder" />
-            }
-          >
+          <Route element={<WarehouseEncoderLayout role="warehouse_encoder" />}>
             <Route
               path="/warehouse-encoder/dashboard"
               element={<WarehouseEncoderDashboard />}
@@ -341,11 +337,7 @@ function App() {
               WAREHOUSE SALES
           ================================================== */}
 
-          <Route
-            element={
-              <WarehouseEncoderLayout role="warehouse_sales" />
-            }
-          >
+          <Route element={<WarehouseEncoderLayout role="warehouse_sales" />}>
             <Route
               path="/warehouse-sales/dashboard"
               element={<WarehouseSalesDashboard />}
@@ -377,11 +369,7 @@ function App() {
               WAREHOUSE LOGISTICS
           ================================================== */}
 
-          <Route
-            element={
-              <WarehouseEncoderLayout role="warehouse_logistics" />
-            }
-          >
+          <Route element={<WarehouseEncoderLayout role="warehouse_logistics" />}>
             <Route
               path="/warehouse-logistics/dashboard"
               element={<WarehouseLogisticsDashboard />}
@@ -428,11 +416,7 @@ function App() {
               WAREHOUSE PROCUREMENT
           ================================================== */}
 
-          <Route
-            element={
-              <WarehouseProcurementLayout />
-            }
-          >
+          <Route element={<WarehouseProcurementLayout />}>
             <Route
               path="/warehouse-procurement/dashboard"
               element={<WarehouseProcurementDashboard />}
@@ -479,11 +463,7 @@ function App() {
               WAREHOUSE FINANCE
           ================================================== */}
 
-          <Route
-            element={
-              <WarehouseEncoderLayout role="warehouse_finance" />
-            }
-          >
+          <Route element={<WarehouseEncoderLayout role="warehouse_finance" />}>
             <Route
               path="/warehouse-finance/dashboard"
               element={<WarehouseFinanceDashboard />}
@@ -520,11 +500,7 @@ function App() {
               WAREHOUSE MANAGER
           ================================================== */}
 
-          <Route
-            element={
-              <WarehouseEncoderLayout role="warehouse_manager" />
-            }
-          >
+          <Route element={<WarehouseEncoderLayout role="warehouse_manager" />}>
             <Route
               path="/warehouse-manager/dashboard"
               element={<WarehouseManagerDashboard />}
@@ -591,11 +567,7 @@ function App() {
               WAREHOUSE DRIVER
           ================================================== */}
 
-          <Route
-            element={
-              <WarehouseEncoderLayout role="warehouse_driver" />
-            }
-          >
+          <Route element={<WarehouseEncoderLayout role="warehouse_driver" />}>
             <Route
               path="/warehouse-driver/dashboard"
               element={<WarehouseDriverDashboard />}
@@ -642,11 +614,7 @@ function App() {
               SUPPLIER ENCODER
           ================================================== */}
 
-          <Route
-            element={
-              <WarehouseEncoderLayout role="supplier_encoder" />
-            }
-          >
+          <Route element={<WarehouseEncoderLayout role="supplier_encoder" />}>
             <Route
               path="/supplier-encoder/dashboard"
               element={<MillerEncoderDashboard />}
@@ -678,11 +646,7 @@ function App() {
               MILLER SALES
           ================================================== */}
 
-          <Route
-            element={
-              <WarehouseEncoderLayout role="miller_sales" />
-            }
-          >
+          <Route element={<WarehouseEncoderLayout role="miller_sales" />}>
             <Route
               path="/miller-sales/dashboard"
               element={<MillerSalesDashboard />}
@@ -714,11 +678,7 @@ function App() {
               MILLER LOGISTICS
           ================================================== */}
 
-          <Route
-            element={
-              <WarehouseEncoderLayout role="miller_logistics" />
-            }
-          >
+          <Route element={<WarehouseEncoderLayout role="miller_logistics" />}>
             <Route
               path="/miller-logistics/dashboard"
               element={<MillerLogisticsDashboard />}
@@ -765,11 +725,7 @@ function App() {
               MILLER FINANCE
           ================================================== */}
 
-          <Route
-            element={
-              <WarehouseEncoderLayout role="miller_finance" />
-            }
-          >
+          <Route element={<WarehouseEncoderLayout role="miller_finance" />}>
             <Route
               path="/miller-finance/dashboard"
               element={<MillerFinanceDashboard />}
@@ -806,11 +762,7 @@ function App() {
               MILLER DRIVER
           ================================================== */}
 
-          <Route
-            element={
-              <WarehouseEncoderLayout role="miller_driver" />
-            }
-          >
+          <Route element={<WarehouseEncoderLayout role="miller_driver" />}>
             <Route
               path="/miller-driver/dashboard"
               element={<MillerDriverDashboard />}
@@ -854,14 +806,92 @@ function App() {
 
 
           {/* ==================================================
+              MILLER MANAGER
+          ================================================== */}
+
+          <Route element={<WarehouseEncoderLayout role="miller_manager" />}>
+            <Route
+              path="/miller-manager/dashboard"
+              element={<MillerManagerDashboard />}
+            />
+
+            <Route
+              path="/miller-manager/branches"
+              element={<MillerBranchManagement />}
+            />
+
+            <Route
+              path="/miller-manager/branches/:branchId/employees"
+              element={<MillerEmployeeManagement />}
+            />
+
+            <Route
+              path="/miller-manager/branch-management"
+              element={<MillerBranchManagement />}
+            />
+
+            <Route
+              path="/miller-manager/contracts"
+              element={<MillerContracts />}
+            />
+
+            <Route
+              path="/miller-manager/order-approval"
+              element={<MillerOrderApproval />}
+            />
+
+            <Route
+              path="/miller-manager/pass-fee"
+              element={<MillerPassFeeManagement />}
+            />
+
+            <Route
+              path="/miller-manager/performance"
+              element={<MillerPerformanceMonitoring />}
+            />
+
+            <Route
+              path="/miller-manager/fulfillment-history"
+              element={<MillerManagerFulfillmentHistory />}
+            />
+
+            <Route
+              path="/miller-manager/sales-history"
+              element={<MillerManagerSalesHistory />}
+            />
+
+            <Route
+              path="/miller-manager/procurement-history"
+              element={<MillerProcurementReceivingHistory />}
+            />
+
+            <Route
+              path="/miller-manager/finance-history"
+              element={<MillerFinanceManagementHistory />}
+            />
+
+            <Route
+              path="/miller-manager/news-updates"
+              element={<MillerManagerNewsUpdates />}
+            />
+
+            <Route
+              path="/miller-manager/news-updates/:id"
+              element={<MillerManagerNewsArticle />}
+            />
+
+            <Route
+              path="/miller-manager/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
+
+
+          {/* ==================================================
               RETAILER
           ================================================== */}
 
-          <Route
-            element={
-              <WarehouseEncoderLayout role="retailer" />
-            }
-          >
+          <Route element={<WarehouseEncoderLayout role="retailer" />}>
             <Route
               path="/retailer/dashboard"
               element={<RetailerDashboard />}
@@ -928,11 +958,7 @@ function App() {
               FARMER
           ================================================== */}
 
-          <Route
-            element={
-              <WarehouseEncoderLayout role="farmer" />
-            }
-          >
+          <Route element={<WarehouseEncoderLayout role="farmer" />}>
             <Route
               path="/farmer/dashboard"
               element={<FarmerDashboard />}
@@ -982,66 +1008,51 @@ function App() {
 
           {/* ==================================================
               ADMIN - PROTECTED
+              KEEP CURRENT ACCOUNT ADMIN IMPLEMENTATION
           ================================================== */}
 
-          <Route
-            element={
-              <AdminProtectedRoute />
-            }
-          >
-            <Route
-              element={
-                <WarehouseEncoderLayout role="admin" />
-              }
-            >
+          <Route element={<AdminProtectedRoute />}>
+            <Route element={<WarehouseEncoderLayout role="admin" />}>
 
               <Route
                 path="/admin/dashboard"
                 element={<AdminDashboard />}
               />
 
-
               <Route
                 path="/admin/suppliers"
                 element={<SupplierManagement />}
               />
-
 
               <Route
                 path="/admin/millers/:userId"
                 element={<MillerInfo />}
               />
 
-
               <Route
                 path="/admin/warehouses"
                 element={<WarehouseManagement />}
               />
-
 
               <Route
                 path="/admin/warehouses/:userId"
                 element={<WarehouseInfo />}
               />
 
-
               <Route
                 path="/admin/retailers"
                 element={<RetailerManagement />}
               />
-
 
               <Route
                 path="/admin/farmers"
                 element={<FarmerManagement />}
               />
 
-
               <Route
                 path="/admin/email-users"
                 element={<EmailUsers />}
               />
-
 
               <Route
                 path="/admin/profile"
@@ -1054,14 +1065,10 @@ function App() {
         </Routes>
       </BrowserRouter>
 
-
-      {/* Floating chatbot — mounted outside BrowserRouter */}
-
       <FloatingChatbot />
 
     </LoadingProvider>
   );
 }
-
 
 export default App;

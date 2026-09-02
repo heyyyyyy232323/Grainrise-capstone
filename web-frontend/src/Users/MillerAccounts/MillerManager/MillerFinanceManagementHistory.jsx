@@ -103,22 +103,22 @@ export default function MillerFinanceManagementHistory() {
   const getColumns = () => {
     if (activeTab === "procurement") {
       return [
-        { key: "batchNo", label: "Batch No.", width: "20%" },
-        { key: "branch", label: "Branch", width: "20%" },
-        { key: "supplier", label: "Supplier", width: "20%" },
+        { key: "batchNo", label: "Batch No.", width: "18%" },
+        { key: "branch", label: "Branch", width: "18%" },
+        { key: "supplier", label: "Supplier", width: "18%" },
         { key: "variant", label: "Variant", width: "18%" },
-        { key: "total", label: "Total", width: "12%" },
+        { key: "total", label: "Total", width: "14%" },
         {
           key: "action",
           label: "Status",
-          width: "10%",
+          width: "14%", // Widened from 10%
           headerClassName: "text-center",
           cellClassName: "text-center",
           render: (row) => (
             <button
               type="button"
               onClick={() => setSelectedRecord({ ...row, type: "procurement" })}
-              className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 transition hover:border-[#0B5D1E] hover:bg-emerald-50/30 hover:text-[#0B5D1E] cursor-pointer"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 transition hover:border-[#0B5D1E] hover:bg-emerald-50/30 hover:text-[#0B5D1E] cursor-pointer"
             >
               View Details
             </button>
@@ -155,7 +155,7 @@ export default function MillerFinanceManagementHistory() {
             <button
               type="button"
               onClick={() => setSelectedRecord({ ...row, type: "tax" })}
-              className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 transition hover:border-[#0B5D1E] hover:bg-emerald-50/30 hover:text-[#0B5D1E] cursor-pointer"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 transition hover:border-[#0B5D1E] hover:bg-emerald-50/30 hover:text-[#0B5D1E] cursor-pointer"
             >
               View Details
             </button>
@@ -168,7 +168,7 @@ export default function MillerFinanceManagementHistory() {
       {
         key: "category",
         label: "Expense Category",
-        width: "28%",
+        width: "26%",
         render: (row) => (
           <div>
             <span className={`inline-block px-2.5 py-0.5 rounded-md text-xs font-semibold ${CATEGORY_STYLES[row.categoryType] || "bg-gray-100 text-gray-700"}`}>
@@ -179,8 +179,8 @@ export default function MillerFinanceManagementHistory() {
         ),
       },
       { key: "cost", label: "Cost", width: "16%" },
-      { key: "requestedBy", label: "Requested By", width: "20%" },
-      { key: "paidBy", label: "Paid By", width: "20%" },
+      { key: "requestedBy", label: "Requested By", width: "21%" },
+      { key: "paidBy", label: "Paid By", width: "21%" },
       {
         key: "action",
         label: "Status",
@@ -191,7 +191,7 @@ export default function MillerFinanceManagementHistory() {
           <button
             type="button"
             onClick={() => setSelectedRecord({ ...row, type: "reimbursement" })}
-            className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 transition hover:border-[#0B5D1E] hover:bg-emerald-50/30 hover:text-[#0B5D1E] cursor-pointer"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 transition hover:border-[#0B5D1E] hover:bg-emerald-50/30 hover:text-[#0B5D1E] cursor-pointer"
           >
             View Details
           </button>
@@ -241,6 +241,7 @@ export default function MillerFinanceManagementHistory() {
         {TABS.map((tab) => (
           <button
             key={tab.id}
+            type="button"
             onClick={() => {
               setActiveTab(tab.id);
               setCurrentPage(1);
@@ -271,6 +272,7 @@ export default function MillerFinanceManagementHistory() {
         </div>
 
         <button
+          type="button"
           onClick={() => setShowReportModal(true)}
           className="flex items-center justify-center gap-2 bg-[#0B5D1E] hover:bg-[#094d19] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-sm transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto"
         >
