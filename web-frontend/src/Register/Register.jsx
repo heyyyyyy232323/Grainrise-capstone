@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Info, ChevronRight, Sparkles } from "lucide-react";
+import { ArrowLeft, Info, ChevronRight } from "lucide-react";
 
 import CustomGreenButton from "../Components/Minor-Components/CustomGreenButton";
 import CustomWhiteButton from "../Components/Minor-Components/CustomWhiteButton";
@@ -134,7 +134,7 @@ const RegisterGateway = () => {
 
       <div className="relative z-10 flex-1 px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         {/* Navigation Bar */}
-        <div className="max-w-7xl mx-auto flex items-center justify-between mb-6">
+        <div className="max-w-7xl mx-auto flex items-center mb-6">
           <CustomWhiteButton
             icon={
               <span className="flex items-center gap-2 px-2 text-sm font-medium whitespace-nowrap">
@@ -145,24 +145,12 @@ const RegisterGateway = () => {
             className="!rounded-full w-auto !p-2 !px-4 shadow-sm border border-gray-200"
             onClick={() => navigate("/login")}
           />
-
-          <button
-            onClick={() => navigate("/")}
-            className="text-xs sm:text-sm font-medium text-emerald-700 hover:text-emerald-800 hover:underline transition-colors cursor-pointer"
-          >
-            Go to Home
-          </button>
         </div>
 
         {/* Header Title Section */}
         <div className="max-w-3xl mx-auto text-center mt-2 mb-10">
           <div className="flex items-center justify-center mb-5">
             <img src={Logo} alt="GrainRise Logo" className="h-12 object-contain" />
-          </div>
-
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold uppercase tracking-wider mb-3">
-            <Sparkles size={13} />
-            Registration Portal
           </div>
 
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-800 tracking-tight mb-3">
