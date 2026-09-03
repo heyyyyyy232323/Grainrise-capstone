@@ -46,7 +46,6 @@ const COLUMNS = [
   { key: "stockQty",    label: "Stock Qty (kg)" },
   { key: "supplier",    label: "Supplier" },
   { key: "status",      label: "Status" },
-  { key: "action",      label: "Action", headerClassName: "text-center", cellClassName: "text-center" },
 ];
 
 const SORT_OPTIONS = [
@@ -402,8 +401,6 @@ export default function WarehouseEncoderOrderHistory() {
         totalPages={totalPages}
         onPageChange={setCurrentPage}
         footerLabel={footerLabel}
-        onViewDetails={(row) => console.log("View details:", row)}
-        viewDetailsLabel="View Details"
         emptyStateTitle="No orders found"
         emptyStateDescription="No matching orders were found. Try adjusting your search or date filters."
       />

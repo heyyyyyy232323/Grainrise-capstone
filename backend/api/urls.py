@@ -1,12 +1,247 @@
-from django.urls import path
+from django.urls import include, path
+
 from . import views
+from . import auth_views
+from .admin_auth import admin_views
+
 
 urlpatterns = [
-    path('', views.read_root, name='root'),
-    path('api/auth/register', views.register, name='register'),
-    path('api/auth/login', views.login, name='login'),
-    path('api/silos', views.silos_list, name='silos_list'),
-    path('api/silos/<int:silo_id>', views.update_silo, name='update_silo'),
-    path('api/alerts', views.alerts_list, name='alerts_list'),
-    path('api/alerts/<int:alert_id>', views.resolve_alert, name='resolve_alert'),
+
+    # ========================================================
+    # API HEALTH
+    # ========================================================
+
+    path(
+        "",
+        views.read_root,
+        name="api-root",
+    ),
+
+
+    # ========================================================
+    # LOCATION / PSGC
+    # ========================================================
+
+    path(
+        "locations/provinces",
+        views.locations_provinces,
+        name="locations-provinces",
+    ),
+
+    path(
+        "locations/provinces/<str:parent_code>/cities-municipalities",
+        views.locations_cities_municipalities,
+        name="locations-cities-municipalities",
+    ),
+
+    path(
+        "locations/cities-municipalities/<str:locality_code>/barangays",
+        views.locations_barangays,
+        name="locations-barangays",
+    ),
+
+    path(
+        "locations/cities-municipalities/<str:locality_code>",
+        views.locations_locality_detail,
+        name="locations-locality-detail",
+    ),
+
+
+    # ========================================================
+    # USER AUTHENTICATION
+    # ========================================================
+
+    path(
+        "auth/login",
+        auth_views.login,
+        name="user-login",
+    ),
+
+    path(
+        "auth/register",
+        views.register,
+        name="generic-register",
+    ),
+
+
+    # ========================================================
+    # ADMIN AUTHENTICATION
+    # ========================================================
+
+    path(
+        "auth/admin/login",
+        admin_views.admin_login,
+        name="admin-login",
+    ),
+
+
+    # ========================================================
+    # RETAILER REGISTRATION
+    # ========================================================
+
+    path(
+        "auth/retailer/send-otp",
+        views.send_retailer_otp,
+        name="retailer-send-otp",
+    ),
+
+    path(
+        "auth/retailer/verify-otp",
+        views.verify_retailer_otp,
+        name="retailer-verify-otp",
+    ),
+
+    path(
+        "auth/retailer/register",
+        views.register_retailer,
+        name="retailer-register",
+    ),
+
+
+    # ========================================================
+    # FARMER REGISTRATION
+    # ========================================================
+
+    path(
+        "auth/farmer/send-otp",
+        views.send_farmer_otp,
+        name="farmer-send-otp",
+    ),
+
+    path(
+        "auth/farmer/verify-otp",
+        views.verify_farmer_otp,
+        name="farmer-verify-otp",
+    ),
+
+    path(
+        "auth/farmer/register",
+        views.register_farmer,
+        name="farmer-register",
+    ),
+
+
+    # ========================================================
+    # WAREHOUSE MANAGER REGISTRATION
+    # ========================================================
+
+    path(
+        "auth/warehouse-manager/send-otp",
+        views.send_warehouse_otp,
+        name="warehouse-manager-send-otp",
+    ),
+
+    path(
+        "auth/warehouse-manager/verify-otp",
+        views.verify_warehouse_otp,
+        name="warehouse-manager-verify-otp",
+    ),
+
+    path(
+        "auth/warehouse-manager/extract-documents",
+        views.extract_warehouse_documents,
+        name="warehouse-manager-extract-documents",
+    ),
+
+    path(
+        "auth/warehouse-manager/register",
+        views.register_warehouse,
+        name="warehouse-manager-register",
+    ),
+
+
+    # ========================================================
+    # SUPPLIER / MILLER REGISTRATION
+    # ========================================================
+
+    path(
+        "auth/supplier/send-otp",
+        views.send_supplier_otp,
+        name="supplier-send-otp",
+    ),
+
+    path(
+        "auth/supplier/verify-otp",
+        views.verify_supplier_otp,
+        name="supplier-verify-otp",
+    ),
+
+    path(
+        "auth/supplier/extract-documents",
+        views.extract_supplier_documents,
+        name="supplier-extract-documents",
+    ),
+
+    path(
+        "auth/supplier/register",
+        views.register_supplier,
+        name="supplier-register",
+    ),
+
+
+    # ========================================================
+    # ACCOUNT ADMIN MANAGEMENT
+    # ========================================================
+
+    path(
+        "admin/",
+        include("api.account_admin_fnction.accountadmin_urls"),
+    ),
+
+
+    # ========================================================
+    # ADMIN — RETAILER MANAGEMENT
+    # ========================================================
+
+    path(
+        "admin/retailers",
+        views.admin_retailers,
+        name="admin-retailers",
+    ),
+
+    path(
+        "admin/retailers/<int:user_id>/status",
+        views.admin_retailer_status,
+        name="admin-retailer-status",
+    ),
+
+    path(
+        "admin/retailers/<int:user_id>/documents/<str:document_kind>",
+        views.admin_retailer_document,
+        name="admin-retailer-document",
+    ),
+
+
+    # ========================================================
+    # EXISTING SILOS
+    # ========================================================
+
+    path(
+        "silos",
+        views.silos_list,
+        name="silos-list",
+    ),
+
+    path(
+        "silos/<int:silo_id>",
+        views.update_silo,
+        name="silo-update",
+    ),
+
+
+    # ========================================================
+    # EXISTING ALERTS
+    # ========================================================
+
+    path(
+        "alerts",
+        views.alerts_list,
+        name="alerts-list",
+    ),
+
+    path(
+        "alerts/<int:alert_id>/resolve",
+        views.resolve_alert,
+        name="alert-resolve",
+    ),
 ]

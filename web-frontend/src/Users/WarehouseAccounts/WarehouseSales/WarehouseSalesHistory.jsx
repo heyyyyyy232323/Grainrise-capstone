@@ -3,6 +3,7 @@ import { Search, Calendar, ChevronDown, X } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import Tabs from "../../../Components/Minor-Components/Tabs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
+import SalesHistoryDetailsModal from "../../../Components/Modals/SalesHistoryDetailsModal";
 
 const TABS = [
   { id: "in-store", label: "In-Store Transactions" },
@@ -42,26 +43,26 @@ const IN_STORE_SECTIONS = [
   {
     label: "Today",
     rows: [
-      { id: "t1", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00" },
-      { id: "t2", time: "11:45 AM", variant: "Sinandomeng", quantity: "480 kg", totalPayment: "₱22,500.00" },
-      { id: "t3", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00" },
+      { id: "t1", transactionId: "TXN-2026-001", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱25,000.00", change: "₱2,500.00", paymentMethod: "Cash", status: "Paid" },
+      { id: "t2", transactionId: "TXN-2026-002", time: "11:45 AM", variant: "Sinandomeng", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱22,500.00", change: "₱0.00", paymentMethod: "Gcash", status: "Paid" },
+      { id: "t3", transactionId: "TXN-2026-003", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱20,000.00", change: "₱0.00", paymentMethod: "Cash", status: "Pending" },
     ],
   },
   {
     label: "Yesterday",
     rows: [
-      { id: "y1", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00" },
-      { id: "y2", time: "11:45 AM", variant: "Sinandomeng", quantity: "480 kg", totalPayment: "₱22,500.00" },
-      { id: "y3", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00" },
-      { id: "y4", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00" },
+      { id: "y1", transactionId: "TXN-2026-004", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱22,500.00", change: "₱0.00", paymentMethod: "Cash", status: "Paid" },
+      { id: "y2", transactionId: "TXN-2026-005", time: "11:45 AM", variant: "Sinandomeng", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱25,000.00", change: "₱2,500.00", paymentMethod: "Cash", status: "Paid" },
+      { id: "y3", transactionId: "TXN-2026-006", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱22,500.00", change: "₱0.00", paymentMethod: "Bank Transfer", status: "Paid" },
+      { id: "y4", transactionId: "TXN-2026-007", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱18,000.00", change: "₱0.00", paymentMethod: "Cash", status: "Pending" },
     ],
   },
   {
     label: "July 18, 2026",
     rows: [
-      { id: "j1", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00" },
-      { id: "j2", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00" },
-      { id: "j3", time: "11:45 AM", variant: "Sinandomeng", quantity: "480 kg", totalPayment: "₱22,500.00" },
+      { id: "j1", transactionId: "TXN-2026-008", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱22,500.00", change: "₱0.00", paymentMethod: "Cash", status: "Paid" },
+      { id: "j2", transactionId: "TXN-2026-009", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱25,000.00", change: "₱2,500.00", paymentMethod: "Cash", status: "Paid" },
+      { id: "j3", transactionId: "TXN-2026-010", time: "11:45 AM", variant: "Sinandomeng", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱20,000.00", change: "₱0.00", paymentMethod: "Gcash", status: "Pending" },
     ],
   },
 ];
@@ -123,6 +124,8 @@ const WarehouseSalesHistory = () => {
   const [tempDateRange,  setTempDateRange]  = useState({ startDate: "", endDate: "" });
   const [sortBy,         setSortBy]         = useState("date-desc");
   const [currentPage,    setCurrentPage]    = useState(1);
+  const [isModalOpen,    setIsModalOpen]    = useState(false);
+  const [selectedSale,    setSelectedSale]   = useState(null);
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showSortDrop,   setShowSortDrop]   = useState(false);
@@ -394,9 +397,22 @@ const WarehouseSalesHistory = () => {
         currentPage={currentPage}
         totalPages={TOTAL_PAGES}
         onPageChange={setCurrentPage}
-        onViewDetails={(row) => console.log("View details:", row)}
+        onViewDetails={(row) => {
+          setSelectedSale(row);
+          setIsModalOpen(true);
+        }}
         viewDetailsLabel="View Details"
         footerLabel={`Showing transactions — Page ${currentPage} of ${TOTAL_PAGES}`}
+      />
+
+      <SalesHistoryDetailsModal
+        isOpen={isModalOpen}
+        sale={selectedSale}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedSale(null);
+        }}
+        type={activeTab}
       />
     </div>
   );

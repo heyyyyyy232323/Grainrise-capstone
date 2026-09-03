@@ -28,11 +28,11 @@ export default function MillerFulfillmentHistory() {
     { key: "branch", label: "Branch", width: "22%" },
     { key: "customerName", label: "Customer Name", width: "20%" },
     { key: "passedQc", label: "Passed QC (kg)", width: "15%" },
-    { key: "failedQc", label: "Failed QC (kg)", width: "15%" },
+    { key: "failedQc", label: "Failed QC (kg)", width: "10%" },
     {
       key: "action",
       label: "Action",
-      width: "10%",
+      width: "15%",
       headerClassName: "text-center",
       cellClassName: "text-center",
       render: (row) => (

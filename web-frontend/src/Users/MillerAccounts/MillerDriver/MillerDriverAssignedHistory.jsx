@@ -1,13 +1,12 @@
 import { useMemo, useState } from "react";
+import { Store, MapPin, Search } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
-import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
-import Dropdown from "../../../Components/Minor-Components/Dropdown";
 import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
 const TODAY = new Date();
 const YESTERDAY = new Date(TODAY); YESTERDAY.setDate(TODAY.getDate() - 1);
-const OLDER = new Date("2026-07-19");
+const OLDER = new Date("2026-07-18");
 
 const makeRows = (dateObj, count, prefix) =>
   Array.from({ length: count }, (_, i) => ({
@@ -17,14 +16,14 @@ const makeRows = (dateObj, count, prefix) =>
     retailer: "Retailer A",
     deliveryAddress: "Retailer Outlet #1, City Hub",
     paymentMethod: i % 2 === 0 ? "Online Payment" : "Cash on Delivery",
-    eta: dateObj.getTime() === TODAY.setHours(0,0,0,0) ? "Today" : dateObj.getTime() === YESTERDAY.setHours(0,0,0,0) ? "Yesterday" : "July 19, 2026",
+    eta: dateObj.getTime() === TODAY.setHours(0,0,0,0) ? "Today" : dateObj.getTime() === YESTERDAY.setHours(0,0,0,0) ? "Yesterday" : "July 18, 2026",
     etaTime: "10:00 AM",
     status: "Completed",
     duty_date: dateObj.toISOString(),
   }));
 
 const ALL_DATA = [
-  ...makeRows(new Date(), 3, "t"),
+  ...makeRows(TODAY,     3, "t"),
   ...makeRows(YESTERDAY, 4, "y"),
   ...makeRows(OLDER,     3, "o"),
 ];
@@ -39,7 +38,7 @@ function groupByDate(rows) {
     let label;
     if (dMid.getTime() === today.getTime()) label = "Today";
     else if (dMid.getTime() === yest.getTime()) label = "Yesterday";
-    else label = d.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
+    else label = "July 18, 2026";
     if (!buckets[label]) buckets[label] = [];
     buckets[label].push(r);
   });
@@ -47,9 +46,28 @@ function groupByDate(rows) {
 }
 
 const METHOD_BADGE = {
-  "Online Payment":   "bg-emerald-100 text-emerald-700",
+  "Online Payment":   "bg-blue-100 text-blue-600",
   "Cash on Delivery": "bg-amber-100 text-amber-700",
 };
+
+function FilterSelect({ value, onChange, options }) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="appearance-none rounded-xl border border-gray-200 bg-white px-3.5 py-2 pr-8 text-xs font-semibold text-gray-700 outline-none focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] cursor-pointer"
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">▾</span>
+    </div>
+  );
+}
 
 export default function MillerDriverAssignedHistory() {
   const [query,  setQuery]  = useState("");
@@ -61,7 +79,7 @@ export default function MillerDriverAssignedHistory() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return ALL_DATA.filter((r) => {
-      if (q && !(`${r.batchNo} ${r.retailer} ${r.deliveryAddress}`.toLowerCase().includes(q))) return false;
+      if (q && !(`${r.batchNo} ${r.retailer} ${r.deliveryAddress} ${r.product}`.toLowerCase().includes(q))) return false;
       if (method && r.paymentMethod !== method) return false;
       return true;
     });
@@ -76,26 +94,32 @@ export default function MillerDriverAssignedHistory() {
     {
       key: "batchNo",
       label: "Order / Delivery",
-      render: (r) => (
-        <div className="space-y-0.5">
-          <p className="font-semibold text-slate-800 text-xs">{r.batchNo}</p>
-          <p className="text-[11px] text-slate-500">{r.product}</p>
-          <p className="text-[11px] text-slate-400 flex items-center gap-1">
-            <span className="inline-block w-3 h-3 rounded-full bg-emerald-500 opacity-70" />
-            {r.retailer}
-          </p>
-          <p className="text-[11px] text-slate-400 flex items-center gap-1">
-            <span className="inline-block w-3 h-3 rounded-full bg-slate-300" />
-            {r.deliveryAddress}
-          </p>
+      width: "35%",
+      renderCell: (r) => (
+        <div className="space-y-1 py-0.5">
+          <p className="font-bold text-gray-900 text-xs">{r.batchNo}</p>
+          <p className="text-[11px] text-gray-500 font-medium">{r.product}</p>
+          <div className="space-y-0.5 text-[10px] text-gray-400 font-medium pt-0.5">
+            <p className="flex items-center gap-1.5">
+              <Store size={12} className="text-gray-400 shrink-0" />
+              <span>{r.retailer}</span>
+            </p>
+            <p className="flex items-center gap-1.5">
+              <MapPin size={12} className="text-gray-400 shrink-0" />
+              <span>{r.deliveryAddress}</span>
+            </p>
+          </div>
         </div>
       ),
     },
     {
       key: "paymentMethod",
       label: "Payment Method",
-      render: (r) => (
-        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold ${METHOD_BADGE[r.paymentMethod] || "bg-slate-100 text-slate-600"}`}>
+      width: "25%",
+      headerClassName: "text-center",
+      cellClassName: "text-center",
+      renderCell: (r) => (
+        <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold ${METHOD_BADGE[r.paymentMethod] || "bg-gray-100 text-gray-600"}`}>
           {r.paymentMethod}
         </span>
       ),
@@ -103,8 +127,11 @@ export default function MillerDriverAssignedHistory() {
     {
       key: "status",
       label: "Status",
-      render: (r) => (
-        <span className="inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-700">
+      width: "20%",
+      headerClassName: "text-center",
+      cellClassName: "text-center",
+      renderCell: (r) => (
+        <span className="inline-block px-3 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
           {r.status}
         </span>
       ),
@@ -112,50 +139,66 @@ export default function MillerDriverAssignedHistory() {
     {
       key: "eta",
       label: "Completed Date",
-      render: (r) => (
+      width: "20%",
+      renderCell: (r) => (
         <div>
-          <p className="text-xs font-semibold text-slate-700">{r.eta}</p>
-          <p className="text-[11px] text-slate-400">{r.etaTime}</p>
+          <p className="text-xs font-bold text-gray-800">{r.eta}</p>
+          <p className="text-[11px] text-gray-400 font-medium">{r.etaTime}</p>
         </div>
       ),
     },
   ];
 
   return (
-    <div className="space-y-5">
-      <Breadcrumbs items={[{ label: "History" }, { label: "Assigned History" }]} />
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Assigned History</h1>
-        <p className="text-sm text-slate-500 mt-1">Review past delivery assignments and completed runs.</p>
+    <div className="space-y-6">
+      {/* ── Breadcrumbs & Title ─────────────────────────────────────────────── */}
+      <div className="space-y-1">
+        <Breadcrumbs items={[{ label: "History" }, { label: "Assigned History" }]} />
+        <h2 className="text-[clamp(1.75rem,2.5vw,2.25rem)] font-bold tracking-tight text-slate-900">
+          Assigned History
+        </h2>
+        <p className="text-sm text-slate-500">
+          Review past delivery assignments and completed runs.
+        </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="w-full max-w-sm">
-          <SearchFilter onSearch={(v) => { setQuery(v); setPage(1); }} placeholder="Search order, batch, recipient, or destination" />
+      {/* ── Toolbar Layout (Search + Filter Selectors) ────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+            placeholder="Search order, batch, recipient, or destination"
+            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-xs focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] outline-none bg-white placeholder-gray-400 text-gray-700"
+          />
         </div>
+
         <DateRangePicker />
-        <Dropdown
+
+        <FilterSelect
+          value={method}
+          onChange={(v) => { setMethod(v); setPage(1); }}
           options={[
             { label: "Payment Method",   value: "" },
             { label: "Online Payment",   value: "Online Payment" },
             { label: "Cash on Delivery", value: "Cash on Delivery" },
           ]}
-          value={method}
-          onChange={(v) => { setMethod(v); setPage(1); }}
-          placeholder="Payment Method"
         />
-        <Dropdown
-          options={[
-            { label: "Sort By",    value: "" },
-            { label: "Newest",     value: "newest" },
-            { label: "Oldest",     value: "oldest" },
-          ]}
+
+        <FilterSelect
           value={sort}
           onChange={(v) => setSort(v)}
-          placeholder="Sort By"
+          options={[
+            { label: "Sort By", value: "" },
+            { label: "Newest",  value: "newest" },
+            { label: "Oldest",  value: "oldest" },
+          ]}
         />
       </div>
 
+      {/* ── Assigned History Table ─────────────────────────────────────────── */}
       <SectionedTableCard
         columns={columns}
         sections={sections}
@@ -163,7 +206,6 @@ export default function MillerDriverAssignedHistory() {
         totalPages={totalPages}
         onPageChange={setPage}
         footerLabel={`Showing ${start + 1}–${Math.min(start + paginated.length, filtered.length)} of ${filtered.length} duties`}
-        onViewDetails={() => {}}
       />
     </div>
   );
