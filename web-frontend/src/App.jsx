@@ -117,6 +117,21 @@ import BranchManagerNewsArticle from "./Users/WarehouseAccounts/BranchManager/Wa
 
 
 // ============================================================
+// BRANCH MANAGER
+// ============================================================
+
+import BranchManagerDashboard from "./Users/WarehouseAccounts/BranchManager/WarehouseManagerDashboard";
+import BranchManagerOrderApproval from "./Users/WarehouseAccounts/BranchManager/OrderApproval";
+import BranchManagerPerformanceMonitoring from "./Users/WarehouseAccounts/BranchManager/PerformanceMonitoring";
+import BranchManagerFulfillmentHistory from "./Users/WarehouseAccounts/BranchManager/FulfillmentHistory";
+import BranchManagerSalesHistory from "./Users/WarehouseAccounts/BranchManager/SalesHistory";
+import BranchManagerProcurementReceivingHistory from "./Users/WarehouseAccounts/BranchManager/ProcurementReceivingHistory";
+import BranchManagerFinanceManagementHistory from "./Users/WarehouseAccounts/BranchManager/FinanceManagementHistory";
+import BranchManagerNewsUpdates from "./Users/WarehouseAccounts/BranchManager/WarehouseManagerNewsUpdates";
+import BranchManagerNewsArticle from "./Users/WarehouseAccounts/BranchManager/WarehouseManagerNewsArticle";
+
+
+// ============================================================
 // WAREHOUSE DRIVER
 // ============================================================
 

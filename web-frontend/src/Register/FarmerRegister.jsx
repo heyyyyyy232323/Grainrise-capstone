@@ -195,13 +195,13 @@ const FarmerRegister = () => {
   const navigate = useNavigate();
   const { request } = useApi();
 
-  // Wizard State (1 to 4)
+  // Wizard State (1 to 5)
   const [step, setStep] = useState(1);
   const [isSuccess, setIsSuccess] = useState(false);
 
   // Main Form Data
   const [form, setForm] = useState({
-    // Step 1: Personal Info
+    // Personal Information (Step 3)
     firstName: "",
     middleInitial: "",
     lastName: "",
@@ -219,7 +219,7 @@ const FarmerRegister = () => {
     confirmPassword: "",
     agreeTerms: false,
 
-    // Step 3: Farm Information
+    // Step 4: Farm Information
     farmName: "",
     farmProvince: "",
     farmMunicipality: "",
@@ -231,13 +231,13 @@ const FarmerRegister = () => {
     riceVariety: "",
     croppingCycles: "",
 
-    // Step 4: Compliance (RSBSA)
+    // Step 5: Compliance (RSBSA)
     rsbsaMethod: "upload", // "upload" | "manual"
     rsbsaNumber: "",
     certifyCompliance: false,
   });
 
-  // Step 2 (OTP Verification)
+  // Step 2: OTP Verification
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpTimer, setOtpTimer] = useState(0);
   const [verificationToken, setVerificationToken] = useState("");
@@ -246,7 +246,7 @@ const FarmerRegister = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const otpRefs = useRef([]);
 
-  // Step 4 Uploaded File State
+  // Step 5 Uploaded File State
   const [rsbsaFile, setRsbsaFile] = useState(null);
 
   // UI / Validation
@@ -271,11 +271,13 @@ const FarmerRegister = () => {
   const setFieldRef = (fieldName) => (el) => { if (el) fieldRefs.current[fieldName] = el; };
 
   const STEP1_FIELD_ORDER = [
-    "firstName", "lastName", "gender",
-    "province", "municipality", "barangay", "streetAddress",
-    "email", "contactNumber", "password", "confirmPassword", "agreeTerms",
+    "email", "contactNumber", "username", "password", "confirmPassword", "agreeTerms",
   ];
   const STEP3_FIELD_ORDER = [
+    "firstName", "lastName", "gender",
+    "province", "municipality", "barangay", "streetAddress",
+  ];
+  const STEP4_FIELD_ORDER = [
     "farmProvince", "farmMunicipality", "farmBarangay", "farmStreetAddress",
     "totalFarmArea", "landOwnership", "riceVariety", "croppingCycles",
   ];
@@ -323,7 +325,7 @@ const FarmerRegister = () => {
       case "streetAddress": errorMsg = validators.streetAddress(value); break;
       case "email": errorMsg = validators.email(value); break;
       case "contactNumber": errorMsg = validators.contactNumber(value); break;
-      case "username": errorMsg = value?.trim() ? validators.username(value) : ""; break;
+      case "username": errorMsg = value?.trim() ? validators.username(value) : "Username is required"; break;
       case "confirmPassword": errorMsg = validators.confirmPassword(form.password, value); break;
       case "password":
         errorMsg = validators.password(value);
@@ -423,22 +425,16 @@ const FarmerRegister = () => {
     ));
   };
 
-  // Step 1 Submit handler
+  // Step 1: Account Information -> send OTP
   const handleNextStep1 = async (e) => {
     e.preventDefault();
 
     const rules = {
-      firstName: validators.firstName(form.firstName),
-      middleInitial: validators.middleInitial(form.middleInitial),
-      lastName: validators.lastName(form.lastName),
-      gender: form.gender ? "" : "Gender is required",
-      province: form.province ? "" : "Province is required",
-      municipality: form.municipality ? "" : "Municipality is required",
-      barangay: form.barangay ? "" : "Barangay is required",
-      streetAddress: validators.streetAddress(form.streetAddress),
       email: validators.email(form.email),
       contactNumber: validators.contactNumber(form.contactNumber),
-      username: form.username.trim() ? validators.username(form.username) : "",
+      username: form.username.trim()
+        ? validators.username(form.username)
+        : "Username is required",
       password: validators.password(form.password),
       confirmPassword: validators.confirmPassword(form.password, form.confirmPassword),
       agreeTerms: validators.checkbox(
@@ -450,12 +446,12 @@ const FarmerRegister = () => {
     const passed = validate(rules);
 
     if (!passed) {
-      setValidationMsg("Please correct the errors in the form before proceeding.");
+      setValidationMsg("Please correct the errors in the account information before proceeding.");
       scrollToFirstError(rules, STEP1_FIELD_ORDER);
       showToast({
         type: "error",
         title: "Validation Error",
-        message: "Please correct the highlighted fields before proceeding.",
+        message: "Please correct the highlighted account fields before proceeding.",
         duration: 4000,
       });
       return;
@@ -608,8 +604,41 @@ const FarmerRegister = () => {
     }
   };
 
-  // Step 3 Submit handler
+  // Step 3: Personal Information
   const handleNextStep3 = (e) => {
+    e.preventDefault();
+
+    const rules = {
+      firstName: validators.firstName(form.firstName),
+      middleInitial: validators.middleInitial(form.middleInitial),
+      lastName: validators.lastName(form.lastName),
+      gender: form.gender ? "" : "Gender is required",
+      province: form.province ? "" : "Province is required",
+      municipality: form.municipality ? "" : "Municipality is required",
+      barangay: form.barangay ? "" : "Barangay is required",
+      streetAddress: validators.streetAddress(form.streetAddress),
+    };
+
+    const passed = validate(rules);
+
+    if (!passed) {
+      setValidationMsg("Please complete the required personal and address information.");
+      scrollToFirstError(rules, STEP3_FIELD_ORDER);
+      showToast({
+        type: "error",
+        title: "Missing Personal Information",
+        message: "Please complete the highlighted personal and address fields.",
+        duration: 4000,
+      });
+      return;
+    }
+
+    setValidationMsg("");
+    setStep(4);
+  };
+
+  // Step 4: Farm Information
+  const handleNextStep4 = (e) => {
     e.preventDefault();
     const rules = {
       farmProvince: form.farmProvince ? "" : "Farm Province is required",
@@ -635,7 +664,7 @@ const FarmerRegister = () => {
 
     if (!passed) {
       setValidationMsg("Please fill in all required farm information fields.");
-      scrollToFirstError(rules, STEP3_FIELD_ORDER);
+      scrollToFirstError(rules, STEP4_FIELD_ORDER);
       showToast({
         type: "error",
         title: "Missing Farm Information",
@@ -644,11 +673,11 @@ const FarmerRegister = () => {
       });
     } else {
       setValidationMsg("");
-      setStep(4);
+      setStep(5);
     }
   };
 
-  // Step 4 RSBSA file upload handler
+  // Step 5 RSBSA file upload handler
   const handleFileDrop = (e) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
@@ -684,7 +713,7 @@ const FarmerRegister = () => {
     setRsbsaFile(null);
   };
 
-  // Step 4 Submit Registration
+  // Step 5 Submit Registration
   const handleSubmitRegistration = async (e) => {
     e.preventDefault();
 
@@ -779,52 +808,56 @@ const FarmerRegister = () => {
   };
 
   // --- Render Stepper Bar ---
-  const renderStepper = () => (
-    <div className="mt-8 mb-10 bg-[#f3f9f4] border border-green-50/50 rounded-2xl p-4 md:py-6 md:px-12 flex items-center justify-between relative overflow-hidden">
-      {/* Step 1 */}
-      <div className="flex flex-col items-center z-10 flex-1">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-md border-4 border-white ${step >= 1 ? "bg-[#08511f] text-white" : "bg-gray-300 text-white"}`}>
-          {step > 1 ? <Check size={18} strokeWidth={3} /> : "1"}
-        </div>
-        <span className={`text-[11px] md:text-xs font-semibold mt-2 whitespace-nowrap ${step >= 1 ? "text-[#08511f]" : "text-gray-400"}`}>
-          Personal Information
-        </span>
-      </div>
-      <div className={`h-0.5 flex-1 mx-2 md:mx-4 relative top-[-10px] ${step >= 2 ? "bg-[#08511f]" : "bg-gray-300"}`} />
+  const renderStepper = () => {
+    const steps = [
+      "Account Information",
+      "Account Verification",
+      "Personal Information",
+      "Farm Information",
+      "Compliance",
+    ];
 
-      {/* Step 2 */}
-      <div className="flex flex-col items-center z-10 flex-1">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 border-white ${step >= 2 ? "bg-[#08511f] text-white shadow-md" : "bg-gray-300 text-white"}`}>
-          {step > 2 ? <Check size={18} strokeWidth={3} /> : "2"}
-        </div>
-        <span className={`text-[11px] md:text-xs font-semibold mt-2 whitespace-nowrap ${step >= 2 ? "text-[#08511f]" : "text-gray-400"}`}>
-          Account Verification
-        </span>
-      </div>
-      <div className={`h-0.5 flex-1 mx-2 md:mx-4 relative top-[-10px] ${step >= 3 ? "bg-[#08511f]" : "bg-gray-300"}`} />
+    return (
+      <div className="mt-8 mb-10 bg-[#f3f9f4] border border-green-50/50 rounded-2xl p-4 md:py-6 md:px-8 flex items-center justify-between relative overflow-x-auto">
+        {steps.map((label, index) => {
+          const stepNumber = index + 1;
+          const isActive = step >= stepNumber;
+          const isComplete = step > stepNumber;
 
-      {/* Step 3 */}
-      <div className="flex flex-col items-center z-10 flex-1">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 border-white ${step >= 3 ? "bg-[#08511f] text-white shadow-md" : "bg-gray-300 text-white"}`}>
-          {step > 3 ? <Check size={18} strokeWidth={3} /> : "3"}
-        </div>
-        <span className={`text-[11px] md:text-xs font-semibold mt-2 whitespace-nowrap ${step >= 3 ? "text-[#08511f]" : "text-gray-400"}`}>
-          Farm Information
-        </span>
-      </div>
-      <div className={`h-0.5 flex-1 mx-2 md:mx-4 relative top-[-10px] ${step >= 4 ? "bg-[#08511f]" : "bg-gray-300"}`} />
+          return (
+            <React.Fragment key={label}>
+              <div className="flex flex-col items-center z-10 flex-1 min-w-[112px]">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 border-white ${
+                    isActive
+                      ? "bg-[#08511f] text-white shadow-md"
+                      : "bg-gray-300 text-white"
+                  }`}
+                >
+                  {isComplete ? <Check size={18} strokeWidth={3} /> : stepNumber}
+                </div>
+                <span
+                  className={`text-[10px] md:text-xs font-semibold mt-2 whitespace-nowrap ${
+                    isActive ? "text-[#08511f]" : "text-gray-400"
+                  }`}
+                >
+                  {label}
+                </span>
+              </div>
 
-      {/* Step 4 */}
-      <div className="flex flex-col items-center z-10 flex-1">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 border-white ${step >= 4 ? "bg-[#08511f] text-white shadow-md" : "bg-gray-300 text-white"}`}>
-          {step > 4 ? <Check size={18} strokeWidth={3} /> : "4"}
-        </div>
-        <span className={`text-[11px] md:text-xs font-semibold mt-2 whitespace-nowrap ${step >= 4 ? "text-[#08511f]" : "text-gray-400"}`}>
-          Compliance
-        </span>
+              {stepNumber < steps.length && (
+                <div
+                  className={`h-0.5 flex-1 min-w-6 mx-1 md:mx-2 relative top-[-10px] ${
+                    step >= stepNumber + 1 ? "bg-[#08511f]" : "bg-gray-300"
+                  }`}
+                />
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden">
@@ -856,10 +889,11 @@ const FarmerRegister = () => {
           }
         />
         <span className="text-xs md:text-sm font-bold text-emerald-800 tracking-wider uppercase">
-          {step === 1 && "STEP 1 OF 4: PERSONAL INFORMATION"}
-          {step === 2 && "STEP 2 OF 4: ACCOUNT VERIFICATION"}
-          {step === 3 && "STEP 3 OF 4: FARM INFORMATION"}
-          {step === 4 && "STEP 4 OF 4: COMPLIANCE"}
+          {step === 1 && "STEP 1 OF 5: ACCOUNT INFORMATION"}
+          {step === 2 && "STEP 2 OF 5: ACCOUNT VERIFICATION"}
+          {step === 3 && "STEP 3 OF 5: PERSONAL INFORMATION"}
+          {step === 4 && "STEP 4 OF 5: FARM INFORMATION"}
+          {step === 5 && "STEP 5 OF 5: COMPLIANCE"}
         </span>
       </div>
 
@@ -908,14 +942,16 @@ const FarmerRegister = () => {
               <h1 className="text-2xl md:text-[32px] font-extrabold text-gray-900 leading-tight">
                 {step === 1 && "Create Your Farmer Account"}
                 {step === 2 && "Verify Your Account"}
-                {step === 3 && "Farm Information"}
-                {step === 4 && "Compliance"}
+                {step === 3 && "Personal Information"}
+                {step === 4 && "Farm Information"}
+                {step === 5 && "Compliance"}
               </h1>
               <p className="text-gray-500 text-sm md:text-base mt-2 max-w-lg">
-                {step === 1 && "Complete your personal information to begin your registration."}
+                {step === 1 && "Create your account credentials to begin your farmer registration."}
                 {step === 2 && "Enter the verification code sent to your registered email to continue your registration."}
-                {step === 3 && "Provide your farm information to support monitoring, planning, and other system functions."}
-                {step === 4 && "Provide your RSBSA Information for verification."}
+                {step === 3 && "Provide your personal and home address information."}
+                {step === 4 && "Provide your farm information to support monitoring, planning, and other system functions."}
+                {step === 5 && "Provide your RSBSA Information for verification."}
               </p>
             </div>
 
@@ -924,95 +960,9 @@ const FarmerRegister = () => {
             {/* Toast notifications */}
             <Toast toasts={toasts} removeToast={removeToast} />
 
-            {/* STEP 1: PERSONAL INFORMATION */}
+            {/* STEP 1: ACCOUNT INFORMATION */}
             {step === 1 && (
               <form onSubmit={handleNextStep1} className="space-y-8 animate-fade-in">
-                {/* Personal Information Section */}
-                <div>
-                  <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
-                    Personal Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
-                    <FieldWithError error={errors.firstName} fieldRef={setFieldRef("firstName")}>
-                      <CustomTextbox
-                        label={<>First Name <span className="text-red-500">*</span></>}
-                        placeholder="e.g. Juan"
-                        value={form.firstName}
-                        onChange={(e) => handleInputChange("firstName", e.target.value)}
-                      />
-                    </FieldWithError>
-
-                    <CustomTextbox
-                      label={<>Middle Initial <span className="text-gray-400 font-normal text-xs">(Optional)</span></>}
-                      placeholder="M.I."
-                      value={form.middleInitial}
-                      onChange={(e) => handleInputChange("middleInitial", e.target.value)}
-                    />
-
-                    <FieldWithError error={errors.lastName} fieldRef={setFieldRef("lastName")}>
-                      <CustomTextbox
-                        label={<>Last Name <span className="text-red-500">*</span></>}
-                        placeholder="e.g. Dela Cruz"
-                        value={form.lastName}
-                        onChange={(e) => handleInputChange("lastName", e.target.value)}
-                      />
-                    </FieldWithError>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="md:col-span-1">
-                      <Dropdown label="Suffix (Optional)" placeholder="Select suffix" options={SUFFIXES} value={form.suffix} onChange={(val) => handleInputChange("suffix", val)} />
-                    </div>
-                    <div className="md:col-span-2" ref={setFieldRef("gender")}>
-                      <Dropdown label="Gender *" placeholder="Select Gender" options={GENDERS} value={form.gender} onChange={(val) => handleInputChange("gender", val)} error={errors.gender} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Address Information Section */}
-                <div>
-                  <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
-                    Address Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                    <div ref={setFieldRef("province")}>
-                      <Dropdown label="Province *" placeholder={homeAddress.isLoading && homeAddress.provinceOptions.length === 0 ? "Loading provinces..." : "Select Province"} options={homeAddress.provinceOptions} value={form.province} onChange={handleProvinceChange} error={errors.province} />
-                    </div>
-                    <div ref={setFieldRef("municipality")}>
-                      <Dropdown label="Municipality *" placeholder="Select City" options={homeAddress.municipalityOptions} value={form.municipality} onChange={handleMunicipalityChange} error={errors.municipality} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                      <label className="block mb-2 text-sm font-medium text-gray-700 text-left">
-                        Postal Code <span className="text-gray-400 font-normal text-xs">(Auto Generated)</span>
-                      </label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={4}
-                        value={form.postalCode}
-                        onChange={(e) => handleInputChange("postalCode", e.target.value.replace(/\D/g, "").slice(0, 4))}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-700 outline-none focus:border-green-600 text-left"
-                      />
-                    </div>
-
-                    <div ref={setFieldRef("barangay")}>
-                      <Dropdown label="Barangay *" placeholder="Select Barangay" options={homeAddress.barangayOptions} value={form.barangay} onChange={(val) => handleInputChange("barangay", val)} error={errors.barangay} />
-                    </div>
-
-                    <FieldWithError error={errors.streetAddress} fieldRef={setFieldRef("streetAddress")}>
-                      <CustomTextbox
-                        label={<>Street Address <span className="text-red-500">*</span></>}
-                        placeholder="Unit/Bldg, Street Name"
-                        value={form.streetAddress}
-                        onChange={(e) => handleInputChange("streetAddress", e.target.value)}
-                      />
-                    </FieldWithError>
-                  </div>
-                </div>
-
                 {/* Account Details Section */}
                 <div>
                   <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
@@ -1041,7 +991,7 @@ const FarmerRegister = () => {
 
                       <FieldWithError error={errors.username} fieldRef={setFieldRef("username")}>
                         <CustomTextbox
-                          label={<>Username <span className="text-gray-400 font-normal text-xs">(Optional)</span></>}
+                          label={<>Username <span className="text-red-500">*</span></>}
                           placeholder="username"
                           value={form.username}
                           onChange={(e) => handleInputChange("username", e.target.value)}
@@ -1258,9 +1208,121 @@ const FarmerRegister = () => {
               </div>
             )}
 
-            {/* STEP 3: FARM INFORMATION */}
+            {/* STEP 3: PERSONAL INFORMATION */}
             {step === 3 && (
-              <form onSubmit={handleNextStep3} className="space-y-8 animate-fade-in text-left">
+              <form onSubmit={handleNextStep3} className="space-y-8 animate-fade-in">
+                {/* Personal Information Section */}
+                <div>
+                  <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
+                    Personal Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+                    <FieldWithError error={errors.firstName} fieldRef={setFieldRef("firstName")}>
+                      <CustomTextbox
+                        label={<>First Name <span className="text-red-500">*</span></>}
+                        placeholder="e.g. Juan"
+                        value={form.firstName}
+                        onChange={(e) => handleInputChange("firstName", e.target.value)}
+                      />
+                    </FieldWithError>
+
+                    <CustomTextbox
+                      label={<>Middle Initial <span className="text-gray-400 font-normal text-xs">(Optional)</span></>}
+                      placeholder="M.I."
+                      value={form.middleInitial}
+                      onChange={(e) => handleInputChange("middleInitial", e.target.value)}
+                    />
+
+                    <FieldWithError error={errors.lastName} fieldRef={setFieldRef("lastName")}>
+                      <CustomTextbox
+                        label={<>Last Name <span className="text-red-500">*</span></>}
+                        placeholder="e.g. Dela Cruz"
+                        value={form.lastName}
+                        onChange={(e) => handleInputChange("lastName", e.target.value)}
+                      />
+                    </FieldWithError>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-1">
+                      <Dropdown label="Suffix (Optional)" placeholder="Select suffix" options={SUFFIXES} value={form.suffix} onChange={(val) => handleInputChange("suffix", val)} />
+                    </div>
+                    <div className="md:col-span-2" ref={setFieldRef("gender")}>
+                      <Dropdown label="Gender *" placeholder="Select Gender" options={GENDERS} value={form.gender} onChange={(val) => handleInputChange("gender", val)} error={errors.gender} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Address Information Section */}
+                <div>
+                  <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
+                    Address Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                    <div ref={setFieldRef("province")}>
+                      <Dropdown label="Province *" placeholder={homeAddress.isLoading && homeAddress.provinceOptions.length === 0 ? "Loading provinces..." : "Select Province"} options={homeAddress.provinceOptions} value={form.province} onChange={handleProvinceChange} error={errors.province} />
+                    </div>
+                    <div ref={setFieldRef("municipality")}>
+                      <Dropdown label="Municipality *" placeholder="Select City" options={homeAddress.municipalityOptions} value={form.municipality} onChange={handleMunicipalityChange} error={errors.municipality} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <label className="block mb-2 text-sm font-medium text-gray-700 text-left">
+                        Postal Code <span className="text-gray-400 font-normal text-xs">(Auto Generated)</span>
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={4}
+                        value={form.postalCode}
+                        onChange={(e) => handleInputChange("postalCode", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-700 outline-none focus:border-green-600 text-left"
+                      />
+                    </div>
+
+                    <div ref={setFieldRef("barangay")}>
+                      <Dropdown label="Barangay *" placeholder="Select Barangay" options={homeAddress.barangayOptions} value={form.barangay} onChange={(val) => handleInputChange("barangay", val)} error={errors.barangay} />
+                    </div>
+
+                    <FieldWithError error={errors.streetAddress} fieldRef={setFieldRef("streetAddress")}>
+                      <CustomTextbox
+                        label={<>Street Address <span className="text-red-500">*</span></>}
+                        placeholder="Unit/Bldg, Street Name"
+                        value={form.streetAddress}
+                        onChange={(e) => handleInputChange("streetAddress", e.target.value)}
+                      />
+                    </FieldWithError>
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-gray-100 flex justify-between items-center">
+                  <CustomWhiteButton
+                    onClick={() => setStep(2)}
+                    className="!rounded-full w-auto !p-2 !px-6"
+                    icon={
+                      <span className="flex items-center gap-2 text-sm font-semibold">
+                        <ArrowLeft size={16} /> Previous
+                      </span>
+                    }
+                  />
+                  <CustomGreenButton
+                    text={
+                      <span className="flex items-center gap-2 font-bold px-4">
+                        Next Step <ArrowRight size={18} />
+                      </span>
+                    }
+                    type="submit"
+                    className="!rounded-full !px-8 !py-3 shadow-lg"
+                  />
+                </div>
+              </form>
+            )}
+
+            {/* STEP 4: FARM INFORMATION */}
+            {step === 4 && (
+              <form onSubmit={handleNextStep4} className="space-y-8 animate-fade-in text-left">
                 {/* Optional Farm Name */}
                 <CustomTextbox
                   label={<>Farm/Farm Lot Name <span className="text-gray-400 font-normal text-xs">(Optional)</span></>}
@@ -1389,7 +1451,7 @@ const FarmerRegister = () => {
 
                 <div className="pt-6 border-t border-gray-100 flex justify-between items-center">
                   <CustomWhiteButton
-                    onClick={() => setStep(2)}
+                    onClick={() => setStep(3)}
                     className="!rounded-full w-auto !p-2 !px-6"
                     icon={
                       <span className="flex items-center gap-2 text-sm font-semibold">
@@ -1410,8 +1472,8 @@ const FarmerRegister = () => {
               </form>
             )}
 
-            {/* STEP 4: COMPLIANCE */}
-            {step === 4 && (
+            {/* STEP 5: COMPLIANCE */}
+            {step === 5 && (
               <form onSubmit={handleSubmitRegistration} className="space-y-8 animate-fade-in text-left">
                 {/* Method selector */}
                 <div>
@@ -1590,7 +1652,7 @@ const FarmerRegister = () => {
                 {/* Bottom Navigation Buttons */}
                 <div className="pt-6 border-t border-gray-100 flex justify-between items-center">
                   <CustomWhiteButton
-                    onClick={() => setStep(3)}
+                    onClick={() => setStep(4)}
                     className="!rounded-full w-auto !p-2 !px-6"
                     icon={
                       <span className="flex items-center gap-2 text-sm font-semibold">
