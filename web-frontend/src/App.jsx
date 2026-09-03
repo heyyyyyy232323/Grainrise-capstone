@@ -170,22 +170,6 @@ import MillerDriverReimbursement from "./Users/MillerAccounts/MillerDriver/Mille
 import MillerDriverReimbursementHistory from "./Users/MillerAccounts/MillerDriver/MillerDriverReimbursementHistory";
 import MillerDriverAssignedHistory from "./Users/MillerAccounts/MillerDriver/MillerDriverAssignedHistory";
 
-// Miller Manager
-import MillerManagerDashboard from "./Users/MillerAccounts/MillerManager/MillerManagerDashboard";
-import MillerBranchManagement from "./Users/MillerAccounts/MillerManager/MillerBranchManagement";
-import MillerEmployeeManagement from "./Users/MillerAccounts/MillerManager/MillerEmployeeManagement";
-import MillerContracts from "./Users/MillerAccounts/MillerManager/MillerContracts";
-import MillerOrderApproval from "./Users/MillerAccounts/MillerManager/MillerOrderApproval";
-import MillerPassFeeManagement from "./Users/MillerAccounts/MillerManager/MillerPassFeeManagement";
-import MillerPerformanceMonitoring from "./Users/MillerAccounts/MillerManager/MillerPerformanceMonitoring";
-import MillerManagerFulfillmentHistory from "./Users/MillerAccounts/MillerManager/MillerFulfillmentHistory";
-import MillerManagerSalesHistory from "./Users/MillerAccounts/MillerManager/MillerSalesHistory";
-import MillerProcurementReceivingHistory from "./Users/MillerAccounts/MillerManager/MillerProcurementReceivingHistory";
-import MillerFinanceManagementHistory from "./Users/MillerAccounts/MillerManager/MillerFinanceManagementHistory";
-import MillerManagerNewsUpdates from "./Users/MillerAccounts/MillerManager/MillerManagerNewsUpdates";
-import MillerManagerNewsArticle from "./Users/MillerAccounts/MillerManager/MillerManagerNewsArticle";
-
-
 // ============================================================
 // MILLER MANAGER
 // ============================================================
@@ -819,24 +803,6 @@ function App() {
             />
           </Route>
 
-          {/* Miller Manager pages */}
-          <Route element={<WarehouseEncoderLayout role="miller_manager" />}>
-            <Route path="/miller-manager/dashboard" element={<MillerManagerDashboard />} />
-            <Route path="/miller-manager/branches" element={<MillerBranchManagement />} />
-            <Route path="/miller-manager/branches/:branchId/employees" element={<MillerEmployeeManagement />} />
-            <Route path="/miller-manager/branch-management" element={<MillerBranchManagement />} />
-            <Route path="/miller-manager/contracts" element={<MillerContracts />} />
-            <Route path="/miller-manager/order-approval" element={<MillerOrderApproval />} />
-            <Route path="/miller-manager/pass-fee" element={<MillerPassFeeManagement />} />
-            <Route path="/miller-manager/performance" element={<MillerPerformanceMonitoring />} />
-            <Route path="/miller-manager/fulfillment-history" element={<MillerManagerFulfillmentHistory />} />
-            <Route path="/miller-manager/sales-history" element={<MillerManagerSalesHistory />} />
-            <Route path="/miller-manager/procurement-history" element={<MillerProcurementReceivingHistory />} />
-            <Route path="/miller-manager/finance-history" element={<MillerFinanceManagementHistory />} />
-            <Route path="/miller-manager/news-updates" element={<MillerManagerNewsUpdates />} />
-            <Route path="/miller-manager/news-updates/:id" element={<MillerManagerNewsArticle />} />
-            <Route path="/miller-manager/profile" element={<UserAccountProfile />} />
-          </Route>
 
 
           {/* ==================================================
