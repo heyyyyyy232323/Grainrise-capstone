@@ -33,8 +33,11 @@ const useNavigation = () => {
     /** Go to the retailer registration page */
     goRetailerRegister: () => navigate("/register/retailer"),
 
-    /** Go to the supplier/warehouse registration page */
-    goSupplierRegister: () => navigate("/register/supplier-warehouse"),
+    /** Go to the supplier registration page */
+    goSupplierRegister: () => navigate("/register/supplier"),
+
+    /** Go to the warehouse registration page */
+    goWarehouseRegister: () => navigate("/register/warehouse-manager"),
 
     /** Go to the farmer registration page */
     goFarmerRegister: () => navigate("/register/farmer"),

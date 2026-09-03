@@ -1251,7 +1251,7 @@ const RetailerRegister = () => {
               <ArrowLeft size={16} />
 
               {step === 1
-                ? "Back to Home"
+                ? "Back to Role Selection"
                 : "Previous Step"}
             </span>
           }

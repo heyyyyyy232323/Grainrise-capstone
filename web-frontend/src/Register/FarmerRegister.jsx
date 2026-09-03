@@ -846,12 +846,12 @@ const FarmerRegister = () => {
       {/* Top Header Navigation */}
       <div className="relative z-10 w-full px-6 sm:px-10 pt-6 flex items-center justify-between">
         <CustomWhiteButton
-          onClick={() => (step === 1 ? navigate("/register/supplier-warehouse") : setStep(step - 1))}
+          onClick={() => (step === 1 ? navigate("/register") : setStep(step - 1))}
           className="!rounded-full w-auto !p-2 !px-5 shadow-sm"
           icon={
             <span className="flex items-center gap-2 text-sm font-semibold whitespace-nowrap">
               <ArrowLeft size={16} />
-              {step === 1 ? "Back to Role Selection" : "Back to Role Selection"}
+              {step === 1 ? "Back to Role Selection" : "Previous Step"}
             </span>
           }
         />
