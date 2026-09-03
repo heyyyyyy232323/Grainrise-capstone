@@ -107,12 +107,6 @@ export default function FarmerDashboard() {
               <text x="200" y="145" className="text-[9px] fill-gray-400 text-center" textAnchor="middle">March</text>
               <text x="280" y="145" className="text-[9px] fill-gray-400 text-center" textAnchor="middle">April</text>
               <text x="360" y="145" className="text-[9px] fill-gray-400 text-center" textAnchor="middle">May</text>
-
-              {/* Mock tooltip bubble */}
-              <g transform="translate(145, 10)">
-                <rect width="36" height="36" rx="18" fill="#F472B6" />
-                <text x="18" y="23" className="text-[14px] font-bold fill-white" textAnchor="middle">K</text>
-              </g>
             </svg>
           </div>
         </div>
@@ -147,12 +141,6 @@ export default function FarmerDashboard() {
               <text x="150" y="145" className="text-[9px] fill-gray-400" textAnchor="middle">Cycle 2</text>
               <text x="230" y="145" className="text-[9px] fill-gray-400" textAnchor="middle">Cycle 3</text>
               <text x="310" y="145" className="text-[9px] fill-gray-400" textAnchor="middle">Cycle 4</text>
-
-              {/* Mock tooltip bubble */}
-              <g transform="translate(155, 60)">
-                <rect width="36" height="36" rx="18" fill="#F472B6" />
-                <text x="18" y="23" className="text-[14px] font-bold fill-white" textAnchor="middle">K</text>
-              </g>
             </svg>
           </div>
         </div>
