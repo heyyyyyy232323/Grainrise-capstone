@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Eye, EyeOff, CheckCircle, Upload, X, FileText, Check, Info, Clock, AlertCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Upload, X, FileText, Check, Info, Clock, AlertCircle } from "lucide-react";
 import CustomTextbox from "../Components/Minor-Components/CustomTextbox";
 import CustomGreenButton from "../Components/Minor-Components/CustomGreenButton";
 import CustomWhiteButton from "../Components/Minor-Components/CustomWhiteButton";
@@ -60,7 +60,7 @@ const SupplierRegister = () => {
     confirmPassword: "",
     agreeTerms: false,
 
-    // Step 4 Business Information (OCR suggestions, always editable)
+    // Step 5 Business Information (OCR suggestions, always editable)
     businessName: "",
     organizationName: "",
     businessProvince: "",
@@ -69,7 +69,7 @@ const SupplierRegister = () => {
     businessBarangay: "",
     businessStreetAddress: "",
 
-    // Step 4 Official Contact Information (OCR may suggest; user can edit)
+    // Step 5 Official Contact Information (OCR may suggest; user can edit)
     officialEmail: "",
     officialContactNumber: "",
     certifyBusinessInfo: false,
@@ -104,7 +104,7 @@ const SupplierRegister = () => {
   const [municipalityRecords, setMunicipalityRecords] = useState({});
   const [isAddressLoading, setIsAddressLoading] = useState(false);
 
-  // Step 4 business-address PSGC state.
+  // Step 5 business-address PSGC state.
   // Separate from Step 1 so the home address is preserved.
   const [businessMunicipalityOptions, setBusinessMunicipalityOptions] = useState([]);
   const [businessBarangayOptions, setBusinessBarangayOptions] = useState([]);
@@ -125,12 +125,26 @@ const SupplierRegister = () => {
   const setFieldRef = (fieldName) => (el) => { if (el) fieldRefs.current[fieldName] = el; };
 
   const STEP1_FIELD_ORDER = [
-    "firstName", "lastName", "gender",
-    "province", "municipality", "postalCode", "barangay", "streetAddress",
-    "email", "contactNumber", "password", "confirmPassword", "agreeTerms",
+    "email",
+    "contactNumber",
+    "username",
+    "password",
+    "confirmPassword",
+    "agreeTerms",
   ];
 
-  const STEP4_FIELD_ORDER = [
+  const STEP3_FIELD_ORDER = [
+    "firstName",
+    "lastName",
+    "gender",
+    "province",
+    "municipality",
+    "postalCode",
+    "barangay",
+    "streetAddress",
+  ];
+
+  const STEP5_FIELD_ORDER = [
     "businessName",
     "businessProvince",
     "businessMunicipality",
@@ -236,7 +250,7 @@ const SupplierRegister = () => {
       case "streetAddress":   errorMsg = validators.streetAddress(value);                          break;
       case "email":           errorMsg = validators.email(value);                                  break;
       case "contactNumber":   errorMsg = validators.contactNumber(value);                          break;
-      case "username":        errorMsg = value.trim() ? validators.username(value) : "";           break;
+      case "username":        errorMsg = validators.username(value);                               break;
       case "confirmPassword": errorMsg = validators.confirmPassword(form.password, value);         break;
       case "password":
         errorMsg = validators.password(value);
@@ -483,7 +497,7 @@ const SupplierRegister = () => {
     }
 
     // Postal code is intentionally non-blocking.
-    // If PSGC cannot return one, Step 4 switches to manual entry.
+    // If PSGC cannot return one, Step 5 switches to manual entry.
     try {
       const localityPayload = await request(
         `/locations/cities-municipalities/${encodeURIComponent(record.code)}`,
@@ -599,38 +613,20 @@ const SupplierRegister = () => {
     }
   };
 
-  // Step 1 Validation — uses useFormValidation hook's validate()
+  // Step 1 Validation — Account Information only
   const validateStep1 = () => {
     const rules = {
-      firstName:       validators.firstName(form.firstName),
-      middleInitial:   validators.middleInitial(form.middleInitial),
-      lastName:        validators.lastName(form.lastName),
-      gender:          form.gender ? "" : "Gender is required",
-      province:        form.province ? "" : "Province is required",
-      municipality:    form.municipality
-                         ? ""
-                         : form.province
-                         ? "Municipality is required"
-                         : "Please select a province first",
-      barangay:        form.barangay
-                         ? ""
-                         : form.municipality
-                         ? "Barangay is required"
-                         : "Please select a municipality first",
-      postalCode:       form.postalCode && !/^\d{4}$/.test(form.postalCode)
-                         ? "Postal code must contain exactly 4 digits"
-                         : "",
-      streetAddress:   validators.streetAddress(form.streetAddress),
-      email:           validators.email(form.email),
-      contactNumber:   validators.contactNumber(form.contactNumber),
-      username:        form.username.trim() ? validators.username(form.username) : "",
-      password:        validators.password(form.password),
+      email: validators.email(form.email),
+      contactNumber: validators.contactNumber(form.contactNumber),
+      username: validators.username(form.username),
+      password: validators.password(form.password),
       confirmPassword: validators.confirmPassword(form.password, form.confirmPassword),
-      agreeTerms:      validators.checkbox(
-                         form.agreeTerms,
-                         "You must agree to the Privacy Policy and Terms of Service"
-                       ),
+      agreeTerms: validators.checkbox(
+        form.agreeTerms,
+        "You must agree to the Privacy Policy and Terms of Service"
+      ),
     };
+
     const passed = validate(rules);
 
     if (!passed) {
@@ -645,7 +641,60 @@ const SupplierRegister = () => {
     } else {
       setValidationMsg("");
     }
+
     return passed;
+  };
+
+  // Step 3 Validation — Personal and home address information
+  const validateStep3 = () => {
+    const rules = {
+      firstName: validators.firstName(form.firstName),
+      middleInitial: validators.middleInitial(form.middleInitial),
+      lastName: validators.lastName(form.lastName),
+      gender: form.gender ? "" : "Gender is required",
+      province: form.province ? "" : "Province is required",
+      municipality: form.municipality
+        ? ""
+        : form.province
+        ? "Municipality is required"
+        : "Please select a province first",
+      barangay: form.barangay
+        ? ""
+        : form.municipality
+        ? "Barangay is required"
+        : "Please select a municipality first",
+      postalCode:
+        form.postalCode && !/^\d{4}$/.test(form.postalCode)
+          ? "Postal code must contain exactly 4 digits"
+          : "",
+      streetAddress: validators.streetAddress(form.streetAddress),
+    };
+
+    const passed = validate(rules);
+
+    if (!passed) {
+      setValidationMsg("Please correct the errors in the form before proceeding.");
+      scrollToFirstError(rules, STEP3_FIELD_ORDER);
+      showToast({
+        type: "error",
+        title: "Validation Error",
+        message: "Please correct the highlighted fields before proceeding.",
+        duration: 4000,
+      });
+    } else {
+      setValidationMsg("");
+    }
+
+    return passed;
+  };
+
+  const handleNextStep3 = (e) => {
+    e.preventDefault();
+
+    if (!validateStep3()) return;
+
+    setValidationMsg("");
+    setStep(4);
   };
 
   const handleNextStep1 = async (e) => {
@@ -894,7 +943,7 @@ const SupplierRegister = () => {
       .map(([, label]) => label);
   };
 
-  const handleNextStep3 = async () => {
+  const handleNextStep4 = async () => {
     const missingDocuments = getMissingDocumentLabels();
 
     if (missingDocuments.length > 0) {
@@ -978,7 +1027,7 @@ const SupplierRegister = () => {
       let matchedBarangay = autofill.barangay || "";
       let resolvedPostalCode = String(autofill.postal_code || "").replace(/\D/g, "").slice(0, 4);
 
-      // Step 4 address follows the same PSGC flow as Step 1.
+      // Step 5 address follows the same PSGC flow as the personal-information address flow.
       if (matchedProvince && provinceRecords[matchedProvince]) {
         setIsBusinessAddressLoading(true);
 
@@ -1042,7 +1091,7 @@ const SupplierRegister = () => {
 
       setErrors({});
       setValidationMsg("");
-      setStep(4);
+      setStep(5);
 
       showToast({
         type: "success",
@@ -1087,7 +1136,7 @@ const SupplierRegister = () => {
 
     if (!passed) {
       setValidationMsg("Please correct the errors in the form before proceeding.");
-      scrollToFirstError(rules, STEP4_FIELD_ORDER);
+      scrollToFirstError(rules, STEP5_FIELD_ORDER);
 
       showToast({
         type: "error",
@@ -1101,7 +1150,7 @@ const SupplierRegister = () => {
     const missingDocuments = getMissingDocumentLabels();
 
     if (missingDocuments.length > 0) {
-      setStep(3);
+      setStep(4);
       setValidationMsg("All four verification documents are required.");
       return;
     }
@@ -1274,52 +1323,63 @@ const SupplierRegister = () => {
   };
 
   // --- Sub-components for Stepper ---
-  const renderStepper = () => (
-    <div className="mt-8 mb-10 bg-[#f3f9f4] border border-green-50/50 rounded-2xl p-4 md:py-6 md:px-12 flex items-center justify-between relative overflow-hidden">
-      {/* Step 1 */}
-      <div className="flex flex-col items-center z-10 flex-1">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-md border-4 border-white ${step >= 1 ? 'bg-[#08511f] text-white' : 'bg-gray-300 text-white'}`}>
-          {step > 1 ? <Check size={18} strokeWidth={3} /> : "1"}
-        </div>
-        <span className={`text-[11px] md:text-xs font-semibold mt-2 whitespace-nowrap ${step >= 1 ? 'text-[#08511f]' : 'text-gray-400'}`}>
-          Personal Information
-        </span>
-      </div>
-      <div className={`h-0.5 flex-1 mx-2 md:mx-4 relative top-[-10px] ${step >= 2 ? 'bg-[#08511f]' : 'bg-gray-300'}`} />
+  const renderStepper = () => {
+    const steps = [
+      "Account Information",
+      "Account Verification",
+      "Personal Information",
+      "Document Verification",
+      "Business Information",
+    ];
 
-      {/* Step 2 */}
-      <div className="flex flex-col items-center z-10 flex-1">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 border-white ${step >= 2 ? 'bg-[#08511f] text-white shadow-md' : 'bg-gray-300 text-white'}`}>
-          {step > 2 ? <Check size={18} strokeWidth={3} /> : "2"}
-        </div>
-        <span className={`text-[11px] md:text-xs font-semibold mt-2 whitespace-nowrap ${step >= 2 ? 'text-[#08511f]' : 'text-gray-400'}`}>
-          Account Verification
-        </span>
-      </div>
-      <div className={`h-0.5 flex-1 mx-2 md:mx-4 relative top-[-10px] ${step >= 3 ? 'bg-[#08511f]' : 'bg-gray-300'}`} />
+    return (
+      <div className="mt-8 mb-10 bg-[#f3f9f4] border border-green-50/50 rounded-2xl p-4 md:py-6 md:px-8 flex items-center justify-between relative overflow-hidden">
+        {steps.map((label, index) => {
+          const stepNumber = index + 1;
+          const isActive = step >= stepNumber;
+          const isCompleted = step > stepNumber;
 
-      {/* Step 3 */}
-      <div className="flex flex-col items-center z-10 flex-1">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 border-white ${step >= 3 ? 'bg-[#08511f] text-white shadow-md' : 'bg-gray-300 text-white'}`}>
-          {step > 3 ? <Check size={18} strokeWidth={3} /> : "3"}
-        </div>
-        <span className={`text-[11px] md:text-xs font-semibold mt-2 whitespace-nowrap ${step >= 3 ? 'text-[#08511f]' : 'text-gray-400'}`}>
-          Document Verification
-        </span>
-      </div>
-      <div className={`h-0.5 flex-1 mx-2 md:mx-4 relative top-[-10px] ${step >= 4 ? 'bg-[#08511f]' : 'bg-gray-300'}`} />
+          return (
+            <React.Fragment key={label}>
+              <div className="flex flex-col items-center z-10 flex-1 min-w-0">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 border-white ${
+                    isActive
+                      ? "bg-[#08511f] text-white shadow-md"
+                      : "bg-gray-300 text-white"
+                  }`}
+                >
+                  {isCompleted ? (
+                    <Check size={18} strokeWidth={3} />
+                  ) : (
+                    stepNumber
+                  )}
+                </div>
 
-      {/* Step 4 */}
-      <div className="flex flex-col items-center z-10 flex-1">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 border-white ${step >= 4 ? 'bg-[#08511f] text-white shadow-md' : 'bg-gray-300 text-white'}`}>
-          {step > 4 ? <Check size={18} strokeWidth={3} /> : "4"}
-        </div>
-        <span className={`text-[11px] md:text-xs font-semibold mt-2 whitespace-nowrap ${step >= 4 ? 'text-[#08511f]' : 'text-gray-400'}`}>
-          Business Information
-        </span>
+                <span
+                  className={`text-[10px] md:text-xs font-semibold mt-2 text-center ${
+                    isActive ? "text-[#08511f]" : "text-gray-400"
+                  }`}
+                >
+                  {label}
+                </span>
+              </div>
+
+              {stepNumber < steps.length && (
+                <div
+                  className={`h-0.5 flex-1 mx-1 md:mx-3 relative top-[-10px] ${
+                    step >= stepNumber + 1
+                      ? "bg-[#08511f]"
+                      : "bg-gray-300"
+                  }`}
+                />
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden">
@@ -1351,10 +1411,11 @@ const SupplierRegister = () => {
           }
         />
         <span className="text-xs md:text-sm font-bold text-emerald-800 tracking-wider uppercase">
-          {step === 1 && "Step 1 of 4: Personal Information"}
-          {step === 2 && "Step 2 of 4: Account Verification"}
-          {step === 3 && "Step 3 of 4: Document Verification"}
-          {step === 4 && "Step 4 of 4: Business Information"}
+          {step === 1 && "Step 1 of 5: Account Information"}
+          {step === 2 && "Step 2 of 5: Account Verification"}
+          {step === 3 && "Step 3 of 5: Personal Information"}
+          {step === 4 && "Step 4 of 5: Document Verification"}
+          {step === 5 && "Step 5 of 5: Business Information"}
         </span>
       </div>
 
@@ -1421,14 +1482,16 @@ const SupplierRegister = () => {
               <h1 className="text-2xl md:text-[32px] font-extrabold text-gray-900 leading-tight">
                 {step === 1 && "Create Your Supplier Account"}
                 {step === 2 && "Verify Your Account"}
-                {step === 3 && "Document Verification"}
-                {step === 4 && "Business Information"}
+                {step === 3 && "Personal Information"}
+                {step === 4 && "Document Verification"}
+                {step === 5 && "Business Information"}
               </h1>
               <p className="text-gray-500 text-sm md:text-base mt-2 max-w-lg">
-                {step === 1 && "Complete your personal information to begin your registration."}
+                {step === 1 && "Create your login credentials to begin your registration."}
                 {step === 2 && "Enter the verification code sent to your registered email to continue your registration."}
-                {step === 3 && "Upload all four required verification documents. GrainRise will use OCR to suggest your Step 4 business information."}
-                {step === 4 && "Provide the details of your supplier operation."}
+                {step === 3 && "Provide your personal and home address information."}
+                {step === 4 && "Upload all four required verification documents. GrainRise will use OCR to suggest your business information."}
+                {step === 5 && "Provide the details of your supplier operation."}
               </p>
             </div>
 
@@ -1437,100 +1500,9 @@ const SupplierRegister = () => {
             {/* Toast notifications rendered at page level */}
             <Toast toasts={toasts} removeToast={removeToast} />
 
-            {/* STEP 1 FORM */}
+            {/* STEP 1 — ACCOUNT INFORMATION */}
             {step === 1 && (
               <form onSubmit={handleNextStep1} className="space-y-8 animate-fade-in">
-                {/* Personal Information */}
-                <div>
-                  <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
-                    Personal Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
-                    <FieldWithError error={errors.firstName} fieldRef={setFieldRef("firstName")}>
-                      <CustomTextbox
-                        label={<>First Name <span className="text-red-500">*</span></>}
-                        placeholder="e.g. Juan"
-                        value={form.firstName}
-                        onChange={(e) => handleInputChange("firstName", e.target.value)}
-                      />
-                    </FieldWithError>
-
-                    <CustomTextbox
-                      label={<>Middle Initial <span className="text-gray-400 font-normal text-xs">(Optional)</span></>}
-                      placeholder="M.I."
-                      value={form.middleInitial}
-                      onChange={(e) => handleInputChange("middleInitial", e.target.value)}
-                    />
-
-                    <FieldWithError error={errors.lastName} fieldRef={setFieldRef("lastName")}>
-                      <CustomTextbox
-                        label={<>Last Name <span className="text-red-500">*</span></>}
-                        placeholder="e.g. Dela Cruz"
-                        value={form.lastName}
-                        onChange={(e) => handleInputChange("lastName", e.target.value)}
-                      />
-                    </FieldWithError>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="md:col-span-1">
-                      <Dropdown label="Suffix (Optional)" placeholder="Select suffix" options={SUFFIXES} value={form.suffix} onChange={(val) => handleInputChange("suffix", val)} />
-                    </div>
-                    <div className="md:col-span-2" ref={setFieldRef("gender")}>
-                      <Dropdown label="Gender *" placeholder="Select Gender" options={GENDERS} value={form.gender} onChange={(val) => handleInputChange("gender", val)} error={errors.gender} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Address Information */}
-                <div>
-                  <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
-                    Address Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                    <div ref={setFieldRef("province")}>
-                      <Dropdown label="Province *" placeholder={isAddressLoading && provinceOptions.length === 0 ? "Loading provinces..." : "Select Province"} options={provinceOptions} value={form.province} onChange={handleProvinceChange} error={errors.province} />
-                    </div>
-                    <div ref={setFieldRef("municipality")}>
-                      <Dropdown label="Municipality *" placeholder={isAddressLoading && form.province && municipalityOptions.length === 0 ? "Loading cities/municipalities..." : "Select City/Municipality"} options={municipalityOptions} value={form.municipality} onChange={handleMunicipalityChange} error={errors.municipality} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div ref={setFieldRef("postalCode")}>
-                      <label className="block mb-2 text-sm font-medium text-gray-700">
-                        Postal Code <span className="text-gray-400 font-normal text-xs">(Auto Generated / Editable)</span>
-                      </label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={4}
-                        value={form.postalCode}
-                        onChange={(e) => handleInputChange("postalCode", e.target.value)}
-                        className={`w-full px-4 py-3 rounded-xl border bg-white text-gray-700 outline-none focus:border-green-600 ${errors.postalCode ? "border-red-500" : "border-gray-200"}`}
-                      />
-                      {errors.postalCode && (
-                        <span className="text-xs text-red-500 mt-1 block">
-                          {errors.postalCode}
-                        </span>
-                      )}
-                    </div>
-
-                    <div ref={setFieldRef("barangay")}>
-                      <Dropdown label="Barangay *" placeholder={isAddressLoading && form.municipality && barangayOptions.length === 0 ? "Loading barangays..." : "Select Barangay"} options={barangayOptions} value={form.barangay} onChange={(val) => handleInputChange("barangay", val)} error={errors.barangay} />
-                    </div>
-
-                    <FieldWithError error={errors.streetAddress} fieldRef={setFieldRef("streetAddress")}>
-                      <CustomTextbox
-                        label={<>Street Address <span className="text-red-500">*</span></>}
-                        placeholder="Unit/Bldg, Street Name"
-                        value={form.streetAddress}
-                        onChange={(e) => handleInputChange("streetAddress", e.target.value)}
-                      />
-                    </FieldWithError>
-                  </div>
-                </div>
-
                 {/* Account Details */}
                 <div>
                   <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
@@ -1559,7 +1531,7 @@ const SupplierRegister = () => {
 
                       <FieldWithError error={errors.username} fieldRef={setFieldRef("username")}>
                         <CustomTextbox
-                          label={<>Username <span className="text-gray-400 font-normal text-xs">(Optional)</span></>}
+                          label={<>Username <span className="text-red-500">*</span></>}
                           placeholder="username"
                           value={form.username}
                           onChange={(e) => handleInputChange("username", e.target.value)}
@@ -1677,6 +1649,7 @@ const SupplierRegister = () => {
                 </div>
                 {errors.agreeTerms && <span className="text-xs text-red-500 block -mt-6">{errors.agreeTerms}</span>}
 
+                
                 <div className="pt-6 border-t border-gray-100 flex justify-end">
                   <CustomGreenButton
                     text={
@@ -1686,6 +1659,7 @@ const SupplierRegister = () => {
                       </span>
                     }
                     type="submit"
+                    disabled={isSendingOtp}
                     className="!rounded-full !px-8 !py-3 shadow-lg"
                   />
                 </div>
@@ -1757,8 +1731,126 @@ const SupplierRegister = () => {
               </div>
             )}
 
-            {/* STEP 3 FORM */}
+            {/* STEP 3 — PERSONAL INFORMATION */}
             {step === 3 && (
+              <form onSubmit={handleNextStep3} className="space-y-8 animate-fade-in">
+                {/* Personal Information */}
+                <div>
+                  <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
+                    Personal Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+                    <FieldWithError error={errors.firstName} fieldRef={setFieldRef("firstName")}>
+                      <CustomTextbox
+                        label={<>First Name <span className="text-red-500">*</span></>}
+                        placeholder="e.g. Juan"
+                        value={form.firstName}
+                        onChange={(e) => handleInputChange("firstName", e.target.value)}
+                      />
+                    </FieldWithError>
+
+                    <CustomTextbox
+                      label={<>Middle Initial <span className="text-gray-400 font-normal text-xs">(Optional)</span></>}
+                      placeholder="M.I."
+                      value={form.middleInitial}
+                      onChange={(e) => handleInputChange("middleInitial", e.target.value)}
+                    />
+
+                    <FieldWithError error={errors.lastName} fieldRef={setFieldRef("lastName")}>
+                      <CustomTextbox
+                        label={<>Last Name <span className="text-red-500">*</span></>}
+                        placeholder="e.g. Dela Cruz"
+                        value={form.lastName}
+                        onChange={(e) => handleInputChange("lastName", e.target.value)}
+                      />
+                    </FieldWithError>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-1">
+                      <Dropdown label="Suffix (Optional)" placeholder="Select suffix" options={SUFFIXES} value={form.suffix} onChange={(val) => handleInputChange("suffix", val)} />
+                    </div>
+                    <div className="md:col-span-2" ref={setFieldRef("gender")}>
+                      <Dropdown label="Gender *" placeholder="Select Gender" options={GENDERS} value={form.gender} onChange={(val) => handleInputChange("gender", val)} error={errors.gender} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Address Information */}
+                <div>
+                  <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
+                    Address Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                    <div ref={setFieldRef("province")}>
+                      <Dropdown label="Province *" placeholder={isAddressLoading && provinceOptions.length === 0 ? "Loading provinces..." : "Select Province"} options={provinceOptions} value={form.province} onChange={handleProvinceChange} error={errors.province} />
+                    </div>
+                    <div ref={setFieldRef("municipality")}>
+                      <Dropdown label="Municipality *" placeholder={isAddressLoading && form.province && municipalityOptions.length === 0 ? "Loading cities/municipalities..." : "Select City/Municipality"} options={municipalityOptions} value={form.municipality} onChange={handleMunicipalityChange} error={errors.municipality} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div ref={setFieldRef("postalCode")}>
+                      <label className="block mb-2 text-sm font-medium text-gray-700">
+                        Postal Code <span className="text-gray-400 font-normal text-xs">(Auto Generated / Editable)</span>
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={4}
+                        value={form.postalCode}
+                        onChange={(e) => handleInputChange("postalCode", e.target.value)}
+                        className={`w-full px-4 py-3 rounded-xl border bg-white text-gray-700 outline-none focus:border-green-600 ${errors.postalCode ? "border-red-500" : "border-gray-200"}`}
+                      />
+                      {errors.postalCode && (
+                        <span className="text-xs text-red-500 mt-1 block">
+                          {errors.postalCode}
+                        </span>
+                      )}
+                    </div>
+
+                    <div ref={setFieldRef("barangay")}>
+                      <Dropdown label="Barangay *" placeholder={isAddressLoading && form.municipality && barangayOptions.length === 0 ? "Loading barangays..." : "Select Barangay"} options={barangayOptions} value={form.barangay} onChange={(val) => handleInputChange("barangay", val)} error={errors.barangay} />
+                    </div>
+
+                    <FieldWithError error={errors.streetAddress} fieldRef={setFieldRef("streetAddress")}>
+                      <CustomTextbox
+                        label={<>Street Address <span className="text-red-500">*</span></>}
+                        placeholder="Unit/Bldg, Street Name"
+                        value={form.streetAddress}
+                        onChange={(e) => handleInputChange("streetAddress", e.target.value)}
+                      />
+                    </FieldWithError>
+                  </div>
+                </div>
+
+                
+                <div className="pt-6 border-t border-gray-100 flex justify-between">
+                  <CustomWhiteButton
+                    onClick={() => setStep(2)}
+                    className="!rounded-full w-auto !p-2 !px-6"
+                    icon={
+                      <span className="flex items-center gap-2 text-sm font-semibold">
+                        <ArrowLeft size={16} /> Previous
+                      </span>
+                    }
+                  />
+                  <CustomGreenButton
+                    text={
+                      <span className="flex items-center gap-2">
+                        Next Step <ArrowRight size={18} />
+                      </span>
+                    }
+                    type="submit"
+                    className="!rounded-full !px-8 !py-3 shadow-lg"
+                  />
+                </div>
+              </form>
+            )}
+
+            {/* STEP 4 — DOCUMENT VERIFICATION */}
+            {step === 4 && (
               <div className="animate-fade-in flex flex-col text-left">
                 <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-6 text-left">
                   Required Documents
@@ -1820,7 +1912,7 @@ const SupplierRegister = () => {
 
                 <div className="w-full flex justify-between">
                   <CustomWhiteButton
-                    onClick={() => setStep(2)}
+                    onClick={() => setStep(3)}
                     className="!rounded-full w-auto !p-2 !px-6"
                     icon={
                       <span className="flex items-center gap-2 text-sm font-semibold">
@@ -1835,15 +1927,15 @@ const SupplierRegister = () => {
                         {!isExtractingDocuments && <ArrowRight size={18} />}
                       </span>
                     }
-                    onClick={handleNextStep3}
+                    onClick={handleNextStep4}
                     className="!rounded-full !px-8 !py-3 shadow-lg"
                   />
                 </div>
               </div>
             )}
 
-            {/* STEP 4 FORM */}
-            {step === 4 && (
+            {/* STEP 5 — BUSINESS INFORMATION */}
+            {step === 5 && (
               <form onSubmit={handleSubmitRegistration} className="space-y-8 animate-fade-in">
                 {/* Auto-filled banner */}
                 <div className="bg-[#eaf5ec] border border-[#bce8c4] rounded-xl p-4 flex items-center gap-3 text-left">
@@ -2052,10 +2144,10 @@ const SupplierRegister = () => {
                   )}
                 </div>
 
-                {/* Step 4 Navigation buttons */}
+                {/* Step 5 Navigation buttons */}
                 <div className="pt-6 border-t border-gray-100 flex justify-between">
                   <CustomWhiteButton
-                    onClick={() => setStep(3)}
+                    onClick={() => setStep(4)}
                     className="!rounded-full w-auto !p-2 !px-6"
                     icon={
                       <span className="flex items-center gap-2 text-sm font-semibold">
