@@ -1,13 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Search, ChevronDown, X, ShieldCheck, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
+import { Search, ChevronDown, X, ShieldCheck, CheckCircle2, Calendar } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
 const QC_STATUS_PILLS = {
-  Partial: "bg-amber-100/90 text-amber-700",
-  Passed: "bg-emerald-100/90 text-emerald-700",
-  Failed: "bg-rose-100/90 text-rose-700",
+  Partial: "bg-amber-100/90 text-amber-700 border border-amber-200",
+  Passed: "bg-emerald-100/90 text-emerald-700 border border-emerald-200",
+  Failed: "bg-rose-100/90 text-rose-700 border border-rose-200",
 };
 
 const TABLE_COLUMNS = [
@@ -31,7 +31,7 @@ const TABLE_COLUMNS = [
   {
     key: "action",
     label: "Action",
-    width: "14%", // Increased from 10% to prevent text wrapping
+    width: "14%",
     headerClassName: "text-center",
     cellClassName: "text-center",
     render: (row) => (
@@ -50,26 +50,26 @@ const MOCK_SECTIONS = [
   {
     label: "Today",
     rows: [
-      { id: "rcv-t1", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Partial", passedQty: "15,000 kg", failedQty: "5,000 kg", bay: "Bay A-1", inspector: "Inspector Cruz" },
-      { id: "rcv-t2", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Passed", passedQty: "20,000 kg", failedQty: "0 kg", bay: "Bay A-2", inspector: "Inspector Cruz" },
-      { id: "rcv-t3", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Failed", passedQty: "0 kg", failedQty: "20,000 kg", bay: "Rejection Bay", inspector: "Inspector Santos" },
+      { id: "rcv-t1", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Partial", passedQty: "15,000 kg", failedQty: "5,000 kg", bay: "Bay A-1", inspector: "Inspector Cruz", isoDate: "2026-09-04" },
+      { id: "rcv-t2", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Passed", passedQty: "20,000 kg", failedQty: "0 kg", bay: "Bay A-2", inspector: "Inspector Cruz", isoDate: "2026-09-04" },
+      { id: "rcv-t3", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Failed", passedQty: "0 kg", failedQty: "20,000 kg", bay: "Rejection Bay", inspector: "Inspector Santos", isoDate: "2026-09-04" },
     ],
   },
   {
     label: "Yesterday",
     rows: [
-      { id: "rcv-y1", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Partial", passedQty: "16,000 kg", failedQty: "4,000 kg", bay: "Bay B-1", inspector: "Inspector Cruz" },
-      { id: "rcv-y2", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Passed", passedQty: "20,000 kg", failedQty: "0 kg", bay: "Bay B-2", inspector: "Inspector Cruz" },
-      { id: "rcv-y3", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Failed", passedQty: "0 kg", failedQty: "20,000 kg", bay: "Rejection Bay", inspector: "Inspector Santos" },
-      { id: "rcv-y4", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Passed", passedQty: "20,000 kg", failedQty: "0 kg", bay: "Bay B-3", inspector: "Inspector Cruz" },
+      { id: "rcv-y1", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Partial", passedQty: "16,000 kg", failedQty: "4,000 kg", bay: "Bay B-1", inspector: "Inspector Cruz", isoDate: "2026-09-03" },
+      { id: "rcv-y2", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Passed", passedQty: "20,000 kg", failedQty: "0 kg", bay: "Bay B-2", inspector: "Inspector Cruz", isoDate: "2026-09-03" },
+      { id: "rcv-y3", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Failed", passedQty: "0 kg", failedQty: "20,000 kg", bay: "Rejection Bay", inspector: "Inspector Santos", isoDate: "2026-09-03" },
+      { id: "rcv-y4", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Passed", passedQty: "20,000 kg", failedQty: "0 kg", bay: "Bay B-3", inspector: "Inspector Cruz", isoDate: "2026-09-03" },
     ],
   },
   {
     label: "July 16, 2026",
     rows: [
-      { id: "rcv-j1", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Partial", passedQty: "14,000 kg", failedQty: "6,000 kg", bay: "Bay C-1", inspector: "Inspector Cruz" },
-      { id: "rcv-j2", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Passed", passedQty: "20,000 kg", failedQty: "0 kg", bay: "Bay C-2", inspector: "Inspector Santos" },
-      { id: "rcv-j3", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Failed", passedQty: "0 kg", failedQty: "20,000 kg", bay: "Rejection Bay", inspector: "Inspector Santos" },
+      { id: "rcv-j1", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Partial", passedQty: "14,000 kg", failedQty: "6,000 kg", bay: "Bay C-1", inspector: "Inspector Cruz", isoDate: "2026-07-16" },
+      { id: "rcv-j2", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Passed", passedQty: "20,000 kg", failedQty: "0 kg", bay: "Bay C-2", inspector: "Inspector Santos", isoDate: "2026-07-16" },
+      { id: "rcv-j3", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Failed", passedQty: "0 kg", failedQty: "20,000 kg", bay: "Rejection Bay", inspector: "Inspector Santos", isoDate: "2026-07-16" },
     ],
   },
 ];
@@ -78,12 +78,48 @@ export default function MillerProcurementReceivingHistory() {
   const [search, setSearch] = useState("");
   const [qcStatusFilter, setQcStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
+  const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
+  const [tempDateRange, setTempDateRange] = useState({ startDate: "", endDate: "" });
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [toastMsg, setToastMsg] = useState("");
+
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const dateRef = useRef(null);
+
+  // Popover dismissal handling for Date Picker
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dateRef.current && !dateRef.current.contains(e.target)) {
+        setShowDatePicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleDateApply = () => {
+    setDateRange(tempDateRange);
+    setCurrentPage(1);
+    setShowDatePicker(false);
+  };
+
+  const handleDateReset = () => {
+    setTempDateRange({ startDate: "", endDate: "" });
+    setDateRange({ startDate: "", endDate: "" });
+    setCurrentPage(1);
+    setShowDatePicker(false);
+  };
+
+  const showToast = (msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(""), 3000);
+  };
 
   const filteredSections = useMemo(() => {
     return MOCK_SECTIONS.map((sec) => {
       const filteredRows = sec.rows.filter((r) => {
+        // Search Filter
         if (search) {
           const q = search.toLowerCase();
           const matchB = r.batchNo.toLowerCase().includes(q);
@@ -92,9 +128,16 @@ export default function MillerProcurementReceivingHistory() {
           const matchBr = r.branch.toLowerCase().includes(q);
           if (!matchB && !matchS && !matchV && !matchBr) return false;
         }
+
+        // Status Filter
         if (qcStatusFilter !== "all") {
           if (r.qcStatus.toLowerCase() !== qcStatusFilter.toLowerCase()) return false;
         }
+
+        // Date Range Filter
+        if (dateRange.startDate && r.isoDate < dateRange.startDate) return false;
+        if (dateRange.endDate && r.isoDate > dateRange.endDate) return false;
+
         return true;
       });
 
@@ -108,16 +151,16 @@ export default function MillerProcurementReceivingHistory() {
         rows: formattedRows,
       };
     }).filter((sec) => sec.rows.length > 0);
-  }, [search, qcStatusFilter]);
+  }, [search, qcStatusFilter, dateRange]);
 
-  const TOTAL_PAGES = 4;
+  const TOTAL_PAGES = Math.max(1, Math.ceil((filteredSections[0]?.rows.length || 0) / 10));
 
   return (
     <div className="space-y-6">
       {/* ── Breadcrumbs & Header ─────────────────────────────────────────────── */}
       <div className="space-y-1">
         <Breadcrumbs items={[{ label: "History" }, { label: "Procurement Receiving History" }]} />
-        <h2 className="text-[clamp(1.75rem,2.5vw,2.25rem)] font-bold tracking-tight text-slate-900">
+        <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-bold tracking-[-0.03em] text-slate-900">
           Procurement Receiving History
         </h2>
         <p className="text-sm text-slate-500">
@@ -126,45 +169,139 @@ export default function MillerProcurementReceivingHistory() {
       </div>
 
       {/* ── Search Bar & Filter Controls ────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[240px] max-w-sm">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search batch no., supplier, or product"
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-[#0B5D1E] outline-none bg-white placeholder-gray-400 text-gray-700"
-          />
-        </div>
+      <div className="flex flex-col sm:flex-row gap-3 mb-2 items-stretch sm:items-center justify-between">
+        <div className="flex flex-wrap items-center gap-2 flex-1">
+          {/* Search Bar */}
+          <div className="relative min-w-[240px] max-w-sm flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+              placeholder="Search batch no., supplier, or product"
+              className="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => { setSearch(""); setCurrentPage(1); }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
 
-        <div className="relative">
-          <select
-            value={qcStatusFilter}
-            onChange={(e) => setQcStatusFilter(e.target.value)}
-            className="appearance-none pl-4 pr-8 py-2 border border-gray-200 rounded-xl text-xs font-semibold bg-white text-gray-700 focus:ring-1 focus:ring-[#0B5D1E] outline-none cursor-pointer"
-          >
-            <option value="all">QC Status</option>
-            <option value="Partial">Partial</option>
-            <option value="Passed">Passed</option>
-            <option value="Failed">Failed</option>
-          </select>
-          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-        </div>
+          {/* 1. Date Range Picker Dropdown (First Filter Position) */}
+          <div className="relative w-full sm:w-auto" ref={dateRef}>
+            <button
+              type="button"
+              onClick={() => setShowDatePicker((prev) => !prev)}
+              className={`flex items-center gap-2 border border-gray-200 bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto justify-center transition-colors cursor-pointer h-[38px] ${
+                dateRange.startDate ? "border-emerald-500 text-emerald-700 bg-emerald-50/40" : ""
+              }`}
+            >
+              <span>
+                {dateRange.startDate
+                  ? `${dateRange.startDate} - ${dateRange.endDate || "..."}`
+                  : "Date Range"}
+              </span>
+              <Calendar size={16} className={dateRange.startDate ? "text-emerald-600" : "text-gray-500"} />
+            </button>
 
-        <div className="relative">
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="appearance-none pl-4 pr-8 py-2 border border-gray-200 rounded-xl text-xs font-semibold bg-white text-gray-700 focus:ring-1 focus:ring-[#0B5D1E] outline-none cursor-pointer"
-          >
-            <option value="newest">Sort By</option>
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
-          </select>
-          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            {showDatePicker && (
+              <div className="absolute top-full mt-2 left-0 sm:left-auto bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-20 w-64">
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={tempDateRange.startDate}
+                      onChange={(e) =>
+                        setTempDateRange((prev) => ({ ...prev, startDate: e.target.value }))
+                      }
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={tempDateRange.endDate}
+                      onChange={(e) =>
+                        setTempDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+                      }
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleDateReset}
+                      className="flex-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDateApply}
+                      className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-[#0B5D1E] hover:bg-[#084b18] rounded transition-colors cursor-pointer"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 2. QC Status Select Filter */}
+          <div className="relative w-full sm:w-auto">
+            <select
+              value={qcStatusFilter}
+              onChange={(e) => { setQcStatusFilter(e.target.value); setCurrentPage(1); }}
+              className="appearance-none border border-gray-200 bg-white pl-3 pr-8 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto transition-colors cursor-pointer h-[38px] focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            >
+              <option value="all">QC Status</option>
+              <option value="Partial">Partial</option>
+              <option value="Passed">Passed</option>
+              <option value="Failed">Failed</option>
+            </select>
+            <ChevronDown
+              size={16}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+            />
+          </div>
+
+          {/* 3. Sort By Dropdown */}
+          <div className="relative w-full sm:w-auto">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="appearance-none border border-gray-200 bg-white pl-3 pr-8 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto transition-colors cursor-pointer h-[38px] focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            >
+              <option value="newest">Sort By</option>
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+            </select>
+            <ChevronDown
+              size={16}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+            />
+          </div>
         </div>
       </div>
+
+      {/* ── Toast Alert ────────────────────────────────────────────────────── */}
+      {toastMsg && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
+          <CheckCircle2 size={16} /> {toastMsg}
+        </div>
+      )}
 
       {/* ── SectionedTableCard Component ─────────────────────────────────────── */}
       <SectionedTableCard
@@ -173,7 +310,7 @@ export default function MillerProcurementReceivingHistory() {
         currentPage={currentPage}
         totalPages={TOTAL_PAGES}
         onPageChange={setCurrentPage}
-        footerLabel={`Showing 1-10 of 38 receiving records`}
+        footerLabel={`Showing receiving records — Page ${currentPage} of ${TOTAL_PAGES}`}
       />
 
       {/* ── Inspection Detail Modal ─────────────────────────────────────────── */}

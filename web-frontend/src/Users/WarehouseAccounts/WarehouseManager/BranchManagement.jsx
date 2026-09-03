@@ -1,77 +1,52 @@
 import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Building2, X, CheckCircle2, Eye } from "lucide-react";
+import { Search, Plus, Building2, X, CheckCircle2, MapPin, Mail, ChevronDown } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
-import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
 export const MOCK_BRANCHES = [
-  { id: "branch-a", name: "Warehouse Distribution A", address: "Address 1, Balagtas, Bulacan", email: "whdistributiona@gmail.com", phone: "09123456789", activeEmployees: 28, archivedEmployees: 12 },
-  { id: "branch-b", name: "Warehouse Distribution B", address: "Address 2, San Ildefonso, Bulacan", email: "whdistributionb@gmail.com", phone: "09123456780", activeEmployees: 22, archivedEmployees: 8 },
-  { id: "branch-c", name: "Warehouse Distribution C", address: "Address 3, Guiguinto, Bulacan", email: "whdistributionc@gmail.com", phone: "09123456781", activeEmployees: 19, archivedEmployees: 5 },
-  { id: "branch-d", name: "Warehouse Distribution D", address: "Address 4, Plaridel, Bulacan", email: "whdistributiond@gmail.com", phone: "09123456782", activeEmployees: 31, archivedEmployees: 14 },
-  { id: "branch-e", name: "Warehouse Distribution E", address: "Address 5, Malolos City, Bulacan", email: "whdistributione@gmail.com", phone: "09123456783", activeEmployees: 15, archivedEmployees: 4 },
-  { id: "branch-f", name: "Warehouse Distribution F", address: "Address 6, Bocaue, Bulacan", email: "whdistributionf@gmail.com", phone: "09123456784", activeEmployees: 24, archivedEmployees: 9 },
-  { id: "branch-g", name: "Warehouse Distribution G", address: "Address 7, Marilao, Bulacan", email: "whdistributiong@gmail.com", phone: "09123456785", activeEmployees: 18, archivedEmployees: 6 },
-  { id: "branch-h", name: "Warehouse Distribution H", address: "Address 8, Santa Maria, Bulacan", email: "whdistributionh@gmail.com", phone: "09123456786", activeEmployees: 27, archivedEmployees: 11 },
-  { id: "branch-i", name: "Warehouse Distribution I", address: "Address 9, Calumpit, Bulacan", email: "whdistributioni@gmail.com", phone: "09123456787", activeEmployees: 14, archivedEmployees: 3 },
-  { id: "branch-j", name: "Warehouse Distribution J", address: "Address 10, Baliuag, Bulacan", email: "whdistributionj@gmail.com", phone: "09123456788", activeEmployees: 26, archivedEmployees: 10 },
-  { id: "branch-k", name: "Warehouse Distribution K", address: "Address 11, Pulilan, Bulacan", email: "whdistributionk@gmail.com", phone: "09123456790", activeEmployees: 20, archivedEmployees: 7 },
-  { id: "branch-l", name: "Warehouse Distribution L", address: "Address 12, Hagonoy, Bulacan", email: "whdistributionl@gmail.com", phone: "09123456791", activeEmployees: 17, archivedEmployees: 5 },
+  { id: "branch-a", name: "North Region Warehouse", address: "123 Agri Valley Road, Tarlac City, Tarlac 2300", email: "north.wh@grainrise.com", phone: "09123456789", status: "ACTIVE" },
+  { id: "branch-b", name: "North Region Warehouse", address: "123 Agri Valley Road, Tarlac City, Tarlac 2300", email: "north.wh@grainrise.com", phone: "09123456780", status: "INACTIVE" },
+  { id: "branch-c", name: "North Region Warehouse", address: "123 Agri Valley Road, Tarlac City, Tarlac 2300", email: "north.wh@grainrise.com", phone: "09123456781", status: "ACTIVE" },
+  { id: "branch-d", name: "North Region Warehouse", address: "123 Agri Valley Road, Tarlac City, Tarlac 2300", email: "north.wh@grainrise.com", phone: "09123456782", status: "INACTIVE" },
+  { id: "branch-e", name: "North Region Warehouse", address: "123 Agri Valley Road, Tarlac City, Tarlac 2300", email: "north.wh@grainrise.com", phone: "09123456783", status: "ACTIVE" },
+  { id: "branch-f", name: "North Region Warehouse", address: "123 Agri Valley Road, Tarlac City, Tarlac 2300", email: "north.wh@grainrise.com", phone: "09123456784", status: "INACTIVE" },
+  { id: "branch-g", name: "North Region Warehouse", address: "123 Agri Valley Road, Tarlac City, Tarlac 2300", email: "north.wh@grainrise.com", phone: "09123456785", status: "ACTIVE" },
+  { id: "branch-h", name: "North Region Warehouse", address: "123 Agri Valley Road, Tarlac City, Tarlac 2300", email: "north.wh@grainrise.com", phone: "09123456786", status: "INACTIVE" },
+  { id: "branch-i", name: "North Region Warehouse", address: "123 Agri Valley Road, Tarlac City, Tarlac 2300", email: "north.wh@grainrise.com", phone: "09123456787", status: "ACTIVE" },
+  { id: "branch-j", name: "North Region Warehouse", address: "123 Agri Valley Road, Tarlac City, Tarlac 2300", email: "north.wh@grainrise.com", phone: "09123456788", status: "INACTIVE" },
+  { id: "branch-k", name: "North Region Warehouse", address: "123 Agri Valley Road, Tarlac City, Tarlac 2300", email: "north.wh@grainrise.com", phone: "09123456790", status: "ACTIVE" },
+  { id: "branch-l", name: "North Region Warehouse", address: "123 Agri Valley Road, Tarlac City, Tarlac 2300", email: "north.wh@grainrise.com", phone: "09123456791", status: "INACTIVE" },
 ];
 
 export default function BranchManagement() {
   const navigate = useNavigate();
   const [branches, setBranches] = useState(MOCK_BRANCHES);
   const [search, setSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState("Status");
   const [showModal, setShowModal] = useState(false);
   const [newBranch, setNewBranch] = useState({ name: "", address: "", email: "", phone: "" });
   const [successToast, setSuccessToast] = useState(false);
 
-  // Column configs use `render` so SectionedTableCard doesn't apply its own
-  // built-in action-button styling on top of ours.
-  const TABLE_COLUMNS = useMemo(
-    () => [
-      { key: "name", label: "Warehouse Name", width: "25%" },
-      { key: "address", label: "Warehouse Address", width: "30%" },
-      { key: "email", label: "Official Email", width: "25%" },
-      {
-        key: "action",
-        label: "Action",
-        width: "20%",
-        headerClassName: "text-center",
-        cellClassName: "text-center",
-        render: (row) => (
-          <button
-            type="button"
-            onClick={() => navigate(`/warehouse-manager/branches/${row.id}/employees`)}
-            className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:bg-emerald-50/40 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 cursor-pointer"
-            title="View Details"
-          >
-            <span>View Branch</span>
-          </button>
-        ),
-      },
-    ],
-    [navigate]
-  );
+  // Filter logic for search and status
+  const filteredBranches = useMemo(() => {
+    return branches.filter((b) => {
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const matchesSearch =
+          b.name.toLowerCase().includes(q) ||
+          b.address.toLowerCase().includes(q) ||
+          b.email.toLowerCase().includes(q);
+        if (!matchesSearch) return false;
+      }
 
-  // Filter raw rows for SectionedTableCard — action rendering is handled by
-  // the column's `render` function above, so rows stay unformatted here.
-  const filteredSections = useMemo(() => {
-    const list = branches.filter(
-      (b) =>
-        b.name.toLowerCase().includes(search.toLowerCase()) ||
-        b.address.toLowerCase().includes(search.toLowerCase()) ||
-        b.email.toLowerCase().includes(search.toLowerCase())
-    );
+      if (statusFilter !== "Status" && statusFilter !== "All") {
+        if (b.status !== statusFilter) return false;
+      }
 
-    return [{ rows: list }];
-  }, [branches, search]);
-
-  const rawCount = filteredSections[0]?.rows.length || 0;
-  const TOTAL_PAGES = Math.max(1, Math.ceil(rawCount / 10));
+      return true;
+    });
+  }, [branches, search, statusFilter]);
 
   const handleRegister = (e) => {
     e.preventDefault();
@@ -83,8 +58,7 @@ export default function BranchManagement() {
       address: newBranch.address,
       email: newBranch.email,
       phone: newBranch.phone || "09123456789",
-      activeEmployees: 0,
-      archivedEmployees: 0,
+      status: "ACTIVE",
     };
 
     setBranches((prev) => [created, ...prev]);
@@ -99,30 +73,61 @@ export default function BranchManagement() {
       {/* ── Breadcrumbs & Title ──────────────────────────────────────────────── */}
       <div className="space-y-1">
         <Breadcrumbs items={[{ label: "Management" }, { label: "Branch Management" }]} />
-        <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-bold tracking-[-0.03em] text-slate-900">
+        <h2 className="text-[clamp(1.75rem,2.5vw,2.25rem)] font-bold tracking-[-0.02em] text-gray-900">
           Branch Management
         </h2>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-gray-500">
           Manage your registered branches.
         </p>
       </div>
 
-      {/* ── Search Bar & Action Button ──────────────────────────────────────── */}
+      {/* ── Search Bar, Status Dropdown & Register Button ───────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-            placeholder="Search branch name, address, or email"
-            className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 focus:border-emerald-600 outline-none bg-white placeholder-gray-400 text-gray-700"
-          />
+        <div className="flex flex-wrap items-center gap-2 flex-1">
+          {/* Search Input */}
+          <div className="relative min-w-[240px] max-w-sm flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search branch name, address, or email"
+              className="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+
+          {/* Status Dropdown */}
+          <div className="relative w-full sm:w-auto">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="appearance-none border border-gray-200 bg-white pl-3 pr-8 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto transition-colors cursor-pointer h-[38px] focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            >
+              <option value="Status">Status</option>
+              <option value="All">All Statuses</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+            </select>
+            <ChevronDown
+              size={16}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+            />
+          </div>
         </div>
 
+        {/* Register Button */}
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center justify-center gap-2 bg-[#0B5D1E] hover:bg-[#094d19] text-white text-sm font-semibold px-5 py-2.5 rounded-full shadow-sm transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto"
+          className="flex items-center justify-center gap-1.5 bg-[#0B5D1E] hover:bg-[#084b18] text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto h-[38px]"
         >
           <Plus size={16} /> Register New Branch
         </button>
@@ -135,17 +140,60 @@ export default function BranchManagement() {
         </div>
       )}
 
-      {/* ── Shared SectionedTableCard Component ─────────────────────────────── */}
-      <SectionedTableCard
-        columns={TABLE_COLUMNS}
-        sections={filteredSections}
-        currentPage={currentPage}
-        totalPages={TOTAL_PAGES}
-        onPageChange={setCurrentPage}
-        footerLabel={`Showing branch records — Page ${currentPage} of ${TOTAL_PAGES}`}
-        emptyStateTitle="No branches found"
-        emptyStateDescription="No branches matched your search. Try adjusting your search terms."
-      />
+      {/* ── Branch Cards Grid ──────────────────────────────────────────────── */}
+      {filteredBranches.length === 0 ? (
+        <div className="p-12 text-center text-gray-500 border border-gray-200 rounded-xl bg-white">
+          <p className="text-base font-semibold text-gray-800 mb-1">No branches found</p>
+          <p className="text-xs text-gray-500">No branches matched your search. Try adjusting your filter terms.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {filteredBranches.map((branch) => (
+            <div
+              key={branch.id}
+className="bg-white border border-[#D8D8D8] rounded-xl p-5 flex flex-col justify-between shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:border-emerald-300 hover:shadow-md transition-all"            >
+              {/* Header: Branch Name & Status Badge */}
+              <div>
+                <div className="flex items-start justify-between gap-2 mb-4">
+                  <h3 className="font-bold text-gray-900 text-base leading-tight">
+                    {branch.name}
+                  </h3>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shrink-0 ${
+                      branch.status === "ACTIVE"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-rose-100 text-rose-600"
+                    }`}
+                  >
+                    {branch.status}
+                  </span>
+                </div>
+
+                {/* Info List */}
+                <div className="space-y-2 text-xs text-gray-500 mb-6">
+                  <div className="flex items-start gap-2">
+                    <MapPin size={14} className="shrink-0 mt-0.5 text-gray-400" />
+                    <span className="leading-snug">{branch.address}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail size={14} className="shrink-0 text-gray-400" />
+                    <span className="truncate">{branch.email}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* View Details Button */}
+              <button
+                type="button"
+                onClick={() => navigate(`/warehouse-manager/branches/${branch.id}/employees`)}
+                className="w-full py-2 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-xs font-semibold rounded-lg transition-colors cursor-pointer text-center"
+              >
+                View Details
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Register New Branch Modal (Portaled to document.body) ─────────────── */}
       {showModal &&
@@ -177,7 +225,7 @@ export default function BranchManagement() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Warehouse Distribution M"
+                    placeholder="e.g. North Region Warehouse"
                     value={newBranch.name}
                     onChange={(e) => setNewBranch({ ...newBranch, name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
@@ -189,7 +237,7 @@ export default function BranchManagement() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Barangay Poblacion, Marilao, Bulacan"
+                    placeholder="e.g. 123 Agri Valley Road, Tarlac City"
                     value={newBranch.address}
                     onChange={(e) => setNewBranch({ ...newBranch, address: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
@@ -201,7 +249,7 @@ export default function BranchManagement() {
                   <input
                     type="email"
                     required
-                    placeholder="e.g. whdistributionm@gmail.com"
+                    placeholder="e.g. north.wh@grainrise.com"
                     value={newBranch.email}
                     onChange={(e) => setNewBranch({ ...newBranch, email: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"

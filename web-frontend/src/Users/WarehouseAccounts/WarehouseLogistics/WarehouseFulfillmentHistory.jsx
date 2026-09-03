@@ -23,6 +23,7 @@ const sampleFulfill = Array.from({ length: 52 }, (_, i) => ({
 
 export default function FulfillmentHistory() {
   const [query, setQuery] = useState("");
+  const [qcStatusFilter, setQcStatusFilter] = useState("QC Status");
   const [sortBy, setSortBy] = useState("date-desc");
   const [page, setPage] = useState(1);
 
@@ -37,8 +38,14 @@ export default function FulfillmentHistory() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return sampleFulfill.filter((r) => q === "" || `${r.variant} ${r.customer}`.toLowerCase().includes(q));
-  }, [query]);
+    return sampleFulfill.filter((r) => {
+      if (q !== "" && !`${r.variant} ${r.customer}`.toLowerCase().includes(q)) return false;
+      if (qcStatusFilter === "QC Status" || qcStatusFilter === "All") return true;
+
+      const status = r.passed === "0 kg" ? "Failed" : r.failed === "0 kg" ? "Passed" : "Partial";
+      return status === qcStatusFilter;
+    });
+  }, [query, qcStatusFilter]);
 
   const itemsPerPage = 10;
   const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
@@ -63,6 +70,19 @@ export default function FulfillmentHistory() {
                 onSearch={(v) => { setQuery(v); setPage(1); }}
                 placeholder="Search order no., batch no., product, or customer"
               />
+            </div>
+            <div className="flex-none">
+              <select
+                value={qcStatusFilter}
+                onChange={(e) => { setQcStatusFilter(e.target.value); setPage(1); }}
+                className="px-3.5 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:ring-1 focus:ring-emerald-500 outline-none min-w-[120px] h-[38px]"
+              >
+                <option value="QC Status">QC Status</option>
+                <option value="All">All Statuses</option>
+                <option value="Partial">Partial</option>
+                <option value="Passed">Passed</option>
+                <option value="Failed">Failed</option>
+              </select>
             </div>
             <div className="flex-none">
               <DateRangePicker onDateChange={() => {}} />

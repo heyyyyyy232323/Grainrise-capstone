@@ -5,18 +5,18 @@ import SectionedTableCard from "../../../Components/Minor-Components/SectionedTa
 
 // ── KPI Card (Figma-style: label / big number / caption link) ──────────────
 const ProcurementKPICard = ({ label, value, caption, captionColor = "#1a7a3a", icon: Icon, iconBg = "#e8f5ee", iconColor = "#0B7A2A" }) => (
-  <div className="flex-1 min-w-0 rounded-[14px] border border-slate-200 bg-white p-5 shadow-[0_6px_18px_rgba(15,23,42,0.06)] hover:-translate-y-0.5 transition-transform duration-200">
+  <div className="flex-1 min-w-0 rounded-[14px] border border-slate-200 bg-white p-4 shadow-[0_6px_18px_rgba(15,23,42,0.06)] hover:-translate-y-0.5 transition-transform duration-200">
     <div className="flex items-start justify-between gap-2">
-      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p>
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: iconBg }}>
-        <Icon size={18} strokeWidth={2.2} style={{ color: iconColor }} />
+      <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">{label}</p>
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: iconBg }}>
+        <Icon size={16} strokeWidth={2.2} style={{ color: iconColor }} />
       </div>
     </div>
-    <div className="mt-3 text-[clamp(1.9rem,3vw,2.4rem)] font-extrabold leading-none tracking-[-0.02em] text-slate-900">
+    <div className="mt-2 text-[clamp(1.5rem,2.5vw,2rem)] font-extrabold leading-none tracking-[-0.02em] text-slate-900">
       {value}
     </div>
     {caption && (
-      <p className="mt-2 text-[12px] font-semibold" style={{ color: captionColor }}>
+      <p className="mt-1.5 text-[11px] font-semibold" style={{ color: captionColor }}>
         {caption}
       </p>
     )}
@@ -26,21 +26,21 @@ const ProcurementKPICard = ({ label, value, caption, captionColor = "#1a7a3a", i
 // ── Inline two-column summary card (Supplier Performance / Returns Summary) ─
 const SummaryCard = ({ title, columns, onView, viewLabel = "View" }) => (
   <div className="flex-1 min-w-0 rounded-[14px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.06)]">
-    <div className="px-5 pt-4 pb-2">
-      <h3 className="text-[15px] font-bold text-slate-900">{title}</h3>
+    <div className="px-4 pt-3 pb-1 border-b border-slate-100">
+      <h3 className="text-sm font-bold text-slate-900">{title}</h3>
     </div>
-    <div className="flex divide-x divide-slate-100 px-4 py-3">
+    <div className="flex divide-x divide-slate-100 px-4 py-2.5">
       {columns.map((col, i) => (
-        <div key={i} className="flex-1 px-3 first:pl-0 last:pr-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">{col.label}</p>
-          <p className="mt-1 text-[14px] font-bold text-slate-800">{col.value}</p>
+        <div key={i} className="flex-1 px-2.5 first:pl-0 last:pr-0">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400">{col.label}</p>
+          <p className="mt-0.5 text-[13px] font-bold text-slate-800">{col.value}</p>
         </div>
       ))}
     </div>
-    <div className="border-t border-dashed border-slate-200 px-5 py-2 text-center">
+    <div className="border-t border-dashed border-slate-200 px-4 py-1.5 text-center">
       <button
         type="button"
-        className="text-[12px] font-semibold text-[#1a7a3a] hover:underline"
+        className="text-[11px] font-semibold text-[#1a7a3a] hover:underline cursor-pointer"
         onClick={onView}
       >
         {viewLabel}
@@ -51,15 +51,15 @@ const SummaryCard = ({ title, columns, onView, viewLabel = "View" }) => (
 
 // ── Activity item row ────────────────────────────────────────────────────────
 const ActivityItem = ({ title, description, time }) => (
-  <div className="flex items-start justify-between gap-3 py-2.5 border-b border-slate-100 last:border-0">
+  <div className="flex items-start justify-between gap-3 py-2 border-b border-slate-100 last:border-0">
     <div className="min-w-0">
-      <p className="text-[13px] font-bold text-slate-800 leading-tight">{title}</p>
+      <p className="text-[12px] font-bold text-slate-800 leading-tight">{title}</p>
       {description && (
-        <p className="mt-0.5 text-[11px] text-slate-500 leading-snug">{description}</p>
+        <p className="mt-0.5 text-[10px] text-slate-500 leading-snug">{description}</p>
       )}
     </div>
     {time && (
-      <span className="whitespace-nowrap text-[11px] font-semibold text-emerald-700 pt-0.5">{time}</span>
+      <span className="whitespace-nowrap text-[10px] font-semibold text-emerald-700 pt-0.5">{time}</span>
     )}
   </div>
 );
@@ -67,18 +67,25 @@ const ActivityItem = ({ title, description, time }) => (
 // ── Date group header with calendar icon ─────────────────────────────────────
 const ActivityGroup = ({ date, items }) => (
   <div className="mb-1">
-    <div className="flex items-center gap-2 py-2">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0B7A2A]">
-        <CalendarDays size={16} strokeWidth={2.2} className="text-white" />
+    <div className="flex items-center gap-2 py-1.5">
+      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0B7A2A]">
+        <CalendarDays size={13} strokeWidth={2.2} className="text-white" />
       </div>
-      <span className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-slate-500">{date}</span>
+      <span className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-slate-500">{date}</span>
     </div>
-    <div className="ml-10">
+    <div className="ml-8">
       {items.map((item, i) => (
         <ActivityItem key={i} {...item} />
       ))}
     </div>
   </div>
+);
+
+// ── Custom Title Wrapper for SectionedTableCard ──────────────────────────────
+const SmallCardHeader = ({ title }) => (
+  <span className="text-sm md:text-base font-bold text-gray-900 block px-1 py-0.5">
+    {title}
+  </span>
 );
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
@@ -164,32 +171,32 @@ const WarehouseProcurementDashboard = () => {
         ]}
       />
 
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+      {/* Page Header - Reduced Font Sizes */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-1">Last Updated: Today, {lastUpdatedTime}</p>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Last Updated: Today, {lastUpdatedTime}</p>
         </div>
         <DateDisplay />
       </div>
 
       {/* KPI Row */}
-      <div className="flex flex-col sm:flex-row gap-4 mt-6">
+      <div className="flex flex-col sm:flex-row gap-3 mt-4">
         {kpis.map((kpi) => (
           <ProcurementKPICard key={kpi.label} {...kpi} />
         ))}
       </div>
 
-      {/* Preview Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+      {/* Preview Tables with Compact Card Headers */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
         <SectionedTableCard
-          title="Receiving Orders Preview"
+          title={<SmallCardHeader title="Receiving Orders Preview" />}
           columns={receivingOrdersColumns}
           sections={[{ rows: receivingOrdersRows }]}
           footerLabel="View All"
         />
         <SectionedTableCard
-          title="Pending Payables Preview"
+          title={<SmallCardHeader title="Pending Payables Preview" />}
           columns={pendingPayablesColumns}
           sections={[{ rows: pendingPayablesRows }]}
           footerLabel="View All"
@@ -197,9 +204,9 @@ const WarehouseProcurementDashboard = () => {
       </div>
 
       {/* Supplier Performance + Returns Summary */}
-      <div className="flex flex-col lg:flex-row gap-6 mt-6">
+      <div className="flex flex-col lg:flex-row gap-5 mt-5">
         <SummaryCard
-          title="Supplier Performace"
+          title="Supplier Performance"
           columns={supplierPerfColumns}
           viewLabel="View Suppliers"
         />
@@ -211,11 +218,11 @@ const WarehouseProcurementDashboard = () => {
       </div>
 
       {/* Recent Procurement Activity */}
-      <div className="mt-6 w-full rounded-[14px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.06)]">
-        <div className="border-b border-slate-200 px-5 py-3">
-          <h3 className="text-[18px] font-bold text-slate-900">Recent Procurement Activity</h3>
+      <div className="mt-5 w-full rounded-[14px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.06)]">
+        <div className="border-b border-slate-200 px-4 py-2.5">
+          <h3 className="text-sm md:text-base font-bold text-slate-900">Recent Procurement Activity</h3>
         </div>
-        <div className="px-5 py-4">
+        <div className="px-4 py-3">
           {activityGroups.map((group, i) => (
             <ActivityGroup key={i} date={group.date} items={group.items} />
           ))}
