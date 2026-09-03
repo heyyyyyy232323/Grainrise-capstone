@@ -699,6 +699,77 @@ export const getUserSidebarConfig = (role = "admin") => {
       ],
     },
 
+    branch_manager: {
+      panelLabel: "BRANCH MANAGER PANEL",
+      sections: [
+        {
+          title: "MAIN",
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/branch-manager/dashboard",
+            },
+          ],
+        },
+        {
+          title: "MANAGEMENT",
+          items: [
+            {
+              label: "Order Approval",
+              icon: ClipboardList,
+              path: "/branch-manager/order-approval",
+            },
+          ],
+        },
+        {
+          title: "ANALYTICS",
+          items: [
+            {
+              label: "Performance Monitoring",
+              icon: FileBarChart,
+              path: "/branch-manager/performance",
+            },
+          ],
+        },
+        {
+          title: "HISTORY",
+          items: [
+            {
+              label: "Fulfillment History",
+              icon: PackageCheck,
+              path: "/branch-manager/fulfillment-history",
+            },
+            {
+              label: "Sales History",
+              icon: History,
+              path: "/branch-manager/sales-history",
+            },
+            {
+              label: "Procurement Receiving History",
+              icon: Truck,
+              path: "/branch-manager/procurement-history",
+            },
+            {
+              label: "Finance Management History",
+              icon: CreditCard,
+              path: "/branch-manager/finance-history",
+            },
+          ],
+        },
+        {
+          title: "RESOURCES",
+          items: [
+            {
+              label: "News & Updates",
+              icon: Newspaper,
+              path: "/branch-manager/news-updates",
+            },
+          ],
+        },
+      ],
+    },
+
     warehouse_driver: {
       panelLabel: "WAREHOUSE DRIVER PANEL",
       sections: [
@@ -992,6 +1063,7 @@ export const userSidebarRoles = [
   "warehouse_procurement",
   "warehouse_finance",
   "warehouse_manager",
+  "branch_manager",
   "warehouse_driver",
   "miller_driver",
   "supplier_encoder",
