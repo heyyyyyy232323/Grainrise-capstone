@@ -460,11 +460,11 @@ export default function LandingPage() {
             Power the Future of Rice Distribution
           </h2>
           <p className="lp-cta-banner__sub">
-            Register as a <strong>Supplier</strong> or <strong>Warehouse Manager</strong> and manage your operations with GrainRise.
+            Register as a <strong>Farmer</strong>, <strong>Supplier</strong>, <strong>Warehouse</strong>, or <strong>Retailer</strong> and manage your operations with GrainRise.
           </p>
           <button
             className="lp-btn lp-cta-banner__btn"
-            onClick={() => navigate('/register/supplier-warehouse')}
+            onClick={() => navigate('/register')}
             id="cta-get-started-btn"
           >
             Join Us Now

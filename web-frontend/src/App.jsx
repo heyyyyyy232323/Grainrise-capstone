@@ -101,6 +101,20 @@ import FinanceManagementHistory from "./Users/WarehouseAccounts/WarehouseManager
 import WarehouseManagerNewsUpdates from "./Users/WarehouseAccounts/WarehouseManager/WarehouseManagerNewsUpdates";
 import WarehouseManagerNewsArticle from "./Users/WarehouseAccounts/WarehouseManager/WarehouseManagerNewsArticle";
 
+// ============================================================
+// BRANCH MANAGER
+// ============================================================
+
+import BranchManagerDashboard from "./Users/WarehouseAccounts/BranchManager/WarehouseManagerDashboard";
+import BranchManagerOrderApproval from "./Users/WarehouseAccounts/BranchManager/OrderApproval";
+import BranchManagerPerformanceMonitoring from "./Users/WarehouseAccounts/BranchManager/PerformanceMonitoring";
+import BranchManagerFulfillmentHistory from "./Users/WarehouseAccounts/BranchManager/FulfillmentHistory";
+import BranchManagerSalesHistory from "./Users/WarehouseAccounts/BranchManager/SalesHistory";
+import BranchManagerProcurementReceivingHistory from "./Users/WarehouseAccounts/BranchManager/ProcurementReceivingHistory";
+import BranchManagerFinanceManagementHistory from "./Users/WarehouseAccounts/BranchManager/FinanceManagementHistory";
+import BranchManagerNewsUpdates from "./Users/WarehouseAccounts/BranchManager/WarehouseManagerNewsUpdates";
+import BranchManagerNewsArticle from "./Users/WarehouseAccounts/BranchManager/WarehouseManagerNewsArticle";
+
 
 // ============================================================
 // WAREHOUSE DRIVER
@@ -259,7 +273,7 @@ function App() {
 
           <Route
             path="/register/supplier-warehouse"
-            element={<SupplierWarehouseGateway />}
+            element={<Register />}
           />
 
           <Route
@@ -557,6 +571,63 @@ function App() {
 
             <Route
               path="/warehouse-manager/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
+
+
+          {/* ==================================================
+              BRANCH MANAGER
+          ================================================== */}
+
+          <Route element={<WarehouseEncoderLayout role="branch_manager" />}>
+            <Route
+              path="/branch-manager/dashboard"
+              element={<BranchManagerDashboard />}
+            />
+
+            <Route
+              path="/branch-manager/order-approval"
+              element={<BranchManagerOrderApproval />}
+            />
+
+            <Route
+              path="/branch-manager/performance"
+              element={<BranchManagerPerformanceMonitoring />}
+            />
+
+            <Route
+              path="/branch-manager/fulfillment-history"
+              element={<BranchManagerFulfillmentHistory />}
+            />
+
+            <Route
+              path="/branch-manager/sales-history"
+              element={<BranchManagerSalesHistory />}
+            />
+
+            <Route
+              path="/branch-manager/procurement-history"
+              element={<BranchManagerProcurementReceivingHistory />}
+            />
+
+            <Route
+              path="/branch-manager/finance-history"
+              element={<BranchManagerFinanceManagementHistory />}
+            />
+
+            <Route
+              path="/branch-manager/news-updates"
+              element={<BranchManagerNewsUpdates />}
+            />
+
+            <Route
+              path="/branch-manager/news-updates/:id"
+              element={<BranchManagerNewsArticle />}
+            />
+
+            <Route
+              path="/branch-manager/profile"
               element={<UserAccountProfile />}
             />
           </Route>
