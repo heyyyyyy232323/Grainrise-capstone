@@ -222,22 +222,21 @@ const RetailerRegister = () => {
 
 
   const FIELD_ORDER = [
-    "firstName",
-    "lastName",
-    "gender",
-
-    "province",
-    "municipality",
-    "barangay",
-    "postalCode",
-    "streetAddress",
-
     "email",
     "contactNumber",
     "username",
     "password",
     "confirmPassword",
     "agreeTerms",
+
+    "firstName",
+    "lastName",
+    "gender",
+    "province",
+    "municipality",
+    "barangay",
+    "postalCode",
+    "streetAddress",
   ];
 
 
@@ -490,58 +489,11 @@ const RetailerRegister = () => {
 
 
   // =========================================================
-  // STEP 1 VALIDATION
+  // STEP 1 VALIDATION — ACCOUNT INFORMATION
   // =========================================================
 
   const validateStep1 = () => {
     const rules = {
-      firstName:
-        validators.firstName(
-          form.firstName
-        ),
-
-      middleInitial:
-        validators.middleInitial(
-          form.middleInitial
-        ),
-
-      lastName:
-        validators.lastName(
-          form.lastName
-        ),
-
-      gender:
-        form.gender
-          ? ""
-          : "Gender is required",
-
-      province:
-        address.province
-          ? ""
-          : "Province is required",
-
-      municipality:
-        address.municipality
-          ? ""
-          : "Municipality/City is required",
-
-      barangay:
-        address.barangay
-          ? ""
-          : "Barangay is required",
-
-      postalCode:
-        /^\d{4}$/.test(
-          address.postalCode
-        )
-          ? ""
-          : "Please enter a valid 4-digit postal code",
-
-      streetAddress:
-        validators.streetAddress(
-          form.streetAddress
-        ),
-
       email:
         validators.email(
           form.email
@@ -602,6 +554,102 @@ const RetailerRegister = () => {
 
 
     return passed;
+  };
+
+
+  // =========================================================
+  // STEP 3 VALIDATION — PERSONAL INFORMATION
+  // =========================================================
+
+  const validateStep3 = () => {
+    const rules = {
+      firstName:
+        validators.firstName(
+          form.firstName
+        ),
+
+      middleInitial:
+        validators.middleInitial(
+          form.middleInitial
+        ),
+
+      lastName:
+        validators.lastName(
+          form.lastName
+        ),
+
+      gender:
+        form.gender
+          ? ""
+          : "Gender is required",
+
+      province:
+        address.province
+          ? ""
+          : "Province is required",
+
+      municipality:
+        address.municipality
+          ? ""
+          : "Municipality/City is required",
+
+      barangay:
+        address.barangay
+          ? ""
+          : "Barangay is required",
+
+      postalCode:
+        /^\d{4}$/.test(
+          address.postalCode
+        )
+          ? ""
+          : "Please enter a valid 4-digit postal code",
+
+      streetAddress:
+        validators.streetAddress(
+          form.streetAddress
+        ),
+    };
+
+
+    const passed =
+      validate(rules);
+
+
+    if (!passed) {
+      setValidationMsg(
+        "Please correct the highlighted fields before proceeding."
+      );
+
+      scrollToFirstError(
+        rules
+      );
+
+      showToast({
+        type: "error",
+        title: "Validation Error",
+        message:
+          "Please correct the highlighted fields before proceeding.",
+        duration: 4000,
+      });
+    } else {
+      setValidationMsg("");
+    }
+
+
+    return passed;
+  };
+
+
+  const handleNextStep3 = (event) => {
+    event.preventDefault();
+
+    if (!validateStep3()) {
+      return;
+    }
+
+    setValidationMsg("");
+    setStep(4);
   };
 
 
@@ -1024,109 +1072,67 @@ const RetailerRegister = () => {
   // STEPPER
   // =========================================================
 
-  const renderStepper = () => (
-    <div className="mt-8 mb-10 bg-[#f3f9f4] border border-green-50/50 rounded-2xl p-4 md:py-6 md:px-12 flex items-center justify-between relative overflow-hidden">
-      <div className="flex flex-col items-center z-10 flex-1">
-        <div
-          className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-md border-4 border-white ${
-            step >= 1
-              ? "bg-[#08511f] text-white"
-              : "bg-gray-300 text-white"
-          }`}
-        >
-          {step > 1 ? (
-            <Check
-              size={18}
-              strokeWidth={3}
-            />
-          ) : (
-            "1"
-          )}
-        </div>
+  const renderStepper = () => {
+    const steps = [
+      "Account Information",
+      "Account Verification",
+      "Personal Information",
+      "Document Verification",
+    ];
 
-        <span
-          className={`text-[11px] md:text-xs font-semibold mt-2 whitespace-nowrap ${
-            step >= 1
-              ? "text-[#08511f]"
-              : "text-gray-400"
-          }`}
-        >
-          Personal Information
-        </span>
+    return (
+      <div className="mt-8 mb-10 bg-[#f3f9f4] border border-green-50/50 rounded-2xl p-4 md:py-6 md:px-8 flex items-start justify-between relative overflow-hidden">
+        {steps.map((label, index) => {
+          const stepNumber = index + 1;
+          const isActive = step >= stepNumber;
+          const isComplete = step > stepNumber;
+
+          return (
+            <React.Fragment key={label}>
+              {index > 0 && (
+                <div
+                  className={`h-0.5 flex-1 mx-1 md:mx-3 relative top-5 ${
+                    step >= stepNumber
+                      ? "bg-[#08511f]"
+                      : "bg-gray-300"
+                  }`}
+                />
+              )}
+
+              <div className="flex flex-col items-center z-10 flex-1 min-w-0">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 border-white ${
+                    isActive
+                      ? "bg-[#08511f] text-white shadow-md"
+                      : "bg-gray-300 text-white"
+                  }`}
+                >
+                  {isComplete ? (
+                    <Check
+                      size={18}
+                      strokeWidth={3}
+                    />
+                  ) : (
+                    stepNumber
+                  )}
+                </div>
+
+                <span
+                  className={`text-[10px] md:text-xs font-semibold mt-2 text-center leading-tight ${
+                    isActive
+                      ? "text-[#08511f]"
+                      : "text-gray-400"
+                  }`}
+                >
+                  {label}
+                </span>
+              </div>
+            </React.Fragment>
+          );
+        })}
       </div>
-
-
-      <div
-        className={`h-0.5 flex-1 mx-2 md:mx-4 relative top-[-10px] ${
-          step >= 2
-            ? "bg-[#08511f]"
-            : "bg-gray-300"
-        }`}
-      />
-
-
-      <div className="flex flex-col items-center z-10 flex-1">
-        <div
-          className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 border-white ${
-            step >= 2
-              ? "bg-[#08511f] text-white shadow-md"
-              : "bg-gray-300 text-white"
-          }`}
-        >
-          {step > 2 ? (
-            <Check
-              size={18}
-              strokeWidth={3}
-            />
-          ) : (
-            "2"
-          )}
-        </div>
-
-        <span
-          className={`text-[11px] md:text-xs font-semibold mt-2 whitespace-nowrap ${
-            step >= 2
-              ? "text-[#08511f]"
-              : "text-gray-400"
-          }`}
-        >
-          Account Verification
-        </span>
-      </div>
-
-
-      <div
-        className={`h-0.5 flex-1 mx-2 md:mx-4 relative top-[-10px] ${
-          step >= 3
-            ? "bg-[#08511f]"
-            : "bg-gray-300"
-        }`}
-      />
-
-
-      <div className="flex flex-col items-center z-10 flex-1">
-        <div
-          className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 border-white ${
-            step >= 3
-              ? "bg-[#08511f] text-white shadow-md"
-              : "bg-gray-300 text-white"
-          }`}
-        >
-          3
-        </div>
-
-        <span
-          className={`text-[11px] md:text-xs font-semibold mt-2 whitespace-nowrap ${
-            step >= 3
-              ? "text-[#08511f]"
-              : "text-gray-400"
-          }`}
-        >
-          Document Verification
-        </span>
-      </div>
-    </div>
-  );
+    );
+  };
 
 
   // =========================================================
@@ -1259,13 +1265,16 @@ const RetailerRegister = () => {
 
         <span className="text-xs md:text-sm font-bold text-emerald-800 tracking-wider uppercase">
           {step === 1 &&
-            "Step 1 of 3: Personal Information"}
+            "Step 1 of 4: Account Information"}
 
           {step === 2 &&
-            "Step 2 of 3: Account Verification"}
+            "Step 2 of 4: Account Verification"}
 
           {step === 3 &&
-            "Step 3 of 3: Document Verification"}
+            "Step 3 of 4: Personal Information"}
+
+          {step === 4 &&
+            "Step 4 of 4: Document Verification"}
         </span>
       </div>
 
@@ -1289,17 +1298,23 @@ const RetailerRegister = () => {
                 "Verify Your Account"}
 
               {step === 3 &&
+                "Personal Information"}
+
+              {step === 4 &&
                 "Document Verification"}
             </h1>
 
             <p className="text-gray-500 text-sm md:text-base mt-2 max-w-lg">
               {step === 1 &&
-                "Complete your personal information to begin your registration."}
+                "Enter your account details to begin your registration."}
 
               {step === 2 &&
                 "Enter the verification code sent to your registered email."}
 
               {step === 3 &&
+                "Provide your personal and address information."}
+
+              {step === 4 &&
                 "Upload the required documents to complete your retailer registration."}
             </p>
           </div>
@@ -1315,7 +1330,7 @@ const RetailerRegister = () => {
 
 
           {/* =================================================
-              STEP 1
+              STEP 1 — ACCOUNT INFORMATION
           ================================================= */}
 
           {step === 1 && (
@@ -1325,355 +1340,6 @@ const RetailerRegister = () => {
               }
               className="space-y-8"
             >
-
-              {/* PERSONAL INFORMATION */}
-
-              <div>
-                <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
-                  Personal Information
-                </h3>
-
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
-                  <FieldWithError
-                    error={
-                      errors.firstName
-                    }
-                    fieldRef={
-                      setFieldRef(
-                        "firstName"
-                      )
-                    }
-                  >
-                    <CustomTextbox
-                      label={
-                        <>
-                          First Name{" "}
-                          <span className="text-red-500">
-                            *
-                          </span>
-                        </>
-                      }
-                      placeholder="e.g. Juan"
-                      value={
-                        form.firstName
-                      }
-                      onChange={(event) =>
-                        handleInputChange(
-                          "firstName",
-                          event.target.value
-                        )
-                      }
-                    />
-                  </FieldWithError>
-
-
-                  <CustomTextbox
-                    label={
-                      <>
-                        Middle Initial{" "}
-                        <span className="text-gray-400 font-normal text-xs">
-                          (Optional)
-                        </span>
-                      </>
-                    }
-                    placeholder="M.I."
-                    value={
-                      form.middleInitial
-                    }
-                    onChange={(event) =>
-                      handleInputChange(
-                        "middleInitial",
-                        event.target.value
-                      )
-                    }
-                  />
-
-
-                  <FieldWithError
-                    error={
-                      errors.lastName
-                    }
-                    fieldRef={
-                      setFieldRef(
-                        "lastName"
-                      )
-                    }
-                  >
-                    <CustomTextbox
-                      label={
-                        <>
-                          Last Name{" "}
-                          <span className="text-red-500">
-                            *
-                          </span>
-                        </>
-                      }
-                      placeholder="e.g. Dela Cruz"
-                      value={
-                        form.lastName
-                      }
-                      onChange={(event) =>
-                        handleInputChange(
-                          "lastName",
-                          event.target.value
-                        )
-                      }
-                    />
-                  </FieldWithError>
-                </div>
-
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <Dropdown
-                    label="Suffix (Optional)"
-                    placeholder="Select suffix"
-                    options={
-                      SUFFIXES
-                    }
-                    value={
-                      form.suffix
-                    }
-                    onChange={(value) =>
-                      handleInputChange(
-                        "suffix",
-                        value
-                      )
-                    }
-                  />
-
-                  <div
-                    className="md:col-span-2"
-                    ref={
-                      setFieldRef(
-                        "gender"
-                      )
-                    }
-                  >
-                    <Dropdown
-                      label="Gender *"
-                      placeholder="Select Gender"
-                      options={
-                        GENDERS
-                      }
-                      value={
-                        form.gender
-                      }
-                      onChange={(value) =>
-                        handleInputChange(
-                          "gender",
-                          value
-                        )
-                      }
-                      error={
-                        errors.gender
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-
-
-              {/* ADDRESS INFORMATION */}
-
-              <div>
-                <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
-                  Address Information
-                </h3>
-
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                  <div
-                    ref={
-                      setFieldRef(
-                        "province"
-                      )
-                    }
-                  >
-                    <Dropdown
-                      label="Province *"
-                      placeholder={
-                        address.loading.provinces
-                          ? "Loading provinces..."
-                          : "Select Province"
-                      }
-                      options={
-                        address.provinceOptions
-                      }
-                      value={
-                        address.province
-                      }
-                      onChange={
-                        handleProvinceChange
-                      }
-                      error={
-                        errors.province ||
-                        address.errors.provinces
-                      }
-                    />
-                  </div>
-
-
-                  <div
-                    ref={
-                      setFieldRef(
-                        "municipality"
-                      )
-                    }
-                  >
-                    <Dropdown
-                      label="Municipality/City *"
-                      placeholder={
-                        address.loading.municipalities
-                          ? "Loading cities/municipalities..."
-                          : !address.province
-                          ? "Select Province First"
-                          : "Select City/Municipality"
-                      }
-                      options={
-                        address.municipalityOptions
-                      }
-                      value={
-                        address.municipality
-                      }
-                      onChange={
-                        handleMunicipalityChange
-                      }
-                      error={
-                        errors.municipality ||
-                        address.errors.municipalities
-                      }
-                    />
-                  </div>
-                </div>
-
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div
-                    ref={
-                      setFieldRef(
-                        "barangay"
-                      )
-                    }
-                  >
-                    <Dropdown
-                      label="Barangay *"
-                      placeholder={
-                        address.loading.barangays
-                          ? "Loading barangays..."
-                          : !address.municipality
-                          ? "Select Municipality First"
-                          : "Select Barangay"
-                      }
-                      options={
-                        address.barangayOptions
-                      }
-                      value={
-                        address.barangay
-                      }
-                      onChange={
-                        handleBarangayChange
-                      }
-                      error={
-                        errors.barangay ||
-                        address.errors.barangays
-                      }
-                    />
-                  </div>
-
-
-                  {/* POSTAL CODE — AUTO + EDITABLE */}
-
-                  <div
-                    ref={
-                      setFieldRef(
-                        "postalCode"
-                      )
-                    }
-                  >
-                    <label className="block mb-2 text-sm font-medium text-gray-700">
-                      Postal Code{" "}
-
-                      <span className="text-gray-400 font-normal text-xs">
-                        (Auto Generated — Editable)
-                      </span>
-                    </label>
-
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={4}
-                      value={
-                        address.postalCode
-                      }
-                      onChange={
-                        handlePostalCodeChange
-                      }
-                      placeholder={
-                        address.loading.postalCode
-                          ? "Loading..."
-                          : !address.municipality
-                          ? "Select Municipality First"
-                          : "Enter Postal Code"
-                      }
-                      className={`w-full px-4 py-3 rounded-xl bg-white text-gray-700 border outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100 ${
-                        errors.postalCode
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
-                    />
-
-                    {errors.postalCode && (
-                      <span className="text-xs text-red-500 mt-1 block">
-                        {
-                          errors.postalCode
-                        }
-                      </span>
-                    )}
-
-                    {address.postalStatus === "unavailable" &&
-                      !errors.postalCode && (
-                        <span className="text-xs text-amber-600 mt-1 block">
-                          Automatic postal lookup was unavailable. You may enter it manually.
-                        </span>
-                      )}
-                  </div>
-
-
-                  <FieldWithError
-                    error={
-                      errors.streetAddress
-                    }
-                    fieldRef={
-                      setFieldRef(
-                        "streetAddress"
-                      )
-                    }
-                  >
-                    <CustomTextbox
-                      label={
-                        <>
-                          Street Address{" "}
-                          <span className="text-red-500">
-                            *
-                          </span>
-                        </>
-                      }
-                      placeholder="Unit/Bldg, Street Name"
-                      value={
-                        form.streetAddress
-                      }
-                      onChange={(event) =>
-                        handleInputChange(
-                          "streetAddress",
-                          event.target.value
-                        )
-                      }
-                    />
-                  </FieldWithError>
-                </div>
-              </div>
-
 
               {/* ACCOUNT DETAILS */}
 
@@ -2015,6 +1681,7 @@ const RetailerRegister = () => {
               </div>
 
 
+
               {/* TERMS */}
 
               <div
@@ -2062,6 +1729,8 @@ const RetailerRegister = () => {
                   }
                 </span>
               )}
+
+
 
 
               {validationMsg && (
@@ -2246,10 +1915,415 @@ const RetailerRegister = () => {
 
 
           {/* =================================================
-              STEP 3 — DOCUMENTS
+              STEP 3 — PERSONAL INFORMATION
           ================================================= */}
 
           {step === 3 && (
+            <form
+              onSubmit={
+                handleNextStep3
+              }
+              className="space-y-8"
+            >
+
+              {/* PERSONAL INFORMATION */}
+
+              <div>
+                <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
+                  Personal Information
+                </h3>
+
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+                  <FieldWithError
+                    error={
+                      errors.firstName
+                    }
+                    fieldRef={
+                      setFieldRef(
+                        "firstName"
+                      )
+                    }
+                  >
+                    <CustomTextbox
+                      label={
+                        <>
+                          First Name{" "}
+                          <span className="text-red-500">
+                            *
+                          </span>
+                        </>
+                      }
+                      placeholder="e.g. Juan"
+                      value={
+                        form.firstName
+                      }
+                      onChange={(event) =>
+                        handleInputChange(
+                          "firstName",
+                          event.target.value
+                        )
+                      }
+                    />
+                  </FieldWithError>
+
+
+                  <CustomTextbox
+                    label={
+                      <>
+                        Middle Initial{" "}
+                        <span className="text-gray-400 font-normal text-xs">
+                          (Optional)
+                        </span>
+                      </>
+                    }
+                    placeholder="M.I."
+                    value={
+                      form.middleInitial
+                    }
+                    onChange={(event) =>
+                      handleInputChange(
+                        "middleInitial",
+                        event.target.value
+                      )
+                    }
+                  />
+
+
+                  <FieldWithError
+                    error={
+                      errors.lastName
+                    }
+                    fieldRef={
+                      setFieldRef(
+                        "lastName"
+                      )
+                    }
+                  >
+                    <CustomTextbox
+                      label={
+                        <>
+                          Last Name{" "}
+                          <span className="text-red-500">
+                            *
+                          </span>
+                        </>
+                      }
+                      placeholder="e.g. Dela Cruz"
+                      value={
+                        form.lastName
+                      }
+                      onChange={(event) =>
+                        handleInputChange(
+                          "lastName",
+                          event.target.value
+                        )
+                      }
+                    />
+                  </FieldWithError>
+                </div>
+
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Dropdown
+                    label="Suffix (Optional)"
+                    placeholder="Select suffix"
+                    options={
+                      SUFFIXES
+                    }
+                    value={
+                      form.suffix
+                    }
+                    onChange={(value) =>
+                      handleInputChange(
+                        "suffix",
+                        value
+                      )
+                    }
+                  />
+
+                  <div
+                    className="md:col-span-2"
+                    ref={
+                      setFieldRef(
+                        "gender"
+                      )
+                    }
+                  >
+                    <Dropdown
+                      label="Gender *"
+                      placeholder="Select Gender"
+                      options={
+                        GENDERS
+                      }
+                      value={
+                        form.gender
+                      }
+                      onChange={(value) =>
+                        handleInputChange(
+                          "gender",
+                          value
+                        )
+                      }
+                      error={
+                        errors.gender
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+
+
+              {/* ADDRESS INFORMATION */}
+
+              <div>
+                <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-5 text-left">
+                  Address Information
+                </h3>
+
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                  <div
+                    ref={
+                      setFieldRef(
+                        "province"
+                      )
+                    }
+                  >
+                    <Dropdown
+                      label="Province *"
+                      placeholder={
+                        address.loading.provinces
+                          ? "Loading provinces..."
+                          : "Select Province"
+                      }
+                      options={
+                        address.provinceOptions
+                      }
+                      value={
+                        address.province
+                      }
+                      onChange={
+                        handleProvinceChange
+                      }
+                      error={
+                        errors.province ||
+                        address.errors.provinces
+                      }
+                    />
+                  </div>
+
+
+                  <div
+                    ref={
+                      setFieldRef(
+                        "municipality"
+                      )
+                    }
+                  >
+                    <Dropdown
+                      label="Municipality/City *"
+                      placeholder={
+                        address.loading.municipalities
+                          ? "Loading cities/municipalities..."
+                          : !address.province
+                          ? "Select Province First"
+                          : "Select City/Municipality"
+                      }
+                      options={
+                        address.municipalityOptions
+                      }
+                      value={
+                        address.municipality
+                      }
+                      onChange={
+                        handleMunicipalityChange
+                      }
+                      error={
+                        errors.municipality ||
+                        address.errors.municipalities
+                      }
+                    />
+                  </div>
+                </div>
+
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div
+                    ref={
+                      setFieldRef(
+                        "barangay"
+                      )
+                    }
+                  >
+                    <Dropdown
+                      label="Barangay *"
+                      placeholder={
+                        address.loading.barangays
+                          ? "Loading barangays..."
+                          : !address.municipality
+                          ? "Select Municipality First"
+                          : "Select Barangay"
+                      }
+                      options={
+                        address.barangayOptions
+                      }
+                      value={
+                        address.barangay
+                      }
+                      onChange={
+                        handleBarangayChange
+                      }
+                      error={
+                        errors.barangay ||
+                        address.errors.barangays
+                      }
+                    />
+                  </div>
+
+
+                  {/* POSTAL CODE — AUTO + EDITABLE */}
+
+                  <div
+                    ref={
+                      setFieldRef(
+                        "postalCode"
+                      )
+                    }
+                  >
+                    <label className="block mb-2 text-sm font-medium text-gray-700">
+                      Postal Code{" "}
+
+                      <span className="text-gray-400 font-normal text-xs">
+                        (Auto Generated — Editable)
+                      </span>
+                    </label>
+
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={
+                        address.postalCode
+                      }
+                      onChange={
+                        handlePostalCodeChange
+                      }
+                      placeholder={
+                        address.loading.postalCode
+                          ? "Loading..."
+                          : !address.municipality
+                          ? "Select Municipality First"
+                          : "Enter Postal Code"
+                      }
+                      className={`w-full px-4 py-3 rounded-xl bg-white text-gray-700 border outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100 ${
+                        errors.postalCode
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
+                    />
+
+                    {errors.postalCode && (
+                      <span className="text-xs text-red-500 mt-1 block">
+                        {
+                          errors.postalCode
+                        }
+                      </span>
+                    )}
+
+                    {address.postalStatus === "unavailable" &&
+                      !errors.postalCode && (
+                        <span className="text-xs text-amber-600 mt-1 block">
+                          Automatic postal lookup was unavailable. You may enter it manually.
+                        </span>
+                      )}
+                  </div>
+
+
+                  <FieldWithError
+                    error={
+                      errors.streetAddress
+                    }
+                    fieldRef={
+                      setFieldRef(
+                        "streetAddress"
+                      )
+                    }
+                  >
+                    <CustomTextbox
+                      label={
+                        <>
+                          Street Address{" "}
+                          <span className="text-red-500">
+                            *
+                          </span>
+                        </>
+                      }
+                      placeholder="Unit/Bldg, Street Name"
+                      value={
+                        form.streetAddress
+                      }
+                      onChange={(event) =>
+                        handleInputChange(
+                          "streetAddress",
+                          event.target.value
+                        )
+                      }
+                    />
+                  </FieldWithError>
+                </div>
+              </div>
+
+
+
+
+              {validationMsg && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                  <p className="text-sm text-red-700">
+                    {
+                      validationMsg
+                    }
+                  </p>
+                </div>
+              )}
+
+
+              <div className="pt-6 border-t border-gray-100 flex justify-between">
+                <CustomWhiteButton
+                  type="button"
+                  onClick={() =>
+                    setStep(2)
+                  }
+                  className="!rounded-full w-auto !p-2 !px-6"
+                  icon={
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      <ArrowLeft size={16} />
+                      Previous
+                    </span>
+                  }
+                />
+
+                <CustomGreenButton
+                  type="submit"
+                  text={
+                    <span className="flex items-center gap-2">
+                      Next Step
+                      <ArrowRight size={18} />
+                    </span>
+                  }
+                  className="!rounded-full !px-8 !py-3 shadow-lg"
+                />
+              </div>
+            </form>
+          )}
+
+
+          {/* =================================================
+              STEP 4 — DOCUMENTS
+          ================================================= */}
+
+          {step === 4 && (
             <div className="flex flex-col text-left">
               <h3 className="text-[#08511f] font-bold text-[15px] tracking-wider uppercase border-b border-gray-100 pb-2 mb-6">
                 Required Documents
@@ -2540,7 +2614,7 @@ const RetailerRegister = () => {
               <div className="w-full flex justify-between">
                 <CustomWhiteButton
                   onClick={() =>
-                    setStep(2)
+                    setStep(3)
                   }
                   className="!rounded-full w-auto !p-2 !px-6"
                   icon={

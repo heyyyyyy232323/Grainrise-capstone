@@ -117,6 +117,21 @@ import BranchManagerNewsArticle from "./Users/WarehouseAccounts/BranchManager/Wa
 
 
 // ============================================================
+// BRANCH MANAGER
+// ============================================================
+
+import BranchManagerDashboard from "./Users/WarehouseAccounts/BranchManager/WarehouseManagerDashboard";
+import BranchManagerOrderApproval from "./Users/WarehouseAccounts/BranchManager/OrderApproval";
+import BranchManagerPerformanceMonitoring from "./Users/WarehouseAccounts/BranchManager/PerformanceMonitoring";
+import BranchManagerFulfillmentHistory from "./Users/WarehouseAccounts/BranchManager/FulfillmentHistory";
+import BranchManagerSalesHistory from "./Users/WarehouseAccounts/BranchManager/SalesHistory";
+import BranchManagerProcurementReceivingHistory from "./Users/WarehouseAccounts/BranchManager/ProcurementReceivingHistory";
+import BranchManagerFinanceManagementHistory from "./Users/WarehouseAccounts/BranchManager/FinanceManagementHistory";
+import BranchManagerNewsUpdates from "./Users/WarehouseAccounts/BranchManager/WarehouseManagerNewsUpdates";
+import BranchManagerNewsArticle from "./Users/WarehouseAccounts/BranchManager/WarehouseManagerNewsArticle";
+
+
+// ============================================================
 // WAREHOUSE DRIVER
 // ============================================================
 
@@ -246,6 +261,7 @@ import FarmerContracts from "./Users/FarmersAccounts/FarmerContracts";
 import FarmerNewsUpdates from "./Users/FarmersAccounts/FarmerNewsUpdates";
 import FarmerNewsArticle from "./Users/FarmersAccounts/FarmerNewsArticle";
 import FarmerFarmManagement from "./Users/FarmersAccounts/FarmerFarmManagement";
+import FarmerFarmDetails from "./Users/FarmersAccounts/FarmerFarmDetails";
 import FarmerPointOfSale from "./Users/FarmersAccounts/FarmerPointOfSale";
 import FarmerTransactionHistory from "./Users/FarmersAccounts/FarmerTransactionHistory";
 
@@ -1058,6 +1074,11 @@ function App() {
             <Route
               path="/farmer/farm-management"
               element={<FarmerFarmManagement />}
+            />
+
+            <Route
+              path="/farmer/farm-management/:farmId"
+              element={<FarmerFarmDetails />}
             />
 
             <Route
