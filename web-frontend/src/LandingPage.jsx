@@ -23,11 +23,22 @@ import {
   Download,
   Tractor,
   ClipboardCheck,
-  ClipboardList
+  ClipboardList,
+  ShieldCheck,
+  LogIn,
+  UserPlus,
+  Building2,
+  ShoppingBag,
+  ShoppingCart,
+  CloudSun,
+  KeyRound,
+  HelpCircle,
+  Headphones
 } from 'lucide-react';
 
 // Images
-import dashboardMockup from './assets/lapisIStop.png';
+import dashboardMockup from './assets/dashboardd.png';
+import phoneMockup from './assets/phone3.png';
 import grainHands from './assets/handss.png';
 import groceryImg from './assets/Grocery.png';
 import warehouseImg from './assets/supplier-warehouse.jpg';
@@ -40,6 +51,8 @@ import phone2Img from './assets/phone2.jpg';
 import ctaBgImg from './assets/adminloginBG.png';
 import grainBgImg from './assets/grainnn.jpg';
 import fieldBgImg from './assets/field2.png';
+import riceBgImg from './assets/ricee.jpg';
+import heroBgImg from './assets/burnt.jpg';
 
 // ─── Animated counter ─────────────────────────────────────────────────────────
 function useCounter(target, duration, trigger) {
@@ -124,13 +137,115 @@ export default function LandingPage() {
   };
 
   const ECOSYSTEM_STEPS = [
-    { icon: <Tractor size={26} strokeWidth={1.8} />,        label: 'Farmers'    },
-    { icon: <Truck size={26} strokeWidth={1.8} />,          label: 'Suppliers'  },
-    { icon: <Warehouse size={26} strokeWidth={1.8} />,      label: 'Warehouse'  },
-    { icon: <ClipboardCheck size={26} strokeWidth={1.8} />,  label: 'Inventory'  },
-    { icon: <ClipboardList size={26} strokeWidth={1.8} />,   label: 'Orders'     },
-    { icon: <Truck size={26} strokeWidth={1.8} />,          label: 'Transport'  },
-    { icon: <Store size={26} strokeWidth={1.8} />,          label: 'Retailers'  },
+    { icon: <Tractor size={24} strokeWidth={1.8} />,        label: 'Farmers'    },
+    { icon: <Truck size={24} strokeWidth={1.8} />,          label: 'Millers'    },
+    { icon: <Warehouse size={24} strokeWidth={1.8} />,      label: 'Warehouse'  },
+    { icon: <Package size={24} strokeWidth={1.8} />,        label: 'Inventory'  },
+    { icon: <ClipboardList size={24} strokeWidth={1.8} />,   label: 'Orders'     },
+    { icon: <Truck size={24} strokeWidth={1.8} />,          label: 'Transport'  },
+    { icon: <Store size={24} strokeWidth={1.8} />,          label: 'Retailers'  },
+  ];
+
+  const ROLE_PORTALS = [
+    {
+      icon: <Tractor size={24} strokeWidth={1.8} />,
+      title: 'Farmer Portal',
+      desc: 'Log harvests, monitor field agro-climatic advisories, verify moisture grades, and access forward pricing contracts.',
+      linkText: 'Continue as Farmer',
+      path: '/login',
+    },
+    {
+      icon: <Building2 size={24} strokeWidth={1.8} />,
+      title: 'Miller Portal',
+      desc: 'Oversee paddy intake lots, run continuous milling schedules, bid on co-op tenders, and generate milled output manifests.',
+      linkText: 'Continue as Miller',
+      path: '/login',
+    },
+    {
+      icon: <ShoppingBag size={24} strokeWidth={1.8} />,
+      title: 'Buyer Portal',
+      desc: 'Execute institutional procurement, bid on commercial rice parcels, review provenance dossiers, and manage contracts.',
+      linkText: 'Continue as Buyer',
+      path: '/login',
+    },
+    {
+      icon: <ShoppingCart size={24} strokeWidth={1.8} />,
+      title: 'Retailer Portal',
+      desc: 'Source authenticated milled sacks, coordinate freight drop-offs, track inbound delivery shipments, and update inventory.',
+      linkText: 'Continue as Retailer',
+      path: '/login',
+    },
+    {
+      icon: <Warehouse size={24} strokeWidth={1.8} />,
+      title: 'Warehouse Portal',
+      desc: 'Audit buffer stock silos, orchestrate pallet movements, manage bay storage thermography, and validate dispatch waybills.',
+      linkText: 'Continue as Warehouse',
+      path: '/login',
+    },
+  ];
+
+  const EXPLORE_FEATURES = [
+    {
+      icon: <ShoppingBag size={20} strokeWidth={1.8} />,
+      title: 'Procurement & Sourcing',
+      desc: 'Opportunities, bidding, product sourcing, and procurement.',
+    },
+    {
+      icon: <Package size={20} strokeWidth={1.8} />,
+      title: 'Inventory',
+      desc: 'Stock availability, monitoring, and warehouse inventory.',
+    },
+    {
+      icon: <CloudSun size={20} strokeWidth={1.8} />,
+      title: 'Climate & Forecasting',
+      desc: 'Climate-informed farming and demand forecasting.',
+    },
+    {
+      icon: <FileText size={20} strokeWidth={1.8} />,
+      title: 'Contracts',
+      desc: 'Applications, offers, agreements, and active contracts.',
+    },
+    {
+      icon: <ClipboardList size={20} strokeWidth={1.8} />,
+      title: 'Orders & Transactions',
+      desc: 'Purchasing, order processing, and transaction records.',
+    },
+    {
+      icon: <Truck size={20} strokeWidth={1.8} />,
+      title: 'Delivery & Logistics',
+      desc: 'Fulfillment, delivery coordination, and logistics tracking.',
+    },
+  ];
+
+  const HELP_CARDS = [
+    {
+      icon: <KeyRound size={18} strokeWidth={2} />,
+      title: 'Login Assistance',
+      desc: 'Recover account access or reset credentials.',
+      linkText: 'Recover Access',
+      action: () => navigate('/login'),
+    },
+    {
+      icon: <HelpCircle size={18} strokeWidth={2} />,
+      title: 'Frequently Asked Questions',
+      desc: 'Find answers about portal access and system use.',
+      linkText: 'Read FAQs',
+      action: () => alert('Frequently Asked Questions coming soon!'),
+    },
+    {
+      icon: <FileText size={18} strokeWidth={2} />,
+      title: 'Registration Guide',
+      desc: 'Get guidance on registering for GrainRise.',
+      linkText: 'View Guide',
+      action: () => navigate('/register'),
+    },
+    {
+      icon: <Headphones size={18} strokeWidth={2} />,
+      title: 'Contact Support',
+      desc: 'Contact the GrainRise support team.',
+      linkText: 'Contact Desk',
+      action: () => { window.location.href = 'mailto:grainriseph@gmail.com'; },
+    },
   ];
 
   const TESTIMONIALS = [
@@ -180,96 +295,56 @@ export default function LandingPage() {
 
       {/* ── HERO ─── */}
       <section className="lp-hero" id="hero">
-        <div className="lp-hero__bg" style={{ backgroundImage: `url(${fieldBgImg})` }} />
+        <div className="lp-hero__bg" style={{ backgroundImage: `url(${heroBgImg})` }} />
         <div className="lp-hero__overlay" />
-        <div className="lp-hero__bg-blob lp-hero__bg-blob--1" />
-        <div className="lp-hero__bg-blob lp-hero__bg-blob--2" />
 
-        <div className="lp-hero__content">
-          <h1 className="lp-hero__headline">
-            Empowering the Future of Rice<br />
-            Supply Chain Management
-          </h1>
-          <p className="lp-hero__sub">
-            Built for smarter inventory, logistics, and supply chain operations.
-          </p>
-          <div className="lp-hero__ctas">
-            <button className="lp-btn lp-btn--cta" onClick={() => navigate('/register')} id="hero-register-btn">Register</button>
-            <button className="lp-btn lp-btn--outline" onClick={() => scrollTo('about')} id="hero-learn-btn">Learn More</button>
-          </div>
-        </div>
+        <div className="lp-hero__inner">
+          {/* Left Column: Headline, Badge, Subtitle & CTAs */}
+          <div className="lp-hero__content">
+            <div className="lp-hero__badge">
+              <ShieldCheck size={16} strokeWidth={2.2} />
+              <span>Centralized System Portal</span>
+            </div>
 
-        {/* Dashboard mockup image */}
-        <div className="lp-hero__mockup-wrap">
-          <img
-            src={dashboardMockup}
-            alt="GrainRise Dashboard on a desktop monitor"
-            className="lp-hero__mockup"
-          />
-        </div>
+            <h1 className="lp-hero__headline">
+              GrainRise Supply Chain<br />
+              Portal
+            </h1>
 
-        {/* Stakeholder ticker */}
-        <div className="lp-hero__ticker">
-          <span className="lp-ticker__label">Built for Rice Supply Chain Stakeholders</span>
-          <div className="lp-ticker__items">
-            <div className="lp-ticker__item"><Tractor size={26} strokeWidth={1.8} /><span>Farmers</span></div>
-            <div className="lp-ticker__item"><Truck size={26} strokeWidth={1.8} /><span>Suppliers</span></div>
-            <div className="lp-ticker__item"><Warehouse size={26} strokeWidth={1.8} /><span>Warehouses</span></div>
-            <div className="lp-ticker__item"><Store size={26} strokeWidth={1.8} /><span>Retailers</span></div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── STATS BAR ─── */}
-      <section className="lp-stats" ref={statsRef}>
-        <div className="lp-stats__item">
-          <div className="lp-stats__number">{statsInView ? c500 : 0}+</div>
-          <div className="lp-stats__label">Businesses Supported</div>
-        </div>
-        <div className="lp-stats__item">
-          <div className="lp-stats__number">{statsInView ? c120 : 0}K</div>
-          <div className="lp-stats__label">Rice Bags Trackable</div>
-        </div>
-        <div className="lp-stats__item">
-          <div className="lp-stats__number">{statsInView ? c98 : 0}%</div>
-          <div className="lp-stats__label">Delivery Accuracy</div>
-        </div>
-        <div className="lp-stats__item">
-          <div className="lp-stats__number">24/7</div>
-          <div className="lp-stats__label">System Monitoring</div>
-        </div>
-      </section>
-
-      {/* ── ABOUT ─── */}
-      <AnimatedSection className="lp-about" id="about">
-        <div className="lp-about__inner">
-          <div className="lp-about__text">
-            <h2 className="lp-section-headline">
-              Transforming Rice Supply Chains Through Innovation and Technology
-            </h2>
-            <p className="lp-about__body">
-              GrainRise modernizes rice distribution through smart tools and sustainable practices. We connect key stakeholders across the ecosystem helping create a cleaner, faster, and more reliable supply chain.
+            <p className="lp-hero__sub">
+              A centralized, mission-critical platform synchronizing farmers, cooperative millers, institutional buyers, regional silos, and retailers across the national rice reserve and distribution grid.
             </p>
-            <p className="lp-about__body">
-              Built on innovation and inclusivity, we help businesses reduce waste, improve planning, and increase profitability. With AI-driven insights and forecasting, teams can make smarter decisions with confidence.
-            </p>
-            <div className="lp-about__checks">
-              <div className="lp-check-item"><CheckCircle size={18} strokeWidth={2} /><span>Real-time visibility</span></div>
-              <div className="lp-check-item"><CheckCircle size={18} strokeWidth={2} /><span>Smarter restocking</span></div>
-              <div className="lp-check-item"><CheckCircle size={18} strokeWidth={2} /><span>Cleaner operations</span></div>
+
+            <div className="lp-hero__ctas">
+              <button
+                className="lp-btn lp-btn--primary lp-hero__btn-login"
+                onClick={() => navigate('/login')}
+                id="hero-login-btn"
+              >
+                <LogIn size={16} strokeWidth={2.2} />
+                <span>Log In</span>
+              </button>
+              <button
+                className="lp-btn lp-btn--outline lp-hero__btn-register"
+                onClick={() => navigate('/register')}
+                id="hero-register-btn"
+              >
+                <UserPlus size={16} strokeWidth={2} />
+                <span>Register / Join GrainRise</span>
+              </button>
             </div>
           </div>
 
-          {/* About image */}
-          <div className="lp-about__image-wrap">
+          {/* Right Column: Dashboard Mockup */}
+          <div className="lp-hero__mockup-wrap">
             <img
-              src={groceryImg}
-              alt="Warehouse operations aisle"
-              className="lp-about__image"
+              src={dashboardMockup}
+              alt="GrainRise Supply Chain Portal Dashboard"
+              className="lp-hero__mockup"
             />
           </div>
         </div>
-      </AnimatedSection>
+      </section>
 
       {/* ── ECOSYSTEM ─── */}
       <AnimatedSection className="lp-ecosystem" id="ecosystem">
@@ -285,190 +360,142 @@ export default function LandingPage() {
                 <span className="lp-flow-label">{step.label}</span>
               </div>
               {i < ECOSYSTEM_STEPS.length - 1 && (
-                <div className="lp-flow-arrow"><ArrowRight size={20} strokeWidth={1.5} color="#aac8aa" /></div>
+                <div className="lp-flow-arrow"><ArrowRight size={18} strokeWidth={1.8} /></div>
               )}
             </React.Fragment>
           ))}
         </div>
       </AnimatedSection>
 
-      {/* ── SERVICES ─── */}
-      <AnimatedSection className="lp-services" id="services">
-        <div className="lp-services__inner">
-          <div className="lp-services__left">
-            <h2 className="lp-section-headline">Our Services</h2>
-            <p className="lp-services__sub">
-              Everything you need to run a cleaner, faster, and more predictable rice distribution workflow.
+      {/* ── ROLE PORTALS ─── */}
+      <AnimatedSection className="lp-portals" id="portal-access">
+        <div className="lp-portals__inner">
+          <div className="lp-portals__header">
+            <h2 className="lp-section-headline lp-section-headline--center">
+              Access the GrainRise Portal
+            </h2>
+            <p className="lp-portals__sub">
+              Select your role to continue to the GrainRise tools and services designed for your part of the rice supply chain.
             </p>
-            {/* Grain hands image */}
-            <div className="lp-services__image-wrap">
-              <img
-                src={grainHands}
-                alt="Hands holding rice grain"
-                className="lp-services__image"
-              />
-            </div>
           </div>
 
-          <div className="lp-services__right">
-            {SERVICES.map(svc => (
-              <div key={svc.name} className="lp-service-item">
-                <div className="lp-service-icon">
-                  {svc.icon}
+          <div className="lp-portals__grid">
+            {ROLE_PORTALS.map((portal) => (
+              <div
+                key={portal.title}
+                className="lp-portal-card"
+                onClick={() => navigate(portal.path)}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="lp-portal-card__icon">{portal.icon}</div>
+                <h3 className="lp-portal-card__title">{portal.title}</h3>
+                <p className="lp-portal-card__desc">{portal.desc}</p>
+                <div className="lp-portal-card__action">
+                  <span>{portal.linkText}</span>
+                  <ArrowRight size={15} strokeWidth={2} />
                 </div>
-                <div className="lp-service-text">
-                  <div className="lp-service-name">{svc.name}</div>
-                  <div className="lp-service-desc">{svc.desc}</div>
-                </div>
-                <div className="lp-service-arrow"><ChevronRight size={18} strokeWidth={2} color="#2d6a35" /></div>
               </div>
             ))}
           </div>
         </div>
       </AnimatedSection>
 
-      {/* ── WHY CHOOSE ─── */}
-      <AnimatedSection className="lp-why" id="why">
-        <div className="lp-why__header">
-          <h2 className="lp-why__title">Why Choose <span className="lp-green">GrainRise</span>?</h2>
-          <p className="lp-why__sub">A smarter way to manage rice distribution — built for clarity, speed, and better decision-making.</p>
-        </div>
-        <div className="lp-why__grid">
-          <div className="lp-why-card">
-            <div className="lp-why-card__img-wrap">
-              <img src={bluescreenImg} alt="Real-Time Tracking" className="lp-why-card__img" />
-            </div>
-            <div className="lp-why-card__content">
-              <h3 className="lp-why-card__tag">REAL-TIME TRACKING</h3>
-              <p className="lp-why-card__desc">Monitor your inventory, shipments, and operations in real-time from any device.</p>
-            </div>
+      {/* ── EXPLORE GRAINRISE ─── */}
+      <AnimatedSection className="lp-explore" id="explore-grainrise">
+        <div className="lp-explore__inner">
+          <div className="lp-explore__header">
+            <h2 className="lp-section-headline lp-section-headline--center">
+              Explore GrainRise
+            </h2>
+            <p className="lp-explore__sub">
+              Access the major tools supporting farming, procurement, inventory, forecasting, contracts, and distribution.
+            </p>
           </div>
 
-          <div className="lp-why-card">
-            <div className="lp-why-card__img-wrap">
-              <img src={talkieImg} alt="User Management" className="lp-why-card__img" />
-            </div>
-            <div className="lp-why-card__content">
-              <h3 className="lp-why-card__tag">USER MANAGEMENT</h3>
-              <p className="lp-why-card__desc">Manage roles and access across your entire team — from warehouse staff to retailers — from one place.</p>
-            </div>
-          </div>
-
-          <div className="lp-why-card">
-            <div className="lp-why-card__img-wrap">
-              <img src={dashboardMockup} alt="Secure & Compliant" className="lp-why-card__img" />
-            </div>
-            <div className="lp-why-card__content">
-              <h3 className="lp-why-card__tag">SECURE &amp; COMPLIANT</h3>
-              <p className="lp-why-card__desc">Protection measures help keep your data safe and standards-ready across all operations.</p>
-            </div>
-          </div>
-
-          <div className="lp-why-card">
-            <div className="lp-why-card__img-wrap">
-              <img src={pinkscreenImg} alt="Advanced Analytics" className="lp-why-card__img" />
-            </div>
-            <div className="lp-why-card__content">
-              <h3 className="lp-why-card__tag">ADVANCED ANALYTICS</h3>
-              <p className="lp-why-card__desc">Use reports to track performance, spot trends, and continuously improve operations.</p>
-            </div>
-          </div>
-
-          <div className="lp-why-card">
-            <div className="lp-why-card__img-wrap">
-              <img src={grainHands} alt="Sales Management" className="lp-why-card__img" />
-            </div>
-            <div className="lp-why-card__content">
-              <h3 className="lp-why-card__tag">SALES MANAGEMENT</h3>
-              <p className="lp-why-card__desc">Track orders, monitor sales performance, and manage retailer transactions efficiently in one dashboard.</p>
-            </div>
-          </div>
-
-          <div className="lp-why-card">
-            <div className="lp-why-card__img-wrap">
-              <img src={stockImg} alt="Procurement Control" className="lp-why-card__img" />
-            </div>
-            <div className="lp-why-card__content">
-              <h3 className="lp-why-card__tag">PROCUREMENT CONTROL</h3>
-              <p className="lp-why-card__desc">Streamline supplier orders, purchase requests, and procurement approvals across your supply chain.</p>
-            </div>
-          </div>
-        </div>
-      </AnimatedSection>
-
-      {/* ── TESTIMONIALS ─── */}
-      <AnimatedSection className="lp-testimonials" id="testimonials">
-        <div className="lp-testimonials__header">
-          <h2 className="lp-testimonials__title">What our <span className="lp-green">Partners</span> Say</h2>
-        </div>
-        
-        <div className="lp-testimonials__grid">
-          {TESTIMONIALS.map((t, idx) => (
-            <div className="lp-tcard" key={idx}>
-              <div className="lp-tcard__quote">“”</div>
-              <p className="lp-tcard__body">"{t.body}"</p>
-              <div className="lp-tcard__author">
-                <div className="lp-tcard__avatar">{t.initials}</div>
-                <div>
-                  <div className="lp-tcard__name">{t.name}</div>
-                  <div className="lp-tcard__role">{t.role}</div>
+          <div className="lp-explore__grid">
+            {EXPLORE_FEATURES.map((item) => (
+              <div key={item.title} className="lp-explore-card">
+                <div className="lp-explore-card__icon-wrap">
+                  {item.icon}
+                </div>
+                <div className="lp-explore-card__content">
+                  <h3 className="lp-explore-card__title">{item.title}</h3>
+                  <p className="lp-explore-card__desc">{item.desc}</p>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </AnimatedSection>
 
-      {/* ── MOBILE PROMO ─── */}
-      <AnimatedSection className="lp-mobile-promo">
-        <div className="lp-mobile-promo__bg" style={{ backgroundImage: `url(${grainBgImg})` }} />
-        <div className="lp-mobile-promo__overlay" />
-        <div className="lp-mobile-promo__inner">
-          <div className="lp-mobile-promo__images">
-            <div className="lp-phone-wrap lp-phone-wrap--back">
-              <img src={phoneImg} alt="GrainRise on smartphone back" className="lp-phone-img" />
-            </div>
-            <div className="lp-phone-wrap lp-phone-wrap--front">
-              <img src={phone2Img} alt="GrainRise on smartphone front" className="lp-phone-img" />
-            </div>
+      {/* ── TAKE GRAINRISE ANYWHERE (MOBILE PROMO) ─── */}
+      <AnimatedSection className="lp-mobile-app" id="mobile-promo">
+        <div className="lp-mobile-app__bg" style={{ backgroundImage: `url(${riceBgImg})` }} />
+        <div className="lp-mobile-app__overlay" />
+        <div className="lp-mobile-app__glow lp-mobile-app__glow--1" />
+        <div className="lp-mobile-app__glow lp-mobile-app__glow--2" />
+        <div className="lp-mobile-app__inner">
+          <div className="lp-mobile-app__phone-col">
+            <div className="lp-phone-orb lp-phone-orb--top" />
+            <div className="lp-phone-orb lp-phone-orb--bottom" />
+            <img
+              src={phoneMockup}
+              alt="GrainRise Mobile Application on Smartphone"
+              className="lp-mobile-app__phone-img"
+            />
           </div>
 
-          <div className="lp-mobile-promo__content">
-            <h2 className="lp-mobile-promo__headline">
+          <div className="lp-mobile-app__content-col">
+            <h2 className="lp-mobile-app__headline">
               Take GrainRise<br />Anywhere
             </h2>
-            <p className="lp-mobile-promo__description">
-              Stay connected with your operations wherever you are. Download the official GrainRise Android application to monitor inventory, warehouse activities, deliveries, and retailer transactions from your mobile device.
+            <p className="lp-mobile-app__sub">
+              Manage your operations wherever you are. Access inventory, deliveries, and transactions with the GrainRise mobile app.
             </p>
-            <button className="lp-mobile-promo__btn" onClick={() => alert("Downloading GrainRise APK...")}>
-              <Download size={18} />
-              Download APK
+            <button
+              className="lp-btn lp-mobile-app__btn"
+              onClick={() => alert("Downloading GrainRise APK...")}
+            >
+              <Download size={17} strokeWidth={2.2} />
+              <span>Download APK</span>
             </button>
-            <p className="lp-mobile-promo__notice">
-              Official Android APK . Secure Download . Optimized for GrainRise Users
-            </p>
           </div>
         </div>
       </AnimatedSection>
 
-      {/* ── CTA BANNER ─── */}
-      <AnimatedSection className="lp-cta-banner">
-        <div className="lp-cta-banner__bg" style={{ backgroundImage: `url(${ctaBgImg})` }} />
-        <div className="lp-cta-banner__overlay" />
-        <div className="lp-cta-banner__inner">
-          <h2 className="lp-cta-banner__headline">
-            Power the Future of Rice Distribution
-          </h2>
-          <p className="lp-cta-banner__sub">
-            Register as a <strong>Farmer</strong>, <strong>Supplier</strong>, <strong>Warehouse</strong>, or <strong>Retailer</strong> and manage your operations with GrainRise.
-          </p>
-          <button
-            className="lp-btn lp-cta-banner__btn"
-            onClick={() => navigate('/register')}
-            id="cta-get-started-btn"
-          >
-            Join Us Now
-          </button>
+      {/* ── OPERATIONAL SUPPORT / HELP ─── */}
+      <AnimatedSection className="lp-help" id="help">
+        <div className="lp-help__inner">
+          <div className="lp-help__left">
+            <div className="lp-help__badge">Operational Support</div>
+            <h2 className="lp-help__headline">
+              Need Help Accessing<br />
+              GrainRise?
+            </h2>
+          </div>
+
+          <div className="lp-help__grid">
+            {HELP_CARDS.map((card) => (
+              <div
+                key={card.title}
+                className="lp-help-card"
+                onClick={card.action}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="lp-help-card__icon-wrap">
+                  {card.icon}
+                </div>
+                <h3 className="lp-help-card__title">{card.title}</h3>
+                <p className="lp-help-card__desc">{card.desc}</p>
+                <div className="lp-help-card__action">
+                  <span>{card.linkText}</span>
+                  <ArrowRight size={14} strokeWidth={2} />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </AnimatedSection>
 
