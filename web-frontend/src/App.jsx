@@ -6,7 +6,6 @@ import LandingPage from "./LandingPage";
 import Login from "./Login/UserLogin";
 import AdminLogin from "./Login/AdminLogin";
 import Register from "./Register/Register";
-import SupplierWarehouseGateway from "./Register/SupplierWarehouseGateway";
 import RetailerRegister from "./Register/RetailerRegister";
 import DashboardPreview from "./DashboardPreview";
 import WarehouseManagerRegister from "./Register/WarehouseManagerRegister";

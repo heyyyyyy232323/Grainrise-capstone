@@ -141,11 +141,11 @@ const UserLogin = () => {
                   "
                 >
                   <ArrowLeft size={18} />
-                  Back to Home
+                  Back
                 </span>
               }
               className="self-start !rounded-full w-auto"
-              onClick={() => navigate("/")}
+              onClick={() => navigate(-1)}
             />
 
             <div className="my-10">
@@ -306,14 +306,14 @@ const UserLogin = () => {
             </form>
 
             <p className="text-center text-sm text-gray-700 mt-6">
-              Don't have an account? {" "}
+              Don't have an account?{" "}
               <Link to="/register" className="text-green-700 font-semibold hover:underline">
                 Register
               </Link>
             </p>
 
             <p className="text-center text-xs text-gray-500 mt-4">
-              By signing in, you agree to our {" "}
+              By signing in, you agree to our{" "}
               <a
                 href="#"
                 onClick={(e) => e.preventDefault()}
@@ -321,7 +321,7 @@ const UserLogin = () => {
               >
                 Terms
               </a>{" "}
-              and acknowledge our {" "}
+              and acknowledge our{" "}
               <a
                 href="#"
                 onClick={(e) => e.preventDefault()}

@@ -139,11 +139,11 @@ const RegisterGateway = () => {
             icon={
               <span className="flex items-center gap-2 px-2 text-sm font-medium whitespace-nowrap">
                 <ArrowLeft size={18} />
-                Back to Login
+                Back
               </span>
             }
             className="!rounded-full w-auto !p-2 !px-4 shadow-sm border border-gray-200"
-            onClick={() => navigate("/login")}
+            onClick={() => navigate(-1)}
           />
         </div>
 
