@@ -65,52 +65,18 @@ export default function LandingFooter() {
           </div>
         </div>
 
-        {/* Links columns */}
-        <div className="lp-footer__links">
-          <div className="lp-footer__col">
-            <h4>Resources</h4>
-            <ul>
-              <li><button onClick={() => scrollTo('about')}>Documentation</button></li>
-              <li><button onClick={() => scrollTo('services')}>User Guide</button></li>
-              <li><button onClick={() => scrollTo('ecosystem')}>FAQ</button></li>
-              <li><button>Support</button></li>
-            </ul>
-          </div>
-          <div className="lp-footer__col">
-            <h4>Company</h4>
-            <ul>
-              <li><button onClick={() => scrollTo('about')}>About Us</button></li>
-              <li><button>Privacy Policy</button></li>
-              <li><button>Terms</button></li>
-            </ul>
-          </div>
-          <div className="lp-footer__col">
-            <h4>Get In Touch</h4>
-            <ul className="lp-footer__contact-list">
-              <li>
-                <span className="lp-footer__contact-icon">
-                  <Mail size={14} />
-                </span>
-                grainriseph@gmail.com
-              </li>
-              <li>
-                <span className="lp-footer__contact-icon">
-                  <Phone size={14} />
-                </span>
-                +1 (555) 123-4567
-              </li>
-            </ul>
-          </div>
+        {/* Right side navigation links */}
+        <div className="lp-footer__nav-links">
+          <button onClick={() => scrollTo('help')}>Help / Support</button>
+          <button onClick={() => { window.location.href = 'mailto:grainriseph@gmail.com'; }}>Contact</button>
+          <button onClick={() => alert('Privacy Policy coming soon!')}>Privacy Policy</button>
+          <button onClick={() => alert('Terms & Policies coming soon!')}>Terms / Policies</button>
         </div>
       </div>
 
       <div className="lp-footer__bottom">
-        <p>2026 GrainRise. All rights reserved.</p>
-        <div className="lp-footer__bottom-links">
-          <button>Sitemap</button>
-          <span className="lp-footer__separator">|</span>
-          <button>Privacy Policy</button>
-        </div>
+        <p>&copy; 2026 GrainRise. All rights reserved.</p>
+        <p className="lp-footer__bottom-tag">Centralized Rice Supply Chain Operations</p>
       </div>
     </footer>
   );

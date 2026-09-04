@@ -116,8 +116,6 @@ import BranchManagerNewsUpdates from "./Users/WarehouseAccounts/BranchManager/Wa
 import BranchManagerNewsArticle from "./Users/WarehouseAccounts/BranchManager/WarehouseManagerNewsArticle";
 
 
-
-
 // ============================================================
 // WAREHOUSE DRIVER
 // ============================================================
@@ -246,6 +244,7 @@ import FarmerContracts from "./Users/FarmersAccounts/FarmerContracts";
 import FarmerNewsUpdates from "./Users/FarmersAccounts/FarmerNewsUpdates";
 import FarmerNewsArticle from "./Users/FarmersAccounts/FarmerNewsArticle";
 import FarmerFarmManagement from "./Users/FarmersAccounts/FarmerFarmManagement";
+import FarmerFarmDetails from "./Users/FarmersAccounts/FarmerFarmDetails";
 import FarmerPointOfSale from "./Users/FarmersAccounts/FarmerPointOfSale";
 import FarmerTransactionHistory from "./Users/FarmersAccounts/FarmerTransactionHistory";
 
@@ -1044,6 +1043,11 @@ function App() {
             <Route
               path="/farmer/farm-management"
               element={<FarmerFarmManagement />}
+            />
+
+            <Route
+              path="/farmer/farm-management/:farmId"
+              element={<FarmerFarmDetails />}
             />
 
             <Route

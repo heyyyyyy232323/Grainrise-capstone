@@ -1,148 +1,1887 @@
-import { useState } from "react";
-import { Leaf, Map, Droplets, Sun, Edit2, Plus, Trash2, TrendingUp } from "lucide-react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  useNavigate,
+} from "react-router-dom";
+
+import {
+  AlertCircle,
+  Loader2,
+  MapPin,
+  Search,
+  Sprout,
+} from "lucide-react";
+
 import Breadcrumbs from "../../Components/Minor-Components/Breadcrumbs";
-import KPICard from "../../Components/Graphs/KPICard";
 
-const kpiMetrics = [
-  { title: "TOTAL FARM AREA", value: "12.5 ha", footer: "Registered harvest area", tone: "success", icon: <Map size={18} strokeWidth={2.2} /> },
-  { title: "ACTIVE PLOTS", value: "4", footer: "Currently planted plots", tone: "neutral", icon: <Leaf size={18} strokeWidth={2.2} /> },
-  { title: "IRRIGATION STATUS", value: "Good", footer: "All systems operational", tone: "success", icon: <Droplets size={18} strokeWidth={2.2} /> },
-  { title: "NEXT HARVEST", value: "~38 days", footer: "Estimated from planting date", tone: "warning", icon: <Sun size={18} strokeWidth={2.2} /> },
-];
+import FarmerFarmFormModal from "../../Components/Modals/FarmerFarmFormModal";
 
-const MOCK_PLOTS = [
-  { id: 1, name: "Plot A", area: "3.2 ha", variety: "NSIC Rc222 (Tubigan 18)", status: "Growing", plantedDate: "Jul 1, 2026", expectedHarvest: "Oct 8, 2026", soil: "Clay Loam", irrigationType: "Rainfed", progress: 72 },
-  { id: 2, name: "Plot B", area: "2.8 ha", variety: "NSIC Rc160 (Japonica)", status: "Harvested", plantedDate: "Mar 15, 2026", expectedHarvest: "Jun 25, 2026", soil: "Sandy Loam", irrigationType: "Pump Irrigation", progress: 100 },
-  { id: 3, name: "Plot C", area: "4.0 ha", variety: "NSIC Rc238 (Mestiso 38)", status: "Growing", plantedDate: "Jul 20, 2026", expectedHarvest: "Oct 28, 2026", soil: "Clay", irrigationType: "Canal Irrigation", progress: 45 },
-  { id: 4, name: "Plot D", area: "2.5 ha", variety: "NSIC Rc222 (Tubigan 18)", status: "Fallow", plantedDate: "—", expectedHarvest: "—", soil: "Clay Loam", irrigationType: "Rainfed", progress: 0 },
-];
+import useFarmManagement from "../../Components/hooks/Farmer/useFarmManagement";
 
-const statusColor = {
-  Growing: "bg-green-100 text-green-700",
-  Harvested: "bg-blue-100 text-blue-700",
-  Fallow: "bg-gray-100 text-gray-500",
+
+// ============================================================
+// INVENTORY
+// ============================================================
+//
+// Lazy loaded para hindi masira ang existing My Farms page
+// habang hindi pa binubuksan ang Inventory.
+// ============================================================
+
+const FarmerInventory =
+  lazy(
+    () =>
+      import(
+        "./FarmerInventory"
+      )
+  );
+
+
+// ============================================================
+// FARM MANAGEMENT SEGMENTS
+// ============================================================
+
+const SEGMENT_MY_FARMS =
+  "my_farms";
+
+const SEGMENT_INVENTORY =
+  "inventory";
+
+
+// ============================================================
+// DEFAULT FILTERS
+// ============================================================
+
+const DEFAULT_FILTERS = {
+  search: "",
+  cropStatus: "",
+  farmStatus: "",
+  sortBy: "newest",
 };
 
-export default function FarmerFarmManagement() {
-  const [plots, setPlots] = useState(MOCK_PLOTS);
-  const [showAdd, setShowAdd] = useState(false);
+
+// ============================================================
+// CROP STATUS OPTIONS
+// ============================================================
+
+const CROP_STATUS_OPTIONS = [
+  {
+    value: "",
+    label: "All Crop Statuses",
+  },
+
+  {
+    value: "available_for_planting",
+    label: "Available for Planting",
+  },
+
+  {
+    value: "land_preparation",
+    label: "Land Preparation",
+  },
+
+  {
+    value: "planted_and_growing",
+    label: "Planted and Growing",
+  },
+
+  {
+    value: "harvested",
+    label: "Harvested",
+  },
+
+  {
+    value: "failed_crop",
+    label: "Failed Crop",
+  },
+];
+
+
+// ============================================================
+// FARM STATUS OPTIONS
+// ============================================================
+
+const FARM_STATUS_OPTIONS = [
+  {
+    value: "",
+    label: "All Farm Statuses",
+  },
+
+  {
+    value: "active",
+    label: "Active",
+  },
+
+  {
+    value: "inactive",
+    label: "Inactive",
+  },
+];
+
+
+// ============================================================
+// SORT OPTIONS
+// ============================================================
+
+const SORT_OPTIONS = [
+  {
+    value: "newest",
+    label: "Newest",
+  },
+
+  {
+    value: "oldest",
+    label: "Oldest",
+  },
+
+  {
+    value: "size_highest",
+    label: "Largest Area",
+  },
+
+  {
+    value: "size_lowest",
+    label: "Smallest Area",
+  },
+];
+
+
+// ============================================================
+// CROP STATUS LABELS
+// ============================================================
+
+const CROP_STATUS_LABELS = {
+  available_for_planting:
+    "Available for Planting",
+
+  land_preparation:
+    "Land Preparation",
+
+  planted_and_growing:
+    "Planted and Growing",
+
+  harvested:
+    "Harvested",
+
+  failed_crop:
+    "Failed Crop",
+};
+
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+const formatCropStatus = (
+  status
+) => {
+  if (
+    CROP_STATUS_LABELS[
+      status
+    ]
+  ) {
+    return CROP_STATUS_LABELS[
+      status
+    ];
+  }
+
+  const normalized =
+    String(
+      status || ""
+    )
+      .trim()
+      .replaceAll(
+        "_",
+        " "
+      );
+
+  if (!normalized) {
+    return "Available for Planting";
+  }
+
+  return normalized.replace(
+    /\b\w/g,
+    (
+      character
+    ) =>
+      character.toUpperCase()
+  );
+};
+
+
+const formatNumber = (
+  value
+) => {
+  const number =
+    Number(
+      value
+    );
+
+  if (
+    !Number.isFinite(
+      number
+    )
+  ) {
+    return "0";
+  }
+
+  return new Intl.NumberFormat(
+    "en-PH",
+    {
+      maximumFractionDigits:
+        2,
+    }
+  ).format(
+    number
+  );
+};
+
+
+const getFarmName = (
+  farm
+) => {
+  const farmName =
+    String(
+      farm?.farm_name || ""
+    ).trim();
+
+  if (farmName) {
+    return farmName;
+  }
+
+  return `Farm Lot #${farm?.farm_id || ""}`;
+};
+
+
+// ============================================================
+// CROP STATUS BADGE
+// ============================================================
+
+const CropStatusBadge = ({
+  status,
+}) => {
+  let classes =
+    "border-slate-200 bg-slate-100 text-slate-600";
+
+  if (
+    status ===
+    "land_preparation"
+  ) {
+    classes =
+      "border-amber-200 bg-amber-50 text-amber-700";
+  }
+
+  if (
+    status ===
+    "planted_and_growing"
+  ) {
+    classes =
+      "border-green-200 bg-green-50 text-green-700";
+  }
+
+  if (
+    status ===
+    "harvested"
+  ) {
+    classes =
+      "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  if (
+    status ===
+    "failed_crop"
+  ) {
+    classes =
+      "border-red-200 bg-red-50 text-red-700";
+  }
 
   return (
-    <div className="space-y-6">
-      {/* ── Header ───────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-1">
-          <Breadcrumbs items={[{ label: "Farm" }, { label: "Farm Management" }]} />
-          <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-extrabold tracking-[-0.03em] text-slate-900">
-            Farm Management
-          </h2>
-          <p className="text-sm text-slate-500">
-            Monitor and manage your registered plots, crop cycles, and farm details.
-          </p>
-        </div>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors self-start"
+    <span
+      className={`
+        inline-flex
+        items-center
+        rounded-full
+        border
+        px-2.5
+        py-1
+        text-xs
+        font-semibold
+        ${classes}
+      `}
+    >
+      {
+        formatCropStatus(
+          status
+        )
+      }
+    </span>
+  );
+};
+
+
+// ============================================================
+// FARM CARD
+// ============================================================
+
+const FarmCard = ({
+  farm,
+  onViewDetails,
+}) => {
+  const cropStatus =
+    farm.current_crop_status ||
+    "available_for_planting";
+
+  return (
+    <article
+      className="
+        flex
+        min-h-[330px]
+        flex-col
+        rounded-2xl
+        border
+        border-slate-200
+        bg-white
+        p-5
+        shadow-sm
+        transition
+        hover:border-slate-300
+        hover:shadow-md
+      "
+    >
+
+      {/* FARM NUMBER */}
+
+      <p
+        className="
+          text-xs
+          font-bold
+          uppercase
+          tracking-wide
+          text-green-700
+        "
+      >
+        Farm #{farm.farm_id}
+      </p>
+
+
+      {/* FARM NAME */}
+
+      <h3
+        className="
+          mt-1
+          break-words
+          text-lg
+          font-bold
+          text-slate-900
+        "
+      >
+        {
+          getFarmName(
+            farm
+          )
+        }
+      </h3>
+
+
+      {/* LOCATION */}
+
+      <div
+        className="
+          mt-4
+          flex
+          min-h-[42px]
+          items-start
+          gap-2
+          text-sm
+          text-slate-500
+        "
+      >
+        <MapPin
+          size={16}
+          className="
+            mt-0.5
+            shrink-0
+            text-slate-400
+          "
+        />
+
+        <span
+          className="
+            break-words
+          "
         >
-          <Plus size={16} /> Add Plot
+          {
+            farm.farm_location ||
+            "Farm location not recorded"
+          }
+        </span>
+      </div>
+
+
+      {/* FARM AREA */}
+
+      <div
+        className="
+          mt-6
+          rounded-xl
+          bg-slate-50
+          px-4
+          py-3
+        "
+      >
+        <p
+          className="
+            text-xs
+            font-medium
+            text-slate-400
+          "
+        >
+          Total Farm Area
+        </p>
+
+        <p
+          className="
+            mt-1
+            text-sm
+            font-bold
+            text-slate-900
+          "
+        >
+          {
+            formatNumber(
+              farm.total_farm_area
+            )
+          }{" "}
+          ha
+        </p>
+      </div>
+
+
+      {/* CURRENT CROP STATUS */}
+
+      <div
+        className="
+          mt-4
+        "
+      >
+        <p
+          className="
+            text-xs
+            font-medium
+            text-slate-500
+          "
+        >
+          Current Crop Status
+        </p>
+
+        <div
+          className="
+            mt-2
+          "
+        >
+          <CropStatusBadge
+            status={
+              cropStatus
+            }
+          />
+        </div>
+      </div>
+
+
+      {/* VIEW DETAILS */}
+
+      <div
+        className="
+          mt-auto
+          pt-5
+        "
+      >
+        <button
+          type="button"
+          onClick={
+            () =>
+              onViewDetails(
+                farm.farm_id
+              )
+          }
+          className="
+            w-full
+            rounded-lg
+            bg-green-700
+            px-4
+            py-2.5
+            text-sm
+            font-semibold
+            text-white
+            transition
+            hover:bg-green-800
+            focus:outline-none
+            focus:ring-2
+            focus:ring-green-600
+            focus:ring-offset-2
+          "
+        >
+          View Details
         </button>
       </div>
 
-      {/* ── KPIs ─────────────────────────────────────────────────────── */}
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {kpiMetrics.map((m) => <KPICard key={m.title} {...m} />)}
+    </article>
+  );
+};
+
+
+// ============================================================
+// INVENTORY LOADING
+// ============================================================
+
+const InventoryLoading = () => {
+  return (
+    <div
+      className="
+        flex
+        min-h-[320px]
+        items-center
+        justify-center
+        rounded-2xl
+        border
+        border-slate-200
+        bg-white
+      "
+    >
+      <div
+        className="
+          flex
+          flex-col
+          items-center
+          gap-3
+          text-slate-500
+        "
+      >
+        <Loader2
+          size={28}
+          className="
+            animate-spin
+            text-green-700
+          "
+        />
+
+        <p
+          className="
+            text-sm
+            font-medium
+          "
+        >
+          Loading Inventory...
+        </p>
+      </div>
+    </div>
+  );
+};
+
+
+// ============================================================
+// COMPONENT
+// ============================================================
+
+export default function FarmerFarmManagement() {
+  const navigate =
+    useNavigate();
+
+
+  // =========================================================
+  // HOOK
+  // =========================================================
+
+  const {
+    farms,
+
+    isLoadingFarms,
+    isSavingFarm,
+
+    error,
+
+    loadFarms,
+    addFarm,
+
+    clearError,
+  } =
+    useFarmManagement();
+
+
+  // =========================================================
+  // ACTIVE SEGMENT
+  // =========================================================
+
+  const [
+    activeSegment,
+    setActiveSegment,
+  ] =
+    useState(
+      SEGMENT_MY_FARMS
+    );
+
+
+  // =========================================================
+  // LOCAL STATE
+  // =========================================================
+
+  const [
+    filters,
+    setFilters,
+  ] =
+    useState(
+      DEFAULT_FILTERS
+    );
+
+
+  const [
+    addFarmModalOpen,
+    setAddFarmModalOpen,
+  ] =
+    useState(
+      false
+    );
+
+
+  const [
+    successMessage,
+    setSuccessMessage,
+  ] =
+    useState(
+      ""
+    );
+
+
+  // =========================================================
+  // LOAD FARMS
+  // =========================================================
+  //
+  // Only load farm records while My Farms is active.
+  // Inventory has its own hook and API loading.
+  // =========================================================
+
+  useEffect(
+    () => {
+      if (
+        activeSegment !==
+        SEGMENT_MY_FARMS
+      ) {
+        return undefined;
+      }
+
+      const timer =
+        window.setTimeout(
+          () => {
+            loadFarms(
+              filters
+            ).catch(
+              () => {}
+            );
+          },
+          300
+        );
+
+      return () => {
+        window.clearTimeout(
+          timer
+        );
+      };
+    },
+    [
+      activeSegment,
+      filters.search,
+      filters.cropStatus,
+      filters.farmStatus,
+      filters.sortBy,
+    ]
+  );
+
+
+  // =========================================================
+  // SUCCESS MESSAGE TIMER
+  // =========================================================
+
+  useEffect(
+    () => {
+      if (
+        !successMessage
+      ) {
+        return undefined;
+      }
+
+      const timer =
+        window.setTimeout(
+          () => {
+            setSuccessMessage(
+              ""
+            );
+          },
+          4000
+        );
+
+      return () => {
+        window.clearTimeout(
+          timer
+        );
+      };
+    },
+    [
+      successMessage,
+    ]
+  );
+
+
+  // =========================================================
+  // SEGMENT CHANGE
+  // =========================================================
+
+  const handleSegmentChange = (
+    segment
+  ) => {
+    clearError();
+
+    setSuccessMessage(
+      ""
+    );
+
+    setActiveSegment(
+      segment
+    );
+  };
+
+
+  // =========================================================
+  // FILTER CHANGE
+  // =========================================================
+
+  const handleFilterChange = (
+    field,
+    value
+  ) => {
+    setFilters(
+      (
+        current
+      ) => ({
+        ...current,
+
+        [field]:
+          value,
+      })
+    );
+  };
+
+
+  // =========================================================
+  // RESET FILTERS
+  // =========================================================
+
+  const handleResetFilters = () => {
+    clearError();
+
+    setFilters({
+      ...DEFAULT_FILTERS,
+    });
+  };
+
+
+  // =========================================================
+  // ADD FARM
+  // =========================================================
+
+  const handleOpenAddFarm = () => {
+    clearError();
+
+    setAddFarmModalOpen(
+      true
+    );
+  };
+
+
+  const handleCloseAddFarm = () => {
+    if (
+      isSavingFarm
+    ) {
+      return;
+    }
+
+    clearError();
+
+    setAddFarmModalOpen(
+      false
+    );
+  };
+
+
+  const handleAddFarm =
+    async (
+      farmData
+    ) => {
+      try {
+        await addFarm(
+          farmData
+        );
+
+        setAddFarmModalOpen(
+          false
+        );
+
+        setSuccessMessage(
+          "Farm added successfully."
+        );
+      } catch {
+        // Keep modal open.
+      }
+    };
+
+
+  // =========================================================
+  // VIEW DETAILS
+  // =========================================================
+
+  const handleViewDetails = (
+    farmId
+  ) => {
+    if (!farmId) {
+      return;
+    }
+
+    clearError();
+
+    navigate(
+      `/farmer/farm-management/${farmId}`
+    );
+  };
+
+
+  // =========================================================
+  // RETRY
+  // =========================================================
+
+  const handleRetry = () => {
+    clearError();
+
+    loadFarms(
+      filters
+    ).catch(
+      () => {}
+    );
+  };
+
+
+  // =========================================================
+  // FILTER CHECK
+  // =========================================================
+
+  const hasActiveFilters =
+    Boolean(
+      filters.search ||
+      filters.cropStatus ||
+      filters.farmStatus ||
+      filters.sortBy !==
+        "newest"
+    );
+
+
+  const isMyFarms =
+    activeSegment ===
+    SEGMENT_MY_FARMS;
+
+
+  const isInventory =
+    activeSegment ===
+    SEGMENT_INVENTORY;
+
+
+  // =========================================================
+  // PAGE
+  // =========================================================
+
+  return (
+    <div
+      className="
+        space-y-6
+      "
+    >
+
+      {/* ====================================================
+          BREADCRUMBS
+      ==================================================== */}
+
+      <Breadcrumbs
+        items={[
+          {
+            label:
+              "Farm",
+          },
+
+          {
+            label:
+              "Farm Management",
+          },
+        ]}
+      />
+
+
+      {/* ====================================================
+          PAGE HEADER
+      ==================================================== */}
+
+      <div
+        className="
+          flex
+          flex-col
+          gap-4
+          sm:flex-row
+          sm:items-start
+          sm:justify-between
+        "
+      >
+        <div />
+
+
+        {/* ADD NEW FARM — ONLY MY FARMS */}
+
+        {
+          isMyFarms &&
+          (
+            <button
+              type="button"
+              onClick={
+                handleOpenAddFarm
+              }
+              className="
+                shrink-0
+                rounded-lg
+                bg-green-700
+                px-5
+                py-2.5
+                text-sm
+                font-semibold
+                text-white
+                transition
+                hover:bg-green-800
+                focus:outline-none
+                focus:ring-2
+                focus:ring-green-600
+                focus:ring-offset-2
+              "
+            >
+              Add New Farm
+            </button>
+          )
+        }
+
       </div>
 
-      {/* ── Plot list ────────────────────────────────────────────────── */}
-      <div className="space-y-4">
-        {plots.map((plot) => (
-          <div key={plot.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 hover:border-green-300 transition-colors">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              {/* Left info */}
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="font-bold text-gray-900 text-lg">{plot.name}</h3>
-                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${statusColor[plot.status]}`}>
-                    {plot.status}
+
+      {/* ====================================================
+          SEGMENTATION
+      ==================================================== */}
+
+      <div
+        className="
+          flex
+          items-end
+          gap-7
+          border-b
+          border-slate-200
+        "
+      >
+
+        {/* MY FARMS */}
+
+        <button
+          type="button"
+          onClick={
+            () =>
+              handleSegmentChange(
+                SEGMENT_MY_FARMS
+              )
+          }
+          className={`
+            border-b-2
+            px-1
+            pb-3
+            text-sm
+            transition
+
+            ${
+              isMyFarms
+                ? (
+                  "border-green-700 " +
+                  "font-bold " +
+                  "text-green-700"
+                )
+                : (
+                  "border-transparent " +
+                  "font-semibold " +
+                  "text-slate-500 " +
+                  "hover:text-slate-700"
+                )
+            }
+          `}
+        >
+          My Farms
+        </button>
+
+
+        {/* INVENTORY */}
+
+        <button
+          type="button"
+          onClick={
+            () =>
+              handleSegmentChange(
+                SEGMENT_INVENTORY
+              )
+          }
+          className={`
+            border-b-2
+            px-1
+            pb-3
+            text-sm
+            transition
+
+            ${
+              isInventory
+                ? (
+                  "border-green-700 " +
+                  "font-bold " +
+                  "text-green-700"
+                )
+                : (
+                  "border-transparent " +
+                  "font-semibold " +
+                  "text-slate-500 " +
+                  "hover:text-slate-700"
+                )
+            }
+          `}
+        >
+          Inventory
+        </button>
+
+      </div>
+
+
+      {/* ====================================================
+          MY FARMS CONTENT
+      ==================================================== */}
+
+      {
+        isMyFarms &&
+        (
+          <>
+
+            {/* ==============================================
+                SUCCESS
+            ============================================== */}
+
+            {
+              successMessage &&
+              (
+                <div
+                  className="
+                    flex
+                    items-start
+                    gap-3
+                    rounded-xl
+                    border
+                    border-green-200
+                    bg-green-50
+                    px-4
+                    py-3
+                    text-sm
+                    text-green-700
+                  "
+                >
+                  <Sprout
+                    size={18}
+                    className="
+                      mt-0.5
+                      shrink-0
+                    "
+                  />
+
+                  <span>
+                    {
+                      successMessage
+                    }
                   </span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1 text-sm text-gray-600">
-                  <span><span className="font-medium text-gray-800">Area:</span> {plot.area}</span>
-                  <span><span className="font-medium text-gray-800">Variety:</span> {plot.variety}</span>
-                  <span><span className="font-medium text-gray-800">Soil:</span> {plot.soil}</span>
-                  <span><span className="font-medium text-gray-800">Planted:</span> {plot.plantedDate}</span>
-                  <span><span className="font-medium text-gray-800">Harvest:</span> {plot.expectedHarvest}</span>
-                  <span><span className="font-medium text-gray-800">Irrigation:</span> {plot.irrigationType}</span>
-                </div>
-              </div>
+              )
+            }
 
-              {/* Right: progress + actions */}
-              <div className="flex flex-col items-end gap-3 shrink-0">
-                <div className="flex gap-2">
-                  <button className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:text-green-700 hover:border-green-300 transition-colors">
-                    <Edit2 size={15} />
-                  </button>
-                  <button
-                    onClick={() => setPlots((p) => p.filter((pl) => pl.id !== plot.id))}
-                    className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:text-red-600 hover:border-red-300 transition-colors"
+
+            {/* ==============================================
+                FILTERS
+            ============================================== */}
+
+            <section
+              className="
+                rounded-2xl
+                border
+                border-slate-200
+                bg-white
+                p-4
+                shadow-sm
+              "
+            >
+              <div
+                className="
+                  grid
+                  gap-3
+                  md:grid-cols-2
+                  xl:grid-cols-[minmax(280px,2fr)_minmax(180px,1fr)_minmax(170px,1fr)_minmax(150px,0.9fr)_auto]
+                "
+              >
+
+                {/* SEARCH FARM */}
+
+                <div>
+                  <label
+                    htmlFor="farm-search"
+                    className="
+                      mb-1.5
+                      block
+                      text-xs
+                      font-semibold
+                      text-slate-600
+                    "
                   >
-                    <Trash2 size={15} />
+                    Search Farm
+                  </label>
+
+                  <div
+                    className="
+                      relative
+                    "
+                  >
+                    <Search
+                      size={17}
+                      className="
+                        pointer-events-none
+                        absolute
+                        left-3
+                        top-1/2
+                        -translate-y-1/2
+                        text-slate-400
+                      "
+                    />
+
+                    <input
+                      id="farm-search"
+                      type="text"
+                      value={
+                        filters.search
+                      }
+                      onChange={
+                        (
+                          event
+                        ) =>
+                          handleFilterChange(
+                            "search",
+                            event.target.value
+                          )
+                      }
+                      placeholder="Search farm name or location"
+                      className="
+                        w-full
+                        rounded-lg
+                        border
+                        border-slate-300
+                        bg-white
+                        py-2.5
+                        pl-10
+                        pr-3
+                        text-sm
+                        text-slate-800
+                        outline-none
+                        transition
+                        placeholder:text-slate-400
+                        focus:border-green-600
+                        focus:ring-1
+                        focus:ring-green-600
+                      "
+                    />
+                  </div>
+                </div>
+
+
+                {/* CURRENT CROP STATUS */}
+
+                <div>
+                  <label
+                    htmlFor="crop-status-filter"
+                    className="
+                      mb-1.5
+                      block
+                      text-xs
+                      font-semibold
+                      text-slate-600
+                    "
+                  >
+                    Current Crop Status
+                  </label>
+
+                  <select
+                    id="crop-status-filter"
+                    value={
+                      filters.cropStatus
+                    }
+                    onChange={
+                      (
+                        event
+                      ) =>
+                        handleFilterChange(
+                          "cropStatus",
+                          event.target.value
+                        )
+                    }
+                    className="
+                      w-full
+                      rounded-lg
+                      border
+                      border-slate-300
+                      bg-white
+                      px-3
+                      py-2.5
+                      text-sm
+                      text-slate-700
+                      outline-none
+                      transition
+                      focus:border-green-600
+                      focus:ring-1
+                      focus:ring-green-600
+                    "
+                  >
+                    {
+                      CROP_STATUS_OPTIONS.map(
+                        (
+                          option
+                        ) => (
+                          <option
+                            key={
+                              option.value ||
+                              "all"
+                            }
+                            value={
+                              option.value
+                            }
+                          >
+                            {
+                              option.label
+                            }
+                          </option>
+                        )
+                      )
+                    }
+                  </select>
+                </div>
+
+
+                {/* FARM STATUS */}
+
+                <div>
+                  <label
+                    htmlFor="farm-status-filter"
+                    className="
+                      mb-1.5
+                      block
+                      text-xs
+                      font-semibold
+                      text-slate-600
+                    "
+                  >
+                    Farm Status
+                  </label>
+
+                  <select
+                    id="farm-status-filter"
+                    value={
+                      filters.farmStatus
+                    }
+                    onChange={
+                      (
+                        event
+                      ) =>
+                        handleFilterChange(
+                          "farmStatus",
+                          event.target.value
+                        )
+                    }
+                    className="
+                      w-full
+                      rounded-lg
+                      border
+                      border-slate-300
+                      bg-white
+                      px-3
+                      py-2.5
+                      text-sm
+                      text-slate-700
+                      outline-none
+                      transition
+                      focus:border-green-600
+                      focus:ring-1
+                      focus:ring-green-600
+                    "
+                  >
+                    {
+                      FARM_STATUS_OPTIONS.map(
+                        (
+                          option
+                        ) => (
+                          <option
+                            key={
+                              option.value ||
+                              "all"
+                            }
+                            value={
+                              option.value
+                            }
+                          >
+                            {
+                              option.label
+                            }
+                          </option>
+                        )
+                      )
+                    }
+                  </select>
+                </div>
+
+
+                {/* SORT */}
+
+                <div>
+                  <label
+                    htmlFor="farm-sort"
+                    className="
+                      mb-1.5
+                      block
+                      text-xs
+                      font-semibold
+                      text-slate-600
+                    "
+                  >
+                    Sort By
+                  </label>
+
+                  <select
+                    id="farm-sort"
+                    value={
+                      filters.sortBy
+                    }
+                    onChange={
+                      (
+                        event
+                      ) =>
+                        handleFilterChange(
+                          "sortBy",
+                          event.target.value
+                        )
+                    }
+                    className="
+                      w-full
+                      rounded-lg
+                      border
+                      border-slate-300
+                      bg-white
+                      px-3
+                      py-2.5
+                      text-sm
+                      text-slate-700
+                      outline-none
+                      transition
+                      focus:border-green-600
+                      focus:ring-1
+                      focus:ring-green-600
+                    "
+                  >
+                    {
+                      SORT_OPTIONS.map(
+                        (
+                          option
+                        ) => (
+                          <option
+                            key={
+                              option.value
+                            }
+                            value={
+                              option.value
+                            }
+                          >
+                            {
+                              option.label
+                            }
+                          </option>
+                        )
+                      )
+                    }
+                  </select>
+                </div>
+
+
+                {/* RESET */}
+
+                <div
+                  className="
+                    flex
+                    items-end
+                  "
+                >
+                  <button
+                    type="button"
+                    onClick={
+                      handleResetFilters
+                    }
+                    disabled={
+                      !hasActiveFilters
+                    }
+                    className="
+                      w-full
+                      rounded-lg
+                      border
+                      border-slate-300
+                      bg-white
+                      px-4
+                      py-2.5
+                      text-sm
+                      font-semibold
+                      text-slate-600
+                      transition
+                      hover:bg-slate-50
+                      disabled:cursor-not-allowed
+                      disabled:opacity-40
+                      xl:w-auto
+                    "
+                  >
+                    Reset
                   </button>
                 </div>
-                {plot.status === "Growing" && (
-                  <div className="w-40">
-                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <span className="flex items-center gap-1"><TrendingUp size={11} /> Growth</span>
-                      <span className="font-semibold text-green-700">{plot.progress}%</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
-                      <div
-                        className="h-full bg-green-600 rounded-full transition-all duration-500"
-                        style={{ width: `${plot.progress}%` }}
+
+              </div>
+            </section>
+
+
+            {/* ==============================================
+                PAGE ERROR
+            ============================================== */}
+
+            {
+              error &&
+              !addFarmModalOpen &&
+              (
+                <div
+                  className="
+                    flex
+                    flex-col
+                    gap-3
+                    rounded-xl
+                    border
+                    border-red-200
+                    bg-red-50
+                    px-4
+                    py-3
+                    text-sm
+                    text-red-700
+                    sm:flex-row
+                    sm:items-center
+                    sm:justify-between
+                  "
+                >
+
+                  <div
+                    className="
+                      flex
+                      items-start
+                      gap-3
+                    "
+                  >
+                    <AlertCircle
+                      size={18}
+                      className="
+                        mt-0.5
+                        shrink-0
+                      "
+                    />
+
+                    <span>
+                      {error}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={
+                      handleRetry
+                    }
+                    className="
+                      self-start
+                      text-sm
+                      font-semibold
+                      text-red-700
+                      underline
+                      underline-offset-2
+                      hover:text-red-800
+                      sm:self-auto
+                    "
+                  >
+                    Try Again
+                  </button>
+
+                </div>
+              )
+            }
+
+
+            {/* ==============================================
+                LOADING
+            ============================================== */}
+
+            {
+              isLoadingFarms &&
+              farms.length ===
+                0
+                ? (
+                  <div
+                    className="
+                      flex
+                      min-h-[300px]
+                      items-center
+                      justify-center
+                      rounded-2xl
+                      border
+                      border-slate-200
+                      bg-white
+                    "
+                  >
+                    <div
+                      className="
+                        flex
+                        flex-col
+                        items-center
+                        gap-3
+                        text-slate-500
+                      "
+                    >
+                      <Loader2
+                        size={28}
+                        className="
+                          animate-spin
+                          text-green-700
+                        "
                       />
+
+                      <p
+                        className="
+                          text-sm
+                          font-medium
+                        "
+                      >
+                        Loading your farms...
+                      </p>
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+                )
+                : (
+                  <>
 
-      {/* ── Add Plot Modal (simple inline) ───────────────────────────── */}
-      {showAdd && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
-            <h3 className="font-bold text-gray-900 text-lg">Add New Plot</h3>
-            <div className="space-y-3">
-              {["Plot Name", "Area (ha)", "Variety", "Soil Type", "Irrigation Type"].map((field) => (
-                <div key={field}>
-                  <label className="text-xs font-semibold text-gray-600 block mb-1">{field}</label>
-                  <input
-                    type="text"
-                    placeholder={`Enter ${field.toLowerCase()}`}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:ring-1 focus:ring-green-600 focus:border-green-600 outline-none"
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setShowAdd(false)}
-                className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => setShowAdd(false)}
-                className="flex-1 py-2.5 bg-green-700 hover:bg-green-800 text-white rounded-xl text-sm font-semibold transition-colors"
-              >
-                Save Plot
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                    {/* ========================================
+                        EMPTY STATE
+                    ======================================== */}
+
+                    {
+                      farms.length ===
+                        0
+                        ? (
+                          <div
+                            className="
+                              rounded-2xl
+                              border
+                              border-slate-200
+                              bg-white
+                              px-6
+                              py-14
+                              text-center
+                              shadow-sm
+                            "
+                          >
+                            <div
+                              className="
+                                mx-auto
+                                flex
+                                h-12
+                                w-12
+                                items-center
+                                justify-center
+                                rounded-full
+                                bg-green-50
+                                text-green-700
+                              "
+                            >
+                              <Sprout
+                                size={23}
+                              />
+                            </div>
+
+                            <h2
+                              className="
+                                mt-4
+                                text-lg
+                                font-bold
+                                text-slate-900
+                              "
+                            >
+                              {
+                                hasActiveFilters
+                                  ? (
+                                    "No farms match your filters"
+                                  )
+                                  : (
+                                    "No registered farms yet"
+                                  )
+                              }
+                            </h2>
+
+                            <p
+                              className="
+                                mx-auto
+                                mt-2
+                                max-w-md
+                                text-sm
+                                text-slate-500
+                              "
+                            >
+                              {
+                                hasActiveFilters
+                                  ? (
+                                    "Try changing or clearing the search and filter options."
+                                  )
+                                  : (
+                                    "Add your first farm or farm lot to start managing your farm records."
+                                  )
+                              }
+                            </p>
+
+                            {
+                              hasActiveFilters
+                                ? (
+                                  <button
+                                    type="button"
+                                    onClick={
+                                      handleResetFilters
+                                    }
+                                    className="
+                                      mt-5
+                                      rounded-lg
+                                      border
+                                      border-slate-300
+                                      bg-white
+                                      px-4
+                                      py-2.5
+                                      text-sm
+                                      font-semibold
+                                      text-slate-700
+                                      transition
+                                      hover:bg-slate-50
+                                    "
+                                  >
+                                    Clear Filters
+                                  </button>
+                                )
+                                : (
+                                  <button
+                                    type="button"
+                                    onClick={
+                                      handleOpenAddFarm
+                                    }
+                                    className="
+                                      mt-5
+                                      rounded-lg
+                                      bg-green-700
+                                      px-5
+                                      py-2.5
+                                      text-sm
+                                      font-semibold
+                                      text-white
+                                      transition
+                                      hover:bg-green-800
+                                    "
+                                  >
+                                    Add New Farm
+                                  </button>
+                                )
+                            }
+                          </div>
+                        )
+                        : (
+                          <>
+
+                            {/* FARM CARDS */}
+
+                            <div
+                              className="
+                                relative
+                              "
+                            >
+
+                              {
+                                isLoadingFarms &&
+                                (
+                                  <div
+                                    className="
+                                      pointer-events-none
+                                      absolute
+                                      right-1
+                                      top-[-32px]
+                                      flex
+                                      items-center
+                                      gap-2
+                                      text-xs
+                                      font-medium
+                                      text-slate-400
+                                    "
+                                  >
+                                    <Loader2
+                                      size={13}
+                                      className="
+                                        animate-spin
+                                      "
+                                    />
+
+                                    Updating farms...
+                                  </div>
+                                )
+                              }
+
+
+                              <div
+                                className="
+                                  grid
+                                  gap-5
+                                  md:grid-cols-2
+                                  2xl:grid-cols-3
+                                "
+                              >
+                                {
+                                  farms.map(
+                                    (
+                                      farm
+                                    ) => (
+                                      <FarmCard
+                                        key={
+                                          farm.farm_id
+                                        }
+                                        farm={
+                                          farm
+                                        }
+                                        onViewDetails={
+                                          handleViewDetails
+                                        }
+                                      />
+                                    )
+                                  )
+                                }
+                              </div>
+
+                            </div>
+
+
+                            {/* FARM COUNT */}
+
+                            <div
+                              className="
+                                flex
+                                items-center
+                                gap-2
+                                pb-2
+                                text-xs
+                                text-slate-500
+                              "
+                            >
+                              <Sprout
+                                size={14}
+                                className="
+                                  text-slate-400
+                                "
+                              />
+
+                              <span>
+                                {
+                                  farms.length
+                                }{" "}
+                                {
+                                  farms.length ===
+                                    1
+                                    ? "farm"
+                                    : "farms"
+                                }{" "}
+                                shown
+                              </span>
+                            </div>
+
+                          </>
+                        )
+                    }
+
+                  </>
+                )
+            }
+
+
+            {/* ==============================================
+                ADD FARM MODAL
+            ============================================== */}
+
+            <FarmerFarmFormModal
+              open={
+                addFarmModalOpen
+              }
+              mode="add"
+              isSaving={
+                isSavingFarm
+              }
+              error={
+                addFarmModalOpen
+                  ? error
+                  : ""
+              }
+              onClose={
+                handleCloseAddFarm
+              }
+              onSubmit={
+                handleAddFarm
+              }
+            />
+
+          </>
+        )
+      }
+
+
+      {/* ====================================================
+          INVENTORY CONTENT
+      ==================================================== */}
+
+      {
+        isInventory &&
+        (
+          <Suspense
+            fallback={
+              <InventoryLoading />
+            }
+          >
+            <FarmerInventory />
+          </Suspense>
+        )
+      }
+
     </div>
   );
 }
