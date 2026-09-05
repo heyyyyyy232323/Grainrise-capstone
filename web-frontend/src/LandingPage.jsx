@@ -464,8 +464,8 @@ export default function LandingPage() {
               className="lp-btn lp-mobile-app__btn"
               onClick={() => alert("Downloading GrainRise APK...")}
             >
-              <Download size={17} strokeWidth={2.2} />
-              <span>Download APK</span>
+              <Download size={16} strokeWidth={2} />
+              <span>Install on Mobile</span>
             </button>
           </div>
         </div>
