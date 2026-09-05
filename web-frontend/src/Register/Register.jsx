@@ -1,103 +1,90 @@
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Info, ChevronRight } from "lucide-react";
+﻿import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Info } from "lucide-react";
 
-import CustomGreenButton from "../Components/Minor-Components/CustomGreenButton";
-import CustomWhiteButton from "../Components/Minor-Components/CustomWhiteButton";
 import Footer from "../Components/Minor-Components/CustomFooter";
 import Logo from "../assets/Logo.png";
 import backgroundImage from "../assets/smudge.jpg";
 
-import farmerImg from "../assets/farmer.jpg";
-import supplierImg from "../assets/supplier.png";
-import warehouseManagerImg from "../assets/warehouse-manager.png";
-import retailerImg from "../assets/retailer.jpg";
+import farmerImg from "../assets/farmerr.png";
+import warehouseOwnerImg from "../assets/warehouseowner.png";
+import millerImg from "../assets/miller.png";
+import retailerImg from "../assets/retailer3.png";
+import consumerImg from "../assets/consumer.png";
 
 const roles = [
   {
     key: "farmer",
     title: "Farmer",
-    badge: "Production & Harvest",
-    description:
-      "Manage farm records, submit grain harvest yields, and connect directly with rice distribution.",
-    buttonText: "Register as Farmer",
+    description: "Manage farms, harvests, and production.",
     image: farmerImg,
-    imagePosition: "center",
+    imagePosition: "center top",
     path: "/register/farmer",
   },
   {
-    key: "supplier",
-    title: "Supplier",
-    badge: "Sourcing & Logistics",
-    description:
-      "Manage grain sourcing, inventory distribution, deliveries, and supply chain operations.",
-    buttonText: "Register as Supplier",
-    image: supplierImg,
+    key: "warehouse-owner",
+    title: "Warehouse Owner",
+    description: "Oversee inventory, storage, and logistics.",
+    image: warehouseOwnerImg,
     imagePosition: "center",
-    path: "/register/supplier",
+    path: "/register/warehouse-manager",
   },
   {
-    key: "warehouse",
-    title: "Warehouse",
-    badge: "Storage & Operations",
-    description:
-      "Oversee storage facilities, monitor stock inventory batches, and manage logistics dispatch.",
-    buttonText: "Register as Warehouse",
-    image: warehouseManagerImg,
-    imagePosition: "50% 30%",
-    path: "/register/warehouse-manager",
+    key: "miller",
+    title: "Miller",
+    description: "Manage supply, deliveries, and distribution.",
+    image: millerImg,
+    imagePosition: "center top",
+    path: "/register/supplier",
   },
   {
     key: "retailer",
     title: "Retailer",
-    badge: "Retail & Sales",
-    description:
-      "Create an account to place grain orders, manage purchases, and track store deliveries.",
-    buttonText: "Register as Retailer",
+    description: "Process, manage, and supply rice products.",
     image: retailerImg,
-    imagePosition: "center",
+    imagePosition: "center top",
     path: "/register/retailer",
+  },
+  {
+    key: "consumer",
+    title: "Consumer",
+    description: "Buy rice products for personal or household needs.",
+    image: consumerImg,
+    imagePosition: "center top",
+    path: "/register/farmer",
   },
 ];
 
-const RoleCard = ({ title, badge, description, buttonText, image, imagePosition = "center", onClick }) => (
+const RoleCard = ({ title, description, image, imagePosition = "center", onClick }) => (
   <div
     onClick={onClick}
-    className="group relative bg-white/95 rounded-2xl shadow-md hover:shadow-2xl border border-emerald-100/80 overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-1.5 hover:border-emerald-300"
+    style={{ display: "flex", flexDirection: "column", cursor: "pointer" }}
+    className="group rounded-xl overflow-hidden border border-gray-200 bg-white transition-all duration-300 hover:shadow-xl hover:border-green-400 hover:-translate-y-1"
   >
-    {/* Card Image with subtle zoom */}
-    <div className="relative h-48 w-full overflow-hidden bg-emerald-50">
+    {/* Image fills top — tall to maximize card */}
+    <div className="w-full flex-shrink-0 overflow-hidden" style={{ height: "210px" }}>
       <img
         src={image}
         alt={title}
         className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
         style={{ objectPosition: imagePosition }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
-      
-      {/* Badge */}
-      <span className="absolute top-3 right-3 text-[11px] font-semibold text-emerald-800 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full shadow-sm border border-emerald-200">
-        {badge}
-      </span>
     </div>
 
-    {/* Card Content */}
-    <div className="p-5 flex flex-col flex-1">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xl font-bold text-slate-800 group-hover:text-emerald-700 transition-colors">
-          {title}
-        </h3>
-        <ChevronRight size={18} className="text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
-      </div>
-
-      <p className="text-slate-600 text-sm leading-relaxed mb-6 flex-1">
+    {/* Card text + button */}
+    <div className="p-4 flex flex-col flex-1">
+      <h3 className="font-bold text-gray-900 mb-1" style={{ fontSize: "15px" }}>
+        {title}
+      </h3>
+      <p className="text-gray-500 leading-snug flex-1" style={{ fontSize: "12px" }}>
         {description}
       </p>
-
-      <CustomGreenButton
-        text={buttonText}
-        onClick={onClick}
-        className="w-full !rounded-full !py-2.5 text-sm font-semibold shadow-sm group-hover:shadow-md"
-      />
+      <button
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        className="w-full font-semibold text-white rounded-md transition-all duration-200 hover:brightness-110 active:scale-95 focus:outline-none mt-4"
+        style={{ backgroundColor: "#2d7a2d", padding: "8px 0", fontSize: "14px" }}
+      >
+        Continue
+      </button>
     </div>
   </div>
 );
@@ -106,87 +93,145 @@ const RegisterGateway = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden animate-page-fade">
-      {/* Gradient background matching design */}
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        backgroundColor: "#e6e6e6",
+        position: "relative",
+      }}
+    >
+      {/* Smudge texture — fixed full-screen */}
       <div
-        className="absolute inset-0"
         style={{
-          background: "linear-gradient(135deg, #e8f5e9 0%, #f5faf5 35%, #ffffff 65%, #bcead1 100%)",
-        }}
-      />
-      {/* Subtle decorative radial glow */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse at 80% 10%, rgba(134,197,148,0.3) 0%, transparent 60%), radial-gradient(ellipse at 20% 90%, rgba(76,175,80,0.25) 0%, transparent 60%)",
-        }}
-      />
-      {/* Background image overlay */}
-      <div
-        className="absolute inset-0 bg-cover bg-center pointer-events-none"
-        style={{
+          position: "fixed",
+          inset: 0,
           backgroundImage: `url(${backgroundImage})`,
-          opacity: 0.42,
-          mixBlendMode: "multiply",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          opacity: 0.45,
+          pointerEvents: "none",
+          zIndex: 0,
         }}
       />
 
-      <div className="relative z-10 flex-1 px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-        {/* Navigation Bar */}
-        <div className="max-w-7xl mx-auto flex items-center mb-6">
-          <CustomWhiteButton
-            icon={
-              <span className="flex items-center gap-2 px-2 text-sm font-medium whitespace-nowrap">
-                <ArrowLeft size={18} />
-                Back to Login
-              </span>
-            }
-            className="!rounded-full w-auto !p-2 !px-4 shadow-sm border border-gray-200"
-            onClick={() => navigate("/login")}
-          />
+      {/* Main layout — fills full viewport height */}
+      <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column" }}>
+
+        {/* Back to Home — top left */}
+        <div style={{ padding: "20px 32px 0" }}>
+          <button
+            onClick={() => navigate("/")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              backgroundColor: "white",
+              border: "1px solid #d1d5db",
+              color: "#374151",
+              fontSize: "13px",
+              fontWeight: 500,
+              padding: "8px 18px",
+              borderRadius: "999px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)"}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)"}
+          >
+            <ArrowLeft size={14} />
+            Back to Home
+          </button>
         </div>
 
-        {/* Header Title Section */}
-        <div className="max-w-3xl mx-auto text-center mt-2 mb-10">
-          <div className="flex items-center justify-center mb-5">
-            <img src={Logo} alt="GrainRise Logo" className="h-12 object-contain" />
+        {/* Centered body — expands to fill remaining viewport */}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "24px 40px",
+          }}
+        >
+          {/* Logo */}
+          <img
+            src={Logo}
+            alt="GrainRise Logo"
+            style={{ height: "52px", objectFit: "contain", marginBottom: "16px" }}
+          />
+
+          {/* Title */}
+          <h1
+            style={{
+              fontSize: "clamp(26px, 3vw, 36px)",
+              fontWeight: 800,
+              color: "#111827",
+              textAlign: "center",
+              marginBottom: "6px",
+              letterSpacing: "-0.5px",
+            }}
+          >
+            Get Started with GrainRise
+          </h1>
+
+          {/* Subtitle */}
+          <p
+            style={{
+              fontSize: "14px",
+              color: "#6b7280",
+              textAlign: "center",
+              marginBottom: "32px",
+            }}
+          >
+            Select an account type to begin your registration.
+          </p>
+
+          {/* 5 role cards — full width up to 1300px */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(5, 1fr)",
+              gap: "20px",
+              width: "100%",
+              maxWidth: "1300px",
+            }}
+          >
+            {roles.map((role) => (
+              <RoleCard
+                key={role.key}
+                title={role.title}
+                description={role.description}
+                image={role.image}
+                imagePosition={role.imagePosition}
+                onClick={() => navigate(role.path)}
+              />
+            ))}
           </div>
 
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-800 tracking-tight mb-3">
-            Create Your GrainRise Account
-          </h1>
-          <p className="text-slate-600 text-base sm:text-lg max-w-xl mx-auto">
-            Select your role to get started with seamless grain supply and management operations.
-          </p>
-        </div>
-
-        {/* 4 Combined Registration Cards (Farmer, Supplier, Warehouse, Retailer) */}
-        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {roles.map((role) => (
-            <RoleCard
-              key={role.key}
-              title={role.title}
-              badge={role.badge}
-              description={role.description}
-              buttonText={role.buttonText}
-              image={role.image}
-              imagePosition={role.imagePosition}
-              onClick={() => navigate(role.path)}
-            />
-          ))}
-        </div>
-
-        {/* Helper Footer Info */}
-        <div className="max-w-3xl mx-auto text-center mt-12 mb-4">
-          <p className="inline-flex items-center justify-center gap-2 text-sm text-slate-500 bg-white/70 backdrop-blur-sm px-4 py-2 rounded-full border border-slate-200/60 shadow-sm">
-            <Info size={16} className="text-emerald-600 shrink-0" />
-            Select the registration option that best matches your role in the GrainRise ecosystem.
-          </p>
+          {/* Disclaimer */}
+          <div style={{ marginTop: "28px" }}>
+            <p
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontSize: "12px",
+                color: "#6b7280",
+              }}
+            >
+              <Info size={13} style={{ flexShrink: 0 }} />
+              This registration portal is intended for Suppliers and Warehouse Managers only.
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="relative z-10">
+      {/* Footer */}
+      <div style={{ position: "relative", zIndex: 1 }}>
         <Footer />
       </div>
     </div>

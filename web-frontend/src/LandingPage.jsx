@@ -33,11 +33,13 @@ import {
   CloudSun,
   KeyRound,
   HelpCircle,
-  Headphones
+  Headphones,
+  User
 } from 'lucide-react';
 
 // Images
 import dashboardMockup from './assets/dashboardd.png';
+import mockup10 from './assets/10.png';
 import phoneMockup from './assets/phone3.png';
 import grainHands from './assets/handss.png';
 import groceryImg from './assets/Grocery.png';
@@ -52,7 +54,9 @@ import ctaBgImg from './assets/adminloginBG.png';
 import grainBgImg from './assets/grainnn.jpg';
 import fieldBgImg from './assets/field2.png';
 import riceBgImg from './assets/ricee.jpg';
-import heroBgImg from './assets/burnt.jpg';
+import heroBgImg from './assets/greenery.jpg';
+import glassImg from './assets/glass.png';
+import headsetImg from './assets/headset.png';
 
 // ─── Animated counter ─────────────────────────────────────────────────────────
 function useCounter(target, duration, trigger) {
@@ -137,13 +141,14 @@ export default function LandingPage() {
   };
 
   const ECOSYSTEM_STEPS = [
-    { icon: <Tractor size={24} strokeWidth={1.8} />,        label: 'Farmers'    },
-    { icon: <Truck size={24} strokeWidth={1.8} />,          label: 'Millers'    },
-    { icon: <Warehouse size={24} strokeWidth={1.8} />,      label: 'Warehouse'  },
-    { icon: <Package size={24} strokeWidth={1.8} />,        label: 'Inventory'  },
-    { icon: <ClipboardList size={24} strokeWidth={1.8} />,   label: 'Orders'     },
-    { icon: <Truck size={24} strokeWidth={1.8} />,          label: 'Transport'  },
-    { icon: <Store size={24} strokeWidth={1.8} />,          label: 'Retailers'  },
+    { icon: <Tractor size={22} strokeWidth={1.8} />,        label: 'Farmers'    },
+    { icon: <Truck size={22} strokeWidth={1.8} />,          label: 'Millers'    },
+    { icon: <Warehouse size={22} strokeWidth={1.8} />,      label: 'Warehouse'  },
+    { icon: <ClipboardCheck size={22} strokeWidth={1.8} />, label: 'Inventory'  },
+    { icon: <FileText size={22} strokeWidth={1.8} />,       label: 'Orders'     },
+    { icon: <Truck size={22} strokeWidth={1.8} />,          label: 'Transport'  },
+    { icon: <Store size={22} strokeWidth={1.8} />,          label: 'Retailers'  },
+    { icon: <User size={22} strokeWidth={1.8} />,           label: 'Consumer'   },
   ];
 
   const ROLE_PORTALS = [
@@ -295,14 +300,15 @@ export default function LandingPage() {
 
       {/* ── HERO ─── */}
       <section className="lp-hero" id="hero">
+        {/* Field/landscape bg image — faded at bottom */}
         <div className="lp-hero__bg" style={{ backgroundImage: `url(${heroBgImg})` }} />
         <div className="lp-hero__overlay" />
 
         <div className="lp-hero__inner">
-          {/* Left Column: Headline, Badge, Subtitle & CTAs */}
+          {/* Left Column: Badge, Headline, Subtitle & CTAs */}
           <div className="lp-hero__content">
             <div className="lp-hero__badge">
-              <ShieldCheck size={16} strokeWidth={2.2} />
+              <ShieldCheck size={15} strokeWidth={2.2} />
               <span>Centralized System Portal</span>
             </div>
 
@@ -317,19 +323,19 @@ export default function LandingPage() {
 
             <div className="lp-hero__ctas">
               <button
-                className="lp-btn lp-btn--primary lp-hero__btn-login"
+                className="lp-hero__btn-login"
                 onClick={() => navigate('/login')}
                 id="hero-login-btn"
               >
-                <LogIn size={16} strokeWidth={2.2} />
+                <LogIn size={15} strokeWidth={2.2} />
                 <span>Log In</span>
               </button>
               <button
-                className="lp-btn lp-btn--outline lp-hero__btn-register"
+                className="lp-hero__btn-register"
                 onClick={() => navigate('/register')}
                 id="hero-register-btn"
               >
-                <UserPlus size={16} strokeWidth={2} />
+                <UserPlus size={15} strokeWidth={2} />
                 <span>Register / Join GrainRise</span>
               </button>
             </div>
@@ -338,8 +344,8 @@ export default function LandingPage() {
           {/* Right Column: Dashboard Mockup */}
           <div className="lp-hero__mockup-wrap">
             <img
-              src={dashboardMockup}
-              alt="GrainRise Supply Chain Portal Dashboard"
+              src={mockup10}
+              alt="GrainRise Supply Chain Portal Dashboard on Laptop and Mobile"
               className="lp-hero__mockup"
             />
           </div>
@@ -403,6 +409,7 @@ export default function LandingPage() {
 
       {/* ── EXPLORE GRAINRISE ─── */}
       <AnimatedSection className="lp-explore" id="explore-grainrise">
+        <div className="lp-explore__bg" style={{ backgroundImage: `url(${glassImg})` }} />
         <div className="lp-explore__inner">
           <div className="lp-explore__header">
             <h2 className="lp-section-headline lp-section-headline--center">
@@ -473,6 +480,7 @@ export default function LandingPage() {
               Need Help Accessing<br />
               GrainRise?
             </h2>
+            <img src={headsetImg} alt="GrainRise Support Headset" className="lp-help__img" />
           </div>
 
           <div className="lp-help__grid">
