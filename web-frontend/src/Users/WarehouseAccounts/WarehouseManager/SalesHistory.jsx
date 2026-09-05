@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Receipt, Clock } from "lucide-react";
+import { X, Receipt, Clock, ChevronDown } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
 import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
@@ -12,6 +12,13 @@ const SORT_OPTIONS = [
   { value: "date-asc", label: "Oldest First" },
   { value: "amount-desc", label: "Amount (High to Low)" },
   { value: "amount-asc", label: "Amount (Low to High)" },
+];
+
+/* ── Branch Options ─────────────────────────────────────────────── */
+const BRANCH_OPTIONS = [
+  "Warehouse ABC",
+  "Warehouse XYZ",
+  "Main Distribution Hub",
 ];
 
 /* ── Columns for In-Store Transactions ────────────────────────── */
@@ -29,24 +36,24 @@ const IN_STORE_SECTIONS = [
     label: "Today",
     rows: [
       { id: "ist-1", time: "11:45 AM", branch: "Warehouse ABC", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-001" },
-      { id: "ist-2", time: "11:45 AM", branch: "Warehouse ABC", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-002" },
-      { id: "ist-3", time: "11:45 AM", branch: "Warehouse ABC", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-003" },
+      { id: "ist-2", time: "11:45 AM", branch: "Warehouse XYZ", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-002" },
+      { id: "ist-3", time: "11:45 AM", branch: "Main Distribution Hub", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-003" },
     ],
   },
   {
     label: "Yesterday",
     rows: [
       { id: "isy-1", time: "11:45 AM", branch: "Warehouse ABC", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-004" },
-      { id: "isy-2", time: "11:45 AM", branch: "Warehouse ABC", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-005" },
-      { id: "isy-3", time: "11:45 AM", variant: "Dinorado", branch: "Warehouse ABC", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-006" },
-      { id: "isy-4", time: "11:45 AM", variant: "Dinorado", branch: "Warehouse ABC", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-007" },
+      { id: "isy-2", time: "11:45 AM", branch: "Warehouse XYZ", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-005" },
+      { id: "isy-3", time: "11:45 AM", branch: "Warehouse ABC", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-006" },
+      { id: "isy-4", time: "11:45 AM", branch: "Main Distribution Hub", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-007" },
     ],
   },
   {
     label: "July 16, 2026",
     rows: [
       { id: "isj-1", time: "11:45 AM", branch: "Warehouse ABC", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-008" },
-      { id: "isj-2", time: "11:45 AM", branch: "Warehouse ABC", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-009" },
+      { id: "isj-2", time: "11:45 AM", branch: "Warehouse XYZ", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-009" },
       { id: "isj-3", time: "11:45 AM", branch: "Warehouse ABC", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22.5k", receiptNo: "REC-2026-010" },
     ],
   },
@@ -79,24 +86,24 @@ const ONLINE_SECTIONS = [
     label: "Today",
     rows: [
       { id: "ont-1", retailer: "Retailer A", branch: "Warehouse ABC", batchNo: "Batch 2026-001", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
-      { id: "ont-2", retailer: "Retailer A", branch: "Warehouse ABC", batchNo: "Batch 2026-001", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
-      { id: "ont-3", retailer: "Retailer A", branch: "Warehouse ABC", batchNo: "Batch 2026-001", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
+      { id: "ont-2", retailer: "Retailer B", branch: "Warehouse XYZ", batchNo: "Batch 2026-002", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
+      { id: "ont-3", retailer: "Retailer C", branch: "Main Distribution Hub", batchNo: "Batch 2026-003", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
     ],
   },
   {
     label: "Yesterday",
     rows: [
       { id: "ony-1", retailer: "Retailer A", branch: "Warehouse ABC", batchNo: "Batch 2026-001", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
-      { id: "ony-2", retailer: "Retailer A", branch: "Warehouse ABC", batchNo: "Batch 2026-001", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
+      { id: "ony-2", retailer: "Retailer B", branch: "Warehouse XYZ", batchNo: "Batch 2026-002", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
       { id: "ony-3", retailer: "Retailer A", branch: "Warehouse ABC", batchNo: "Batch 2026-001", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
-      { id: "ony-4", retailer: "Retailer A", branch: "Warehouse ABC", batchNo: "Batch 2026-001", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
+      { id: "ony-4", retailer: "Retailer C", branch: "Main Distribution Hub", batchNo: "Batch 2026-003", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
     ],
   },
   {
     label: "July 16, 2026",
     rows: [
       { id: "onj-1", retailer: "Retailer A", branch: "Warehouse ABC", batchNo: "Batch 2026-001", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
-      { id: "onj-2", retailer: "Retailer A", branch: "Warehouse ABC", batchNo: "Batch 2026-001", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
+      { id: "onj-2", retailer: "Retailer B", branch: "Warehouse XYZ", batchNo: "Batch 2026-002", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
       { id: "onj-3", retailer: "Retailer A", branch: "Warehouse ABC", batchNo: "Batch 2026-001", variant: "Dinorado", totalPrice: "₱1,500", deliveryStatus: "Completed" },
     ],
   },
@@ -105,6 +112,7 @@ const ONLINE_SECTIONS = [
 export default function WarehouseManagerSalesHistory() {
   const [activeTab, setActiveTab] = useState("in-store"); // "in-store" | "online"
   const [searchQuery, setSearchQuery] = useState("");
+  const [branchFilter, setBranchFilter] = useState("Branch");
   const [sortBy, setSortBy] = useState("date-desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
@@ -117,16 +125,26 @@ export default function WarehouseManagerSalesHistory() {
     .map((section) => ({
       ...section,
       rows: section.rows.filter((row) => {
-        if (!searchQuery) return true;
-        const q = searchQuery.toLowerCase();
-        return (
-          row.variant?.toLowerCase().includes(q) ||
-          row.branch?.toLowerCase().includes(q) ||
-          row.retailer?.toLowerCase().includes(q) ||
-          row.batchNo?.toLowerCase().includes(q) ||
-          row.totalPayment?.toLowerCase().includes(q) ||
-          row.totalPrice?.toLowerCase().includes(q)
-        );
+        // Search Filter
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const matchesSearch =
+            row.variant?.toLowerCase().includes(q) ||
+            row.branch?.toLowerCase().includes(q) ||
+            row.retailer?.toLowerCase().includes(q) ||
+            row.batchNo?.toLowerCase().includes(q) ||
+            row.totalPayment?.toLowerCase().includes(q) ||
+            row.totalPrice?.toLowerCase().includes(q);
+
+          if (!matchesSearch) return false;
+        }
+
+        // Branch Filter
+        if (branchFilter !== "Branch" && branchFilter !== "All") {
+          if (row.branch !== branchFilter) return false;
+        }
+
+        return true;
       }),
     }))
     .filter((section) => section.rows.length > 0);
@@ -171,14 +189,42 @@ export default function WarehouseManagerSalesHistory() {
 
       {/* ── Filter Row ──────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3">
+        {/* Search */}
         <div className="w-full max-w-sm">
           <SearchFilter
             onSearch={setSearchQuery}
             placeholder="Search receipt no., variant, customer, or amount"
           />
         </div>
+
+        {/* Date Range Picker */}
         <DateRangePicker onDateChange={() => {}} />
+
+        {/* Sort By Dropdown */}
         <SortByDropdown value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} />
+
+        {/* Branch Filter Dropdown (Placed as Last Filter) */}
+        <div className="relative w-full sm:w-auto">
+          <select
+            value={branchFilter}
+            onChange={(e) => {
+              setBranchFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="appearance-none border border-gray-200 bg-white pl-3 pr-8 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto transition-colors cursor-pointer h-[38px] focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          >
+            <option value="Branch">All Branches</option>
+            {BRANCH_OPTIONS.map((branch) => (
+              <option key={branch} value={branch}>
+                {branch}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            size={16}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+          />
+        </div>
       </div>
 
       {/* ── Transactions Table ──────────────────────────────────────────────── */}

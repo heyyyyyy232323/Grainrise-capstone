@@ -1,16 +1,15 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Heart, MessageSquare, ArrowRight } from "lucide-react";
+import { Search, Heart, MessageSquare, ArrowRight, Calendar, ChevronDown, ChevronUp, X } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 
 export const MILLER_NEWS_DATA = [
   {
     id: 1,
     category: "MARKET UPDATES",
-    categoryColor: "bg-emerald-100 text-emerald-700",
+    categoryColor: "bg-emerald-100 text-emerald-700 border border-emerald-200",
     date: "August 20, 2026 · 10:00 AM",
-    year: "2026",
-    month: "August",
+    isoDate: "2026-08-20",
     title: "Palay Buying Prices Show Stable Movement This Month",
     description:
       "Recent market analysis indicate stable palay buying prices across selected agricultural areas, providing a predictable revenue stream for local producers...",
@@ -21,10 +20,9 @@ export const MILLER_NEWS_DATA = [
   {
     id: 2,
     category: "ADVISORY & BEST PRACTICES",
-    categoryColor: "bg-blue-100 text-blue-700",
+    categoryColor: "bg-blue-100 text-blue-700 border border-blue-200",
     date: "August 17, 2026 · 08:15 AM",
-    year: "2026",
-    month: "August",
+    isoDate: "2026-08-17",
     title: "El Niño Preparations: Water Management Strategies for Q4",
     description:
       "With projected rainfall deficits approaching in the final quarter, experts recommend immediate implementation of efficient irrigation scheduling and soil...",
@@ -35,10 +33,9 @@ export const MILLER_NEWS_DATA = [
   {
     id: 3,
     category: "GRANT PROGRAMS & SUPPORT",
-    categoryColor: "bg-amber-100 text-amber-700",
+    categoryColor: "bg-amber-100 text-amber-700 border border-amber-200",
     date: "August 10, 2026 · 02:30 PM",
-    year: "2026",
-    month: "August",
+    isoDate: "2026-08-10",
     title: "New Fertilizer Discount Vouchers Available for Registration",
     description:
       "Eligible registered farmers can now apply for the Q3 fertilizer discount voucher program through the centralized portal to offset rising input costs for the...",
@@ -48,17 +45,67 @@ export const MILLER_NEWS_DATA = [
   },
 ];
 
+const CATEGORY_OPTIONS = [
+  { value: "all", label: "News Category" },
+  { value: "MARKET UPDATES", label: "Market Updates" },
+  { value: "ADVISORY & BEST PRACTICES", label: "Advisory & Best Practices" },
+  { value: "GRANT PROGRAMS & SUPPORT", label: "Grant Programs & Support" },
+];
+
+const SORT_OPTIONS = [
+  { value: "Latest", label: "Latest" },
+  { value: "Most Liked", label: "Most Liked" },
+  { value: "Most Commented", label: "Most Commented" },
+];
+
 export default function MillerManagerNewsUpdates() {
   const navigate = useNavigate();
-  
+
   // Filter States
   const [search, setSearch] = useState("");
-  const [selectedYear, setSelectedYear] = useState("Year");
-  const [selectedMonth, setSelectedMonth] = useState("Month");
-  const [selectedCategory, setSelectedCategory] = useState("News Category");
+  const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
+  const [tempDateRange, setTempDateRange] = useState({ startDate: "", endDate: "" });
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("Latest");
-  
+
+  // Dropdown visibility states
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+
   const [likedArticles, setLikedArticles] = useState({});
+
+  const dateRef = useRef(null);
+  const categoryRef = useRef(null);
+  const sortRef = useRef(null);
+
+  // Handle outside clicks to close dropdown popovers
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dateRef.current && !dateRef.current.contains(e.target)) {
+        setShowDatePicker(false);
+      }
+      if (categoryRef.current && !categoryRef.current.contains(e.target)) {
+        setShowCategoryDropdown(false);
+      }
+      if (sortRef.current && !sortRef.current.contains(e.target)) {
+        setShowSortDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleDateApply = () => {
+    setDateRange(tempDateRange);
+    setShowDatePicker(false);
+  };
+
+  const handleDateReset = () => {
+    setTempDateRange({ startDate: "", endDate: "" });
+    setDateRange({ startDate: "", endDate: "" });
+    setShowDatePicker(false);
+  };
 
   const toggleLike = (e, id) => {
     e.stopPropagation();
@@ -69,13 +116,17 @@ export default function MillerManagerNewsUpdates() {
   const filtered = MILLER_NEWS_DATA.filter((news) => {
     if (search) {
       const q = search.toLowerCase();
-      if (!news.title.toLowerCase().includes(q) && !news.description.toLowerCase().includes(q)) {
-        return false;
-      }
+      const matchTitle = news.title.toLowerCase().includes(q);
+      const matchDesc = news.description.toLowerCase().includes(q);
+      if (!matchTitle && !matchDesc) return false;
     }
-    if (selectedYear !== "Year" && news.year !== selectedYear) return false;
-    if (selectedMonth !== "Month" && news.month !== selectedMonth) return false;
-    if (selectedCategory !== "News Category" && !news.category.toLowerCase().includes(selectedCategory.toLowerCase())) return false;
+
+    if (dateRange.startDate && news.isoDate < dateRange.startDate) return false;
+    if (dateRange.endDate && news.isoDate > dateRange.endDate) return false;
+
+    if (selectedCategory !== "all" && news.category !== selectedCategory) {
+      return false;
+    }
 
     return true;
   }).sort((a, b) => {
@@ -84,12 +135,15 @@ export default function MillerManagerNewsUpdates() {
     return b.id - a.id; // Default "Latest"
   });
 
+  const categoryLabel =
+    CATEGORY_OPTIONS.find((opt) => opt.value === selectedCategory)?.label || "News Category";
+
   return (
     <div className="space-y-6">
       {/* ── Page Header ─────────────────────────────────────────────────────── */}
       <div className="space-y-1">
         <Breadcrumbs items={[{ label: "Resources" }, { label: "News & Updates" }]} />
-        <h2 className="text-[clamp(1.75rem,2.5vw,2.25rem)] font-bold tracking-tight text-slate-900">
+        <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-bold tracking-[-0.03em] text-slate-900">
           News &amp; Updates
         </h2>
         <p className="text-sm text-slate-500">
@@ -97,61 +151,182 @@ export default function MillerManagerNewsUpdates() {
         </p>
       </div>
 
-      {/* ── Search & Dropdown Filters ──────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row gap-4 mb-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search news and updates..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl text-sm focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] outline-none bg-white text-gray-700"
-          />
-        </div>
+      {/* ── Search & Filter Controls ────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-2 items-stretch sm:items-center justify-between">
+        <div className="flex flex-wrap items-center gap-2 flex-1">
+          {/* Search Bar */}
+          <div className="relative min-w-[240px] max-w-sm flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search news and updates..."
+              className="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
 
-        <div className="flex flex-wrap gap-3">
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] outline-none bg-white text-gray-700 min-w-[100px]"
-          >
-            <option value="Year">Year</option>
-            <option value="2026">2026</option>
-            <option value="2025">2025</option>
-          </select>
+          {/* 1. Date Range Picker Dropdown */}
+          <div className="relative w-full sm:w-auto" ref={dateRef}>
+            <button
+              type="button"
+              onClick={() => setShowDatePicker((prev) => !prev)}
+              className={`flex items-center gap-2 border border-gray-200 bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto justify-center transition-colors cursor-pointer h-[38px] ${
+                dateRange.startDate ? "border-emerald-500 text-emerald-700 bg-emerald-50/40" : ""
+              }`}
+            >
+              <span>
+                {dateRange.startDate
+                  ? `${dateRange.startDate} - ${dateRange.endDate || "..."}`
+                  : "Date Range"}
+              </span>
+              <Calendar size={16} className={dateRange.startDate ? "text-emerald-600" : "text-gray-500"} />
+            </button>
 
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] outline-none bg-white text-gray-700 min-w-[100px]"
-          >
-            <option value="Month">Month</option>
-            <option value="August">August</option>
-            <option value="July">July</option>
-            <option value="June">June</option>
-          </select>
+            {showDatePicker && (
+              <div className="absolute top-full mt-2 left-0 sm:left-auto bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-20 w-64">
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={tempDateRange.startDate}
+                      onChange={(e) =>
+                        setTempDateRange((prev) => ({ ...prev, startDate: e.target.value }))
+                      }
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={tempDateRange.endDate}
+                      onChange={(e) =>
+                        setTempDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+                      }
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleDateReset}
+                      className="flex-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDateApply}
+                      className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-[#0B5D1E] hover:bg-[#084b18] rounded transition-colors cursor-pointer"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] outline-none bg-white text-gray-700 min-w-[160px]"
-          >
-            <option value="News Category">News Category</option>
-            <option value="Market Updates">Market Updates</option>
-            <option value="Advisory">Advisory &amp; Best Practices</option>
-            <option value="Grant Programs">Grant Programs &amp; Support</option>
-          </select>
+          {/* 2. News Category Dropdown */}
+          <div className="relative w-full sm:w-auto" ref={categoryRef}>
+            <button
+              type="button"
+              onClick={() => setShowCategoryDropdown((prev) => !prev)}
+              className="flex items-center gap-2 border border-gray-200 bg-white px-3.5 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-gray-50 transition-colors cursor-pointer h-[38px] justify-between"
+            >
+              <span>{categoryLabel}</span>
+              {showCategoryDropdown ? (
+                <ChevronUp size={16} className="text-slate-500" />
+              ) : (
+                <ChevronDown size={16} className="text-slate-500" />
+              )}
+            </button>
 
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] outline-none bg-white text-gray-700 min-w-[120px]"
-          >
-            <option value="Latest">Latest</option>
-            <option value="Most Liked">Most Liked</option>
-            <option value="Most Commented">Most Commented</option>
-          </select>
+            {showCategoryDropdown && (
+              <div className="absolute top-full mt-1.5 left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-1.5 z-30 w-60 animate-in fade-in zoom-in-95 duration-100">
+                <div className="space-y-0.5">
+                  {CATEGORY_OPTIONS.map((opt) => {
+                    const isSelected = selectedCategory === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCategory(opt.value);
+                          setShowCategoryDropdown(false);
+                        }}
+                        className={`w-full text-left px-3.5 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
+                          isSelected
+                            ? "bg-[#EAF5ED] text-[#0B5D1E] font-semibold"
+                            : "text-slate-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 3. Sort By Dropdown */}
+          <div className="relative w-full sm:w-auto" ref={sortRef}>
+            <button
+              type="button"
+              onClick={() => setShowSortDropdown((prev) => !prev)}
+              className="flex items-center gap-2 border border-gray-200 bg-white px-4 py-2 rounded-2xl text-sm font-medium text-slate-800 hover:bg-gray-50 transition-colors cursor-pointer h-[38px] min-w-[140px] justify-between shadow-2xs"
+            >
+              <span>{sortBy}</span>
+              {showSortDropdown ? (
+                <ChevronUp size={16} className="text-slate-500" />
+              ) : (
+                <ChevronDown size={16} className="text-slate-500" />
+              )}
+            </button>
+
+            {showSortDropdown && (
+              <div className="absolute top-full mt-1.5 left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-1.5 z-30 w-48 animate-in fade-in zoom-in-95 duration-100">
+                <div className="space-y-0.5">
+                  {SORT_OPTIONS.map((opt) => {
+                    const isSelected = sortBy === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          setSortBy(opt.value);
+                          setShowSortDropdown(false);
+                        }}
+                        className={`w-full text-left px-3.5 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
+                          isSelected
+                            ? "bg-[#EAF5ED] text-[#0B5D1E] font-semibold"
+                            : "text-slate-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -184,7 +359,7 @@ export default function MillerManagerNewsUpdates() {
                   <div>
                     <div className="flex items-center gap-3 mb-2">
                       <span
-                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-sm uppercase ${news.categoryColor}`}
+                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase ${news.categoryColor}`}
                       >
                         {news.category}
                       </span>
@@ -204,6 +379,7 @@ export default function MillerManagerNewsUpdates() {
                   <div className="flex justify-between items-center mt-auto border-t border-gray-100 pt-3">
                     <div className="flex items-center gap-4 text-xs font-medium text-gray-500">
                       <button
+                        type="button"
                         onClick={(e) => toggleLike(e, news.id)}
                         className={`flex items-center gap-1 ${
                           isLiked ? "text-emerald-700 font-semibold" : "hover:text-emerald-700"
@@ -211,12 +387,13 @@ export default function MillerManagerNewsUpdates() {
                       >
                         <Heart size={14} fill={isLiked ? "currentColor" : "none"} /> {displayLikes}
                       </button>
-                      <span>
-                        <MessageSquare size={14} className="inline mr-1" /> {news.comments} Comments
+                      <span className="flex items-center gap-1">
+                        <MessageSquare size={14} /> {news.comments} Comments
                       </span>
                       <span className="hidden sm:inline-block">Source: {news.source}</span>
                     </div>
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         navigate(`/miller-manager/news-updates/${news.id}`);
@@ -239,19 +416,19 @@ export default function MillerManagerNewsUpdates() {
           Showing 1-{filtered.length} of {MILLER_NEWS_DATA.length} articles
         </p>
         <div className="flex gap-1">
-          <button className="px-3 py-1 border border-gray-200 text-gray-400 rounded-md text-sm cursor-not-allowed">
+          <button type="button" className="px-3 py-1 border border-gray-200 text-gray-400 rounded-md text-sm cursor-not-allowed">
             Previous
           </button>
-          <button className="px-3 py-1 bg-[#0B5D1E] text-white font-medium rounded-md text-sm">
+          <button type="button" className="px-3 py-1 bg-[#0B5D1E] text-white font-medium rounded-md text-sm cursor-pointer">
             1
           </button>
-          <button className="px-3 py-1 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-md text-sm transition">
+          <button type="button" className="px-3 py-1 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-md text-sm transition cursor-pointer">
             2
           </button>
-          <button className="px-3 py-1 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-md text-sm transition">
+          <button type="button" className="px-3 py-1 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-md text-sm transition cursor-pointer">
             3
           </button>
-          <button className="px-3 py-1 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-md text-sm transition">
+          <button type="button" className="px-3 py-1 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-md text-sm transition cursor-pointer">
             Next
           </button>
         </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShieldCheck, HelpCircle, LogIn, Download } from 'lucide-react';
+import { ShieldCheck, HelpCircle, LogIn } from 'lucide-react';
 import logoImg from '../../assets/Logo.png';
 import '../../LandingPage.css';
 
@@ -32,7 +32,7 @@ export default function LandingHeader() {
   };
 
   return (
-    <header className="lp-header-wrapper">
+    <>
       {/* Top Green Notification Bar */}
       <div className="lp-topbar">
         <div className="lp-topbar__inner">
@@ -86,6 +86,6 @@ export default function LandingHeader() {
           </div>
         </div>
       </nav>
-    </header>
+    </>
   );
 }

@@ -1058,7 +1058,6 @@ export const getUserSidebarConfig = (role = "admin") => {
         {
           title: "MANAGEMENT",
           items: [
-            { label: "Branch Management", icon: Warehouse, path: "/miller-manager/branches" },
             { label: "Contracts", icon: ClipboardList, path: "/miller-manager/contracts" },
             { label: "Order Approval", icon: ClipboardList, path: "/miller-manager/order-approval" },
             { label: "Pass Fee Management", icon: Receipt, path: "/miller-manager/pass-fee" },

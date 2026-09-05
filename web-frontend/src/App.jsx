@@ -6,7 +6,6 @@ import LandingPage from "./LandingPage";
 import Login from "./Login/UserLogin";
 import AdminLogin from "./Login/AdminLogin";
 import Register from "./Register/Register";
-import SupplierWarehouseGateway from "./Register/SupplierWarehouseGateway";
 import RetailerRegister from "./Register/RetailerRegister";
 import DashboardPreview from "./DashboardPreview";
 import WarehouseManagerRegister from "./Register/WarehouseManagerRegister";
@@ -189,8 +188,6 @@ import MillerDriverAssignedHistory from "./Users/MillerAccounts/MillerDriver/Mil
 // ============================================================
 
 import MillerManagerDashboard from "./Users/MillerAccounts/MillerManager/MillerManagerDashboard";
-import MillerBranchManagement from "./Users/MillerAccounts/MillerManager/MillerBranchManagement";
-import MillerEmployeeManagement from "./Users/MillerAccounts/MillerManager/MillerEmployeeManagement";
 import MillerContracts from "./Users/MillerAccounts/MillerManager/MillerContracts";
 import MillerOrderApproval from "./Users/MillerAccounts/MillerManager/MillerOrderApproval";
 import MillerPassFeeManagement from "./Users/MillerAccounts/MillerManager/MillerPassFeeManagement";
@@ -887,20 +884,6 @@ function App() {
               element={<MillerManagerDashboard />}
             />
 
-            <Route
-              path="/miller-manager/branches"
-              element={<MillerBranchManagement />}
-            />
-
-            <Route
-              path="/miller-manager/branches/:branchId/employees"
-              element={<MillerEmployeeManagement />}
-            />
-
-            <Route
-              path="/miller-manager/branch-management"
-              element={<MillerBranchManagement />}
-            />
 
             <Route
               path="/miller-manager/contracts"

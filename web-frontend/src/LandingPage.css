@@ -3,7 +3,7 @@
   font-family: 'Inter', system-ui, sans-serif;
   color: #1a2e1a;
   background: #dceedd;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .lp-green {
@@ -12,10 +12,6 @@
 
 /* ─── Topbar & Header ────────────────────────────────────────── */
 .lp-header-wrapper {
-  position: sticky;
-  top: 0;
-  left: 0;
-  right: 0;
   z-index: 1000;
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -60,6 +56,9 @@
 
 /* ─── Navbar ─────────────────────────────────────────────────── */
 .lp-nav {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   transition: all 0.3s ease;
