@@ -89,13 +89,13 @@ export default function WarehouseManagerNewsArticle() {
       <Breadcrumbs
         items={[
           { label: "Resources" },
-          { label: "News & Updates", path: "/warehouse-manager/news-updates" },
+          { label: "News & Updates", path: "/branch-manager/news-updates" },
           { label: article.title.slice(0, 45) + "…" },
         ]}
       />
 
       <button
-        onClick={() => navigate("/warehouse-manager/news-updates")}
+        onClick={() => navigate("/branch-manager/news-updates")}
         className="flex items-center gap-2 text-sm text-gray-500 hover:text-emerald-700 transition font-medium cursor-pointer"
       >
         <ArrowLeft size={16} /> Back to News &amp; Updates

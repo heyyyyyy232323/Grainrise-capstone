@@ -15,6 +15,8 @@ import {
 
 import Breadcrumbs from "../../Components/Minor-Components/Breadcrumbs";
 import Tabs from "../../Components/Minor-Components/Tabs";
+import Dropdown from "../../Components/Minor-Components/Dropdown";
+import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 
 import FarmerContractHistoryDetailsModal from "../../Components/Modals/FarmerContractHistoryDetailsModal";
 
@@ -1196,239 +1198,68 @@ export default function FarmerTransactionHistory() {
 
 
             {/* STATUS */}
-
-            <select
-              value={
-                transactionStatus
-              }
-              onChange={
-                (
-                  event
-                ) =>
-                  setTransactionStatus(
-                    event.target.value
-                  )
-              }
-              className="
-                h-10
-                min-w-[135px]
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                text-sm
-                text-slate-600
-                outline-none
-                focus:border-green-600
-              "
-            >
-
-              <option value="">
-                All Status
-              </option>
-
-              <option value="completed">
-                Completed
-              </option>
-
-              <option value="voided">
-                Voided
-              </option>
-
-            </select>
-
+            <div className="w-36">
+              <Dropdown
+                options={[
+                  { label: "All Status", value: "" },
+                  { label: "Completed", value: "completed" },
+                  { label: "Voided", value: "voided" },
+                ]}
+                value={transactionStatus}
+                onChange={setTransactionStatus}
+                placeholder="All Status"
+              />
+            </div>
 
             {/* YEAR */}
-
-            <select
-              value={
-                year
-              }
-              onChange={
-                (
-                  event
-                ) =>
-                  setYear(
-                    event.target.value
-                  )
-              }
-              className="
-                h-10
-                min-w-[110px]
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                text-sm
-                text-slate-600
-                outline-none
-                focus:border-green-600
-              "
-            >
-
-              <option value="">
-                Year
-              </option>
-
-
-              {yearOptions.map(
-                (
-                  option
-                ) => (
-
-                  <option
-                    key={
-                      option
-                    }
-                    value={
-                      option
-                    }
-                  >
-                    {option}
-                  </option>
-
-                )
-              )}
-
-            </select>
-
+            <div className="w-28">
+              <Dropdown
+                options={[
+                  { label: "All Years", value: "" },
+                  ...yearOptions.map((y) => ({ label: String(y), value: String(y) })),
+                ]}
+                value={year}
+                onChange={setYear}
+                placeholder="Year"
+              />
+            </div>
 
             {/* MONTH */}
-
-            <select
-              value={
-                month
-              }
-              onChange={
-                (
-                  event
-                ) =>
-                  setMonth(
-                    event.target.value
-                  )
-              }
-              className="
-                h-10
-                min-w-[125px]
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                text-sm
-                text-slate-600
-                outline-none
-                focus:border-green-600
-              "
-            >
-
-              {MONTHS.map(
-                (
-                  option
-                ) => (
-
-                  <option
-                    key={
-                      option.value ||
-                      "month"
-                    }
-                    value={
-                      option.value
-                    }
-                  >
-                    {option.label}
-                  </option>
-
-                )
-              )}
-
-            </select>
-
+            <div className="w-32">
+              <Dropdown
+                options={[
+                  { label: "All Months", value: "" },
+                  ...MONTHS.filter((m) => m.value).map((m) => ({ label: m.label, value: m.value })),
+                ]}
+                value={month}
+                onChange={setMonth}
+                placeholder="Month"
+              />
+            </div>
 
             {/* PAYMENT */}
-
-            <select
-              value={
-                paymentMethod
-              }
-              onChange={
-                (
-                  event
-                ) =>
-                  setPaymentMethod(
-                    event.target.value
-                  )
-              }
-              className="
-                h-10
-                min-w-[140px]
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                text-sm
-                text-slate-600
-                outline-none
-                focus:border-green-600
-              "
-            >
-
-              <option value="">
-                All Payments
-              </option>
-
-              <option value="cash">
-                Cash
-              </option>
-
-              <option value="card">
-                Card
-              </option>
-
-            </select>
-
+            <div className="w-36">
+              <Dropdown
+                options={[
+                  { label: "All Payments", value: "" },
+                  { label: "Cash", value: "cash" },
+                  { label: "Card", value: "card" },
+                ]}
+                value={paymentMethod}
+                onChange={setPaymentMethod}
+                placeholder="All Payments"
+              />
+            </div>
 
             {/* SORT */}
-
-            <select
-              value={
-                sortBy
-              }
-              onChange={
-                (
-                  event
-                ) =>
-                  setSortBy(
-                    event.target.value
-                  )
-              }
-              className="
-                h-10
-                min-w-[140px]
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                text-sm
-                text-slate-600
-                outline-none
-                focus:border-green-600
-              "
-            >
-
-              <option value="newest">
-                Newest
-              </option>
-
-              <option value="oldest">
-                Oldest
-              </option>
-
-            </select>
+            <SortByDropdown
+              options={[
+                { value: "newest", label: "Newest First" },
+                { value: "oldest", label: "Oldest First" },
+              ]}
+              value={sortBy}
+              onChange={setSortBy}
+            />
 
           </div>
 
@@ -1810,151 +1641,40 @@ export default function FarmerTransactionHistory() {
 
 
             {/* YEAR */}
-
-            <select
-              value={
-                year
-              }
-              onChange={
-                (
-                  event
-                ) =>
-                  setYear(
-                    event.target.value
-                  )
-              }
-              className="
-                h-10
-                min-w-[110px]
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                text-sm
-                text-slate-600
-                outline-none
-                focus:border-green-600
-              "
-            >
-
-              <option value="">
-                Year
-              </option>
-
-
-              {yearOptions.map(
-                (
-                  option
-                ) => (
-
-                  <option
-                    key={
-                      option
-                    }
-                    value={
-                      option
-                    }
-                  >
-                    {option}
-                  </option>
-
-                )
-              )}
-
-            </select>
-
+            <div className="w-28">
+              <Dropdown
+                options={[
+                  { label: "All Years", value: "" },
+                  ...yearOptions.map((y) => ({ label: String(y), value: String(y) })),
+                ]}
+                value={year}
+                onChange={setYear}
+                placeholder="Year"
+              />
+            </div>
 
             {/* MONTH */}
-
-            <select
-              value={
-                month
-              }
-              onChange={
-                (
-                  event
-                ) =>
-                  setMonth(
-                    event.target.value
-                  )
-              }
-              className="
-                h-10
-                min-w-[125px]
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                text-sm
-                text-slate-600
-                outline-none
-                focus:border-green-600
-              "
-            >
-
-              {MONTHS.map(
-                (
-                  option
-                ) => (
-
-                  <option
-                    key={
-                      option.value ||
-                      "month"
-                    }
-                    value={
-                      option.value
-                    }
-                  >
-                    {option.label}
-                  </option>
-
-                )
-              )}
-
-            </select>
-
+            <div className="w-32">
+              <Dropdown
+                options={[
+                  { label: "All Months", value: "" },
+                  ...MONTHS.filter((m) => m.value).map((m) => ({ label: m.label, value: m.value })),
+                ]}
+                value={month}
+                onChange={setMonth}
+                placeholder="Month"
+              />
+            </div>
 
             {/* SORT */}
-
-            <select
-              value={
-                sortBy
-              }
-              onChange={
-                (
-                  event
-                ) =>
-                  setSortBy(
-                    event.target.value
-                  )
-              }
-              className="
-                h-10
-                min-w-[140px]
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                text-sm
-                text-slate-600
-                outline-none
-                focus:border-green-600
-              "
-            >
-
-              <option value="newest">
-                Newest
-              </option>
-
-              <option value="oldest">
-                Oldest
-              </option>
-
-            </select>
+            <SortByDropdown
+              options={[
+                { value: "newest", label: "Newest First" },
+                { value: "oldest", label: "Oldest First" },
+              ]}
+              value={sortBy}
+              onChange={setSortBy}
+            />
 
           </div>
 

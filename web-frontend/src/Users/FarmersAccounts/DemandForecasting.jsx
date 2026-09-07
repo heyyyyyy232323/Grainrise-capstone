@@ -1,37 +1,57 @@
+import { useState } from "react";
 import { Search, Lightbulb, Download, TrendingUp } from "lucide-react";
+import Dropdown from "../../Components/Minor-Components/Dropdown";
+
+const PRODUCT_TYPE_OPTIONS = [
+  { label: "Milled Rice", value: "Milled Rice" },
+  { label: "Palay", value: "Palay" },
+];
+
+const FORECAST_VIEW_OPTIONS = [
+  { label: "Monthly", value: "Monthly" },
+  { label: "Quarterly", value: "Quarterly" },
+];
 
 export default function DemandForecasting() {
+  const [query, setQuery] = useState("Jasmine Rice");
+  const [productType, setProductType] = useState("Milled Rice");
+  const [forecastView, setForecastView] = useState("Monthly");
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h3 className="font-bold text-gray-900 text-lg mb-4">Demand Forecasting</h3>
 
         {/* ── Filter Controls ────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
           <div className="md:col-span-6 relative">
-             <label className="text-xs font-semibold text-gray-500 mb-1 block">Search Product / Variety</label>
+             <label className="text-xs font-semibold text-gray-500 mb-1.5 block">Search Product / Variety</label>
              <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                 <input 
                   type="text" 
-                  defaultValue="Jasmine Rice"
-                  className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-green-600 focus:border-green-600 outline-none"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search product / variety"
+                  className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-green-600 focus:border-green-600 outline-none bg-white h-[38px]"
                 />
              </div>
           </div>
           <div className="md:col-span-3">
-             <label className="text-xs font-semibold text-gray-500 mb-1 block">Product Type</label>
-             <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-green-600 focus:border-green-600 outline-none">
-                <option>Milled Rice</option>
-                <option>Palay</option>
-             </select>
+             <Dropdown
+               label="Product Type"
+               options={PRODUCT_TYPE_OPTIONS}
+               value={productType}
+               onChange={setProductType}
+             />
           </div>
           <div className="md:col-span-3">
-             <label className="text-xs font-semibold text-gray-500 mb-1 block">Forecast View</label>
-             <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-green-600 focus:border-green-600 outline-none">
-                <option>Monthly</option>
-                <option>Quarterly</option>
-             </select>
+             <Dropdown
+               label="Forecast View"
+               options={FORECAST_VIEW_OPTIONS}
+               value={forecastView}
+               onChange={setForecastView}
+             />
           </div>
         </div>
       </div>

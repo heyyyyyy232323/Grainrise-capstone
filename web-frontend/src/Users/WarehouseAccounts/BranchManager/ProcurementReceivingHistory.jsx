@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Search, X, ShieldCheck, Eye } from "lucide-react";
+import { Search, Calendar, ChevronDown, X, ShieldCheck, Eye } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
@@ -11,7 +11,7 @@ const QC_STATUS_PILLS = {
   Failed: "bg-rose-100/90 text-rose-700 border border-rose-200",
 };
 
-/* ── Table Column Configurations for SectionedTableCard ───────────────────────── */
+/* ── Table Column Configurations ───────────────────────────────────────────────── */
 const TABLE_COLUMNS = [
   { key: "batchNo",  label: "Batch No.",         width: "18%" },
   { key: "branch",   label: "Branch",            width: "18%" },
@@ -22,31 +22,47 @@ const TABLE_COLUMNS = [
   { key: "action",   label: "Action",            width: "10%", headerClassName: "text-center", cellClassName: "text-center" },
 ];
 
+/* ── Branch Options ───────────────────────────────────────────────────────────── */
+const BRANCH_OPTIONS = [
+  "Warehouse ABC",
+  "Warehouse XYZ",
+  "Main Distribution Hub",
+];
+
+/* ── Sort Options ─────────────────────────────────────────────────────────────── */
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest First" },
+  { value: "oldest", label: "Oldest First" },
+];
+
 /* ── Mock Data ───────────────────────────────────────────────────────────────── */
 const MOCK_SECTIONS = [
   {
     label: "Today",
+    date: "2026-09-04",
     rows: [
-      { id: "rcv-t1", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Partial", passedQty: "15,000 kg", failedQty: "5,000 kg", bay: "Bay A-1", inspector: "Inspector Cruz" },
-      { id: "rcv-t2", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Passed", passedQty: "20,000 kg", failedQty: "0 kg", bay: "Bay A-2", inspector: "Inspector Cruz" },
-      { id: "rcv-t3", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Failed", passedQty: "0 kg", failedQty: "20,000 kg", bay: "Rejection Bay", inspector: "Inspector Santos" },
+      { id: "rcv-t1", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Partial", passedQty: "15,000 kg", failedQty: "5,000 kg", bay: "Bay A-1", inspector: "Inspector Cruz", date: "2026-09-04" },
+      { id: "rcv-t2", batchNo: "Batch 2026 - 001", branch: "Warehouse XYZ", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Passed", passedQty: "20,000 kg", failedQty: "0 kg", bay: "Bay A-2", inspector: "Inspector Cruz", date: "2026-09-04" },
+      { id: "rcv-t3", batchNo: "Batch 2026 - 001", branch: "Main Distribution Hub", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Failed", passedQty: "0 kg", failedQty: "20,000 kg", bay: "Rejection Bay", inspector: "Inspector Santos", date: "2026-09-04" },
     ],
   },
   {
     label: "Yesterday",
+    date: "2026-09-03",
     rows: [
-      { id: "rcv-y1", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Partial", passedQty: "16,000 kg", failedQty: "4,000 kg", bay: "Bay B-1", inspector: "Inspector Cruz" },
-      { id: "rcv-y2", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Passed", passedQty: "20,000 kg", failedQty: "0 kg", bay: "Bay B-2", inspector: "Inspector Cruz" },
-      { id: "rcv-y3", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Failed", passedQty: "0 kg", failedQty: "20,000 kg", bay: "Rejection Bay", inspector: "Inspector Santos" },
-      { id: "rcv-y4", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Passed", passedQty: "20,000 kg", failedQty: "0 kg", bay: "Bay B-3", inspector: "Inspector Cruz" },
+      { id: "rcv-y1", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Partial", passedQty: "16,000 kg", failedQty: "4,000 kg", bay: "Bay B-1", inspector: "Inspector Cruz", date: "2026-09-03" },
+      { id: "rcv-y2", batchNo: "Batch 2026 - 001", branch: "Warehouse XYZ", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Passed", passedQty: "20,000 kg", failedQty: "0 kg", bay: "Bay B-2", inspector: "Inspector Cruz", date: "2026-09-03" },
+      { id: "rcv-y3", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Failed", passedQty: "0 kg", failedQty: "20,000 kg", bay: "Rejection Bay", inspector: "Inspector Santos", date: "2026-09-03" },
+      { id: "rcv-y4", batchNo: "Batch 2026 - 001", branch: "Main Distribution Hub", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Passed", passedQty: "20,000 kg", failedQty: "0 kg", bay: "Bay B-3", inspector: "Inspector Cruz", date: "2026-09-03" },
     ],
   },
   {
     label: "July 16, 2026",
+    date: "2026-07-16",
     rows: [
-      { id: "rcv-j1", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Partial", passedQty: "14,000 kg", failedQty: "6,000 kg", bay: "Bay C-1", inspector: "Inspector Cruz" },
-      { id: "rcv-j2", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Passed", passedQty: "20,000 kg", failedQty: "0 kg", bay: "Bay C-2", inspector: "Inspector Santos" },
-      { id: "rcv-j3", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Failed", passedQty: "0 kg", failedQty: "20,000 kg", bay: "Rejection Bay", inspector: "Inspector Santos" },
+      { id: "rcv-j1", batchNo: "Batch 2026 - 001", branch: "Warehouse ABC", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Partial", passedQty: "14,000 kg", failedQty: "6,000 kg", bay: "Bay C-1", inspector: "Inspector Cruz", date: "2026-07-16" },
+      { id: "rcv-j2", batchNo: "Batch 2026 - 001", branch: "Warehouse XYZ", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Passed", passedQty: "20,000 kg", failedQty: "0 kg", bay: "Bay C-2", inspector: "Inspector Santos", date: "2026-07-16" },
+      { id: "rcv-j3", batchNo: "Batch 2026 - 001", branch: "Main Distribution Hub", supplier: "Supplier A", variant: "Dinorado", qty: "20,000 kg", qcStatus: "Failed", passedQty: "0 kg", failedQty: "20,000 kg", bay: "Rejection Bay", inspector: "Inspector Santos", date: "2026-07-16" },
     ],
   },
 ];
@@ -54,15 +70,52 @@ const MOCK_SECTIONS = [
 export default function ProcurementReceivingHistory() {
   const [search, setSearch] = useState("");
   const [qcStatusFilter, setQcStatusFilter] = useState("QC Status");
-  const [sortBy, setSortBy] = useState("Sort By");
+  const [branchFilter, setBranchFilter] = useState("Branch");
+  const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
+  const [tempDateRange, setTempDateRange] = useState({ startDate: "", endDate: "" });
+  const [sortBy, setSortBy] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRecord, setSelectedRecord] = useState(null);
+
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showSortDrop, setShowSortDrop] = useState(false);
+
+  const dateRef = useRef(null);
+  const sortRef = useRef(null);
+
+  // Click outside listener for popovers
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dateRef.current && !dateRef.current.contains(e.target)) {
+        setShowDatePicker(false);
+      }
+      if (sortRef.current && !sortRef.current.contains(e.target)) {
+        setShowSortDrop(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleDateApply = () => {
+    setDateRange(tempDateRange);
+    setCurrentPage(1);
+    setShowDatePicker(false);
+  };
+
+  const handleDateReset = () => {
+    setTempDateRange({ startDate: "", endDate: "" });
+    setDateRange({ startDate: "", endDate: "" });
+    setCurrentPage(1);
+    setShowDatePicker(false);
+  };
 
   // Format and filter sectioned data for SectionedTableCard
   const filteredSections = useMemo(() => {
     return MOCK_SECTIONS.map((sec) => {
       const filteredRows = sec.rows.filter((r) => {
-        if (search) {
+        // Search Filter
+        if (search.trim()) {
           const q = search.toLowerCase();
           const matchB = r.batchNo.toLowerCase().includes(q);
           const matchS = r.supplier.toLowerCase().includes(q);
@@ -70,19 +123,26 @@ export default function ProcurementReceivingHistory() {
           const matchBr = r.branch.toLowerCase().includes(q);
           if (!matchB && !matchS && !matchV && !matchBr) return false;
         }
+
+        // QC Status Filter
         if (qcStatusFilter !== "QC Status" && qcStatusFilter !== "All") {
           if (r.qcStatus !== qcStatusFilter) return false;
         }
+
+        // Date Range Filter
+        if (dateRange.startDate && r.date < dateRange.startDate) return false;
+        if (dateRange.endDate && r.date > dateRange.endDate) return false;
+
+        // Branch Filter
+        if (branchFilter !== "Branch" && branchFilter !== "All") {
+          if (r.branch !== branchFilter) return false;
+        }
+
         return true;
       });
 
       const formattedRows = filteredRows.map((row) => ({
         ...row,
-        batchNo: row.batchNo,
-        branch: row.branch,
-        supplier: row.supplier,
-        variant: row.variant,
-        qty: row.qty,
         qcStatus: (
           <span className={`inline-block px-3 py-0.5 rounded-full text-xs font-normal ${QC_STATUS_PILLS[row.qcStatus]}`}>
             {row.qcStatus}
@@ -106,11 +166,7 @@ export default function ProcurementReceivingHistory() {
         rows: formattedRows,
       };
     }).filter((sec) => sec.rows.length > 0);
-  }, [search, qcStatusFilter]);
-
-  const totalRecordCount = useMemo(() => {
-    return filteredSections.reduce((acc, sec) => acc + sec.rows.length, 0);
-  }, [filteredSections]);
+  }, [search, qcStatusFilter, dateRange, branchFilter]);
 
   const TOTAL_PAGES = 4;
 
@@ -129,19 +185,26 @@ export default function ProcurementReceivingHistory() {
 
       {/* ── Search Bar & Filter Controls ────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3">
+        {/* Search Input */}
         <div className="relative flex-1 min-w-[240px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Search batch no., supplier, or product"
-            className="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none bg-white placeholder-gray-400 text-gray-700"
+            className="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
           />
           {search && (
             <button
               type="button"
-              onClick={() => setSearch("")}
+              onClick={() => {
+                setSearch("");
+                setCurrentPage(1);
+              }}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               <X size={15} />
@@ -149,27 +212,144 @@ export default function ProcurementReceivingHistory() {
           )}
         </div>
 
-        <select
-          value={qcStatusFilter}
-          onChange={(e) => setQcStatusFilter(e.target.value)}
-          className="px-3.5 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:ring-1 focus:ring-emerald-500 outline-none min-w-[120px]"
-        >
-          <option value="QC Status">QC Status</option>
-          <option value="All">All Statuses</option>
-          <option value="Partial">Partial</option>
-          <option value="Passed">Passed</option>
-          <option value="Failed">Failed</option>
-        </select>
+        {/* Filter and Sort Dropdowns */}
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center">
 
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className="px-3.5 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:ring-1 focus:ring-emerald-500 outline-none min-w-[110px]"
-        >
-          <option value="Sort By">Sort By</option>
-          <option value="newest">Newest First</option>
-          <option value="oldest">Oldest First</option>
-        </select>
+          {/* Date Range Picker Dropdown */}
+          <div className="relative w-full sm:w-auto" ref={dateRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setShowDatePicker((prev) => !prev);
+                setShowSortDrop(false);
+              }}
+              className={`flex items-center gap-2 border border-gray-200 bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto justify-center transition-colors cursor-pointer h-[38px] ${
+                dateRange.startDate ? "border-emerald-500 text-emerald-700 bg-emerald-50/40" : ""
+              }`}
+            >
+              <span>
+                {dateRange.startDate
+                  ? `${dateRange.startDate} - ${dateRange.endDate || "..."}`
+                  : "Date Range"}
+              </span>
+              <Calendar size={16} className={dateRange.startDate ? "text-emerald-600" : "text-gray-500"} />
+            </button>
+
+            {showDatePicker && (
+              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-20 w-64">
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={tempDateRange.startDate}
+                      onChange={(e) =>
+                        setTempDateRange((prev) => ({ ...prev, startDate: e.target.value }))
+                      }
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={tempDateRange.endDate}
+                      onChange={(e) =>
+                        setTempDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+                      }
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleDateReset}
+                      className="flex-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDateApply}
+                      className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-[#0B5D1E] hover:bg-[#084b18] rounded transition-colors cursor-pointer"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sort By Dropdown */}
+          <div className="relative w-full sm:w-auto" ref={sortRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setShowSortDrop((prev) => !prev);
+                setShowDatePicker(false);
+              }}
+              className="flex items-center gap-2 border border-gray-200 bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto justify-center transition-colors cursor-pointer h-[38px]"
+            >
+              <span>{SORT_OPTIONS.find((o) => o.value === sortBy)?.label || "Sort By"}</span>
+              <ChevronDown
+                size={16}
+                className={`text-gray-500 transition-transform duration-200 ${
+                  showSortDrop ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {showSortDrop && (
+              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-xl shadow-lg p-1.5 z-20 min-w-[180px]">
+                {SORT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      setSortBy(opt.value);
+                      setShowSortDrop(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                      sortBy === opt.value
+                        ? "bg-[#EAF7E8] text-[#0B5D1E] font-bold"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Branch Filter Dropdown (Placed as Last Filter) */}
+          <div className="relative w-full sm:w-auto">
+            <select
+              value={branchFilter}
+              onChange={(e) => {
+                setBranchFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="appearance-none border border-gray-200 bg-white pl-3 pr-8 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto transition-colors cursor-pointer h-[38px] focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            >
+              <option value="Branch">All Branches</option>
+              {BRANCH_OPTIONS.map((branch) => (
+                <option key={branch} value={branch}>
+                  {branch}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              size={16}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+            />
+          </div>
+        </div>
       </div>
 
       {/* ── Shared SectionedTableCard Component ─────────────────────────────── */}
@@ -200,7 +380,7 @@ export default function ProcurementReceivingHistory() {
                 <button
                   type="button"
                   onClick={() => setSelectedRecord(null)}
-                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
                 >
                   <X size={18} />
                 </button>

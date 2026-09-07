@@ -1,6 +1,9 @@
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Heart, MessageSquare, ArrowRight } from "lucide-react";
 import Breadcrumbs from "../../Components/Minor-Components/Breadcrumbs";
+import Dropdown from "../../Components/Minor-Components/Dropdown";
+import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 
 const MOCK_NEWS = [
   {
@@ -38,8 +41,55 @@ const MOCK_NEWS = [
   }
 ];
 
+const YEAR_OPTIONS = [
+  { label: "All Years", value: "" },
+  { label: "2026", value: "2026" },
+  { label: "2025", value: "2025" },
+];
+
+const MONTH_OPTIONS = [
+  { label: "All Months", value: "" },
+  { label: "August", value: "August" },
+  { label: "July", value: "July" },
+  { label: "June", value: "June" },
+];
+
+const CATEGORY_OPTIONS = [
+  { label: "All Categories", value: "" },
+  { label: "Market Updates", value: "MARKET UPDATES" },
+  { label: "Advisory & Best Practices", value: "ADVISORY & BEST PRACTICES" },
+  { label: "Grant Programs & Support", value: "GRANT PROGRAMS & SUPPORT" },
+];
+
+const SORT_OPTIONS = [
+  { value: "latest", label: "Latest First" },
+  { value: "oldest", label: "Oldest First" },
+  { value: "likes", label: "Most Liked" },
+];
+
 export default function FarmerNewsUpdates() {
   const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  const [year, setYear] = useState("");
+  const [month, setMonth] = useState("");
+  const [category, setCategory] = useState("");
+  const [sortBy, setSortBy] = useState("latest");
+
+  const filteredNews = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let result = MOCK_NEWS.filter((news) => {
+      if (q && !(`${news.title} ${news.description} ${news.source}`.toLowerCase().includes(q))) return false;
+      if (category && news.category !== category) return false;
+      if (month && !news.date.includes(month)) return false;
+      if (year && !news.date.includes(year)) return false;
+      return true;
+    });
+    if (sortBy === "likes") result.sort((a, b) => b.likes - a.likes);
+    else if (sortBy === "oldest") result.sort((a, b) => a.id - b.id);
+    else result.sort((a, b) => b.id - a.id);
+    return result;
+  }, [query, year, month, category, sortBy]);
+
   return (
     <div className="space-y-6">
       {/* ── Page Header ─────────────────────────────────────────────────────── */}
@@ -54,34 +104,51 @@ export default function FarmerNewsUpdates() {
       </div>
 
       {/* ── Filters ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row gap-4 mb-2">
+      <div className="flex flex-col md:flex-row gap-3 mb-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <input 
             type="text" 
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder="Search news and updates"
-            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-green-600 focus:border-green-600 outline-none"
+            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-green-600 focus:border-green-600 outline-none bg-white h-[38px]"
           />
         </div>
 
-        <div className="flex flex-wrap gap-3">
-           <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-green-600 focus:border-green-600 outline-none min-w-[100px]">
-              <option>Year</option>
-              <option>2026</option>
-           </select>
-           <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-green-600 focus:border-green-600 outline-none min-w-[100px]">
-              <option>Month</option>
-              <option>August</option>
-           </select>
-           <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-green-600 focus:border-green-600 outline-none min-w-[160px]">
-              <option>News Category</option>
-              <option>Market Updates</option>
-              <option>Advisory</option>
-           </select>
-           <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-green-600 focus:border-green-600 outline-none min-w-[120px]">
-              <option>Sort By</option>
-              <option>Latest</option>
-           </select>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="w-28">
+            <Dropdown
+              options={YEAR_OPTIONS}
+              value={year}
+              onChange={setYear}
+              placeholder="Year"
+            />
+          </div>
+
+          <div className="w-32">
+            <Dropdown
+              options={MONTH_OPTIONS}
+              value={month}
+              onChange={setMonth}
+              placeholder="Month"
+            />
+          </div>
+
+          <div className="w-48">
+            <Dropdown
+              options={CATEGORY_OPTIONS}
+              value={category}
+              onChange={setCategory}
+              placeholder="News Category"
+            />
+          </div>
+
+          <SortByDropdown
+            options={SORT_OPTIONS}
+            value={sortBy}
+            onChange={setSortBy}
+          />
         </div>
       </div>
 

@@ -1,10 +1,17 @@
 import { useState } from "react";
-import { Search, MapPin, CheckCircle2, ChevronRight, Droplets, Thermometer, ArrowRight, Download, Crosshair } from "lucide-react";
-import { Tractor } from "lucide-react";
+import { Search, MapPin, CheckCircle2, ChevronRight, Droplets, Thermometer, ArrowRight, Download, Crosshair, Tractor } from "lucide-react";
+import Dropdown from "../../Components/Minor-Components/Dropdown";
+
+const VIEW_OPTIONS = [
+  { label: "Monthly View", value: "Monthly View" },
+  { label: "Quarterly View", value: "Quarterly View" },
+];
 
 export default function ClimateForecasting() {
   const [isLocationConfirmed, setIsLocationConfirmed] = useState(false);
   const [selectedFarm, setSelectedFarm] = useState("San Miguel Rice Farm");
+  const [outlookView, setOutlookView] = useState("Monthly View");
+  const [historyView, setHistoryView] = useState("Monthly View");
 
   // Flow 1: Location Selection
   if (!isLocationConfirmed) {
@@ -175,9 +182,14 @@ export default function ClimateForecasting() {
             <div>
                <h4 className="font-bold text-gray-900 text-md">6-Month Climate Outlook (Sept 2026 - Feb 2027)</h4>
             </div>
-            <select className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium focus:ring-1 focus:ring-green-600 focus:border-green-600 outline-none">
-               <option>Monthly View</option>
-            </select>
+            <div className="w-36">
+               <Dropdown
+                  options={VIEW_OPTIONS}
+                  value={outlookView}
+                  onChange={setOutlookView}
+                  placeholder="View"
+               />
+            </div>
          </div>
 
          {/* The 2 Charts */}
@@ -332,11 +344,16 @@ export default function ClimateForecasting() {
 
          {/* Bottom Section: Climate History */}
          <div className="flex flex-col gap-4">
-            <div className="flex justify-between items-end">
+            <div className="flex justify-between items-center">
                <h4 className="font-bold text-gray-900 text-md">Climate History</h4>
-               <select className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium focus:ring-1 focus:ring-green-600 focus:border-green-600 outline-none">
-                  <option>Monthly View</option>
-               </select>
+               <div className="w-36">
+                  <Dropdown
+                     options={VIEW_OPTIONS}
+                     value={historyView}
+                     onChange={setHistoryView}
+                     placeholder="View"
+                  />
+               </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

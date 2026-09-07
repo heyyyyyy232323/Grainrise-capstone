@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Heart, MessageSquare, ArrowRight } from "lucide-react";
+import { Search, Heart, MessageSquare, ArrowRight, Calendar, ChevronDown, X } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 
 export const WAREHOUSE_NEWS_DATA = [
@@ -9,6 +9,7 @@ export const WAREHOUSE_NEWS_DATA = [
     category: "MARKET UPDATES",
     categoryColor: "bg-emerald-100 text-emerald-700",
     date: "August 20, 2026 · 10:00 AM",
+    isoDate: "2026-08-20",
     year: "2026",
     month: "August",
     title: "Palay Buying Prices Show Stable Movement This Month",
@@ -23,6 +24,7 @@ export const WAREHOUSE_NEWS_DATA = [
     category: "ADVISORY & BEST PRACTICES",
     categoryColor: "bg-blue-100 text-blue-700",
     date: "August 17, 2026 · 08:15 AM",
+    isoDate: "2026-08-17",
     year: "2026",
     month: "August",
     title: "El Niño Preparations: Water Management Strategies for Q4",
@@ -37,6 +39,7 @@ export const WAREHOUSE_NEWS_DATA = [
     category: "GRANT PROGRAMS & SUPPORT",
     categoryColor: "bg-amber-100 text-amber-700",
     date: "August 10, 2026 · 02:30 PM",
+    isoDate: "2026-08-10",
     year: "2026",
     month: "August",
     title: "New Fertilizer Discount Vouchers Available for Registration",
@@ -50,15 +53,46 @@ export const WAREHOUSE_NEWS_DATA = [
 
 export default function WarehouseManagerNewsUpdates() {
   const navigate = useNavigate();
-  
+
   // Filter States
   const [search, setSearch] = useState("");
-  const [selectedYear, setSelectedYear] = useState("Year");
-  const [selectedMonth, setSelectedMonth] = useState("Month");
+  const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
+  const [tempDateRange, setTempDateRange] = useState({ startDate: "", endDate: "" });
   const [selectedCategory, setSelectedCategory] = useState("News Category");
   const [sortBy, setSortBy] = useState("Latest");
-  
+
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showSortDrop, setShowSortDrop] = useState(false);
+
   const [likedArticles, setLikedArticles] = useState({});
+
+  const dateRef = useRef(null);
+  const sortRef = useRef(null);
+
+  // Click outside listener for dropdowns
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dateRef.current && !dateRef.current.contains(e.target)) {
+        setShowDatePicker(false);
+      }
+      if (sortRef.current && !sortRef.current.contains(e.target)) {
+        setShowSortDrop(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleDateApply = () => {
+    setDateRange(tempDateRange);
+    setShowDatePicker(false);
+  };
+
+  const handleDateReset = () => {
+    setTempDateRange({ startDate: "", endDate: "" });
+    setDateRange({ startDate: "", endDate: "" });
+    setShowDatePicker(false);
+  };
 
   const toggleLike = (e, id) => {
     e.stopPropagation();
@@ -67,15 +101,24 @@ export default function WarehouseManagerNewsUpdates() {
 
   // Filter & Sort Logic
   const filtered = WAREHOUSE_NEWS_DATA.filter((news) => {
-    if (search) {
+    if (search.trim()) {
       const q = search.toLowerCase();
       if (!news.title.toLowerCase().includes(q) && !news.description.toLowerCase().includes(q)) {
         return false;
       }
     }
-    if (selectedYear !== "Year" && news.year !== selectedYear) return false;
-    if (selectedMonth !== "Month" && news.month !== selectedMonth) return false;
-    if (selectedCategory !== "News Category" && !news.category.toLowerCase().includes(selectedCategory.toLowerCase())) return false;
+
+    // Date Range Filter
+    if (dateRange.startDate && news.isoDate < dateRange.startDate) return false;
+    if (dateRange.endDate && news.isoDate > dateRange.endDate) return false;
+
+    // Category Filter
+    if (
+      selectedCategory !== "News Category" &&
+      !news.category.toLowerCase().includes(selectedCategory.toLowerCase())
+    ) {
+      return false;
+    }
 
     return true;
   }).sort((a, b) => {
@@ -97,61 +140,159 @@ export default function WarehouseManagerNewsUpdates() {
         </p>
       </div>
 
-      {/* ── Search & Dropdown Filters ──────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row gap-4 mb-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search news and updates..."
-            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-emerald-600 focus:border-emerald-600 outline-none bg-white text-gray-700"
-          />
-        </div>
+      {/* ── Search & Grouped Filter Toolbar ─────────────────────────────────── */}
+      <div className="flex flex-col lg:flex-row gap-3 mb-2 items-stretch lg:items-center justify-between">
+        <div className="flex flex-wrap items-center gap-2 flex-1">
+          {/* Search Input */}
+          <div className="relative min-w-[240px] max-w-sm flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search news and updates..."
+              className="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
 
-        <div className="flex flex-wrap gap-3">
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-emerald-600 focus:border-emerald-600 outline-none bg-white text-gray-700 min-w-[100px]"
-          >
-            <option value="Year">Year</option>
-            <option value="2026">2026</option>
-            <option value="2025">2025</option>
-          </select>
+          {/* Date Range Picker Dropdown */}
+          <div className="relative w-full sm:w-auto" ref={dateRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setShowDatePicker((prev) => !prev);
+                setShowSortDrop(false);
+              }}
+              className={`flex items-center gap-2 border border-gray-200 bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto justify-center transition-colors cursor-pointer h-[38px] ${
+                dateRange.startDate ? "border-emerald-500 text-emerald-700 bg-emerald-50/40" : ""
+              }`}
+            >
+              <span>
+                {dateRange.startDate
+                  ? `${dateRange.startDate} - ${dateRange.endDate || "..."}`
+                  : "Date Range"}
+              </span>
+              <Calendar size={16} className={dateRange.startDate ? "text-emerald-600" : "text-gray-500"} />
+            </button>
 
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-emerald-600 focus:border-emerald-600 outline-none bg-white text-gray-700 min-w-[100px]"
-          >
-            <option value="Month">Month</option>
-            <option value="August">August</option>
-            <option value="July">July</option>
-            <option value="June">June</option>
-          </select>
+            {showDatePicker && (
+              <div className="absolute top-full mt-2 left-0 sm:left-auto sm:right-0 bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-20 w-64">
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={tempDateRange.startDate}
+                      onChange={(e) =>
+                        setTempDateRange((prev) => ({ ...prev, startDate: e.target.value }))
+                      }
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={tempDateRange.endDate}
+                      onChange={(e) =>
+                        setTempDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+                      }
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleDateReset}
+                      className="flex-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDateApply}
+                      className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-[#0B5D1E] hover:bg-[#084b18] rounded transition-colors cursor-pointer"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-emerald-600 focus:border-emerald-600 outline-none bg-white text-gray-700 min-w-[160px]"
-          >
-            <option value="News Category">News Category</option>
-            <option value="Market Updates">Market Updates</option>
-            <option value="Advisory">Advisory &amp; Best Practices</option>
-            <option value="Grant Programs">Grant Programs &amp; Support</option>
-          </select>
+          {/* News Category Select */}
+          <div className="relative w-full sm:w-auto">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="appearance-none border border-gray-200 bg-white pl-3 pr-8 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto transition-colors cursor-pointer h-[38px] focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            >
+              <option value="News Category">News Category</option>
+              <option value="Market Updates">Market Updates</option>
+              <option value="Advisory">Advisory &amp; Best Practices</option>
+              <option value="Grant Programs">Grant Programs &amp; Support</option>
+            </select>
+            <ChevronDown
+              size={16}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+            />
+          </div>
 
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-emerald-600 focus:border-emerald-600 outline-none bg-white text-gray-700 min-w-[120px]"
-          >
-            <option value="Latest">Latest</option>
-            <option value="Most Liked">Most Liked</option>
-            <option value="Most Commented">Most Commented</option>
-          </select>
+          {/* Sort By Dropdown */}
+          <div className="relative w-full sm:w-auto" ref={sortRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setShowSortDrop((prev) => !prev);
+                setShowDatePicker(false);
+              }}
+              className="flex items-center gap-2 border border-gray-200 bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto justify-center transition-colors cursor-pointer h-[38px]"
+            >
+              <span>{sortBy}</span>
+              <ChevronDown
+                size={16}
+                className={`text-gray-500 transition-transform duration-200 ${
+                  showSortDrop ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {showSortDrop && (
+              <div className="absolute top-full mt-2 left-0 sm:left-auto sm:right-0 bg-white border border-gray-200 rounded-xl shadow-lg p-1.5 z-20 min-w-[160px]">
+                {["Latest", "Most Liked", "Most Commented"].map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => {
+                      setSortBy(opt);
+                      setShowSortDrop(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                      sortBy === opt
+                        ? "bg-[#EAF7E8] text-[#0B5D1E] font-bold"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -169,7 +310,7 @@ export default function WarehouseManagerNewsUpdates() {
             return (
               <div
                 key={news.id}
-                onClick={() => navigate(`/warehouse-manager/news-updates/${news.id}`)}
+                onClick={() => navigate(`/branch-manager/news-updates/${news.id}`)}
                 className="border border-slate-200 rounded-xl bg-white shadow-sm flex flex-col md:flex-row overflow-hidden hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer group"
               >
                 {/* Thumbnail Placeholder */}
@@ -219,7 +360,7 @@ export default function WarehouseManagerNewsUpdates() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/warehouse-manager/news-updates/${news.id}`);
+                        navigate(`/branch-manager/news-updates/${news.id}`);
                       }}
                       className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 transition"
                     >

@@ -83,7 +83,7 @@ export default function MillerTaxes() {
             <SearchFilter onSearch={(v) => { setQuery(v); setPage(1); }} placeholder="Search tax name, description" />
           </div>
 
-          <div className="w-36">
+          <div className="w-full sm:w-40">
             <Dropdown
               options={[{ label: "All Periods", value: "" }, { label: "Quarterly", value: "Quarterly" }, { label: "Yearly", value: "Yearly" }]}
               value={period}
