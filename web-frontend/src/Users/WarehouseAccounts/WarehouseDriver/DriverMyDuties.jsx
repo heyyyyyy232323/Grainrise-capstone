@@ -1,7 +1,9 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Store, MapPin, Search } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
+import Dropdown from "../../../Components/Minor-Components/Dropdown";
+import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
 const TODAY = new Date();
@@ -49,29 +51,21 @@ const METHOD_BADGE = {
   "Cash on Delivery": "bg-amber-100 text-amber-700",
 };
 
-function FilterSelect({ value, onChange, options }) {
-  return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="appearance-none rounded-xl border border-gray-200 bg-white px-3.5 py-2 pr-8 text-xs font-semibold text-gray-700 outline-none focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] cursor-pointer"
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">▾</span>
-    </div>
-  );
-}
+const PAYMENT_METHOD_OPTIONS = [
+  { label: "Payment Method",   value: "" },
+  { label: "Online Payment",   value: "Online Payment" },
+  { label: "Cash on Delivery", value: "Cash on Delivery" },
+];
+
+const SORT_OPTIONS = [
+  { label: "Newest First", value: "newest" },
+  { label: "Oldest First", value: "oldest" },
+];
 
 export default function DriverMyDuties() {
   const [query,  setQuery]  = useState("");
   const [method, setMethod] = useState("");
-  const [sort,   setSort]   = useState("");
+  const [sort,   setSort]   = useState("newest");
   const [page,   setPage]   = useState(1);
 
   const ITEMS = 10;
@@ -81,8 +75,13 @@ export default function DriverMyDuties() {
       if (q && !(`${r.batchNo} ${r.retailer} ${r.deliveryAddress} ${r.product}`.toLowerCase().includes(q))) return false;
       if (method && r.paymentMethod !== method) return false;
       return true;
+    }).sort((a, b) => {
+      if (sort === "oldest") {
+        return new Date(a.duty_date) - new Date(b.duty_date);
+      }
+      return new Date(b.duty_date) - new Date(a.duty_date);
     });
-  }, [query, method]);
+  }, [query, method, sort]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS));
   const start = (page - 1) * ITEMS;
@@ -174,30 +173,24 @@ export default function DriverMyDuties() {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setPage(1); }}
             placeholder="Search order, batch, recipient, or destination"
-            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-xs focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] outline-none bg-white placeholder-gray-400 text-gray-700"
+            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
           />
         </div>
 
         <DateRangePicker />
 
-        <FilterSelect
+        <Dropdown
           value={method}
           onChange={(v) => { setMethod(v); setPage(1); }}
-          options={[
-            { label: "Payment Method",   value: "" },
-            { label: "Online Payment",   value: "Online Payment" },
-            { label: "Cash on Delivery", value: "Cash on Delivery" },
-          ]}
+          options={PAYMENT_METHOD_OPTIONS}
+          placeholder="Payment Method"
         />
 
-        <FilterSelect
+        <SortByDropdown
           value={sort}
           onChange={(v) => setSort(v)}
-          options={[
-            { label: "Sort By", value: "" },
-            { label: "Newest",  value: "newest" },
-            { label: "Oldest",  value: "oldest" },
-          ]}
+          options={SORT_OPTIONS}
+          placeholder="Sort By"
         />
       </div>
 

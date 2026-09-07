@@ -24,6 +24,7 @@ import useFarmerInventory, {
   INVENTORY_SORT_STOCK_HIGHEST,
   INVENTORY_SORT_STOCK_LOWEST,
 } from "../../Components/hooks/Farmer/useFarmerInventory";
+import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 
 
 // ============================================================
@@ -872,10 +873,12 @@ export default function FarmerInventory() {
 
   const handleSortChange =
     async (
-      event
+      valueOrEvent
     ) => {
       const nextSort =
-        event.target.value;
+        valueOrEvent?.target
+          ? valueOrEvent.target.value
+          : valueOrEvent;
 
       setSortBy(
         nextSort
@@ -1705,56 +1708,14 @@ export default function FarmerInventory() {
           </form>
 
 
-          <select
-            value={
-              sortBy
-            }
-            onChange={
-              handleSortChange
-            }
-            disabled={
-              isLoadingProducts
-            }
-            aria-label="Sort inventory"
-            className="
-              w-full
-              rounded-xl
-              border
-              border-slate-300
-              bg-white
-              px-3.5
-              py-2.5
-              text-sm
-              font-medium
-              text-slate-600
-              outline-none
-              focus:border-green-600
-              focus:ring-1
-              focus:ring-green-600
-              disabled:cursor-not-allowed
-              disabled:bg-slate-50
-            "
-          >
-            {SORT_OPTIONS.map(
-              (
-                option
-              ) => (
-                <option
-                  key={
-                    option.value
-                  }
-                  value={
-                    option.value
-                  }
-                >
-                  Sort By:{" "}
-                  {
-                    option.label
-                  }
-                </option>
-              )
-            )}
-          </select>
+          <div className="w-full">
+            <SortByDropdown
+              options={SORT_OPTIONS}
+              value={sortBy}
+              onChange={handleSortChange}
+              disabled={isLoadingProducts}
+            />
+          </div>
         </div>
 
 

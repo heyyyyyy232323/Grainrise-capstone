@@ -12,6 +12,8 @@ import {
 
 import useFarmerContracts from "../../Components/hooks/Farmer/useFarmerContracts";
 import useFarmerInventory from "../../Components/hooks/Farmer/useFarmerInventory";
+import Dropdown from "../../Components/Minor-Components/Dropdown";
+import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 
 import FarmerContractOpportunityDetailsModal from "../../Components/Modals/FarmerContractOpportunityDetailsModal";
 import FarmerContractApplicationModal from "../../Components/Modals/FarmerContractApplicationModal";
@@ -614,109 +616,41 @@ export default function FarmerContractsOpportunities({
           >
 
             {/* PRODUCT TYPE */}
-
-            <select
-              value={
-                productTypeFilter
-              }
-              onChange={(
-                event
-              ) =>
-                handleProductTypeChange(
-                  event.target.value
-                )
-              }
-              className="
-                min-w-[150px]
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                py-2.5
-                text-sm
-                text-slate-700
-                outline-none
-                focus:border-green-600
-              "
-            >
-              <option value="">
-                Product Type
-              </option>
-
-              <option value="unmilled_palay">
-                Unmilled Palay
-              </option>
-
-              <option value="milled_rice">
-                Milled Rice
-              </option>
-            </select>
-
+            <div className="w-40">
+              <Dropdown
+                options={[
+                  { label: "Product Type", value: "" },
+                  { label: "Unmilled Palay", value: "unmilled_palay" },
+                  { label: "Milled Rice", value: "milled_rice" },
+                ]}
+                value={productTypeFilter}
+                onChange={handleProductTypeChange}
+                placeholder="Product Type"
+              />
+            </div>
 
             {/* RICE VARIETY */}
-
-            <select
-              value={
-                riceVarietyFilter
-              }
-              onChange={(
-                event
-              ) =>
-                setRiceVarietyFilter(
-                  event.target.value
-                )
-              }
-              className="
-                min-w-[145px]
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                py-2.5
-                text-sm
-                text-slate-700
-                outline-none
-                focus:border-green-600
-              "
-            >
-              <option value="">
-                Rice Variety
-              </option>
-
-              {riceVarietyOptions.map(
-                (
-                  variety
-                ) => (
-                  <option
-                    key={
-                      variety
-                    }
-                    value={
-                      variety
-                    }
-                  >
-                    {variety}
-                  </option>
-                )
-              )}
-            </select>
-
+            <div className="w-40">
+              <Dropdown
+                options={[
+                  { label: "Rice Variety", value: "" },
+                  ...riceVarietyOptions.map((variety) => ({
+                    label: variety,
+                    value: variety,
+                  })),
+                ]}
+                value={riceVarietyFilter}
+                onChange={setRiceVarietyFilter}
+                placeholder="Rice Variety"
+              />
+            </div>
 
             {/* LOCATION */}
-
             <input
               type="text"
-              value={
-                locationFilter
-              }
-              onChange={(
-                event
-              ) =>
-                setLocationFilter(
-                  event.target.value
-                )
+              value={locationFilter}
+              onChange={(event) =>
+                setLocationFilter(event.target.value)
               }
               placeholder="Location"
               className="
@@ -735,49 +669,19 @@ export default function FarmerContractsOpportunities({
               "
             />
 
-
             {/* SORT */}
-
-            <select
-              value={sortBy}
-              onChange={(
-                event
-              ) =>
-                setSortBy(
-                  event.target.value
-                )
-              }
-              className="
-                min-w-[145px]
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                py-2.5
-                text-sm
-                text-slate-700
-                outline-none
-                focus:border-green-600
-              "
-            >
-              <option value="newest">
-                Newest
-              </option>
-
-              <option value="oldest">
-                Oldest
-              </option>
-
-              <option value="highest_price">
-                Highest Price
-              </option>
-
-              <option value="lowest_price">
-                Lowest Price
-              </option>
-            </select>
-
+            <div className="w-40">
+              <SortByDropdown
+                options={[
+                  { label: "Newest", value: "newest" },
+                  { label: "Oldest", value: "oldest" },
+                  { label: "Highest Price", value: "highest_price" },
+                  { label: "Lowest Price", value: "lowest_price" },
+                ]}
+                value={sortBy}
+                onChange={setSortBy}
+              />
+            </div>
           </div>
         </div>
 

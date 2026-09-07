@@ -9,7 +9,23 @@ import {
 } from "lucide-react";
 
 import useFarmerContracts from "../../Components/hooks/Farmer/useFarmerContracts";
+import Dropdown from "../../Components/Minor-Components/Dropdown";
+import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 
+const MONTHS = [
+  { value: "1", label: "January" },
+  { value: "2", label: "February" },
+  { value: "3", label: "March" },
+  { value: "4", label: "April" },
+  { value: "5", label: "May" },
+  { value: "6", label: "June" },
+  { value: "7", label: "July" },
+  { value: "8", label: "August" },
+  { value: "9", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
+];
 
 const STATUS_LABELS = {
   pending: "Pending",
@@ -349,151 +365,65 @@ export default function FarmerContractsApplications({
 
 
         <div className="flex flex-wrap gap-3">
-
           {/* STATUS */}
-
-          <select
-            value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(
-                event.target.value
-              )
-            }
-            className="min-w-[140px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
-          >
-            <option value="">
-              All Status
-            </option>
-
-            <option value="pending">
-              Pending
-            </option>
-
-            <option value="under_review">
-              Under Review
-            </option>
-
-            <option value="declined">
-              Declined
-            </option>
-
-            <option value="cancelled">
-              Cancelled
-            </option>
-          </select>
-
+          <div className="w-36">
+            <Dropdown
+              options={[
+                { label: "All Status", value: "" },
+                { label: "Pending", value: "pending" },
+                { label: "Under Review", value: "under_review" },
+                { label: "Declined", value: "declined" },
+                { label: "Cancelled", value: "cancelled" },
+              ]}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              placeholder="Status"
+            />
+          </div>
 
           {/* YEAR */}
-
-          <select
-            value={yearFilter}
-            onChange={(event) =>
-              setYearFilter(
-                event.target.value
-              )
-            }
-            className="min-w-[105px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
-          >
-            <option value="">
-              Year
-            </option>
-
-            {years.map((year) => (
-              <option
-                key={year}
-                value={year}
-              >
-                {year}
-              </option>
-            ))}
-          </select>
-
+          <div className="w-28">
+            <Dropdown
+              options={[
+                { label: "All Years", value: "" },
+                ...years.map((year) => ({
+                  label: String(year),
+                  value: String(year),
+                })),
+              ]}
+              value={yearFilter}
+              onChange={setYearFilter}
+              placeholder="Year"
+            />
+          </div>
 
           {/* MONTH */}
-
-          <select
-            value={monthFilter}
-            onChange={(event) =>
-              setMonthFilter(
-                event.target.value
-              )
-            }
-            className="min-w-[120px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
-          >
-            <option value="">
-              Month
-            </option>
-
-            <option value="1">
-              January
-            </option>
-
-            <option value="2">
-              February
-            </option>
-
-            <option value="3">
-              March
-            </option>
-
-            <option value="4">
-              April
-            </option>
-
-            <option value="5">
-              May
-            </option>
-
-            <option value="6">
-              June
-            </option>
-
-            <option value="7">
-              July
-            </option>
-
-            <option value="8">
-              August
-            </option>
-
-            <option value="9">
-              September
-            </option>
-
-            <option value="10">
-              October
-            </option>
-
-            <option value="11">
-              November
-            </option>
-
-            <option value="12">
-              December
-            </option>
-          </select>
-
+          <div className="w-32">
+            <Dropdown
+              options={[
+                { label: "All Months", value: "" },
+                ...MONTHS.map((m) => ({
+                  label: m.label,
+                  value: m.value,
+                })),
+              ]}
+              value={monthFilter}
+              onChange={setMonthFilter}
+              placeholder="Month"
+            />
+          </div>
 
           {/* SORT */}
-
-          <select
-            value={sortBy}
-            onChange={(event) =>
-              setSortBy(
-                event.target.value
-              )
-            }
-            className="min-w-[150px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
-          >
-            <option value="newest">
-              Newest
-            </option>
-
-            <option value="oldest">
-              Oldest
-            </option>
-          </select>
-
+          <div className="w-36">
+            <SortByDropdown
+              options={[
+                { label: "Newest", value: "newest" },
+                { label: "Oldest", value: "oldest" },
+              ]}
+              value={sortBy}
+              onChange={setSortBy}
+            />
+          </div>
         </div>
       </div>
 

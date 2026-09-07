@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 
 import useFarmerContracts from "../../Components/hooks/Farmer/useFarmerContracts";
+import Dropdown from "../../Components/Minor-Components/Dropdown";
+import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 
 import FarmerContractDetailsModal from "../../Components/Modals/FarmerContractDetailsModal";
 import FarmerContractVoidRequestModal from "../../Components/Modals/FarmerContractVoidRequestModal";
@@ -802,238 +804,73 @@ export default function FarmerContractsCurrent({
           >
 
             {/* CONTRACT STATUS */}
-
-            <select
-              value={
-                statusFilter
-              }
-              onChange={(
-                event
-              ) =>
-                setStatusFilter(
-                  event.target.value
-                )
-              }
-              className="
-                min-w-[145px]
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                py-2.5
-                text-sm
-                text-slate-700
-                outline-none
-                focus:border-green-600
-              "
-            >
-              <option value="">
-                Contract Status
-              </option>
-
-              <option value="active">
-                Active
-              </option>
-
-              <option value="void_requested">
-                Void Requested
-              </option>
-
-              <option value="completed">
-                Completed
-              </option>
-
-              <option value="voided">
-                Voided
-              </option>
-            </select>
-
+            <div className="w-40">
+              <Dropdown
+                options={[
+                  { label: "Contract Status", value: "" },
+                  { label: "Active", value: "active" },
+                  { label: "Void Requested", value: "void_requested" },
+                  { label: "Completed", value: "completed" },
+                  { label: "Voided", value: "voided" },
+                ]}
+                value={statusFilter}
+                onChange={setStatusFilter}
+                placeholder="Contract Status"
+              />
+            </div>
 
             {/* FULFILLMENT */}
-
-            <select
-              value={
-                fulfillmentFilter
-              }
-              onChange={(
-                event
-              ) =>
-                setFulfillmentFilter(
-                  event.target.value
-                )
-              }
-              className="
-                min-w-[160px]
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                py-2.5
-                text-sm
-                text-slate-700
-                outline-none
-                focus:border-green-600
-              "
-            >
-              <option value="">
-                Fulfillment Status
-              </option>
-
-              <option value="pending">
-                Pending
-              </option>
-
-              <option value="partially_fulfilled">
-                Partially Fulfilled
-              </option>
-
-              <option value="fulfilled">
-                Fulfilled
-              </option>
-            </select>
-
+            <div className="w-44">
+              <Dropdown
+                options={[
+                  { label: "Fulfillment Status", value: "" },
+                  { label: "Pending", value: "pending" },
+                  { label: "Partially Fulfilled", value: "partially_fulfilled" },
+                  { label: "Fulfilled", value: "fulfilled" },
+                ]}
+                value={fulfillmentFilter}
+                onChange={setFulfillmentFilter}
+                placeholder="Fulfillment Status"
+              />
+            </div>
 
             {/* YEAR */}
-
-            <select
-              value={
-                yearFilter
-              }
-              onChange={(
-                event
-              ) =>
-                setYearFilter(
-                  event.target.value
-                )
-              }
-              className="
-                min-w-[100px]
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                py-2.5
-                text-sm
-                text-slate-700
-                outline-none
-                focus:border-green-600
-              "
-            >
-              <option value="">
-                Year
-              </option>
-
-              {yearOptions.map(
-                (
-                  year
-                ) => (
-                  <option
-                    key={year}
-                    value={year}
-                  >
-                    {year}
-                  </option>
-                )
-              )}
-            </select>
-
+            <div className="w-28">
+              <Dropdown
+                options={[
+                  { label: "All Years", value: "" },
+                  ...yearOptions.map((y) => ({ label: String(y), value: String(y) })),
+                ]}
+                value={yearFilter}
+                onChange={setYearFilter}
+                placeholder="Year"
+              />
+            </div>
 
             {/* MONTH */}
-
-            <select
-              value={
-                monthFilter
-              }
-              onChange={(
-                event
-              ) =>
-                setMonthFilter(
-                  event.target.value
-                )
-              }
-              className="
-                min-w-[120px]
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                py-2.5
-                text-sm
-                text-slate-700
-                outline-none
-                focus:border-green-600
-              "
-            >
-              <option value="">
-                Month
-              </option>
-
-              {MONTHS.map(
-                (
-                  month
-                ) => (
-                  <option
-                    key={
-                      month.value
-                    }
-                    value={
-                      month.value
-                    }
-                  >
-                    {month.label}
-                  </option>
-                )
-              )}
-            </select>
-
+            <div className="w-32">
+              <Dropdown
+                options={[
+                  { label: "All Months", value: "" },
+                  ...MONTHS.map((m) => ({ label: m.label, value: m.value })),
+                ]}
+                value={monthFilter}
+                onChange={setMonthFilter}
+                placeholder="Month"
+              />
+            </div>
 
             {/* SORT */}
-
-            <select
-              value={
-                sortBy
-              }
-              onChange={(
-                event
-              ) =>
-                setSortBy(
-                  event.target.value
-                )
-              }
-              className="
-                min-w-[145px]
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                py-2.5
-                text-sm
-                text-slate-700
-                outline-none
-                focus:border-green-600
-              "
-            >
-              <option value="newest">
-                Newest
-              </option>
-
-              <option value="oldest">
-                Oldest
-              </option>
-
-              <option value="highest_value">
-                Highest Value
-              </option>
-
-              <option value="lowest_value">
-                Lowest Value
-              </option>
-            </select>
+            <SortByDropdown
+              options={[
+                { value: "newest", label: "Newest First" },
+                { value: "oldest", label: "Oldest First" },
+                { value: "highest_value", label: "Highest Value" },
+                { value: "lowest_value", label: "Lowest Value" },
+              ]}
+              value={sortBy}
+              onChange={setSortBy}
+            />
 
           </div>
         </div>

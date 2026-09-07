@@ -1,7 +1,9 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
+import Dropdown from "../../../Components/Minor-Components/Dropdown";
+import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
 const TODAY = new Date();
@@ -42,29 +44,22 @@ function groupByDate(rows) {
   return Object.entries(buckets).map(([label, rows]) => ({ label, rows }));
 }
 
-function FilterSelect({ value, onChange, options }) {
-  return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="appearance-none rounded-xl border border-gray-200 bg-white px-3.5 py-2 pr-8 text-xs font-semibold text-gray-700 outline-none focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] cursor-pointer"
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">▾</span>
-    </div>
-  );
-}
+const STATUS_OPTIONS = [
+  { label: "All Statuses", value: "" },
+  { label: "Paid",         value: "Paid" },
+  { label: "Approved",     value: "Approved" },
+  { label: "Pending",      value: "Pending" },
+];
+
+const SORT_OPTIONS = [
+  { label: "Newest First", value: "newest" },
+  { label: "Oldest First", value: "oldest" },
+];
 
 export default function DriverReimbursementHistory() {
   const [query,  setQuery]  = useState("");
   const [status, setStatus] = useState("");
-  const [sort,   setSort]   = useState("");
+  const [sort,   setSort]   = useState("newest");
   const [page,   setPage]   = useState(1);
 
   const ITEMS = 10;
@@ -74,8 +69,13 @@ export default function DriverReimbursementHistory() {
       if (q && !(`${r.category} ${r.paidBy}`.toLowerCase().includes(q))) return false;
       if (status && r.status.toLowerCase() !== status.toLowerCase()) return false;
       return true;
+    }).sort((a, b) => {
+      if (sort === "oldest") {
+        return new Date(a.expense_date) - new Date(b.expense_date);
+      }
+      return new Date(b.expense_date) - new Date(a.expense_date);
     });
-  }, [query, status]);
+  }, [query, status, sort]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS));
   const start = (page - 1) * ITEMS;
@@ -168,31 +168,24 @@ export default function DriverReimbursementHistory() {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setPage(1); }}
             placeholder="Search category or paid by..."
-            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-xs focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] outline-none bg-white placeholder-gray-400 text-gray-700"
+            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
           />
         </div>
 
         <DateRangePicker />
 
-        <FilterSelect
+        <Dropdown
           value={status}
           onChange={(v) => { setStatus(v); setPage(1); }}
-          options={[
-            { label: "All Statuses", value: "" },
-            { label: "Paid",         value: "Paid" },
-            { label: "Approved",     value: "Approved" },
-            { label: "Pending",      value: "Pending" },
-          ]}
+          options={STATUS_OPTIONS}
+          placeholder="Filter Status"
         />
 
-        <FilterSelect
+        <SortByDropdown
           value={sort}
           onChange={(v) => setSort(v)}
-          options={[
-            { label: "Sort By", value: "" },
-            { label: "Newest",  value: "newest" },
-            { label: "Oldest",  value: "oldest" },
-          ]}
+          options={SORT_OPTIONS}
+          placeholder="Sort By"
         />
       </div>
 

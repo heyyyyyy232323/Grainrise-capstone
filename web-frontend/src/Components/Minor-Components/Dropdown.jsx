@@ -65,13 +65,13 @@ const Dropdown = ({
 
       <button
         type="button"
-        disabled={disabled} // 👈 Disable button action
+        disabled={disabled}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`
           flex items-center justify-between gap-2
           w-full px-3 py-2
-          rounded-xl border
-          text-xs font-medium
+          rounded-lg border
+          text-sm font-medium
           transition-colors
           ${disabled 
             ? "bg-gray-50 text-gray-500 border-gray-200 cursor-not-allowed opacity-80" 
@@ -86,14 +86,14 @@ const Dropdown = ({
         </span>
         <ChevronDown
           size={16}
-          className={`text-gray-400 ml-1.5 shrink-0 transition-transform duration-200 ${
+          className={`text-gray-500 ml-1.5 shrink-0 transition-transform duration-200 ${
             isOpen ? "transform rotate-180" : ""
           }`}
         />
       </button>
 
       {isOpen && !disabled && (
-        <div className="absolute z-[999] min-w-full w-max max-w-[280px] mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto p-1.5 right-0 sm:right-auto sm:left-0">
+        <div className="absolute z-[999] min-w-full w-max max-w-[280px] mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto p-1.5 right-0 sm:right-auto sm:left-0 animate-in fade-in zoom-in-95 duration-100">
           {options.length > 0 ? (
             <div className="flex flex-col gap-0.5">
               {options.map((option, idx) => {
@@ -108,7 +108,7 @@ const Dropdown = ({
                     onClick={() => handleSelect(optionValue)}
                     className={`
                       w-full px-3 py-2 
-                      text-xs text-left
+                      text-xs sm:text-sm text-left
                       cursor-pointer 
                       rounded-lg
                       transition-colors 

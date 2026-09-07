@@ -14,6 +14,8 @@ import {
 
 import useFarmerContracts from "../../Components/hooks/Farmer/useFarmerContracts";
 import useFarmerInventory from "../../Components/hooks/Farmer/useFarmerInventory";
+import Dropdown from "../../Components/Minor-Components/Dropdown";
+import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 
 import FarmerContractOpenBiddingModal from "../../Components/Modals/FarmerContractOpenBiddingModal";
 import FarmerContractOfferDetailsModal from "../../Components/Modals/FarmerContractOfferDetailsModal";
@@ -23,6 +25,21 @@ import FarmerContractAcceptOfferModal from "../../Components/Modals/FarmerContra
 // ============================================================
 // CONSTANTS
 // ============================================================
+
+const MONTHS = [
+  { value: "1", label: "January" },
+  { value: "2", label: "February" },
+  { value: "3", label: "March" },
+  { value: "4", label: "April" },
+  { value: "5", label: "May" },
+  { value: "6", label: "June" },
+  { value: "7", label: "July" },
+  { value: "8", label: "August" },
+  { value: "9", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
+];
 
 const BIDDING_STATUS_LABELS = {
   open: "Open",
@@ -1272,99 +1289,34 @@ export default function FarmerContractsOffers({
             </div>
 
 
-            <div
-              className="
-                flex
-                flex-wrap
-                gap-3
-              "
-            >
-              <select
-                value={
-                  offerStatusFilter
-                }
-                onChange={(
-                  event
-                ) =>
-                  setOfferStatusFilter(
-                    event.target.value
-                  )
-                }
-                className="
-                  min-w-[150px]
-                  rounded-lg
-                  border
-                  border-slate-300
-                  bg-white
-                  px-3
-                  py-2.5
-                  text-sm
-                  outline-none
-                  focus:border-green-600
-                "
-              >
-                <option value="">
-                  All Offer Status
-                </option>
+            <div className="flex flex-wrap gap-3">
+              <div className="w-40">
+                <Dropdown
+                  options={[
+                    { label: "All Offer Status", value: "" },
+                    { label: "Submitted", value: "submitted" },
+                    { label: "Accepted", value: "accepted" },
+                    { label: "Declined", value: "declined" },
+                    { label: "Withdrawn", value: "withdrawn" },
+                  ]}
+                  value={offerStatusFilter}
+                  onChange={setOfferStatusFilter}
+                  placeholder="Offer Status"
+                />
+              </div>
 
-                <option value="submitted">
-                  Submitted
-                </option>
-
-                <option value="accepted">
-                  Accepted
-                </option>
-
-                <option value="declined">
-                  Declined
-                </option>
-
-                <option value="withdrawn">
-                  Withdrawn
-                </option>
-              </select>
-
-
-              <select
-                value={
-                  offerSort
-                }
-                onChange={(
-                  event
-                ) =>
-                  setOfferSort(
-                    event.target.value
-                  )
-                }
-                className="
-                  min-w-[145px]
-                  rounded-lg
-                  border
-                  border-slate-300
-                  bg-white
-                  px-3
-                  py-2.5
-                  text-sm
-                  outline-none
-                  focus:border-green-600
-                "
-              >
-                <option value="highest_price">
-                  Highest Price
-                </option>
-
-                <option value="lowest_price">
-                  Lowest Price
-                </option>
-
-                <option value="newest">
-                  Newest
-                </option>
-
-                <option value="oldest">
-                  Oldest
-                </option>
-              </select>
+              <div className="w-40">
+                <SortByDropdown
+                  options={[
+                    { label: "Highest Price", value: "highest_price" },
+                    { label: "Lowest Price", value: "lowest_price" },
+                    { label: "Newest", value: "newest" },
+                    { label: "Oldest", value: "oldest" },
+                  ]}
+                  value={offerSort}
+                  onChange={setOfferSort}
+                />
+              </div>
             </div>
           </div>
 
@@ -1891,195 +1843,67 @@ export default function FarmerContractsOffers({
 
             {/* FILTERS */}
 
-            <div
-              className="
-                flex
-                flex-wrap
-                gap-3
-              "
-            >
-              <select
-                value={
-                  statusFilter
-                }
-                onChange={(
-                  event
-                ) =>
-                  setStatusFilter(
-                    event.target.value
-                  )
-                }
-                className="
-                  min-w-[145px]
-                  rounded-lg
-                  border
-                  border-slate-300
-                  bg-white
-                  px-3
-                  py-2.5
-                  text-sm
-                  outline-none
-                  focus:border-green-600
-                "
-              >
-                <option value="">
-                  Bidding Status
-                </option>
+            <div className="flex flex-wrap gap-3">
+              {/* STATUS */}
+              <div className="w-36">
+                <Dropdown
+                  options={[
+                    { label: "Bidding Status", value: "" },
+                    { label: "Open", value: "open" },
+                    { label: "Awarded", value: "awarded" },
+                    { label: "Closed", value: "closed" },
+                    { label: "Cancelled", value: "cancelled" },
+                    { label: "Expired", value: "expired" },
+                  ]}
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  placeholder="Bidding Status"
+                />
+              </div>
 
-                <option value="open">
-                  Open
-                </option>
+              {/* YEAR */}
+              <div className="w-28">
+                <Dropdown
+                  options={[
+                    { label: "All Years", value: "" },
+                    ...yearOptions.map((year) => ({
+                      label: String(year),
+                      value: String(year),
+                    })),
+                  ]}
+                  value={yearFilter}
+                  onChange={setYearFilter}
+                  placeholder="Year"
+                />
+              </div>
 
-                <option value="awarded">
-                  Awarded
-                </option>
+              {/* MONTH */}
+              <div className="w-32">
+                <Dropdown
+                  options={[
+                    { label: "All Months", value: "" },
+                    ...MONTHS.map((m) => ({
+                      label: m.label,
+                      value: m.value,
+                    })),
+                  ]}
+                  value={monthFilter}
+                  onChange={setMonthFilter}
+                  placeholder="Month"
+                />
+              </div>
 
-                <option value="closed">
-                  Closed
-                </option>
-
-                <option value="cancelled">
-                  Cancelled
-                </option>
-
-                <option value="expired">
-                  Expired
-                </option>
-              </select>
-
-
-              <select
-                value={
-                  yearFilter
-                }
-                onChange={(
-                  event
-                ) =>
-                  setYearFilter(
-                    event.target.value
-                  )
-                }
-                className="
-                  min-w-[100px]
-                  rounded-lg
-                  border
-                  border-slate-300
-                  bg-white
-                  px-3
-                  py-2.5
-                  text-sm
-                  outline-none
-                  focus:border-green-600
-                "
-              >
-                <option value="">
-                  Year
-                </option>
-
-                {yearOptions.map(
-                  (
-                    year
-                  ) => (
-                    <option
-                      key={year}
-                      value={year}
-                    >
-                      {year}
-                    </option>
-                  )
-                )}
-              </select>
-
-
-              <select
-                value={
-                  monthFilter
-                }
-                onChange={(
-                  event
-                ) =>
-                  setMonthFilter(
-                    event.target.value
-                  )
-                }
-                className="
-                  min-w-[120px]
-                  rounded-lg
-                  border
-                  border-slate-300
-                  bg-white
-                  px-3
-                  py-2.5
-                  text-sm
-                  outline-none
-                  focus:border-green-600
-                "
-              >
-                <option value="">
-                  Month
-                </option>
-
-                {[
-                  "January",
-                  "February",
-                  "March",
-                  "April",
-                  "May",
-                  "June",
-                  "July",
-                  "August",
-                  "September",
-                  "October",
-                  "November",
-                  "December",
-                ].map(
-                  (
-                    month,
-                    index
-                  ) => (
-                    <option
-                      key={month}
-                      value={
-                        index + 1
-                      }
-                    >
-                      {month}
-                    </option>
-                  )
-                )}
-              </select>
-
-
-              <select
-                value={sortBy}
-                onChange={(
-                  event
-                ) =>
-                  setSortBy(
-                    event.target.value
-                  )
-                }
-                className="
-                  min-w-[125px]
-                  rounded-lg
-                  border
-                  border-slate-300
-                  bg-white
-                  px-3
-                  py-2.5
-                  text-sm
-                  outline-none
-                  focus:border-green-600
-                "
-              >
-                <option value="newest">
-                  Newest
-                </option>
-
-                <option value="oldest">
-                  Oldest
-                </option>
-              </select>
+              {/* SORT */}
+              <div className="w-36">
+                <SortByDropdown
+                  options={[
+                    { label: "Newest", value: "newest" },
+                    { label: "Oldest", value: "oldest" },
+                  ]}
+                  value={sortBy}
+                  onChange={setSortBy}
+                />
+              </div>
             </div>
           </div>
 

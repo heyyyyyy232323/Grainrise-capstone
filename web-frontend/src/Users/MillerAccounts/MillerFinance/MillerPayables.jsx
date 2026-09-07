@@ -91,7 +91,7 @@ export default function MillerPayables() {
             <SearchFilter onSearch={(v) => { setQuery(v); setPage(1); }} placeholder="Search batch no., supplier, product" />
           </div>
 
-          <div className="w-36">
+          <div className="w-full sm:w-40">
             <Dropdown
               options={[{ label: "All Suppliers", value: "" }, { label: "Supplier A", value: "Supplier A" }]}
               value={supplier}

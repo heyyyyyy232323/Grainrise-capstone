@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 
 import Breadcrumbs from "../../Components/Minor-Components/Breadcrumbs";
+import Dropdown from "../../Components/Minor-Components/Dropdown";
+import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 
 import FarmerFarmFormModal from "../../Components/Modals/FarmerFarmFormModal";
 
@@ -1213,10 +1215,8 @@ export default function FarmerFarmManagement() {
 
 
                 {/* CURRENT CROP STATUS */}
-
                 <div>
                   <label
-                    htmlFor="crop-status-filter"
                     className="
                       mb-1.5
                       block
@@ -1227,68 +1227,20 @@ export default function FarmerFarmManagement() {
                   >
                     Current Crop Status
                   </label>
-
-                  <select
-                    id="crop-status-filter"
-                    value={
-                      filters.cropStatus
+                  <Dropdown
+                    options={CROP_STATUS_OPTIONS}
+                    value={filters.cropStatus}
+                    onChange={(value) =>
+                      handleFilterChange("cropStatus", value)
                     }
-                    onChange={
-                      (
-                        event
-                      ) =>
-                        handleFilterChange(
-                          "cropStatus",
-                          event.target.value
-                        )
-                    }
-                    className="
-                      w-full
-                      rounded-lg
-                      border
-                      border-slate-300
-                      bg-white
-                      px-3
-                      py-2.5
-                      text-sm
-                      text-slate-700
-                      outline-none
-                      transition
-                      focus:border-green-600
-                      focus:ring-1
-                      focus:ring-green-600
-                    "
-                  >
-                    {
-                      CROP_STATUS_OPTIONS.map(
-                        (
-                          option
-                        ) => (
-                          <option
-                            key={
-                              option.value ||
-                              "all"
-                            }
-                            value={
-                              option.value
-                            }
-                          >
-                            {
-                              option.label
-                            }
-                          </option>
-                        )
-                      )
-                    }
-                  </select>
+                    placeholder="Crop Status"
+                  />
                 </div>
 
 
                 {/* FARM STATUS */}
-
                 <div>
                   <label
-                    htmlFor="farm-status-filter"
                     className="
                       mb-1.5
                       block
@@ -1299,68 +1251,20 @@ export default function FarmerFarmManagement() {
                   >
                     Farm Status
                   </label>
-
-                  <select
-                    id="farm-status-filter"
-                    value={
-                      filters.farmStatus
+                  <Dropdown
+                    options={FARM_STATUS_OPTIONS}
+                    value={filters.farmStatus}
+                    onChange={(value) =>
+                      handleFilterChange("farmStatus", value)
                     }
-                    onChange={
-                      (
-                        event
-                      ) =>
-                        handleFilterChange(
-                          "farmStatus",
-                          event.target.value
-                        )
-                    }
-                    className="
-                      w-full
-                      rounded-lg
-                      border
-                      border-slate-300
-                      bg-white
-                      px-3
-                      py-2.5
-                      text-sm
-                      text-slate-700
-                      outline-none
-                      transition
-                      focus:border-green-600
-                      focus:ring-1
-                      focus:ring-green-600
-                    "
-                  >
-                    {
-                      FARM_STATUS_OPTIONS.map(
-                        (
-                          option
-                        ) => (
-                          <option
-                            key={
-                              option.value ||
-                              "all"
-                            }
-                            value={
-                              option.value
-                            }
-                          >
-                            {
-                              option.label
-                            }
-                          </option>
-                        )
-                      )
-                    }
-                  </select>
+                    placeholder="Farm Status"
+                  />
                 </div>
 
 
                 {/* SORT */}
-
                 <div>
                   <label
-                    htmlFor="farm-sort"
                     className="
                       mb-1.5
                       block
@@ -1371,59 +1275,13 @@ export default function FarmerFarmManagement() {
                   >
                     Sort By
                   </label>
-
-                  <select
-                    id="farm-sort"
-                    value={
-                      filters.sortBy
+                  <SortByDropdown
+                    options={SORT_OPTIONS}
+                    value={filters.sortBy}
+                    onChange={(value) =>
+                      handleFilterChange("sortBy", value)
                     }
-                    onChange={
-                      (
-                        event
-                      ) =>
-                        handleFilterChange(
-                          "sortBy",
-                          event.target.value
-                        )
-                    }
-                    className="
-                      w-full
-                      rounded-lg
-                      border
-                      border-slate-300
-                      bg-white
-                      px-3
-                      py-2.5
-                      text-sm
-                      text-slate-700
-                      outline-none
-                      transition
-                      focus:border-green-600
-                      focus:ring-1
-                      focus:ring-green-600
-                    "
-                  >
-                    {
-                      SORT_OPTIONS.map(
-                        (
-                          option
-                        ) => (
-                          <option
-                            key={
-                              option.value
-                            }
-                            value={
-                              option.value
-                            }
-                          >
-                            {
-                              option.label
-                            }
-                          </option>
-                        )
-                      )
-                    }
-                  </select>
+                  />
                 </div>
 
 
