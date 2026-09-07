@@ -1,7 +1,8 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
+import Dropdown from "../../../Components/Minor-Components/Dropdown";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
 const TODAY = new Date();
@@ -55,24 +56,17 @@ const STATUS_BADGE = {
   Pending: "bg-amber-100 text-amber-700",
 };
 
-function FilterSelect({ value, onChange, options }) {
-  return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="appearance-none rounded-xl border border-gray-200 bg-white px-3.5 py-2 pr-8 text-xs font-semibold text-gray-700 outline-none focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] cursor-pointer"
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">▾</span>
-    </div>
-  );
-}
+const PAYMENT_METHOD_OPTIONS = [
+  { label: "All Methods",      value: "" },
+  { label: "Online Payment",   value: "Online Payment" },
+  { label: "Cash on Delivery", value: "Cash on Delivery" },
+];
+
+const STATUS_OPTIONS = [
+  { label: "All Statuses", value: "" },
+  { label: "Paid",         value: "Paid" },
+  { label: "Pending",      value: "Pending" },
+];
 
 export default function DriverPaymentSubmission() {
   const [query,   setQuery]   = useState("");
@@ -194,30 +188,24 @@ export default function DriverPaymentSubmission() {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setPage(1); }}
             placeholder="Search batch, retailer, or destination"
-            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-xs focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] outline-none bg-white placeholder-gray-400 text-gray-700"
+            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
           />
         </div>
 
         <DateRangePicker />
 
-        <FilterSelect
+        <Dropdown
           value={method}
           onChange={(v) => { setMethod(v); setPage(1); }}
-          options={[
-            { label: "Payment Method",   value: "" },
-            { label: "Online Payment",   value: "Online Payment" },
-            { label: "Cash on Delivery", value: "Cash on Delivery" },
-          ]}
+          options={PAYMENT_METHOD_OPTIONS}
+          placeholder="Payment Method"
         />
 
-        <FilterSelect
+        <Dropdown
           value={status}
           onChange={(v) => { setStatus(v); setPage(1); }}
-          options={[
-            { label: "Payment Status", value: "" },
-            { label: "Paid",           value: "Paid" },
-            { label: "Pending",        value: "Pending" },
-          ]}
+          options={STATUS_OPTIONS}
+          placeholder="Payment Status"
         />
       </div>
 
