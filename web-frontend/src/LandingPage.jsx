@@ -168,9 +168,9 @@ export default function LandingPage() {
     },
     {
       icon: <ShoppingBag size={24} strokeWidth={1.8} />,
-      title: 'Buyer Portal',
+      title: 'Consumer Portal',
       desc: 'Execute institutional procurement, bid on commercial rice parcels, review provenance dossiers, and manage contracts.',
-      linkText: 'Continue as Buyer',
+      linkText: 'Continue as Consumer',
       path: '/login',
     },
     {
@@ -352,89 +352,92 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── ECOSYSTEM ─── */}
-      <AnimatedSection className="lp-ecosystem" id="ecosystem">
-        <div className="lp-ecosystem__badge">How it works</div>
-        <h2 className="lp-section-headline lp-section-headline--center">
-          Connected Supply Chain Ecosystem
-        </h2>
-        <div className="lp-ecosystem__flow">
-          {ECOSYSTEM_STEPS.map((step, i) => (
-            <React.Fragment key={step.label}>
-              <div className="lp-flow-step">
-                <div className="lp-flow-icon">{step.icon}</div>
-                <span className="lp-flow-label">{step.label}</span>
-              </div>
-              {i < ECOSYSTEM_STEPS.length - 1 && (
-                <div className="lp-flow-arrow"><ArrowRight size={18} strokeWidth={1.8} /></div>
-              )}
-            </React.Fragment>
-          ))}
-        </div>
-      </AnimatedSection>
-
-      {/* ── ROLE PORTALS ─── */}
-      <AnimatedSection className="lp-portals" id="portal-access">
-        <div className="lp-portals__inner">
-          <div className="lp-portals__header">
-            <h2 className="lp-section-headline lp-section-headline--center">
-              Access the GrainRise Portal
-            </h2>
-            <p className="lp-portals__sub">
-              Select your role to continue to the GrainRise tools and services designed for your part of the rice supply chain.
-            </p>
-          </div>
-
-          <div className="lp-portals__grid">
-            {ROLE_PORTALS.map((portal) => (
-              <div
-                key={portal.title}
-                className="lp-portal-card"
-                onClick={() => navigate(portal.path)}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="lp-portal-card__icon">{portal.icon}</div>
-                <h3 className="lp-portal-card__title">{portal.title}</h3>
-                <p className="lp-portal-card__desc">{portal.desc}</p>
-                <div className="lp-portal-card__action">
-                  <span>{portal.linkText}</span>
-                  <ArrowRight size={15} strokeWidth={2} />
+      {/* ── ECOSYSTEM, PORTALS & EXPLORE WRAPPER ─── */}
+      <div className="lp-ecosystem-portals-wrapper">
+        {/* ── ECOSYSTEM ─── */}
+        <AnimatedSection className="lp-ecosystem" id="ecosystem">
+          <div className="lp-ecosystem__badge">How it works</div>
+          <h2 className="lp-section-headline lp-section-headline--center">
+            Connected Supply Chain Ecosystem
+          </h2>
+          <div className="lp-ecosystem__flow">
+            {ECOSYSTEM_STEPS.map((step, i) => (
+              <React.Fragment key={step.label}>
+                <div className="lp-flow-step">
+                  <div className="lp-flow-icon">{step.icon}</div>
+                  <span className="lp-flow-label">{step.label}</span>
                 </div>
-              </div>
+                {i < ECOSYSTEM_STEPS.length - 1 && (
+                  <div className="lp-flow-arrow"><ArrowRight size={18} strokeWidth={1.8} /></div>
+                )}
+              </React.Fragment>
             ))}
           </div>
-        </div>
-      </AnimatedSection>
+        </AnimatedSection>
 
-      {/* ── EXPLORE GRAINRISE ─── */}
-      <AnimatedSection className="lp-explore" id="explore-grainrise">
-        <div className="lp-explore__bg" style={{ backgroundImage: `url(${glassImg})` }} />
-        <div className="lp-explore__inner">
-          <div className="lp-explore__header">
-            <h2 className="lp-section-headline lp-section-headline--center">
-              Explore GrainRise
-            </h2>
-            <p className="lp-explore__sub">
-              Access the major tools supporting farming, procurement, inventory, forecasting, contracts, and distribution.
-            </p>
-          </div>
+        {/* ── ROLE PORTALS ─── */}
+        <AnimatedSection className="lp-portals" id="portal-access">
+          <div className="lp-portals__inner">
+            <div className="lp-portals__header">
+              <h2 className="lp-section-headline lp-section-headline--center">
+                Access the GrainRise Portal
+              </h2>
+              <p className="lp-portals__sub">
+                Select your role to continue to the GrainRise tools and services designed for your part of the rice supply chain.
+              </p>
+            </div>
 
-          <div className="lp-explore__grid">
-            {EXPLORE_FEATURES.map((item) => (
-              <div key={item.title} className="lp-explore-card">
-                <div className="lp-explore-card__icon-wrap">
-                  {item.icon}
+            <div className="lp-portals__grid">
+              {ROLE_PORTALS.map((portal) => (
+                <div
+                  key={portal.title}
+                  className="lp-portal-card"
+                  onClick={() => navigate(portal.path)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="lp-portal-card__icon">{portal.icon}</div>
+                  <h3 className="lp-portal-card__title">{portal.title}</h3>
+                  <p className="lp-portal-card__desc">{portal.desc}</p>
+                  <div className="lp-portal-card__action">
+                    <span>{portal.linkText}</span>
+                    <ArrowRight size={15} strokeWidth={2} />
+                  </div>
                 </div>
-                <div className="lp-explore-card__content">
-                  <h3 className="lp-explore-card__title">{item.title}</h3>
-                  <p className="lp-explore-card__desc">{item.desc}</p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </AnimatedSection>
+        </AnimatedSection>
+
+        {/* ── EXPLORE GRAINRISE ─── */}
+        <AnimatedSection className="lp-explore" id="explore-grainrise">
+          <div className="lp-explore__bg" style={{ backgroundImage: `url(${glassImg})` }} />
+          <div className="lp-explore__inner">
+            <div className="lp-explore__header">
+              <h2 className="lp-section-headline lp-section-headline--center">
+                Explore GrainRise
+              </h2>
+              <p className="lp-explore__sub">
+                Access the major tools supporting farming, procurement, inventory, forecasting, contracts, and distribution.
+              </p>
+            </div>
+
+            <div className="lp-explore__grid">
+              {EXPLORE_FEATURES.map((item) => (
+                <div key={item.title} className="lp-explore-card">
+                  <div className="lp-explore-card__icon-wrap">
+                    {item.icon}
+                  </div>
+                  <div className="lp-explore-card__content">
+                    <h3 className="lp-explore-card__title">{item.title}</h3>
+                    <p className="lp-explore-card__desc">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </AnimatedSection>
+      </div>
 
       {/* ── TAKE GRAINRISE ANYWHERE (MOBILE PROMO) ─── */}
       <AnimatedSection className="lp-mobile-app" id="mobile-promo">
