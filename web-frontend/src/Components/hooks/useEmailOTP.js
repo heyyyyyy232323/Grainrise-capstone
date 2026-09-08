@@ -644,6 +644,8 @@ const useEmailOTP = ({
 
     // Verification
     verificationToken,
+    setVerificationToken,
+    setIsVerified,
     isVerified,
 
     sendOtp,

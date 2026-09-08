@@ -1033,6 +1033,42 @@ def verify_retailer_otp(request):
 
 
 # ============================================================
+# RETAILER — GOOGLE VERIFY
+# ============================================================
+
+@api_view(["POST"])
+def verify_retailer_google(request):
+    email = str(request.data.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return Response(
+            {"detail": "A valid email address is required for Google verification."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        if user_value_exists("email", email):
+            return Response(
+                {"detail": "An account with this email address already exists. Please log in."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    except Exception:
+        pass
+
+    verification_token = create_email_verification_token(email)
+
+    return Response(
+        {
+            "message": "Google account verified successfully.",
+            "verification_token": verification_token,
+            "email": email,
+            "verified_via": "google",
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+
+# ============================================================
 # RETAILER — REGISTER
 # ============================================================
 
@@ -1346,6 +1382,42 @@ def verify_farmer_otp(request):
 
 
 # ============================================================
+# FARMER — GOOGLE VERIFY
+# ============================================================
+
+@api_view(["POST"])
+def verify_farmer_google(request):
+    email = str(request.data.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return Response(
+            {"detail": "A valid email address is required for Google verification."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        if farmer_user_value_exists("email", email):
+            return Response(
+                {"detail": "An account with this email address already exists. Please log in."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    except Exception:
+        pass
+
+    verification_token = create_farmer_email_verification_token(email)
+
+    return Response(
+        {
+            "message": "Google account verified successfully.",
+            "verification_token": verification_token,
+            "email": email,
+            "verified_via": "google",
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+
+# ============================================================
 # FARMER — REGISTER
 # ============================================================
 
@@ -1612,6 +1684,42 @@ def verify_warehouse_otp(request):
         },
         status=status.HTTP_200_OK,
     )
+
+
+# ============================================================
+# WAREHOUSE MANAGER — GOOGLE VERIFY
+# ============================================================
+
+@api_view(["POST"])
+def verify_warehouse_google(request):
+    email = str(request.data.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return Response(
+            {"detail": "A valid email address is required for Google verification."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        if warehouse_user_value_exists("email", email):
+            return Response(
+                {"detail": "An account with this email address already exists. Please log in."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    except Exception:
+        pass
+
+    verification_token = create_warehouse_email_verification_token(email)
+
+    return Response(
+        {
+            "message": "Google account verified successfully.",
+            "verification_token": verification_token,
+            "email": email,
+            "verified_via": "google",
+        },
+        status=status.HTTP_200_OK,
+    )
+
 
 
 # ============================================================
@@ -1962,6 +2070,42 @@ def verify_supplier_otp(request):
         },
         status=status.HTTP_200_OK,
     )
+
+
+# ============================================================
+# SUPPLIER / MILLER — GOOGLE VERIFY
+# ============================================================
+
+@api_view(["POST"])
+def verify_supplier_google(request):
+    email = str(request.data.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return Response(
+            {"detail": "A valid email address is required for Google verification."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        if supplier_user_value_exists("email", email):
+            return Response(
+                {"detail": "An account with this email address already exists. Please log in."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    except Exception:
+        pass
+
+    verification_token = create_supplier_email_verification_token(email)
+
+    return Response(
+        {
+            "message": "Google account verified successfully.",
+            "verification_token": verification_token,
+            "email": email,
+            "verified_via": "google",
+        },
+        status=status.HTTP_200_OK,
+    )
+
 
 
 # ============================================================

@@ -9,6 +9,7 @@ import Footer from "../Components/Minor-Components/CustomFooter";
 import Toast from "../Components/Minor-Components/Toast";
 import useToast from "../Components/hooks/useToast";
 import useApi from "../Components/hooks/useApi";
+import GoogleVerificationModal, { GoogleIcon } from "../Components/Modals/GoogleVerificationModal";
 import logo from "../assets/Logo.png";
 import backgroundImage from "../assets/smudge.jpg";
 import useFormValidation from "../Components/hooks/useFormValidation";
@@ -116,6 +117,7 @@ const WarehouseManagerRegister = () => {
   // UI States
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
   const { errors, setErrors, validators, validate, getPasswordStrength } = useFormValidation();
   const [validationMsg, setValidationMsg] = useState("");
   const { toasts, showToast, removeToast } = useToast();
@@ -695,6 +697,24 @@ const WarehouseManagerRegister = () => {
 
     setValidationMsg("");
     setStep(4);
+  };
+
+  const handleGoogleVerifySuccess = ({ email, verificationToken }) => {
+    setForm((prev) => ({
+      ...prev,
+      email: email,
+      username: prev.username.trim() ? prev.username : email.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, ""),
+    }));
+    setVerificationToken(verificationToken);
+    setErrors((prev) => ({ ...prev, email: "", otp: "" }));
+    setValidationMsg("");
+    setStep(3);
+    showToast({
+      type: "success",
+      title: "Google Account Verified",
+      message: "Your Google account has been verified. Please continue with your personal details.",
+      duration: 4000,
+    });
   };
 
   const handleNextStep1 = async (e) => {
@@ -1500,6 +1520,16 @@ const WarehouseManagerRegister = () => {
             {/* Toast notifications rendered at page level */}
             <Toast toasts={toasts} removeToast={removeToast} />
 
+            {/* Google Verification Modal */}
+            <GoogleVerificationModal
+              isOpen={isGoogleModalOpen}
+              onClose={() => setIsGoogleModalOpen(false)}
+              onSuccess={handleGoogleVerifySuccess}
+              initialEmail={form.email}
+              roleName="Warehouse Manager"
+              endpoint="/auth/warehouse-manager/google-verify"
+            />
+
             {/* STEP 1 — ACCOUNT INFORMATION */}
             {step === 1 && (
               <form onSubmit={handleNextStep1} className="space-y-8 animate-fade-in">
@@ -1650,6 +1680,26 @@ const WarehouseManagerRegister = () => {
                 {errors.agreeTerms && <span className="text-xs text-red-500 block -mt-6">{errors.agreeTerms}</span>}
 
                 
+                {/* Centered Google Verification Option */}
+                <div className="pt-2 flex flex-col items-center">
+                  <div className="w-full flex items-center justify-center my-4">
+                    <div className="flex-grow border-t border-gray-200"></div>
+                    <span className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      or continue with
+                    </span>
+                    <div className="flex-grow border-t border-gray-200"></div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsGoogleModalOpen(true)}
+                    className="w-full max-w-md px-6 py-3.5 rounded-full border border-gray-300 hover:border-[#08511f] bg-white hover:bg-emerald-50/60 text-gray-800 font-semibold text-sm shadow-sm hover:shadow transition-all duration-200 flex items-center justify-center gap-3 cursor-pointer"
+                  >
+                    <GoogleIcon size={20} />
+                    <span>Continue with Google</span>
+                  </button>
+                </div>
+
                 <div className="pt-6 border-t border-gray-100 flex justify-end">
                   <CustomGreenButton
                     text={
@@ -1707,6 +1757,19 @@ const WarehouseManagerRegister = () => {
                       Resend OTP
                     </button>
                   </p>
+
+                  <div className="mt-4 pt-4 border-t border-gray-100 w-full flex flex-col items-center">
+                    <p className="text-xs text-gray-500 mb-2 font-medium">Or prefer instant verification?</p>
+                    <button
+                      type="button"
+                      onClick={() => setIsGoogleModalOpen(true)}
+                      className="px-5 py-2 rounded-full border border-gray-300 hover:border-[#08511f] bg-white hover:bg-emerald-50 text-gray-700 font-semibold text-xs transition flex items-center gap-2 shadow-sm cursor-pointer"
+                    >
+                      <GoogleIcon size={15} />
+                      <span>Verify with Google instead</span>
+                    </button>
+                  </div>
+
                   <p className="text-xs text-gray-400 max-w-sm text-center mt-4">
                     The new verification code will be sent to your registered email address.
                   </p>

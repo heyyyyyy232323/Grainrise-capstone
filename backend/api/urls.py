@@ -92,6 +92,12 @@ urlpatterns = [
     ),
 
     path(
+        "auth/retailer/google-verify",
+        views.verify_retailer_google,
+        name="retailer-google-verify",
+    ),
+
+    path(
         "auth/retailer/register",
         views.register_retailer,
         name="retailer-register",
@@ -115,6 +121,12 @@ urlpatterns = [
     ),
 
     path(
+        "auth/farmer/google-verify",
+        views.verify_farmer_google,
+        name="farmer-google-verify",
+    ),
+
+    path(
         "auth/farmer/register",
         views.register_farmer,
         name="farmer-register",
@@ -135,6 +147,12 @@ urlpatterns = [
         "auth/warehouse-manager/verify-otp",
         views.verify_warehouse_otp,
         name="warehouse-manager-verify-otp",
+    ),
+
+    path(
+        "auth/warehouse-manager/google-verify",
+        views.verify_warehouse_google,
+        name="warehouse-manager-google-verify",
     ),
 
     path(
@@ -164,6 +182,12 @@ urlpatterns = [
         "auth/supplier/verify-otp",
         views.verify_supplier_otp,
         name="supplier-verify-otp",
+    ),
+
+    path(
+        "auth/supplier/google-verify",
+        views.verify_supplier_google,
+        name="supplier-google-verify",
     ),
 
     path(
