@@ -1,4 +1,4 @@
-﻿import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Truck,
   ClipboardList,
@@ -110,95 +110,98 @@ export default function WarehouseDriverDashboard() {
       <div className="grid gap-4 lg:grid-cols-2">
 
         {/* ── Current Active Duty ─────────────────────────────────────────── */}
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          {/* Card header bar */}
-          <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100 bg-slate-50/60">
-            <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-slate-500">
-              Current Active Duty
-            </p>
-          </div>
-
-          <div className="p-5 space-y-4">
-            {/* Batch + retailer */}
-            <div>
-              <p className="font-extrabold text-slate-900 text-[15px] tracking-tight">
-                {ACTIVE_DUTY.batchNo}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col justify-between">
+          <div>
+            {/* Card header bar */}
+            <div className="flex items-center gap-2 px-5 py-3 border-b border-emerald-100 bg-[#EBF7EE]">
+              <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-emerald-800">
+                CURRENT ACTIVE DUTY
               </p>
-              <div className="flex items-center gap-1 mt-1 text-[11px] text-slate-500">
-                <MapPin size={11} className="text-slate-400 shrink-0" />
-                <span>{ACTIVE_DUTY.retailer}</span>
-              </div>
             </div>
 
-            {/* Detail grid */}
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="space-y-0.5">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Commodity
+            <div className="p-5 space-y-4">
+              {/* Batch + retailer */}
+              <div>
+                <p className="font-extrabold text-slate-900 text-[16px] tracking-tight">
+                  {ACTIVE_DUTY.batchNo}
                 </p>
-                <p className="text-sm font-semibold text-slate-800">
-                  {ACTIVE_DUTY.commodity}
-                </p>
+                <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-500">
+                  <MapPin size={13} className="text-slate-400 shrink-0" />
+                  <span>Retailer: <strong className="text-slate-700 font-semibold">{ACTIVE_DUTY.retailer}</strong></span>
+                </div>
               </div>
-              <div className="space-y-0.5">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Quantity
-                </p>
-                <p className="text-sm font-semibold text-slate-800">
-                  {ACTIVE_DUTY.quantity}
-                </p>
-              </div>
-              <div className="col-span-2 space-y-0.5">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Delivery Schedule
-                </p>
-                <div className="flex items-center gap-1.5">
-                  <CalendarDays size={12} className="text-slate-500" />
-                  <p className="text-sm font-semibold text-slate-800">
-                    {ACTIVE_DUTY.deliverySchedule}
+
+              {/* Detail box */}
+              <div className="rounded-xl bg-[#F5F7FA] p-4">
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      COMMODITY
+                    </p>
+                    <p className="text-sm font-bold text-slate-800">
+                      {ACTIVE_DUTY.commodity}
+                    </p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      QUANTITY
+                    </p>
+                    <p className="text-sm font-bold text-slate-800">
+                      {ACTIVE_DUTY.quantity}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-0.5 pt-2 border-t border-slate-200/60">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    DELIVERY SCHEDULE
                   </p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <CalendarDays size={13} className="text-slate-500" />
+                    <p className="text-sm font-semibold text-slate-800">
+                      {ACTIVE_DUTY.deliverySchedule}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Action buttons */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => navigate("/warehouse-driver/my-duties")}
-                className="flex-1 rounded-lg bg-[#0B5D1E] hover:bg-[#094d19] text-white text-[11px] font-bold py-2.5 uppercase tracking-wide transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Truck size={13} />
-                Continue Tracking
-              </button>
-              <button
-                onClick={() => navigate("/warehouse-driver/my-duties")}
-                className="flex-1 rounded-lg border border-slate-200 bg-white hover:border-slate-300 text-slate-600 text-[11px] font-bold py-2.5 uppercase tracking-wide transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                View Duty Details
-              </button>
-            </div>
+          {/* Action buttons */}
+          <div className="p-5 pt-0 flex gap-2.5">
+            <button
+              onClick={() => navigate("/warehouse-driver/my-duties")}
+              className="flex-1 rounded-lg bg-[#0B5D1E] hover:bg-[#094d19] text-white text-xs font-bold py-2.5 uppercase tracking-wide transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              CONTINUE TRACKING
+            </button>
+            <button
+              onClick={() => navigate("/warehouse-driver/my-duties")}
+              className="flex-1 rounded-lg border border-slate-300 bg-white hover:border-slate-400 text-slate-700 text-xs font-bold py-2.5 uppercase tracking-wide transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              VIEW DUTY DETAILS
+            </button>
           </div>
         </div>
 
         {/* ── Load Utilization ───────────────────────────────────────────── */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
           <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-slate-500">
-              Load Utilization
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-slate-600">
+              LOAD UTILIZATION
             </p>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Based on active and assigned duties. Driver assignment limit:{" "}
-              {ACTIVE_DUTY.maxLoad}
+            <p className="text-xs text-slate-400 mt-0.5">
+              Based on active and assigned duties, Driver assignment limit: {ACTIVE_DUTY.maxLoad}
             </p>
           </div>
 
           {/* Big number */}
           <div className="flex items-end gap-2">
-            <p className="text-[3rem] font-extrabold tracking-[-0.03em] leading-none text-slate-900">
+            <p className="text-[2.75rem] font-extrabold tracking-[-0.03em] leading-none text-slate-900">
               {ACTIVE_DUTY.assignedLoad}
             </p>
-            <p className="text-sm text-slate-400 mb-1">{ACTIVE_DUTY.maxLoad}</p>
+            <p className="text-sm font-medium text-slate-400 mb-1">/ {ACTIVE_DUTY.maxLoad}</p>
           </div>
 
           {/* Progress bar */}
@@ -211,18 +214,18 @@ export default function WarehouseDriverDashboard() {
             </div>
             <div className="flex justify-end">
               <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">
-                {ACTIVE_DUTY.percentAssigned}% Assigned
+                {ACTIVE_DUTY.percentAssigned}% ASSIGNED
               </span>
             </div>
           </div>
 
           {/* 3 stat boxes */}
-          <div className="grid grid-cols-3 gap-2 pt-1">
+          <div className="grid grid-cols-3 gap-2.5 pt-1">
             {/* Assigned Load */}
-            <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-1.5">
-              <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                <Package size={10} className="text-slate-400" />
-                Assigned Load
+            <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-1">
+              <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <ClipboardList size={11} className="text-slate-400" />
+                ASSIGNED LOAD
               </div>
               <p className="text-sm font-bold text-slate-800">
                 {ACTIVE_DUTY.assignedLoadFull}
@@ -230,10 +233,10 @@ export default function WarehouseDriverDashboard() {
             </div>
 
             {/* Remaining Capacity — highlighted green */}
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-1.5">
-              <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-emerald-600">
-                <Package size={10} />
-                Remaining Capacity
+            <div className="rounded-xl border border-emerald-300 bg-emerald-50/70 p-3 space-y-1">
+              <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                <Truck size={11} className="text-emerald-700" />
+                REMAINING CAPACITY
               </div>
               <p className="text-sm font-bold text-emerald-700">
                 {ACTIVE_DUTY.remainingCapacity}
@@ -241,10 +244,10 @@ export default function WarehouseDriverDashboard() {
             </div>
 
             {/* Delivered Load */}
-            <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-1.5">
-              <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                <CheckCircle2 size={10} className="text-slate-400" />
-                Delivered Load
+            <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-1">
+              <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <CheckCircle2 size={11} className="text-slate-400" />
+                DELIVERED LOAD
               </div>
               <p className="text-sm font-bold text-slate-800">
                 {ACTIVE_DUTY.deliveredLoad}
@@ -265,21 +268,21 @@ export default function WarehouseDriverDashboard() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-[#f9fafb] border-b border-slate-100">
+            <thead className="bg-[#EBF7EE] border-b border-emerald-100">
               <tr>
-                <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                <th className="px-5 py-3 text-left text-[11px] font-bold text-slate-600 uppercase tracking-wide">
                   Batch No.
                 </th>
-                <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                <th className="px-5 py-3 text-left text-[11px] font-bold text-slate-600 uppercase tracking-wide">
                   Retailer
                 </th>
-                <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                <th className="px-5 py-3 text-left text-[11px] font-bold text-slate-600 uppercase tracking-wide">
                   Commodity Details
                 </th>
-                <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                <th className="px-5 py-3 text-left text-[11px] font-bold text-slate-600 uppercase tracking-wide">
                   Status
                 </th>
-                <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                <th className="px-5 py-3 text-left text-[11px] font-bold text-slate-600 uppercase tracking-wide">
                   Schedule
                 </th>
               </tr>
@@ -287,22 +290,22 @@ export default function WarehouseDriverDashboard() {
             <tbody className="divide-y divide-slate-100">
               {DELIVERIES.map((d, idx) => (
                 <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="px-5 py-3.5 text-sm font-medium text-slate-800">
+                  <td className="px-5 py-3.5 text-xs font-semibold text-slate-800">
                     {d.batchNo}
                   </td>
-                  <td className="px-5 py-3.5 text-sm text-slate-600">
+                  <td className="px-5 py-3.5 text-xs text-slate-600">
                     {d.retailer}
                   </td>
                   <td className="px-5 py-3.5">
-                    <p className="text-sm text-slate-800">{d.commodity}</p>
-                    <p className="text-xs text-slate-400">{d.variety}</p>
+                    <p className="text-xs font-medium text-slate-800">{d.commodity}</p>
+                    <p className="text-[11px] text-slate-400">{d.variety}</p>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="text-sm font-semibold text-amber-500">
+                    <span className="text-xs font-semibold text-amber-500">
                       {d.status}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5 text-sm text-slate-600">
+                  <td className="px-5 py-3.5 text-xs text-slate-600">
                     {d.schedule}
                   </td>
                 </tr>
