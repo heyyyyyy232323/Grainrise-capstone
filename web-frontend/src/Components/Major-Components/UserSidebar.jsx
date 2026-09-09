@@ -26,57 +26,61 @@ import Logo from "../../assets/Logo.png";
 
 export const getUserSidebarConfig = (role = "admin") => {
   const menuConfigs = {
-    admin: {
-      panelLabel: "Admin Panel",
-      sections: [
+admin: {
+  panelLabel: "Admin Panel",
+  sections: [
+    {
+      title: "MAIN",
+      items: [
         {
-          title: "MAIN",
-          items: [
-            {
-              label: "Dashboard",
-              icon: LayoutDashboard,
-              path: "/admin/dashboard",
-            },
-          ],
-        },
-        {
-          title: "MANAGEMENT",
-          items: [
-            {
-              label: "Miller Management",
-              icon: Truck,
-              path: "/admin/suppliers",
-            },
-            {
-              label: "Warehouse Management",
-              icon: Warehouse,
-              path: "/admin/warehouses",
-            },
-            {
-              label: "Retailer Management",
-              icon: Store,
-              path: "/admin/retailers",
-            },
-            {
-              label: "Farmer Management",
-              icon: Users,
-              path: "/admin/farmers",
-            },
-          ],
-        },
-        {
-          title: "COMMUNICATION",
-          items: [
-            {
-              label: "Email Users",
-              icon: Mail,
-              path: "/admin/email-users",
-            },
-          ],
+          label: "Dashboard",
+          icon: LayoutDashboard,
+          path: "/admin/dashboard",
         },
       ],
     },
-
+    {
+      title: "MANAGEMENT",
+      items: [
+        {
+          label: "Miller Management",
+          icon: Truck,
+          path: "/admin/suppliers",
+        },
+        {
+          label: "Warehouse Management",
+          icon: Warehouse,
+          path: "/admin/warehouses",
+        },
+        {
+          label: "Retailer Management",
+          icon: Store,
+          path: "/admin/retailers",
+        },
+        {
+          label: "Farmer Management",
+          icon: Users,
+          path: "/admin/farmers",
+        },
+      ],
+    },
+    {
+      title: "COMMUNICATION",
+      items: [
+        {
+          label: "Email Users",
+          icon: Mail,
+          path: "/admin/email-users",
+        },
+        {
+          label: "News & Updates",
+          icon: Newspaper,
+          path: "/admin/news-updates",
+        },
+      ],
+    },
+  ],
+},
     supplier: {
       panelLabel: "Supplier Panel",
       sections: [

@@ -11,17 +11,32 @@ from django.urls import include, path
 # /api/farmer/
 #
 #
-# CURRENT FARMER MODULES:
+# FARMER MODULES:
 #
+# /api/farmer/dashboard/
 # /api/farmer/farm-management/
 # /api/farmer/contracts/
 # /api/farmer/point-of-sale/
 # /api/farmer/transaction-history/
+# /api/farmer/forecasting/
+# /api/farmer/notifications/
 #
 # ============================================================
 
 
 urlpatterns = [
+
+    # ========================================================
+    # DASHBOARD
+    # ========================================================
+
+    path(
+        "dashboard/",
+        include(
+            "api.farmer_function.dashboard.urls"
+        ),
+    ),
+
 
     # ========================================================
     # FARM MANAGEMENT
@@ -50,16 +65,6 @@ urlpatterns = [
     # ========================================================
     # POINT OF SALE
     # ========================================================
-    #
-    # CHILD ENDPOINTS:
-    #
-    # GET
-    # /api/farmer/point-of-sale/products/
-    #
-    # POST
-    # /api/farmer/point-of-sale/checkout/
-    #
-    # ========================================================
 
     path(
         "point-of-sale/",
@@ -72,27 +77,35 @@ urlpatterns = [
     # ========================================================
     # TRANSACTION HISTORY
     # ========================================================
-    #
-    # CHILD ENDPOINTS:
-    #
-    # GET
-    # /api/farmer/transaction-history/pos/
-    #
-    # GET
-    # /api/farmer/transaction-history/pos/summary/
-    #
-    # GET
-    # /api/farmer/transaction-history/contracts/
-    #
-    # GET
-    # /api/farmer/transaction-history/contracts/<contract_id>/
-    #
-    # ========================================================
 
     path(
         "transaction-history/",
         include(
             "api.farmer_function.transaction_history.urls"
+        ),
+    ),
+
+
+    # ========================================================
+    # FORECASTING
+    # ========================================================
+
+    path(
+        "forecasting/",
+        include(
+            "api.farmer_function.forecasting.urls"
+        ),
+    ),
+
+
+    # ========================================================
+    # NOTIFICATIONS
+    # ========================================================
+
+    path(
+        "notifications/",
+        include(
+            "api.farmer_function.notifications.urls"
         ),
     ),
 

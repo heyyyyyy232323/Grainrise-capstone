@@ -28,17 +28,30 @@ export default function KPICard({
   tone = "success",
   variant = "surface",
   className = "",
+  onClick,
+  ariaLabel,
 }) {
   const styles = toneStyles[tone] || toneStyles.success;
   const badgeIcon = icon || <BadgeDollarSign size={18} strokeWidth={2.2} />;
-  // Prefer `trend` as the single caption line (matches design); fall back to `footer`
-  // so existing callers that only pass `footer` still render something.
   const caption = trend || footer;
   const isSolid = variant === "solid";
+  const isClickable = typeof onClick === "function";
+  const CardElement = isClickable ? "button" : "article";
 
   return (
-    <article
-      className={`w-full rounded-[22px] border p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.1)] ${
+    <CardElement
+      {...(isClickable
+        ? {
+            type: "button",
+            onClick,
+            "aria-label": ariaLabel || `${title}: ${value}`,
+          }
+        : {})}
+      className={`w-full rounded-[22px] border p-5 text-left shadow-[0_12px_32px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.1)] ${
+        isClickable
+          ? "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0B7A2A] focus-visible:ring-offset-2"
+          : ""
+      } ${
         isSolid
           ? "border-[#065416] bg-[#0B5D1E] text-white"
           : "border-slate-200 bg-white"
@@ -79,6 +92,6 @@ export default function KPICard({
           {caption}
         </p>
       ) : null}
-    </article>
+    </CardElement>
   );
 }

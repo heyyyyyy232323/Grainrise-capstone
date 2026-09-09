@@ -224,6 +224,30 @@ urlpatterns = [
 
 
     # ========================================================
+    # CENTRALIZED NEWS & UPDATES
+    # ========================================================
+    #
+    # Shared by:
+    #
+    # farmer
+    # miller_manager
+    # warehouse_manager
+    # retailer
+    #
+    # Employees are rejected by the News authentication guard.
+    #
+    # Final prefix:
+    #
+    # /api/news/
+    # ========================================================
+
+    path(
+        "news/",
+        include("api.news_updates.urls"),
+    ),
+
+
+    # ========================================================
     # ADMIN — RETAILER MANAGEMENT
     # ========================================================
 
