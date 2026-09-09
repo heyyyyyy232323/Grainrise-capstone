@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Store, MapPin, Search } from "lucide-react";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { Store, MapPin, Search, ChevronDown } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
@@ -49,21 +49,73 @@ const METHOD_BADGE = {
   "Cash on Delivery": "bg-amber-100 text-amber-700",
 };
 
-function FilterSelect({ value, onChange, options }) {
+const PAYMENT_METHOD_OPTIONS = [
+  { label: "Payment Method",   value: "" },
+  { label: "Online Payment",   value: "Online Payment" },
+  { label: "Cash on Delivery", value: "Cash on Delivery" },
+];
+
+const SORT_OPTIONS = [
+  { label: "Sort By",      value: "" },
+  { label: "Newest First", value: "newest" },
+  { label: "Oldest First", value: "oldest" },
+];
+
+function CustomDropdown({ label, options, value, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find((opt) => opt.value === value);
+  const displayLabel = selectedOption && selectedOption.value !== "" ? selectedOption.label : label;
+  const isSelected = value && value !== "" && value !== "all";
+
   return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="appearance-none rounded-xl border border-gray-200 bg-white px-3.5 py-2 pr-8 text-xs font-semibold text-gray-700 outline-none focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] cursor-pointer"
+    <div className="relative w-full sm:w-auto" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className={`flex items-center gap-2 border border-gray-200 bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto justify-center transition-colors cursor-pointer h-[38px] ${
+          isSelected ? "border-emerald-500 text-emerald-700 bg-emerald-50/40" : ""
+        }`}
       >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">▾</span>
+        <span>{displayLabel}</span>
+        <ChevronDown
+          size={16}
+          className={`text-gray-500 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full mt-2 right-0 sm:left-0 bg-white border border-gray-200 rounded-xl shadow-lg p-1.5 z-20 min-w-[160px] animate-in fade-in zoom-in-95 duration-100">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                value === opt.value
+                  ? "bg-[#EAF7E8] text-[#0B5D1E] font-bold"
+                  : "text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -81,8 +133,16 @@ export default function MillerDriverMyDuties() {
       if (q && !(`${r.batchNo} ${r.retailer} ${r.deliveryAddress} ${r.product}`.toLowerCase().includes(q))) return false;
       if (method && r.paymentMethod !== method) return false;
       return true;
+    }).sort((a, b) => {
+      if (sort === "oldest") {
+        return new Date(a.duty_date) - new Date(b.duty_date);
+      }
+      if (sort === "newest") {
+        return new Date(b.duty_date) - new Date(a.duty_date);
+      }
+      return 0;
     });
-  }, [query, method]);
+  }, [query, method, sort]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS));
   const start = (page - 1) * ITEMS;
@@ -174,30 +234,24 @@ export default function MillerDriverMyDuties() {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setPage(1); }}
             placeholder="Search order, batch, recipient, or destination"
-            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-xs focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] outline-none bg-white placeholder-gray-400 text-gray-700"
+            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
           />
         </div>
 
         <DateRangePicker />
 
-        <FilterSelect
+        <CustomDropdown
+          label="Payment Method"
           value={method}
           onChange={(v) => { setMethod(v); setPage(1); }}
-          options={[
-            { label: "Payment Method",   value: "" },
-            { label: "Online Payment",   value: "Online Payment" },
-            { label: "Cash on Delivery", value: "Cash on Delivery" },
-          ]}
+          options={PAYMENT_METHOD_OPTIONS}
         />
 
-        <FilterSelect
+        <CustomDropdown
+          label="Sort By"
           value={sort}
           onChange={(v) => setSort(v)}
-          options={[
-            { label: "Sort By", value: "" },
-            { label: "Newest",  value: "newest" },
-            { label: "Oldest",  value: "oldest" },
-          ]}
+          options={SORT_OPTIONS}
         />
       </div>
 
