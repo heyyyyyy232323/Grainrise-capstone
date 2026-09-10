@@ -1,392 +1,1442 @@
-import { useState } from "react";
-import { Search, MapPin, CheckCircle2, ChevronRight, Droplets, Thermometer, ArrowRight, Download, Crosshair, Tractor } from "lucide-react";
-import Dropdown from "../../Components/Minor-Components/Dropdown";
-
-const VIEW_OPTIONS = [
-  { label: "Monthly View", value: "Monthly View" },
-  { label: "Quarterly View", value: "Quarterly View" },
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  CircleAlert,
+  Crosshair,
+  Droplets,
+  LoaderCircle,
+  MapPin,
+  RefreshCw,
+  Search,
+  Sparkles,
+  Sprout,
+  ThermometerSun,
+  Tractor,
+} from "lucide-react";
+import useFarmerForecasting from "../../Components/hooks/Farmer/useFarmerForecasting";
+const HISTORY_YEAR_OPTIONS = [1, 3, 5];
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
-
+function safeNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+function shortMonthLabel(value) {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+  });
+}
+function buildAddressLine(farm) {
+  return [
+    farm?.barangay,
+    farm?.municipality,
+    farm?.province,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+function formatCoordinate(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return "—";
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed)
+    ? parsed.toFixed(5)
+    : "—";
+}
+function normalizeSeries(points) {
+  if (!Array.isArray(points)) return [];
+  return points
+    .map((item) => {
+      const periodStart = item?.period_start;
+      const date = new Date(periodStart);
+      if (
+        !periodStart ||
+        Number.isNaN(date.getTime())
+      ) {
+        return null;
+      }
+      return {
+        label: shortMonthLabel(periodStart),
+        monthIndex: date.getMonth(),
+        timestamp: date.getTime(),
+        value: safeNumber(item?.value),
+        unit: item?.unit || item?.unit_code || "",
+        raw: item,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.timestamp - b.timestamp);
+}
+function buildHistoricalMonthProfile(
+  points,
+  anchorMonthIndex = 0
+) {
+  const normalized = normalizeSeries(points);
+  if (!normalized.length) return [];
+  const bucket = normalized.reduce(
+    (result, item) => {
+      if (!result[item.monthIndex]) {
+        result[item.monthIndex] = {
+          monthIndex: item.monthIndex,
+          total: 0,
+          count: 0,
+          unit: item.unit,
+        };
+      }
+      result[item.monthIndex].total += item.value;
+      result[item.monthIndex].count += 1;
+      return result;
+    },
+    {}
+  );
+  const orderedMonths = Array.from(
+    { length: 12 },
+    (_, index) =>
+      (anchorMonthIndex + index) % 12
+  );
+  return orderedMonths
+    .map((monthIndex) => {
+      const item = bucket[monthIndex];
+      if (!item?.count) return null;
+      return {
+        label: MONTH_LABELS[monthIndex],
+        monthIndex,
+        value: item.total / item.count,
+        unit: item.unit,
+      };
+    })
+    .filter(Boolean);
+}
+function mapFarmToSelection(farm) {
+  const name =
+    farm?.farm_name ||
+    "Registered Farm";
+  const address = buildAddressLine(farm);
+  return {
+    type: "registered_farm",
+    displayName: name,
+    subtitle:
+      address ||
+      "Registered farm location",
+    latitude: farm?.latitude ?? null,
+    longitude: farm?.longitude ?? null,
+    requestPayload: {
+      location_source: "registered_farm",
+      farm_id: farm?.farm_id,
+    },
+  };
+}
+function pickHighest(data) {
+  if (!data?.length) return null;
+  return data.reduce((highest, current) =>
+    current.value > highest.value
+      ? current
+      : highest
+  );
+}
+function pickLowest(data) {
+  if (!data?.length) return null;
+  return data.reduce((lowest, current) =>
+    current.value < lowest.value
+      ? current
+      : lowest
+  );
+}
+function buildRainPlainText(data) {
+  if (!data.length) {
+    return "Walang sapat na rainfall forecast data pa.";
+  }
+  const highest = pickHighest(data);
+  const lowest = pickLowest(data);
+  return (
+    `Mas maraming ulan ang posibleng maranasan sa ${highest?.label}. ` +
+    `Pinaka-kaunti naman ang forecast na ulan sa ${lowest?.label}.`
+  );
+}
+function buildHeatPlainText(data) {
+  if (!data.length) {
+    return "Walang sapat na temperature forecast data pa.";
+  }
+  const highest = pickHighest(data);
+  const lowest = pickLowest(data);
+  return (
+    `Pinaka-mainit ang posibleng buwan sa ${highest?.label}. ` +
+    `Mas malamig naman ang forecast sa ${lowest?.label}.`
+  );
+}
+function cleanRecommendationLine(value) {
+  return String(value || "")
+    .replace(/^\s*[•▪◦*-]\s*/, "")
+    .replace(/^\s*\d+[.)]\s+/, "")
+    .trim();
+}
+function splitRecommendationText(value) {
+  const text = String(value || "").trim();
+  if (!text) return [];
+  const normalized = text
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
+  const bulletParts = normalized
+    .split(/(?:^|\n|\s)•\s+/g)
+    .map(cleanRecommendationLine)
+    .filter(Boolean);
+  if (bulletParts.length > 1) {
+    return bulletParts;
+  }
+  const lineParts = normalized
+    .split(/\n+/)
+    .map(cleanRecommendationLine)
+    .filter(Boolean);
+  if (lineParts.length > 1) {
+    return lineParts;
+  }
+  return [cleanRecommendationLine(normalized)].filter(Boolean);
+}
+function EmptyChartState({ message }) {
+  return (
+    <div className="h-[180px] flex items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-center px-6">
+      <p className="text-sm text-slate-500">
+        {message}
+      </p>
+    </div>
+  );
+}
+function ChartCardHeader({
+  icon,
+  title,
+  subtitle,
+  iconColor = "text-blue-600",
+}) {
+  const Icon = icon;
+  return (
+    <div className="mb-4">
+      <div
+        className={`flex items-center gap-2 font-bold text-lg ${iconColor}`}
+      >
+        <Icon size={18} />
+        <span>{title}</span>
+      </div>
+      <p className="text-sm text-slate-500 mt-1">
+        {subtitle}
+      </p>
+    </div>
+  );
+}
+function RainBarChart({ data }) {
+  if (!data?.length) {
+    return (
+      <EmptyChartState message="No rainfall data available yet." />
+    );
+  }
+  const maxValue = Math.max(
+    ...data.map((item) => item.value),
+    0
+  );
+  const highest = pickHighest(data);
+  const lowest = pickLowest(data);
+  const barWidth = 34;
+  const barGap = 20;
+  const leftPadding = 18;
+  const baselineY = 132;
+  const chartHeight = 86;
+  const svgWidth = Math.max(
+    420,
+    data.length * (barWidth + barGap) + 30
+  );
+  return (
+    <div className="overflow-x-auto">
+      <svg
+        viewBox={`0 0 ${svgWidth} 170`}
+        className="w-full min-w-[340px] h-[170px]"
+      >
+        {data.map((item, index) => {
+          const x =
+            leftPadding +
+            index * (barWidth + barGap);
+          const height =
+            maxValue > 0
+              ? Math.max(
+                  12,
+                  (item.value / maxValue) * chartHeight
+                )
+              : 12;
+          const y = baselineY - height;
+          let fill = "#38BDF8";
+          if (
+            highest &&
+            item.label === highest.label &&
+            item.value === highest.value
+          ) {
+            fill = "#4F7DF3";
+          } else if (
+            lowest &&
+            item.label === lowest.label &&
+            item.value === lowest.value
+          ) {
+            fill = "#F59E0B";
+          }
+          return (
+            <g key={`${item.label}-${index}`}>
+              <rect
+                x={x}
+                y={y}
+                width={barWidth}
+                height={height}
+                rx="8"
+                fill={fill}
+              />
+              <text
+                x={x + barWidth / 2}
+                y={154}
+                textAnchor="middle"
+                className="fill-slate-500 text-[11px] font-medium"
+              >
+                {item.label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+function TemperatureLineChart({ data }) {
+  if (!data?.length) {
+    return (
+      <EmptyChartState message="No temperature data available yet." />
+    );
+  }
+  const values = data.map(
+    (item) => item.value
+  );
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const range = maxValue - minValue || 1;
+  const leftPadding = 24;
+  const rightPadding = 24;
+  const bottomY = 118;
+  const graphHeight = 56;
+  const svgWidth = Math.max(
+    460,
+    data.length * 66
+  );
+  const step =
+    data.length > 1
+      ? (svgWidth - leftPadding - rightPadding) /
+        (data.length - 1)
+      : 0;
+  const points = data.map(
+    (item, index) => {
+      const x = leftPadding + step * index;
+      const normalized =
+        (item.value - minValue) / range;
+      const y =
+        bottomY -
+        normalized * graphHeight;
+      return {
+        ...item,
+        x,
+        y,
+        displayValue:
+          `${Math.round(item.value)}°`,
+      };
+    }
+  );
+  const path = points
+    .map(
+      (point, index) =>
+        `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`
+    )
+    .join(" ");
+  return (
+    <div className="overflow-x-auto">
+      <svg
+        viewBox={`0 0 ${svgWidth} 170`}
+        className="w-full min-w-[340px] h-[170px]"
+      >
+        <line
+          x1={leftPadding}
+          y1={bottomY}
+          x2={svgWidth - rightPadding}
+          y2={bottomY}
+          stroke="#E2E8F0"
+          strokeWidth="1"
+        />
+        <path
+          d={path}
+          fill="none"
+          stroke="#F97316"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {points.map((point, index) => (
+          <g key={`${point.label}-${index}`}>
+            <text
+              x={point.x}
+              y={point.y - 12}
+              textAnchor="middle"
+              className="fill-slate-600 text-[11px] font-semibold"
+            >
+              {point.displayValue}
+            </text>
+            <circle
+              cx={point.x}
+              cy={point.y}
+              r="4.5"
+              fill="#F97316"
+            />
+            <text
+              x={point.x}
+              y={148}
+              textAnchor="middle"
+              className="fill-slate-500 text-[11px] font-medium"
+            >
+              {point.label}
+            </text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+function YearPill({
+  active,
+  children,
+  onClick,
+  disabled,
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
+        active
+          ? "bg-green-700 text-white shadow-sm"
+          : "bg-transparent text-slate-500 hover:text-slate-700"
+      } ${
+        disabled
+          ? "opacity-60 cursor-not-allowed"
+          : ""
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+function LocationCard({
+  farm,
+  selected,
+  onClick,
+}) {
+  const address = buildAddressLine(farm);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left rounded-2xl border p-4 transition ${
+        selected
+          ? "border-green-600 bg-green-50"
+          : "border-slate-200 bg-white hover:border-green-300"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={`w-11 h-11 rounded-xl flex items-center justify-center ${
+            selected
+              ? "bg-green-100 text-green-700"
+              : "bg-slate-100 text-slate-500"
+          }`}
+        >
+          <Tractor size={18} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-slate-900 truncate">
+            {farm?.farm_name ||
+              "Registered Farm"}
+          </p>
+          <p className="text-sm text-slate-500 mt-1 flex items-start gap-1">
+            <MapPin
+              size={14}
+              className="mt-0.5 shrink-0"
+            />
+            <span>
+              {address ||
+                "Farm address not available"}
+            </span>
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-[11px] font-semibold text-green-700">
+              Farm Location
+            </span>
+            {farm?.latitude &&
+            farm?.longitude ? (
+              <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-600">
+                {formatCoordinate(
+                  farm.latitude
+                )}
+                , {formatCoordinate(
+                  farm.longitude
+                )}
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-[11px] font-semibold text-amber-700">
+                Coordinates will be resolved by GrainRise
+              </span>
+            )}
+          </div>
+        </div>
+        {selected ? (
+          <CheckCircle2
+            size={18}
+            className="text-green-600 mt-1"
+          />
+        ) : null}
+      </div>
+    </button>
+  );
+}
+function ForecastHelperIntro({
+  onClick,
+  loading,
+  error,
+}) {
+  return (
+    <div className="rounded-[28px] border border-green-100 bg-white p-6 md:p-7 shadow-sm">
+      <div className="flex items-center gap-3 font-bold text-slate-900">
+        <div className="w-11 h-11 rounded-full bg-green-600 text-white flex items-center justify-center">
+          <Sprout size={20} />
+        </div>
+        <span className="text-xl md:text-2xl">
+          GrainRise Farm Helper
+        </span>
+      </div>
+      <p className="text-slate-500 text-center mt-8 text-lg max-w-2xl mx-auto leading-relaxed">
+        Want a simple explanation of what this weather means for your farm,
+        and what to do about it?
+      </p>
+      <div className="flex justify-center mt-6">
+        <button
+          type="button"
+          onClick={onClick}
+          disabled={loading}
+          className="inline-flex items-center gap-2 rounded-2xl bg-green-700 px-6 py-3 text-white font-bold hover:bg-green-800 transition disabled:opacity-70 disabled:cursor-not-allowed"
+        >
+          {loading ? (
+            <LoaderCircle
+              size={18}
+              className="animate-spin"
+            />
+          ) : (
+            <Sparkles size={18} />
+          )}
+          Explain it to me
+        </button>
+      </div>
+      {error ? (
+        <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 break-words">
+          {error}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+function ForecastHelperExpanded({
+  aiInterpretation,
+  climateNote,
+  onRefresh,
+  loading,
+  error,
+}) {
+  const [showReason, setShowReason] =
+    useState(false);
+  const actions = splitRecommendationText(
+    aiInterpretation?.recommended_actions_text
+  );
+  const explanation = String(
+    aiInterpretation?.explanation_text || ""
+  ).trim();
+  const reason = String(
+    aiInterpretation?.forecast_reason_text || ""
+  ).trim();
+  const learningGuidance = String(
+    aiInterpretation?.learning_guidance_text || ""
+  ).trim();
+  return (
+    <div className="rounded-[28px] border border-green-100 bg-white p-6 md:p-7 shadow-sm overflow-visible">
+      {}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full bg-green-600 text-white flex items-center justify-center shrink-0">
+            <Sprout size={20} />
+          </div>
+          <div>
+            <h4 className="text-xl md:text-2xl font-bold text-slate-900">
+              GrainRise Farm Helper
+            </h4>
+            <p className="text-sm text-slate-500 mt-1">
+              Simpleng paliwanag para sa iyong sakahan
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={loading}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 px-4 py-2.5 text-sm font-semibold text-green-700 hover:bg-green-50 transition disabled:opacity-60"
+        >
+          {loading ? (
+            <LoaderCircle
+              size={16}
+              className="animate-spin"
+            />
+          ) : (
+            <RefreshCw size={16} />
+          )}
+          Explain again
+        </button>
+      </div>
+      {}
+      <div className="mt-6 rounded-2xl bg-slate-50 px-5 py-5 border border-slate-100">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+          Ano ang ibig sabihin nito?
+        </p>
+        <p className="mt-3 text-[16px] md:text-[17px] text-slate-700 leading-8 whitespace-pre-line break-words">
+          {explanation ||
+            "Wala pang available na simpleng paliwanag."}
+        </p>
+      </div>
+      {}
+      <div className="mt-7">
+        <p className="text-sm font-bold uppercase tracking-wide text-slate-500">
+          Ano ang pwede mong gawin?
+        </p>
+        <div className="mt-4 space-y-3">
+          {actions.length ? (
+            actions.map((action, index) => (
+              <div
+                key={`${index}-${action}`}
+                className="w-full min-h-fit flex items-start gap-3 rounded-2xl border border-green-100 bg-green-50 px-5 py-4 overflow-visible"
+              >
+                <CheckCircle2
+                  size={19}
+                  className="text-green-600 mt-1 shrink-0"
+                />
+                <p className="min-w-0 flex-1 text-[15px] md:text-[16px] text-slate-700 leading-7 whitespace-pre-line break-words overflow-visible">
+                  {action}
+                </p>
+              </div>
+            ))
+          ) : (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+              <p className="text-slate-500 leading-7 whitespace-pre-line break-words">
+                Walang hiwalay na recommended action na ibinalik ang Farm Helper para sa request na ito.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+      {}
+      {learningGuidance ? (
+        <div className="mt-6 rounded-2xl border border-green-100 bg-[#F8FCF8] px-5 py-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-green-700">
+            Dagdag na gabay
+          </p>
+          <p className="mt-2 text-sm md:text-[15px] text-slate-700 leading-7 whitespace-pre-line break-words">
+            {learningGuidance}
+          </p>
+        </div>
+      ) : null}
+      {}
+      {reason ? (
+        <div className="mt-6 border-t border-slate-100 pt-5">
+          <button
+            type="button"
+            onClick={() =>
+              setShowReason(
+                (previous) => !previous
+              )
+            }
+            className="inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-800"
+          >
+            <CircleAlert size={16} />
+            {showReason
+              ? "Itago ang paliwanag"
+              : "Bakit ganito ang forecast?"}
+          </button>
+          {showReason ? (
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-5 py-4">
+              <p className="text-sm md:text-[15px] text-slate-600 leading-7 whitespace-pre-line break-words">
+                {reason}
+              </p>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {}
+      <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+        <div className="flex items-start gap-3">
+          <CircleAlert
+            size={18}
+            className="text-amber-600 shrink-0 mt-0.5"
+          />
+          <p className="text-sm text-amber-700 leading-6 whitespace-pre-line break-words">
+            {climateNote ||
+              "Hindi direktang sinusukat ng GrainRise ang kondisyon ng lupa. Ang payo ay batay sa weather at climate patterns."}
+          </p>
+        </div>
+      </div>
+      {error ? (
+        <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 break-words">
+          {error}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 export default function ClimateForecasting() {
-  const [isLocationConfirmed, setIsLocationConfirmed] = useState(false);
-  const [selectedFarm, setSelectedFarm] = useState("San Miguel Rice Farm");
-  const [outlookView, setOutlookView] = useState("Monthly View");
-  const [historyView, setHistoryView] = useState("Monthly View");
-
-  // Flow 1: Location Selection
-  if (!isLocationConfirmed) {
+  const {
+    farms,
+    loadForecastingFarms,
+    climateForecast,
+    generateClimateForecast,
+    aiInterpretation,
+    generateAIInterpretation,
+    clearAIInterpretation,
+    loading,
+    errors,
+  } = useFarmerForecasting();
+  const [screenMode, setScreenMode] =
+    useState("select");
+  const [searchTerm, setSearchTerm] =
+    useState("");
+  const [selectedLocation, setSelectedLocation] =
+    useState(null);
+  const [activeSelection, setActiveSelection] =
+    useState(null);
+  const [historyYears, setHistoryYears] =
+    useState(3);
+  const [locationMessage, setLocationMessage] =
+    useState("");
+  useEffect(() => {
+    loadForecastingFarms().catch(() => {});
+  }, [loadForecastingFarms]);
+  useEffect(() => {
+    if (
+      !selectedLocation &&
+      farms?.length
+    ) {
+      setSelectedLocation(
+        mapFarmToSelection(farms[0])
+      );
+    }
+  }, [farms, selectedLocation]);
+  const filteredFarms = useMemo(() => {
+    const query = searchTerm
+      .trim()
+      .toLowerCase();
+    if (!query) return farms || [];
+    return (farms || []).filter(
+      (farm) => {
+        const haystack = [
+          farm?.farm_name,
+          farm?.barangay,
+          farm?.municipality,
+          farm?.province,
+          farm?.geocoded_address,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(query);
+      }
+    );
+  }, [farms, searchTerm]);
+  const handleUseCurrentLocation =
+    useCallback(() => {
+      setLocationMessage("");
+      if (!navigator?.geolocation) {
+        setLocationMessage(
+          "This browser does not support current location."
+        );
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const latitude =
+            position?.coords?.latitude;
+          const longitude =
+            position?.coords?.longitude;
+          setSelectedLocation({
+            type: "current_location",
+            displayName: "Current Location",
+            subtitle:
+              "Your device's current coordinates",
+            latitude,
+            longitude,
+            requestPayload: {
+              location_source:
+                "current_location",
+              latitude,
+              longitude,
+              location_label:
+                "Current Location",
+            },
+          });
+          setLocationMessage(
+            "Current location selected successfully."
+          );
+        },
+        () => {
+          setLocationMessage(
+            "Unable to get your current location. Please allow location access."
+          );
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        }
+      );
+    }, []);
+  const runClimateForecast =
+    useCallback(
+      async (
+        selection,
+        yearsOverride = historyYears
+      ) => {
+        if (!selection?.requestPayload) {
+          return;
+        }
+        clearAIInterpretation();
+        const payload = {
+          ...selection.requestPayload,
+          historical_years:
+            yearsOverride,
+          display_granularity:
+            "monthly",
+        };
+        const result =
+          await generateClimateForecast(
+            payload
+          );
+        if (result) {
+          setActiveSelection(selection);
+          setScreenMode("forecast");
+        }
+      },
+      [
+        clearAIInterpretation,
+        generateClimateForecast,
+        historyYears,
+      ]
+    );
+  const handleConfirmLocation =
+    useCallback(async () => {
+      if (!selectedLocation) {
+        setLocationMessage(
+          "Please choose a farm or use your current location first."
+        );
+        return;
+      }
+      setLocationMessage("");
+      try {
+        await runClimateForecast(
+          selectedLocation,
+          historyYears
+        );
+      } catch {
+      }
+    }, [
+      historyYears,
+      runClimateForecast,
+      selectedLocation,
+    ]);
+  const handleChangeHistoryYears =
+    useCallback(
+      async (years) => {
+        setHistoryYears(years);
+        if (!activeSelection) return;
+        try {
+          await runClimateForecast(
+            activeSelection,
+            years
+          );
+        } catch {
+        }
+      },
+      [activeSelection, runClimateForecast]
+    );
+  const handleExplainForecast =
+    useCallback(async () => {
+      const runId =
+        climateForecast
+          ?.climate_forecast_run_id;
+      if (!runId) return;
+      try {
+        await generateAIInterpretation({
+          scope: "climate",
+          climate_forecast_run_id:
+            runId,
+          response_language:
+            "taglish",
+        });
+      } catch {
+      }
+    }, [
+      climateForecast,
+      generateAIInterpretation,
+    ]);
+  const forecastRain = useMemo(
+    () =>
+      normalizeSeries(
+        climateForecast
+          ?.forecast
+          ?.chart_data
+          ?.precipitation_mm || []
+      ),
+    [climateForecast]
+  );
+  const forecastHeat = useMemo(
+    () =>
+      normalizeSeries(
+        climateForecast
+          ?.forecast
+          ?.chart_data
+          ?.temperature_c || []
+      ),
+    [climateForecast]
+  );
+  const historyAnchorMonth =
+    forecastRain[0]?.monthIndex ??
+    new Date().getMonth();
+  const historicalRain = useMemo(
+    () =>
+      buildHistoricalMonthProfile(
+        climateForecast
+          ?.historical
+          ?.chart_data
+          ?.precipitation_mm || [],
+        historyAnchorMonth
+      ),
+    [
+      climateForecast,
+      historyAnchorMonth,
+    ]
+  );
+  const historicalHeat = useMemo(
+    () =>
+      buildHistoricalMonthProfile(
+        climateForecast
+          ?.historical
+          ?.chart_data
+          ?.temperature_c || [],
+        historyAnchorMonth
+      ),
+    [
+      climateForecast,
+      historyAnchorMonth,
+    ]
+  );
+  const plainRainText = useMemo(
+    () => buildRainPlainText(forecastRain),
+    [forecastRain]
+  );
+  const plainHeatText = useMemo(
+    () => buildHeatPlainText(forecastHeat),
+    [forecastHeat]
+  );
+  const locationTitle =
+    activeSelection?.displayName ||
+    selectedLocation?.displayName ||
+    "Selected Location";
+  const locationSubtitle =
+    activeSelection?.subtitle ||
+    selectedLocation?.subtitle ||
+    "Location details";
+  if (screenMode === "select") {
     return (
       <div className="flex flex-col gap-6">
-        <h3 className="font-bold text-gray-900 text-lg">Select Location</h3>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column (Search & List) */}
-          <div className="lg:col-span-4 flex flex-col gap-4">
-             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                <input 
-                  type="text" 
-                  placeholder="Search location"
-                  className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-green-600 focus:border-green-600 outline-none"
+        <div>
+          <h3 className="font-bold text-slate-900 text-2xl">
+            Select Location
+          </h3>
+          <p className="text-slate-500 mt-2">
+            Choose the farm or location that GrainRise will use for the weather forecast.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          <div className="xl:col-span-5 flex flex-col gap-4">
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="relative">
+                <Search
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
                 />
-             </div>
-             
-             <div className="flex items-center gap-3">
-               <hr className="flex-1 border-gray-200" />
-               <span className="text-xs text-gray-400 font-medium uppercase">or</span>
-               <hr className="flex-1 border-gray-200" />
-             </div>
-
-             <button className="w-full flex items-center justify-center gap-2 border border-green-600 text-green-700 py-2.5 rounded-lg font-medium hover:bg-green-50 transition">
-                <Crosshair size={16} /> Use Current Location
-             </button>
-
-             <div className="mt-2">
-                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Registered Farms</h4>
-                <div className="flex flex-col gap-3">
-                   {/* Farm 1 */}
-                   <div 
-                      onClick={() => setSelectedFarm("San Miguel Rice Farm")}
-                      className={`p-4 border rounded-xl cursor-pointer transition ${selectedFarm === "San Miguel Rice Farm" ? "border-green-600 bg-green-50/30" : "border-slate-200 hover:border-green-400"}`}
-                    >
-                      <div className="flex justify-between items-start">
-                         <div className="flex gap-3">
-                            <div className={`p-2 rounded-lg ${selectedFarm === "San Miguel Rice Farm" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                               <Tractor size={20} />
-                            </div>
-                            <div>
-                               <h5 className={`font-bold text-sm ${selectedFarm === "San Miguel Rice Farm" ? "text-green-800" : "text-gray-900"}`}>San Miguel Rice Farm</h5>
-                               <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><MapPin size={10} /> Nueva Ecija, Philippines</p>
-                               <span className="inline-block mt-2 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-sm">12.5 ha</span>
-                            </div>
-                         </div>
-                         {selectedFarm === "San Miguel Rice Farm" && <CheckCircle2 className="text-green-600" size={18} />}
-                      </div>
-                   </div>
-
-                   {/* Farm 2 */}
-                   <div 
-                      onClick={() => setSelectedFarm("Isabela North Block")}
-                      className={`p-4 border rounded-xl cursor-pointer transition ${selectedFarm === "Isabela North Block" ? "border-green-600 bg-green-50/30" : "border-slate-200 hover:border-green-400"}`}
-                    >
-                      <div className="flex justify-between items-start">
-                         <div className="flex gap-3">
-                            <div className={`p-2 rounded-lg ${selectedFarm === "Isabela North Block" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                               <Tractor size={20} />
-                            </div>
-                            <div>
-                               <h5 className={`font-bold text-sm ${selectedFarm === "Isabela North Block" ? "text-green-800" : "text-gray-900"}`}>Isabela North Block</h5>
-                               <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><MapPin size={10} /> Isabela, Philippines</p>
-                               <span className="inline-block mt-2 bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-sm">42.0 ha</span>
-                            </div>
-                         </div>
-                         {selectedFarm === "Isabela North Block" && <CheckCircle2 className="text-green-600" size={18} />}
-                      </div>
-                   </div>
-
-                   {/* Farm 3 */}
-                   <div 
-                      onClick={() => setSelectedFarm("Pangasinan Test Plot")}
-                      className={`p-4 border rounded-xl cursor-pointer transition ${selectedFarm === "Pangasinan Test Plot" ? "border-green-600 bg-green-50/30" : "border-slate-200 hover:border-green-400"}`}
-                    >
-                      <div className="flex justify-between items-start">
-                         <div className="flex gap-3">
-                            <div className={`p-2 rounded-lg ${selectedFarm === "Pangasinan Test Plot" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                               <Tractor size={20} />
-                            </div>
-                            <div>
-                               <h5 className={`font-bold text-sm ${selectedFarm === "Pangasinan Test Plot" ? "text-green-800" : "text-gray-900"}`}>Pangasinan Test Plot</h5>
-                               <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><MapPin size={10} /> Pangasinan, Philippines</p>
-                               <span className="inline-block mt-2 bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-sm">2.0 ha</span>
-                            </div>
-                         </div>
-                         {selectedFarm === "Pangasinan Test Plot" && <CheckCircle2 className="text-green-600" size={18} />}
-                      </div>
-                   </div>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(event) =>
+                    setSearchTerm(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Search registered farms"
+                  className="w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 py-3 text-sm text-slate-700 outline-none focus:border-green-500"
+                />
+              </div>
+              <div className="my-4 flex items-center gap-3">
+                <div className="h-px flex-1 bg-slate-200" />
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  or
+                </span>
+                <div className="h-px flex-1 bg-slate-200" />
+              </div>
+              <button
+                type="button"
+                onClick={
+                  handleUseCurrentLocation
+                }
+                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-green-600 px-4 py-3 font-semibold text-green-700 hover:bg-green-50 transition"
+              >
+                <Crosshair size={18} />
+                Use Current Location
+              </button>
+              {locationMessage ? (
+                <div
+                  className={`mt-4 rounded-2xl px-4 py-3 text-sm ${
+                    locationMessage
+                      .toLowerCase()
+                      .includes("unable") ||
+                    locationMessage
+                      .toLowerCase()
+                      .includes("please") ||
+                    locationMessage
+                      .toLowerCase()
+                      .includes("does not support")
+                      ? "border border-red-200 bg-red-50 text-red-700"
+                      : "border border-green-200 bg-green-50 text-green-700"
+                  }`}
+                >
+                  {locationMessage}
                 </div>
-             </div>
+              ) : null}
+            </div>
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                  Registered Farms
+                </p>
+                {loading.farms ? (
+                  <div className="inline-flex items-center gap-2 text-sm text-slate-500">
+                    <LoaderCircle
+                      size={14}
+                      className="animate-spin"
+                    />
+                    Loading
+                  </div>
+                ) : null}
+              </div>
+              <div className="mt-4 space-y-3 max-h-[470px] overflow-y-auto pr-1">
+                {filteredFarms.length ? (
+                  filteredFarms.map((farm) => {
+                    const isSelected =
+                      selectedLocation?.type ===
+                        "registered_farm" &&
+                      selectedLocation
+                        ?.requestPayload
+                        ?.farm_id ===
+                        farm?.farm_id;
+                    return (
+                      <LocationCard
+                        key={farm?.farm_id}
+                        farm={farm}
+                        selected={isSelected}
+                        onClick={() =>
+                          setSelectedLocation(
+                            mapFarmToSelection(
+                              farm
+                            )
+                          )
+                        }
+                      />
+                    );
+                  })
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
+                    <p className="text-sm text-slate-500">
+                      No farms found for your search.
+                    </p>
+                  </div>
+                )}
+              </div>
+              {errors.farms ? (
+                <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 break-words">
+                  {errors.farms}
+                </div>
+              ) : null}
+            </div>
           </div>
-
-          {/* Right Column (Map & Confirmation) */}
-          <div className="lg:col-span-8 flex flex-col gap-4 h-full min-h-[400px]">
-             {/* Mock Map */}
-             <div className="flex-1 border border-slate-200 rounded-xl overflow-hidden bg-[#e5e3df] relative min-h-[300px]">
-                {/* Simulated map background lines */}
-                <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                   <defs>
-                      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                         <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#d4d4d8" strokeWidth="0.5"/>
-                      </pattern>
-                   </defs>
-                   <rect width="100%" height="100%" fill="url(#grid)" />
-                   
-                   {/* Simulated regions */}
-                   <path d="M 100 100 Q 150 50 250 80 T 400 120 T 450 250 T 250 300 Z" fill="#bbf7d0" fillOpacity="0.4" stroke="#86efac" />
-                   
-                   {/* Pin marker */}
-                   <g transform="translate(250, 150)">
-                      <path d="M0 -15 C 8 -15 15 -8 15 0 C 15 10 0 25 0 25 C 0 25 -15 10 -15 0 C -15 -8 -8 -15 0 -15 Z" fill="#dc2626" />
-                      <circle cx="0" cy="-2" r="5" fill="white" />
-                   </g>
-                </svg>
-
-                {/* Map Controls Mock */}
-                <div className="absolute top-4 right-4 flex flex-col gap-2 shadow-sm rounded-lg overflow-hidden border border-gray-200">
-                   <button className="bg-white p-2 hover:bg-gray-50 text-gray-600">+</button>
-                   <hr className="border-gray-200" />
-                   <button className="bg-white p-2 hover:bg-gray-50 text-gray-600">-</button>
-                </div>
-
-                {/* Selected Location Card overlay */}
-                <div className="absolute bottom-6 left-6 right-6 bg-white rounded-xl shadow-lg border border-slate-200 p-4 flex justify-between items-center">
-                   <div className="flex items-center gap-4">
-                      <div className="w-16 h-12 bg-green-100 rounded flex items-center justify-center text-green-700">
-                        <MapPin size={24} />
+          <div className="xl:col-span-7">
+            <div className="rounded-[28px] border border-slate-200 bg-[#F8FBF7] p-6 md:p-7 shadow-sm min-h-[520px] flex flex-col">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                  Location Preview
+                </p>
+                <h4 className="text-2xl font-bold text-slate-900 mt-2">
+                  We’ll use this place for the climate forecast
+                </h4>
+                <p className="text-slate-500 mt-2">
+                  This helps GrainRise know which weather data to check for your farm.
+                </p>
+              </div>
+              <div className="mt-6 flex-1 flex items-center">
+                {selectedLocation ? (
+                  <div className="w-full rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
+                    <div className="flex flex-col md:flex-row md:items-start gap-5">
+                      <div className="w-16 h-16 rounded-2xl bg-green-100 text-green-700 flex items-center justify-center shrink-0">
+                        <MapPin size={28} />
                       </div>
-                      <div>
-                         <p className="text-[10px] font-bold text-gray-400 tracking-wider uppercase">Selected Location</p>
-                         <h4 className="font-bold text-gray-900 text-md">{selectedFarm}</h4>
-                         <p className="text-xs text-gray-500">Nueva Ecija, Philippines</p>
+                      <div className="flex-1">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                          Selected Location
+                        </p>
+                        <h5 className="text-2xl font-bold text-slate-900 mt-1">
+                          {selectedLocation.displayName}
+                        </h5>
+                        <p className="text-slate-500 mt-2">
+                          {selectedLocation.subtitle}
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+                          <div className="rounded-2xl bg-slate-50 px-4 py-4 border border-slate-100">
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                              Latitude
+                            </p>
+                            <p className="text-lg font-semibold text-slate-900 mt-1">
+                              {formatCoordinate(
+                                selectedLocation.latitude
+                              )}
+                            </p>
+                          </div>
+                          <div className="rounded-2xl bg-slate-50 px-4 py-4 border border-slate-100">
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                              Longitude
+                            </p>
+                            <p className="text-lg font-semibold text-slate-900 mt-1">
+                              {formatCoordinate(
+                                selectedLocation.longitude
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-5 rounded-2xl border border-green-100 bg-green-50 px-4 py-4">
+                          <p className="text-sm text-green-700 leading-6">
+                            GrainRise will use this saved farm location or current coordinates to fetch climate data.
+                          </p>
+                        </div>
                       </div>
-                   </div>
-                   <button 
-                     onClick={() => setIsLocationConfirmed(true)}
-                     className="bg-green-700 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-green-800 transition"
-                   >
-                      Confirm Location
-                   </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full rounded-[24px] border border-dashed border-slate-200 bg-white px-6 py-16 text-center">
+                    <div className="w-16 h-16 mx-auto rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
+                      <MapPin size={26} />
+                    </div>
+                    <h5 className="text-xl font-bold text-slate-900 mt-4">
+                      No location selected yet
+                    </h5>
+                    <p className="text-slate-500 mt-2 max-w-lg mx-auto">
+                      Choose one of your registered farms or use your current location.
+                    </p>
+                  </div>
+                )}
+              </div>
+              {errors.climate ? (
+                <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 break-words">
+                  {errors.climate}
                 </div>
-             </div>
+              ) : null}
+              <div className="mt-6">
+                <button
+                  type="button"
+                  onClick={
+                    handleConfirmLocation
+                  }
+                  disabled={
+                    !selectedLocation ||
+                    loading.climate
+                  }
+                  className="w-full md:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-green-700 px-6 py-3 text-white font-bold hover:bg-green-800 transition disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {loading.climate ? (
+                    <LoaderCircle
+                      size={18}
+                      className="animate-spin"
+                    />
+                  ) : null}
+                  Confirm Location
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     );
   }
-
-  // Flow 2: View Forecast Detailed
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex justify-between items-center">
-         <h3 className="font-bold text-gray-900 text-lg">View Forecast</h3>
-         <button 
-           onClick={() => setIsLocationConfirmed(false)}
-           className="text-sm font-medium text-green-700 hover:text-green-800 flex items-center gap-1"
-         >
-            Change Location <ArrowRight size={14} />
-         </button>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h3 className="font-bold text-slate-900 text-2xl">
+            Climate Forecast
+          </h3>
+          <p className="text-slate-500 mt-2">
+            A simpler view of the forecast so farmers can understand it faster.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() =>
+            setScreenMode("select")
+          }
+          className="inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-800"
+        >
+          Change Location
+          <ArrowRight size={16} />
+        </button>
       </div>
-
-      <div className="border border-slate-200 rounded-xl bg-white p-6 shadow-sm flex flex-col gap-6">
-         {/* Top Section */}
-         <div className="flex justify-between items-end border-b border-gray-100 pb-4">
-            <div>
-               <h4 className="font-bold text-gray-900 text-md">6-Month Climate Outlook (Sept 2026 - Feb 2027)</h4>
+      <div className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-7 shadow-sm">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+              Forecast Location
+            </p>
+            <h4 className="text-2xl font-bold text-slate-900 mt-1">
+              {locationTitle}
+            </h4>
+            <p className="text-slate-500 mt-1">
+              {locationSubtitle}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <div className="rounded-2xl border border-slate-200 px-4 py-3 bg-slate-50 min-w-[140px]">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                Latitude
+              </p>
+              <p className="font-semibold text-slate-900 mt-1">
+                {formatCoordinate(
+                  activeSelection?.latitude ||
+                    selectedLocation?.latitude
+                )}
+              </p>
             </div>
-            <div className="w-36">
-               <Dropdown
-                  options={VIEW_OPTIONS}
-                  value={outlookView}
-                  onChange={setOutlookView}
-                  placeholder="View"
-               />
+            <div className="rounded-2xl border border-slate-200 px-4 py-3 bg-slate-50 min-w-[140px]">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                Longitude
+              </p>
+              <p className="font-semibold text-slate-900 mt-1">
+                {formatCoordinate(
+                  activeSelection?.longitude ||
+                    selectedLocation?.longitude
+                )}
+              </p>
             </div>
-         </div>
-
-         {/* The 2 Charts */}
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Rainfall Bar Chart */}
-            <div className="border border-slate-100 rounded-xl p-4 bg-gray-50/50">
-               <h5 className="text-sm font-bold text-green-800 mb-4 flex items-center gap-1.5">
-                  <Droplets size={16} /> 6-Month Rainfall Outlook
-               </h5>
-               <div className="w-full h-32 relative">
-                  <svg viewBox="0 0 300 100" className="w-full h-full overflow-visible">
-                     {/* Y-axis indicator */}
-                     <text x="-5" y="10" className="text-[8px] fill-gray-400" textAnchor="end">Max</text>
-                     <text x="-5" y="90" className="text-[8px] fill-gray-400" textAnchor="end">0</text>
-                     <line x1="0" y1="0" x2="0" y2="90" stroke="#CBD5E1" strokeWidth="0.5" />
-                     
-                     {/* Bars */}
-                     <rect x="15" y="20" width="40" height="70" fill="#16A34A" />
-                     <rect x="65" y="40" width="40" height="50" fill="#16A34A" />
-                     <rect x="115" y="60" width="40" height="30" fill="#16A34A" />
-                     <rect x="165" y="65" width="40" height="25" fill="#16A34A" />
-                     <rect x="215" y="70" width="40" height="20" fill="#16A34A" />
-                     <rect x="265" y="55" width="40" height="35" fill="#16A34A" />
-
-                     {/* X-axis */}
-                     <line x1="0" y1="90" x2="300" y2="90" stroke="#CBD5E1" strokeWidth="0.5" />
-                     <text x="35" y="105" className="text-[9px] fill-gray-500" textAnchor="middle">Sep</text>
-                     <text x="85" y="105" className="text-[9px] fill-gray-500" textAnchor="middle">Oct</text>
-                     <text x="135" y="105" className="text-[9px] fill-gray-500" textAnchor="middle">Nov</text>
-                     <text x="185" y="105" className="text-[9px] fill-gray-500" textAnchor="middle">Dec</text>
-                     <text x="235" y="105" className="text-[9px] fill-gray-500" textAnchor="middle">Jan</text>
-                     <text x="285" y="105" className="text-[9px] fill-gray-500" textAnchor="middle">Feb</text>
-                  </svg>
-               </div>
-            </div>
-
-            {/* Temperature Line Chart */}
-            <div className="border border-slate-100 rounded-xl p-4 bg-gray-50/50">
-               <h5 className="text-sm font-bold text-red-700 mb-4 flex items-center gap-1.5">
-                  <Thermometer size={16} /> 6-Month Temperature Outlook
-               </h5>
-               <div className="w-full h-32 relative">
-                  <svg viewBox="0 0 300 100" className="w-full h-full overflow-visible">
-                     {/* Y-axis indicator */}
-                     <text x="-5" y="10" className="text-[8px] fill-gray-400" textAnchor="end">High</text>
-                     <text x="-5" y="90" className="text-[8px] fill-gray-400" textAnchor="end">Low</text>
-                     <line x1="0" y1="0" x2="0" y2="90" stroke="#CBD5E1" strokeWidth="0.5" />
-
-                     {/* Line Path */}
-                     <path d="M 35,60 Q 85,60 135,50 T 185,15 T 235,25 T 285,25" fill="none" stroke="#DC2626" strokeWidth="2.5" />
-                     <circle cx="35" cy="60" r="2" fill="#DC2626" />
-                     <circle cx="135" cy="50" r="2" fill="#DC2626" />
-                     <circle cx="185" cy="15" r="2" fill="#DC2626" />
-                     <circle cx="285" cy="25" r="2" fill="#DC2626" />
-
-                     {/* X-axis */}
-                     <line x1="0" y1="90" x2="300" y2="90" stroke="#CBD5E1" strokeWidth="0.5" />
-                     <text x="35" y="105" className="text-[9px] fill-gray-500" textAnchor="middle">Sep</text>
-                     <text x="85" y="105" className="text-[9px] fill-gray-500" textAnchor="middle">Oct</text>
-                     <text x="135" y="105" className="text-[9px] fill-gray-500" textAnchor="middle">Nov</text>
-                     <text x="185" y="105" className="text-[9px] fill-gray-500" textAnchor="middle">Dec</text>
-                     <text x="235" y="105" className="text-[9px] fill-gray-500" textAnchor="middle">Jan</text>
-                     <text x="285" y="105" className="text-[9px] fill-gray-500" textAnchor="middle">Feb</text>
-                  </svg>
-               </div>
-            </div>
-         </div>
-
-         {/* Middle Section: Insights & Actions */}
-         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 border-b border-gray-100 pb-6">
-            <div className="lg:col-span-2 flex flex-col gap-4">
-               <h4 className="font-bold text-gray-900 text-md">Climate Insights for Your Farm</h4>
-               <div className="border border-slate-200 rounded-xl p-4 shadow-sm bg-white">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Climate Summary</p>
-                  <p className="text-sm text-gray-700 leading-relaxed mb-4">
-                     Expect an unusually dry late Q4 transitioning into a warmer Q1. Early planting is recommended to leverage remaining soil moisture before peak dry conditions set in by December.
+          </div>
+        </div>
+        {loading.climate &&
+        !climateForecast ? (
+          <div className="mt-8 rounded-[24px] border border-slate-200 bg-slate-50 px-6 py-14 text-center">
+            <LoaderCircle
+              size={28}
+              className="animate-spin text-green-700 mx-auto mb-4"
+            />
+            <h5 className="font-bold text-slate-900 text-lg">
+              GrainRise is preparing your climate forecast
+            </h5>
+            <p className="text-slate-500 mt-2">
+              Please wait while we gather and summarize the weather data.
+            </p>
+          </div>
+        ) : null}
+        {climateForecast ? (
+          <>
+            {}
+            <div className="mt-8 rounded-[24px] border border-green-100 bg-[#F8FCF8] p-5">
+              <p className="text-sm font-bold uppercase tracking-wide text-green-700">
+                In simple words
+              </p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                <div className="rounded-2xl bg-white border border-slate-200 px-5 py-4">
+                  <div className="flex items-center gap-2 text-blue-600 font-bold">
+                    <Droplets size={18} />
+                    <span>Rain</span>
+                  </div>
+                  <p className="text-slate-700 mt-3 leading-7">
+                    {plainRainText}
                   </p>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                     <div className="border border-slate-100 rounded-lg p-3 bg-gray-50/50">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1"><Droplets size={12}/> Rainfall Advisory</p>
-                        <p className="text-xs text-gray-700">Precipitation projected 15% below historical averages for Nov-Jan.</p>
-                     </div>
-                     <div className="border border-slate-100 rounded-lg p-3 bg-gray-50/50">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1"><Thermometer size={12}/> Temperature Advisory</p>
-                        <p className="text-xs text-gray-700">Peak daytime temperatures likely to exceed 34°C during late January.</p>
-                     </div>
+                </div>
+                <div className="rounded-2xl bg-white border border-slate-200 px-5 py-4">
+                  <div className="flex items-center gap-2 text-orange-600 font-bold">
+                    <ThermometerSun size={18} />
+                    <span>Heat</span>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                     <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Drought Risk</p>
-                        <span className="inline-block bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-sm">High Risk</span>
-                     </div>
-                     <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Excessive Rainfall Risk</p>
-                        <span className="inline-block bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-sm">Low Risk</span>
-                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                     <div className="bg-green-100 rounded-lg p-3 border border-green-200">
-                        <p className="text-[10px] font-bold text-green-800 uppercase tracking-wider mb-1">Suggested Planting Period</p>
-                        <p className="text-sm font-bold text-green-900">Oct 5 - Oct 20</p>
-                     </div>
-                     <div className="bg-green-100 rounded-lg p-3 border border-green-200 opacity-75">
-                        <p className="text-[10px] font-bold text-green-800 uppercase tracking-wider mb-1">Suggested Harvest Consideration</p>
-                        <p className="text-sm font-bold text-green-900">Accelerate by 1 week</p>
-                     </div>
-                  </div>
-               </div>
+                  <p className="text-slate-700 mt-3 leading-7">
+                    {plainHeatText}
+                  </p>
+                </div>
+              </div>
             </div>
-
-            <div className="flex flex-col gap-4">
-               <div className="bg-green-50 border border-green-100 rounded-xl p-5 shadow-sm h-full">
-                  <h4 className="font-bold text-green-800 text-md flex items-center gap-2 mb-4">
-                     <CheckCircle2 size={18} /> Recommended Actions
-                  </h4>
-                  <ul className="space-y-4">
-                     <li className="flex gap-2 items-start">
-                        <div className="mt-0.5 bg-green-200 p-0.5 rounded-full"><CheckCircle2 size={12} className="text-green-700" /></div>
-                        <div>
-                           <p className="text-sm font-bold text-gray-900">Monitor soil moisture</p>
-                           <p className="text-xs text-gray-600">Deploy additional sensors in Sector B.</p>
-                        </div>
-                     </li>
-                     <li className="flex gap-2 items-start">
-                        <div className="mt-0.5 bg-green-200 p-0.5 rounded-full"><CheckCircle2 size={12} className="text-green-700" /></div>
-                        <div>
-                           <p className="text-sm font-bold text-gray-900">Prepare irrigation</p>
-                           <p className="text-xs text-gray-600">Service primary pumps before mid-November.</p>
-                        </div>
-                     </li>
-                     <li className="flex gap-2 items-start">
-                        <div className="mt-0.5 bg-green-200 p-0.5 rounded-full"><CheckCircle2 size={12} className="text-green-700" /></div>
-                        <div>
-                           <p className="text-sm font-bold text-gray-900">Adjust fertilizer schedule</p>
-                           <p className="text-xs text-gray-600">Delay final nitrogen application by 10 days.</p>
-                        </div>
-                     </li>
-                     <li className="flex gap-2 items-start">
-                        <div className="mt-0.5 bg-green-200 p-0.5 rounded-full"><CheckCircle2 size={12} className="text-green-700" /></div>
-                        <div>
-                           <p className="text-sm font-bold text-gray-900">Procure drought-resistant seeds</p>
-                           <p className="text-xs text-gray-600">For subsequent crop rotation cycle.</p>
-                        </div>
-                     </li>
-                  </ul>
-               </div>
+            {}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
+              <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                <ChartCardHeader
+                  icon={Droplets}
+                  title="How much rain, month by month"
+                  subtitle="Taller bar = more rain that month"
+                  iconColor="text-blue-700"
+                />
+                <RainBarChart
+                  data={forecastRain}
+                />
+              </div>
+              <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                <ChartCardHeader
+                  icon={ThermometerSun}
+                  title="How hot it may get"
+                  subtitle="Higher dot = hotter that month"
+                  iconColor="text-orange-600"
+                />
+                <TemperatureLineChart
+                  data={forecastHeat}
+                />
+              </div>
             </div>
-         </div>
-
-         {/* Bottom Section: Climate History */}
-         <div className="flex flex-col gap-4">
-            <div className="flex justify-between items-center">
-               <h4 className="font-bold text-gray-900 text-md">Climate History</h4>
-               <div className="w-36">
-                  <Dropdown
-                     options={VIEW_OPTIONS}
-                     value={historyView}
-                     onChange={setHistoryView}
-                     placeholder="View"
+            {}
+            <div className="mt-8">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
+                <h4 className="text-2xl font-bold text-slate-900">
+                  How the weather has been
+                </h4>
+                <div className="inline-flex items-center rounded-full bg-slate-100 p-1">
+                  {HISTORY_YEAR_OPTIONS.map(
+                    (year) => (
+                      <YearPill
+                        key={year}
+                        active={
+                          historyYears === year
+                        }
+                        onClick={() =>
+                          handleChangeHistoryYears(
+                            year
+                          )
+                        }
+                        disabled={
+                          loading.climate
+                        }
+                      >
+                        {year} year
+                        {year > 1 ? "s" : ""}
+                      </YearPill>
+                    )
+                  )}
+                </div>
+              </div>
+              {loading.climate ? (
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-green-50 px-4 py-2 text-sm text-green-700">
+                  <LoaderCircle
+                    size={14}
+                    className="animate-spin"
                   />
-               </div>
+                  Updating historical view...
+                </div>
+              ) : null}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-4">
+                    Past Rain
+                  </p>
+                  <RainBarChart
+                    data={historicalRain}
+                  />
+                </div>
+                <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-4">
+                    Past Heat
+                  </p>
+                  <TemperatureLineChart
+                    data={historicalHeat}
+                  />
+                </div>
+              </div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <div className="border border-slate-100 rounded-xl p-4 bg-gray-50/50 flex flex-col gap-2 h-28">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Historical Rainfall (5yr Avg)</p>
-                  <div className="flex items-end justify-around flex-1 px-4">
-                     <div className="w-10 h-10 bg-slate-400"></div>
-                     <div className="w-10 h-8 bg-slate-400"></div>
-                     <div className="w-10 h-12 bg-slate-400"></div>
-                  </div>
-               </div>
-               <div className="border border-slate-100 rounded-xl p-4 bg-gray-50/50 flex flex-col gap-2 h-28">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Historical Temp (5yr Avg)</p>
-                  <div className="flex items-center flex-1 px-4">
-                     <svg viewBox="0 0 200 40" className="w-full h-full overflow-visible">
-                        <path d="M 0,20 Q 50,10 100,20 T 200,20" fill="none" stroke="#94A3B8" strokeWidth="2" />
-                     </svg>
-                  </div>
-               </div>
+            {}
+            <div className="mt-8">
+              {aiInterpretation ? (
+                <ForecastHelperExpanded
+                  aiInterpretation={
+                    aiInterpretation
+                  }
+                  climateNote={
+                    climateForecast
+                      ?.soil_land_note
+                  }
+                  onRefresh={
+                    handleExplainForecast
+                  }
+                  loading={loading.ai}
+                  error={errors.ai}
+                />
+              ) : (
+                <ForecastHelperIntro
+                  onClick={
+                    handleExplainForecast
+                  }
+                  loading={loading.ai}
+                  error={errors.ai}
+                />
+              )}
             </div>
-         </div>
-         
-         <div className="flex justify-between items-center pt-4">
-            <div>
-               <p className="text-xs text-gray-500">Forecast Area: <span className="font-medium text-gray-900">{selectedFarm}</span></p>
-               <p className="text-xs text-gray-500">Data Period: Sept 2026 - Feb 2027</p>
-               <p className="text-xs text-gray-500">Last Updated: Aug 30, 2026</p>
+            <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+              <div className="flex items-start gap-3">
+                <CircleAlert
+                  size={18}
+                  className="text-slate-500 mt-1 shrink-0"
+                />
+                <p className="text-sm text-slate-600 leading-7">
+                  These charts show a simplified view of the climate forecast. The AI helper explains the result in easier words, but it does not create the forecast numbers itself.
+                </p>
+              </div>
             </div>
-            <button className="flex items-center gap-2 bg-green-700 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-green-800 transition text-sm">
-               <Download size={16} /> Download Forecast Report
-            </button>
-         </div>
-
+          </>
+        ) : null}
+        {errors.climate &&
+        climateForecast ? (
+          <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 break-words">
+            {errors.climate}
+          </div>
+        ) : null}
       </div>
     </div>
   );

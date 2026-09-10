@@ -221,6 +221,7 @@ import WarehouseInfo from "./Users/AdminAccounts/AccountAdmin/WarehouseInfo";
 import RetailerManagement from "./Users/AdminAccounts/AccountAdmin/RetailerManagement";
 import FarmerManagement from "./Users/AdminAccounts/AccountAdmin/FarmerManagement";
 import EmailUsers from "./Users/AdminAccounts/AccountAdmin/EmailUsers";
+import AdminNewsUpdates from "./Users/AdminAccounts/AccountAdmin/AdminNewsUpdates";
 
 
 // ============================================================
@@ -1134,6 +1135,11 @@ function App() {
               <Route
                 path="/admin/email-users"
                 element={<EmailUsers />}
+              />
+
+              <Route
+                path="/admin/news-updates"
+                element={<AdminNewsUpdates />}
               />
 
               <Route

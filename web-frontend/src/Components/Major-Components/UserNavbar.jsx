@@ -22,6 +22,7 @@ import {
 
 import useAuth from "../hooks/useAuth";
 import useAdminNotifications from "../hooks/AccountAdmin/useAdminNotifications";
+import useFarmerNotifications from "../hooks/Farmer/useFarmerNotifications";
 
 
 // ============================================================
@@ -61,7 +62,7 @@ export const getUserNavbarMenuItems = (
 // Used only by other roles that do not yet have their
 // own functional notification APIs.
 //
-// Account Admin does NOT use these.
+// Account Admin and Farmer do NOT use these.
 // ============================================================
 
 export const getUserNavbarNotifications = () => [
@@ -274,6 +275,10 @@ const UserNavbar = ({
     role === "admin";
 
 
+  const isFarmer =
+    role === "farmer";
+
+
   // =========================================================
   // ACTUAL LOGGED-IN USER DISPLAY
   // =========================================================
@@ -362,6 +367,43 @@ const UserNavbar = ({
 
 
   // =========================================================
+  // FARMER NOTIFICATIONS
+  // =========================================================
+
+  const {
+    notifications:
+      farmerNotifications,
+
+    unreadCount:
+      farmerUnreadCount,
+
+    isLoading:
+      isLoadingFarmerNotifications,
+
+    isUpdating:
+      isUpdatingFarmerNotifications,
+
+    error:
+      farmerNotificationError,
+
+    loadUnreadCount:
+      loadFarmerUnreadCount,
+
+    refreshNotifications:
+      refreshFarmerNotifications,
+
+    openNotification:
+      openFarmerNotification,
+
+    markAllAsRead:
+      markAllFarmerNotificationsAsRead,
+  } = useFarmerNotifications({
+    enabled:
+      isFarmer,
+  });
+
+
+  // =========================================================
   // NAVBAR STATE
   // =========================================================
 
@@ -427,12 +469,15 @@ const UserNavbar = ({
 
 
   // =========================================================
-  // ADMIN NOTIFICATION BADGE REFRESH
+  // DATABASE NOTIFICATION BADGE REFRESH
   // =========================================================
 
   useEffect(
     () => {
-      if (!isAdmin) {
+      if (
+        !isAdmin &&
+        !isFarmer
+      ) {
         return undefined;
       }
 
@@ -440,7 +485,13 @@ const UserNavbar = ({
       const interval =
         window.setInterval(
           () => {
-            loadUnreadCount().catch(
+            const refreshCount =
+              isAdmin
+                ? loadUnreadCount
+                : loadFarmerUnreadCount;
+
+
+            refreshCount().catch(
               () => {
                 // Error stored by hook.
               }
@@ -458,7 +509,9 @@ const UserNavbar = ({
     },
     [
       isAdmin,
+      isFarmer,
       loadUnreadCount,
+      loadFarmerUnreadCount,
     ]
   );
 
@@ -629,10 +682,6 @@ const UserNavbar = ({
   // =========================================================
 
   const handleLogout = () => {
-    // =======================================================
-    // CONFIRM FIRST
-    // =======================================================
-
     const confirmed =
       window.confirm(
         "Are you sure you want to log out of GrainRise?"
@@ -644,10 +693,6 @@ const UserNavbar = ({
     }
 
 
-    // =======================================================
-    // CLOSE NAVBAR PANELS
-    // =======================================================
-
     setMenuOpen(
       false
     );
@@ -657,19 +702,8 @@ const UserNavbar = ({
     );
 
 
-    // =======================================================
-    // EXISTING AUTH LOGOUT
-    // Removes:
-    // grainrise_token
-    // grainrise_user
-    // =======================================================
-
     logout();
 
-
-    // =======================================================
-    // REDIRECT
-    // =======================================================
 
     navigate(
       isAdmin
@@ -702,7 +736,38 @@ const UserNavbar = ({
   const effectiveNotifications =
     isAdmin
       ? adminNotifications
-      : notifications;
+      : isFarmer
+        ? farmerNotifications
+        : notifications;
+
+
+  const usesDatabaseNotifications =
+    isAdmin ||
+    isFarmer;
+
+
+  const isLoadingDatabaseNotifications =
+    isAdmin
+      ? isLoadingAdminNotifications
+      : isFarmer
+        ? isLoadingFarmerNotifications
+        : false;
+
+
+  const isUpdatingDatabaseNotifications =
+    isAdmin
+      ? isUpdatingAdminNotifications
+      : isFarmer
+        ? isUpdatingFarmerNotifications
+        : false;
+
+
+  const databaseNotificationError =
+    isAdmin
+      ? adminNotificationError
+      : isFarmer
+        ? farmerNotificationError
+        : "";
 
 
   // =========================================================
@@ -721,10 +786,12 @@ const UserNavbar = ({
   const badgeCount =
     isAdmin
       ? adminUnreadCount
-      : (
-          notificationCount ||
-          localUnreadCount
-        );
+      : isFarmer
+        ? farmerUnreadCount
+        : (
+            notificationCount ||
+            localUnreadCount
+          );
 
 
   // =========================================================
@@ -756,6 +823,20 @@ const UserNavbar = ({
             // Hook already stores error.
           }
         );
+
+        return;
+      }
+
+
+      if (
+        willOpen &&
+        isFarmer
+      ) {
+        refreshFarmerNotifications().catch(
+          () => {
+            // Hook already stores error.
+          }
+        );
       }
     };
 
@@ -777,6 +858,27 @@ const UserNavbar = ({
 
         try {
           await markAllAdminNotificationsAsRead();
+
+        } catch {
+          // Error remains available from hook.
+        }
+
+
+        return;
+      }
+
+
+      if (isFarmer) {
+        if (
+          farmerUnreadCount <= 0 ||
+          isUpdatingFarmerNotifications
+        ) {
+          return;
+        }
+
+
+        try {
+          await markAllFarmerNotificationsAsRead();
 
         } catch {
           // Error remains available from hook.
@@ -850,6 +952,55 @@ const UserNavbar = ({
       }
 
 
+      if (isFarmer) {
+        const notificationId =
+          item?.notification_id;
+
+
+        if (!notificationId) {
+          return;
+        }
+
+
+        try {
+          const result =
+            await openFarmerNotification(
+              notificationId
+            );
+
+
+          setNotificationOpen(
+            false
+          );
+
+
+          let targetPath =
+            result?.targetPath ||
+            "/farmer/dashboard";
+
+
+          if (
+            targetPath ===
+            "/farmer/account-settings"
+          ) {
+            targetPath =
+              "/farmer/profile";
+          }
+
+
+          navigate(
+            targetPath
+          );
+
+        } catch {
+          // Error displayed inside notification panel.
+        }
+
+
+        return;
+      }
+
+
       item?.onView?.(
         item
       );
@@ -876,6 +1027,15 @@ const UserNavbar = ({
       if (isAdmin) {
         navigate(
           "/admin/profile"
+        );
+
+        return;
+      }
+
+
+      if (isFarmer) {
+        navigate(
+          "/farmer/profile"
         );
 
         return;
@@ -1027,16 +1187,16 @@ const UserNavbar = ({
                   disabled={
                     badgeCount <= 0 ||
                     (
-                      isAdmin &&
-                      isUpdatingAdminNotifications
+                      usesDatabaseNotifications &&
+                      isUpdatingDatabaseNotifications
                     )
                   }
                   className="text-[11px] font-semibold text-[#0B7A2A] hover:text-[#096322] transition cursor-pointer disabled:text-gray-300 disabled:cursor-not-allowed"
                 >
 
                   {
-                    isAdmin &&
-                    isUpdatingAdminNotifications
+                    usesDatabaseNotifications &&
+                    isUpdatingDatabaseNotifications
                       ? "Updating..."
                       : "Mark all as read"
                   }
@@ -1053,8 +1213,8 @@ const UserNavbar = ({
               <div className="max-h-80 overflow-y-auto px-2 py-2 space-y-1">
 
                 {
-                  isAdmin &&
-                  isLoadingAdminNotifications ? (
+                  usesDatabaseNotifications &&
+                  isLoadingDatabaseNotifications ? (
 
                     <div className="flex items-center justify-center py-8">
 
@@ -1077,14 +1237,14 @@ const UserNavbar = ({
                         item
                       ) => {
                         const itemId =
-                          isAdmin
+                          usesDatabaseNotifications
                             ? item
                                 ?.notification_id
                             : item?.id;
 
 
                         const itemRead =
-                          isAdmin
+                          usesDatabaseNotifications
                             ? Boolean(
                                 item?.is_read
                               )
@@ -1099,13 +1259,13 @@ const UserNavbar = ({
 
 
                         const itemDescription =
-                          isAdmin
+                          usesDatabaseNotifications
                             ? item?.message
                             : item?.description;
 
 
                         const itemTime =
-                          isAdmin
+                          usesDatabaseNotifications
                             ? formatNotificationTime(
                                 item?.created_at
                               )
@@ -1184,14 +1344,14 @@ const UserNavbar = ({
                                     )
                                   }
                                   disabled={
-                                    isAdmin &&
-                                    isUpdatingAdminNotifications
+                                    usesDatabaseNotifications &&
+                                    isUpdatingDatabaseNotifications
                                   }
                                   className="mt-2.5 inline-flex items-center rounded-full bg-[#007A1F] px-3 py-1 text-[11px] font-bold text-white hover:bg-[#006218] transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                                 >
 
                                   {
-                                    isAdmin
+                                    usesDatabaseNotifications
                                       ? "View"
                                       : (
                                           item?.actionLabel ||
@@ -1240,14 +1400,14 @@ const UserNavbar = ({
               ============================================= */}
 
               {
-                isAdmin &&
-                adminNotificationError && (
+                usesDatabaseNotifications &&
+                databaseNotificationError && (
 
                   <div className="border-t border-red-100 bg-red-50 px-3 py-2">
 
                     <p className="text-[11px] text-red-600">
                       {
-                        adminNotificationError
+                        databaseNotificationError
                       }
                     </p>
 
