@@ -21,6 +21,13 @@ import {
   Archive,
   Mail,
   Newspaper,
+  MessageSquare,
+  MessagesSquare,
+  FileText,
+  ClipboardCheck,
+  SlidersHorizontal,
+  CircleDollarSign,
+  Tractor,
 } from "lucide-react";
 import Logo from "../../assets/Logo.png";
 
@@ -180,7 +187,7 @@ admin: {
             },
             {
               label: "Messages",
-              icon: Mail,
+              icon: MessagesSquare,
               path: "/retailer/messages",
             },
           ],
@@ -802,7 +809,7 @@ admin: {
           items: [
             {
               label: "Messages",
-              icon: Mail,
+              icon: MessagesSquare,
               path: "/warehouse-driver/messages",
             },
           ],
@@ -868,7 +875,7 @@ admin: {
           items: [
             {
               label: "Messages",
-              icon: Mail,
+              icon: MessagesSquare,
               path: "/miller-driver/messages",
             },
           ],
@@ -929,17 +936,22 @@ admin: {
             },
             {
               label: "Contracts",
-              icon: ClipboardList,
+              icon: FileText,
               path: "/miller-manager/contracts",
             },
             {
+              label: "Messages",
+              icon: MessagesSquare,
+              path: "/miller-manager/messages",
+            },
+            {
               label: "Order Approval",
-              icon: ClipboardList,
+              icon: ClipboardCheck,
               path: "/miller-manager/order-approval",
             },
             {
-              label: "Pass Fee Management",
-              icon: Receipt,
+              label: "Fare Fee Management",
+              icon: SlidersHorizontal,
               path: "/miller-manager/pass-fee",
             },
           ],
@@ -964,23 +976,23 @@ admin: {
             },
             {
               label: "Sales History",
-              icon: History,
+              icon: Receipt,
               path: "/miller-manager/sales-history",
             },
             {
               label: "Procurement Receiving History",
-              icon: Truck,
+              icon: Package,
               path: "/miller-manager/procurement-history",
             },
             {
               label: "Finance Management History",
-              icon: CreditCard,
+              icon: CircleDollarSign,
               path: "/miller-manager/finance-history",
             },
           ],
         },
         {
-          title: "WORKSPACE",
+          title: "RESOURCES",
           items: [
             {
               label: "News & Updates",
@@ -1010,7 +1022,7 @@ admin: {
           items: [
             {
               label: "Farm Management",
-              icon: Package,
+              icon: Tractor,
               path: "/farmer/farm-management",
             },
             {
@@ -1027,6 +1039,11 @@ admin: {
               label: "Contracts",
               icon: ClipboardList,
               path: "/farmer/contracts",
+            },
+            {
+              label: "Messages",
+              icon: MessagesSquare,
+              path: "/farmer/messages",
             },
             {
               label: "Point of Sale",
@@ -1052,44 +1069,7 @@ admin: {
         },
       ],
     },
-    miller_manager: {
-      panelLabel: "MILLER MANAGER PANEL",
-      sections: [
-        {
-          title: "MAIN",
-          items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/miller-manager/dashboard" }],
-        },
-        {
-          title: "MANAGEMENT",
-          items: [
-            { label: "Contracts", icon: ClipboardList, path: "/miller-manager/contracts" },
-            { label: "Order Approval", icon: ClipboardList, path: "/miller-manager/order-approval" },
-            { label: "Pass Fee Management", icon: Receipt, path: "/miller-manager/pass-fee" },
-          ],
-        },
-        {
-          title: "ANALYTICS",
-          items: [
-            { label: "Performance Monitoring", icon: FileBarChart, path: "/miller-manager/performance" },
-          ],
-        },
-        {
-          title: "HISTORY",
-          items: [
-            { label: "Fulfillment History", icon: PackageCheck, path: "/miller-manager/fulfillment-history" },
-            { label: "Sales History", icon: History, path: "/miller-manager/sales-history" },
-            { label: "Procurement Receiving History", icon: Truck, path: "/miller-manager/procurement-history" },
-            { label: "Finance Management History", icon: CreditCard, path: "/miller-manager/finance-history" },
-          ],
-        },
-        {
-          title: "WORKSPACE",
-          items: [
-            { label: "News & Updates", icon: Newspaper, path: "/miller-manager/news-updates" },
-          ],
-        },
-      ],
-    },
+
   };
 
   return menuConfigs[role] || menuConfigs.admin;

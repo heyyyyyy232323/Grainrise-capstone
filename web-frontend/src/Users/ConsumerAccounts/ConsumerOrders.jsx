@@ -443,7 +443,7 @@ export default function ConsumerOrders() {
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-gray-800 antialiased">
       <ConsumerNavbar activePath="/consumer/orders" />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
+      <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-5 sm:py-6">
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-1 text-xs text-gray-400 mb-2 select-none">

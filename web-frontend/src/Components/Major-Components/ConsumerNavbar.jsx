@@ -13,6 +13,7 @@ import Logo from "../../assets/Logo.png";
 export const CONSUMER_NAV_LINKS = [
   { label: "Home", path: "/consumer/home" },
   { label: "Marketplace", path: "/consumer/marketplace" },
+  { label: "Retailers Nearby", path: "/consumer/retailers-nearby" },
   { label: "Orders", path: "/consumer/orders" },
   { label: "Promotions & Rewards", path: "/consumer/promotions" },
   { label: "Market Prices", path: "/consumer/market-prices" },
@@ -34,7 +35,7 @@ export default function ConsumerNavbar({
 
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14 sm:h-16">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 flex items-center justify-between h-14 sm:h-16">
         {/* Left: Logo & Nav Links together */}
         <div className="flex items-center gap-4 lg:gap-6">
           {/* Logo */}

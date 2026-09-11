@@ -414,7 +414,7 @@ export default function ConsumerAccountSettings() {
       <ConsumerNavbar activePath="/consumer/account-settings" />
 
       {/* ── Main Content Container ─────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 pt-6">
         
         {/* ── Breadcrumb ────────────────────────────────────── */}
         <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">

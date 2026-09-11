@@ -18,6 +18,7 @@ import ConsumerPromotions from "./Users/ConsumerAccounts/ConsumerPromotions";
 import ConsumerMarketPrices from "./Users/ConsumerAccounts/ConsumerMarketPrices";
 import ConsumerWishlist from "./Users/ConsumerAccounts/ConsumerWishlist";
 import ConsumerAccountSettings from "./Users/ConsumerAccounts/ConsumerAccountSettings";
+import ConsumerRetailersNearby from "./Users/ConsumerAccounts/ConsumerRetailersNearby";
 
 import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout";
 import AdminProtectedRoute from "./Components/Major-Components/AdminProtectedRoute";
@@ -205,6 +206,7 @@ import MillerProcurementReceivingHistory from "./Users/MillerAccounts/MillerMana
 import MillerFinanceManagementHistory from "./Users/MillerAccounts/MillerManager/MillerFinanceManagementHistory";
 import MillerManagerNewsUpdates from "./Users/MillerAccounts/MillerManager/MillerManagerNewsUpdates";
 import MillerManagerNewsArticle from "./Users/MillerAccounts/MillerManager/MillerManagerNewsArticle";
+import MillerManagerMessages from "./Users/MillerAccounts/MillerManager/MillerManagerMessages";
 
 
 // ============================================================
@@ -254,6 +256,7 @@ import FarmerFarmManagement from "./Users/FarmersAccounts/FarmerFarmManagement";
 import FarmerFarmDetails from "./Users/FarmersAccounts/FarmerFarmDetails";
 import FarmerPointOfSale from "./Users/FarmersAccounts/FarmerPointOfSale";
 import FarmerTransactionHistory from "./Users/FarmersAccounts/FarmerTransactionHistory";
+import FarmerMessages from "./Users/FarmersAccounts/FarmerMessages";
 
 
 // ============================================================
@@ -277,6 +280,10 @@ function App() {
           <Route path="/consumer/marketplace" element={<ConsumerMarketplace />} />
           <Route path="/consumermarketplace" element={<ConsumerMarketplace />} />
           <Route path="/marketplace" element={<ConsumerMarketplace />} />
+          <Route path="/consumer/retailers-nearby" element={<ConsumerRetailersNearby />} />
+          <Route path="/consumer/nearby-retailers" element={<ConsumerRetailersNearby />} />
+          <Route path="/retailers-nearby" element={<ConsumerRetailersNearby />} />
+          <Route path="/nearby-retailers" element={<ConsumerRetailersNearby />} />
           <Route path="/consumer/orders" element={<ConsumerOrders />} />
           <Route path="/consumer/promotions" element={<ConsumerPromotions />} />
           <Route path="/promotions" element={<ConsumerPromotions />} />
@@ -909,6 +916,11 @@ function App() {
 
 
             <Route
+              path="/miller-manager/branches"
+              element={<BranchManagement />}
+            />
+
+            <Route
               path="/miller-manager/contracts"
               element={<MillerContracts />}
             />
@@ -946,6 +958,11 @@ function App() {
             <Route
               path="/miller-manager/finance-history"
               element={<MillerFinanceManagementHistory />}
+            />
+
+            <Route
+              path="/miller-manager/messages"
+              element={<MillerManagerMessages />}
             />
 
             <Route
@@ -1050,6 +1067,11 @@ function App() {
             <Route
               path="/farmer/contracts"
               element={<FarmerContracts />}
+            />
+
+            <Route
+              path="/farmer/messages"
+              element={<FarmerMessages />}
             />
 
             <Route

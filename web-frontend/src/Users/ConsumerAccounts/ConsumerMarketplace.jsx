@@ -568,7 +568,7 @@ export default function ConsumerMarketplace() {
       {/* ========================================================
           2. PAGE TITLE & STATUS BAR
       ======================================================== */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
+      <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-6 flex flex-col gap-6">
         {/* Breadcrumb & Title */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -1600,6 +1600,61 @@ export default function ConsumerMarketplace() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      {/* ========================================================
+          9.5 STICKY COMPARE PRODUCTS FLOATING BAR
+      ======================================================== */}
+      {compareList.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-4xl animate-in slide-in-from-bottom-5 duration-200">
+          <div className="bg-[#18181B] text-white rounded-2xl px-4 py-3.5 sm:px-6 sm:py-4 shadow-2xl border border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-4">
+            {/* Left Info */}
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="w-10 h-10 rounded-xl bg-[#00580C] text-white flex items-center justify-center shrink-0 shadow-sm">
+                <BarChart2 size={20} />
+              </div>
+              <div>
+                <h4 className="font-bold text-white text-sm leading-tight">Compare Products</h4>
+                <p className="text-[#00C853] text-xs font-semibold mt-0.5">
+                  {compareList.length} of 3 selected
+                </p>
+              </div>
+            </div>
+
+            {/* Middle Pills */}
+            <div className="flex items-center gap-2 flex-wrap justify-start md:justify-center w-full md:w-auto flex-1 px-0 md:px-3">
+              {compareList.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-[#27272A] border border-zinc-700/70 text-zinc-200 text-xs font-medium px-3.5 py-1.5 rounded-full flex items-center gap-2 shadow-xs"
+                >
+                  <span className="truncate max-w-[150px]">{item.name}</span>
+                  <button
+                    onClick={() => removeCompareItem(item.id)}
+                    className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                    title={`Remove ${item.name}`}
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Right Actions */}
+            <div className="flex items-center justify-end gap-4 w-full md:w-auto shrink-0">
+              <button
+                onClick={clearAllCompare}
+                className="text-xs text-zinc-400 hover:text-zinc-100 underline underline-offset-2 transition-colors cursor-pointer"
+              >
+                Clear All
+              </button>
+              <button
+                onClick={() => setCompareModalOpen(true)}
+                className="bg-[#00580C] hover:bg-[#016f0e] text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-md hover:shadow-lg transition-all cursor-pointer whitespace-nowrap"
+              >
+                Compare Products ({compareList.length}) →
+              </button>
             </div>
           </div>
         </div>

@@ -333,7 +333,7 @@
 /* Left content column */
 .lp-hero__content {
   text-align: left;
-  max-width: 500px;
+  max-width: 530px;
 }
 
 /* "Centralized System Portal" badge */
@@ -341,11 +341,11 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: transparent;
+  background: rgba(220, 252, 231, 0.65);
   color: #00580C;
-  border: 1.5px solid #00580C;
+  border: 1.2px solid #86efac;
   padding: 5px 14px;
-  border-radius: 100px;
+  border-radius: 9999px;
   font-size: 12.5px;
   font-weight: 600;
   margin-bottom: 20px;
@@ -355,12 +355,12 @@
 /* Main headline */
 .lp-hero__headline {
   font-family: 'Outfit', 'Inter', sans-serif;
-  font-size: clamp(32px, 3.8vw, 48px);
+  font-size: clamp(34px, 4vw, 48px);
   font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -0.02em;
-  margin: 0 0 16px;
-  color: #0b3d14;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin: 0 0 18px;
+  color: #00580C;
   animation: heroFadeUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both;
 }
 
@@ -369,8 +369,9 @@
   font-size: 14px;
   color: #4b5563;
   font-weight: 400;
-  line-height: 1.7;
-  margin: 0 0 30px;
+  line-height: 1.55;
+  max-width: 510px;
+  margin: 0 0 28px;
   animation: heroFadeUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.26s both;
 }
 
@@ -385,51 +386,52 @@
 
 /* Log In button — solid dark green */
 .lp-hero__btn-login {
-  background: #1a4d1a;
+  background: #00580C;
   color: #ffffff;
   font-family: 'Inter', 'Outfit', sans-serif;
   font-size: 13.5px;
   font-weight: 600;
-  padding: 10px 20px;
+  padding: 9px 20px;
   border-radius: 8px;
-  border: none;
+  border: 1px solid #00580C;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 0 3px 10px rgba(0, 88, 12, 0.22);
+  box-shadow: 0 2px 6px rgba(0, 88, 12, 0.2);
   transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .lp-hero__btn-login:hover {
-  background: #0f3310;
+  background: #014209;
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 88, 12, 0.3);
+  box-shadow: 0 5px 14px rgba(0, 88, 12, 0.25);
 }
 
-/* Register button — white outline */
+/* Register button — frosted light outline */
 .lp-hero__btn-register {
-  background: #ffffff;
-  color: #1f2937;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(4px);
+  color: #334155;
   font-family: 'Inter', 'Outfit', sans-serif;
   font-size: 13.5px;
   font-weight: 600;
-  padding: 10px 20px;
+  padding: 9px 18px;
   border-radius: 8px;
-  border: 1.5px solid #d1d5db;
+  border: 1.2px solid #94a3b8;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .lp-hero__btn-register:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #64748b;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
 }
 
 /* Right column — mockup wrapper (no card/border container, exactly like Figma) */

@@ -417,7 +417,7 @@ export default function ConsumerPromotions() {
       <ConsumerNavbar activePath="/consumer/promotions" />
 
       {/* Main Page Container */}
-      <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-6 space-y-6 flex-1">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <button

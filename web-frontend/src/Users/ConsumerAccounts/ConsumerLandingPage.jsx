@@ -990,7 +990,7 @@ export default function ConsumerLandingPage() {
     <div className="min-h-screen bg-[#FBFBFB] font-sans antialiased text-gray-800">
       <ConsumerNavbar activePath={activePath} onNavigate={handleNavigate} />
 
-      <main className="max-w-screen-xl mx-auto px-4 py-6 space-y-6 pb-16">
+      <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-6 space-y-6 pb-16">
         <HeroSection />
         <ShopByCategory />
         <QuickAccess />
