@@ -1603,6 +1603,8 @@ export default function ConsumerMarketplace() {
             </div>
           </div>
         </div>
+      )}
+
       {/* ========================================================
           9.5 STICKY COMPARE PRODUCTS FLOATING BAR
       ======================================================== */}
