@@ -1253,68 +1253,6 @@ export default function ConsumerMarketplace() {
       </main>
 
       {/* ========================================================
-          7. FLOATING COMPARISON BAR (EXACT FIGMA REPLICA)
-      ======================================================== */}
-      {compareList.length > 0 && (
-        <div className="fixed bottom-5 left-0 right-0 z-40 px-4 pointer-events-none">
-          <div className="max-w-3xl mx-auto bg-[#18181B] text-white px-5 py-3 rounded-2xl shadow-2xl border border-gray-700 flex flex-wrap items-center justify-between gap-4 pointer-events-auto animate-in slide-in-from-bottom duration-200">
-            {/* Left: Icon & Count */}
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#00580C] text-white flex items-center justify-center shrink-0">
-                <BarChart2 size={18} />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-white leading-tight">
-                  Compare Products
-                </div>
-                <div className="text-[11px] text-emerald-400 font-medium">
-                  {compareList.length} of 3 selected
-                </div>
-              </div>
-            </div>
-
-            {/* Middle: Selected Item Badges */}
-            <div className="flex flex-wrap items-center gap-2">
-              {compareList.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-white/10 border border-white/15 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-2"
-                >
-                  <span className="font-medium max-w-[120px] sm:max-w-[160px] truncate">
-                    {item.name}
-                  </span>
-                  <button
-                    onClick={() => removeCompareItem(item.id)}
-                    className="text-gray-400 hover:text-white transition cursor-pointer"
-                    title="Remove from comparison"
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* Right: Actions */}
-            <div className="flex items-center gap-3 ml-auto">
-              <button
-                onClick={clearAllCompare}
-                className="text-xs text-gray-400 hover:text-white underline transition cursor-pointer"
-              >
-                Clear All
-              </button>
-
-              <button
-                onClick={() => setCompareModalOpen(true)}
-                className="px-4 py-2 bg-[#00580C] hover:bg-[#016f0e] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition cursor-pointer"
-              >
-                Compare Products ({compareList.length}) →
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================
           8. PRODUCT DETAILS MODAL
       ======================================================== */}
       {detailsModalProduct && (

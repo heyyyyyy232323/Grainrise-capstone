@@ -57,7 +57,7 @@ export default function LandingHeader() {
           <ul className={`lp-nav__links ${menuOpen ? 'lp-nav__links--open' : ''}`}>
             <li><button onClick={() => scrollTo('hero')}>Home</button></li>
             <li><button onClick={() => scrollTo('about')}>Portal Access</button></li>
-            <li><button onClick={() => scrollTo('services')}>Explore GrainRise</button></li>
+            <li><button onClick={() => scrollTo('services')}>Explore Grainrise</button></li>
             <li><button onClick={() => scrollTo('footer')}>Help &amp; Support</button></li>
           </ul>
 
