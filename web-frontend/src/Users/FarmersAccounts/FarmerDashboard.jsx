@@ -1,215 +1,2035 @@
-import { CalendarDays, Warehouse, FileText, Leaf, Map } from "lucide-react";
-import Breadcrumbs from "../../Components/Minor-Components/Breadcrumbs";
-import KPICard from "../../Components/Graphs/KPICard";
+import {
+  CalendarDays,
+  Warehouse,
+  FileText,
+  Leaf,
+  Map,
+} from "lucide-react";
 
-const kpiMetrics = [
-  {
-    title: "AVAILABLE MILLERS",
-    value: "24",
-    footer: "Millers available in the system",
-    tone: "success",
-    icon: <Warehouse size={18} strokeWidth={2.2} />,
-  },
-  {
-    title: "CONTRACTED MILLERS",
-    value: "8",
-    footer: "Millers with active contracts",
-    tone: "neutral",
-    icon: <FileText size={18} strokeWidth={2.2} />,
-  },
-  {
-    title: "REGISTERED HARVEST AREA",
-    value: "12.5 ha",
-    footer: "Registered farm area",
-    tone: "success",
-    icon: <Leaf size={18} strokeWidth={2.2} />,
-  },
-  {
-    title: "POTENTIAL CROPPING AREA",
-    value: "18.2 ha",
-    footer: "Total area available for cropping",
-    tone: "warning",
-    icon: <Map size={18} strokeWidth={2.2} />,
-  },
-];
+import {
+  useMemo,
+} from "react";
 
-const now = new Date("2026-07-19T10:42:00");
-const formattedDate = now.toLocaleDateString("en-US", {
-  month: "long",
-  day: "numeric",
-  year: "numeric",
-});
-const formattedTime = now.toLocaleTimeString("en-US", {
-  hour: "numeric",
-  minute: "2-digit",
-  hour12: true,
-});
+import {
+  useNavigate,
+} from "react-router-dom";
+
+import Breadcrumbs
+  from "../../Components/Minor-Components/Breadcrumbs";
+
+import KPICard
+  from "../../Components/Graphs/KPICard";
+
+import useFarmerDashboard
+  from "../../Components/hooks/Farmer/useFarmerDashboard";
+
+
+// ============================================================
+// DATE / NUMBER HELPERS
+// ============================================================
+
+const formatDashboardDate = (date) =>
+  date.toLocaleDateString(
+    "en-US",
+    {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }
+  );
+
+
+const formatDashboardTime = (date) =>
+  date.toLocaleTimeString(
+    "en-US",
+    {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }
+  );
+
+
+const formatMonth = (
+  dateValue,
+  format = "short"
+) => {
+
+  if (!dateValue) {
+    return "";
+  }
+
+
+  const date = new Date(
+    `${dateValue}T00:00:00`
+  );
+
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return "";
+  }
+
+
+  return date.toLocaleDateString(
+    "en-US",
+    {
+      month: format,
+    }
+  );
+};
+
+
+const formatArea = (value) => {
+
+  const number =
+    Number(value) || 0;
+
+
+  return `${number.toLocaleString(
+    "en-US",
+    {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }
+  )} ha`;
+};
+
+
+const formatPeso = (value) => {
+
+  const number =
+    Number(value) || 0;
+
+
+  return `₱${number.toLocaleString(
+    "en-US",
+    {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }
+  )}`;
+};
+
+
+const formatQuantity = (value) => {
+
+  const number =
+    Number(value) || 0;
+
+
+  return number.toLocaleString(
+    "en-US",
+    {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }
+  );
+};
+
+
+// ============================================================
+// MARKET PRICE CHART HELPER
+// ============================================================
+
+const createMarketChart = (
+  records
+) => {
+
+  const width = 400;
+  const height = 150;
+
+  const left = 42;
+  const right = 18;
+  const top = 15;
+  const bottom = 28;
+
+
+  const values =
+    records
+      .map(
+        (record) =>
+          record.average_price_per_kg
+      )
+      .filter(
+        (value) =>
+          value !== null &&
+          value !== undefined &&
+          Number.isFinite(
+            Number(value)
+          )
+      )
+      .map(Number);
+
+
+  if (values.length === 0) {
+
+    return {
+      available: false,
+      points: [],
+      polyline: "",
+      area: "",
+      min: 0,
+      middle: 0,
+      max: 0,
+    };
+
+  }
+
+
+  const rawMin =
+    Math.min(...values);
+
+  const rawMax =
+    Math.max(...values);
+
+
+  const padding =
+    rawMax === rawMin
+      ? Math.max(
+          rawMax * 0.1,
+          1
+        )
+      : Math.max(
+          (
+            rawMax -
+            rawMin
+          ) * 0.15,
+          0.5
+        );
+
+
+  const min =
+    Math.max(
+      0,
+      rawMin - padding
+    );
+
+  const max =
+    rawMax + padding;
+
+
+  const range =
+    Math.max(
+      max - min,
+      1
+    );
+
+
+  const totalRecords =
+    Math.max(
+      records.length,
+      1
+    );
+
+
+  const points =
+    records
+      .map(
+        (
+          record,
+          index
+        ) => {
+
+          const value =
+            record.average_price_per_kg;
+
+
+          if (
+            value === null ||
+            value === undefined ||
+            !Number.isFinite(
+              Number(value)
+            )
+          ) {
+            return null;
+          }
+
+
+          const x =
+            totalRecords === 1
+              ? (
+                  left +
+                  (
+                    width -
+                    left -
+                    right
+                  ) /
+                    2
+                )
+              : (
+                  left +
+                  (
+                    index /
+                    (
+                      totalRecords -
+                      1
+                    )
+                  ) *
+                    (
+                      width -
+                      left -
+                      right
+                    )
+                );
+
+
+          const y =
+            top +
+            (
+              (
+                max -
+                Number(value)
+              ) /
+              range
+            ) *
+              (
+                height -
+                top -
+                bottom
+              );
+
+
+          return {
+            x,
+            y,
+            value:
+              Number(value),
+            record,
+          };
+
+        }
+      )
+      .filter(Boolean);
+
+
+  const polyline =
+    points
+      .map(
+        (point) =>
+          `${point.x},${point.y}`
+      )
+      .join(" ");
+
+
+  const baseline =
+    height - bottom;
+
+
+  const area =
+    points.length > 1
+      ? [
+          `${points[0].x},${baseline}`,
+          ...points.map(
+            (point) =>
+              `${point.x},${point.y}`
+          ),
+          `${
+            points[
+              points.length - 1
+            ].x
+          },${baseline}`,
+        ].join(" ")
+      : "";
+
+
+  return {
+    available: true,
+    points,
+    polyline,
+    area,
+    min,
+    middle:
+      (
+        min +
+        max
+      ) / 2,
+    max,
+  };
+
+};
+
+
+// ============================================================
+// HARVEST CHART HELPER
+// ============================================================
+
+const createYieldChart = (
+  records
+) => {
+
+  const width = 400;
+  const height = 150;
+
+  const left = 42;
+  const right = 12;
+  const top = 12;
+  const bottom = 30;
+
+
+  const values =
+    records
+      .map(
+        (record) =>
+          Number(
+            record.actual_yield_kg
+          ) || 0
+      )
+      .filter(
+        (value) =>
+          value > 0
+      );
+
+
+  if (values.length === 0) {
+
+    return {
+      available: false,
+      bars: [],
+      max: 0,
+    };
+
+  }
+
+
+  const rawMax =
+    Math.max(...values);
+
+
+  const max =
+    Math.max(
+      rawMax * 1.15,
+      1
+    );
+
+
+  const drawableWidth =
+    width -
+    left -
+    right;
+
+
+  const drawableHeight =
+    height -
+    top -
+    bottom;
+
+
+  const slotWidth =
+    drawableWidth /
+    Math.max(
+      records.length,
+      1
+    );
+
+
+  const barWidth =
+    Math.min(
+      slotWidth * 0.55,
+      42
+    );
+
+
+  const bars =
+    records.map(
+      (
+        record,
+        index
+      ) => {
+
+        const value =
+          Number(
+            record.actual_yield_kg
+          ) || 0;
+
+
+        const barHeight =
+          (
+            value /
+            max
+          ) *
+          drawableHeight;
+
+
+        const centerX =
+          left +
+          (
+            slotWidth *
+            index
+          ) +
+          (
+            slotWidth /
+            2
+          );
+
+
+        return {
+          ...record,
+
+          value,
+
+          x:
+            centerX -
+            (
+              barWidth /
+              2
+            ),
+
+          centerX,
+
+          y:
+            top +
+            drawableHeight -
+            barHeight,
+
+          height:
+            barHeight,
+
+          width:
+            barWidth,
+
+          label:
+            `Cycle ${
+              index + 1
+            }`,
+        };
+
+      }
+    );
+
+
+  return {
+    available: true,
+    bars,
+    max,
+  };
+
+};
+
+
+// ============================================================
+// CLIMATE CHART HELPER
+// ============================================================
+
+const createClimateChart = (
+  records
+) => {
+
+  const width = 800;
+  const height = 200;
+
+  const left = 28;
+  const right = 28;
+  const top = 18;
+  const bottom = 28;
+
+
+  if (
+    !Array.isArray(records) ||
+    records.length === 0
+  ) {
+
+    return {
+      available: false,
+      bars: [],
+      temperaturePoints: [],
+      temperaturePolyline: "",
+      rainfallMax: 0,
+      temperatureMin: 0,
+      temperatureMax: 0,
+    };
+
+  }
+
+
+  const rainfallValues =
+    records
+      .map(
+        (record) =>
+          Number(
+            record.rainfall_mm
+          ) || 0
+      );
+
+
+  const temperatureValues =
+    records
+      .map(
+        (record) =>
+          record.temperature_c
+      )
+      .filter(
+        (value) =>
+          value !== null &&
+          value !== undefined &&
+          Number.isFinite(
+            Number(value)
+          )
+      )
+      .map(Number);
+
+
+  const rawRainfallMax =
+    rainfallValues.length > 0
+      ? Math.max(
+          ...rainfallValues
+        )
+      : 0;
+
+
+  const rainfallMax =
+    Math.max(
+      rawRainfallMax * 1.15,
+      1
+    );
+
+
+  let temperatureMin = 0;
+  let temperatureMax = 1;
+
+
+  if (
+    temperatureValues.length > 0
+  ) {
+
+    const rawMin =
+      Math.min(
+        ...temperatureValues
+      );
+
+    const rawMax =
+      Math.max(
+        ...temperatureValues
+      );
+
+
+    const padding =
+      rawMax === rawMin
+        ? 1
+        : Math.max(
+            (
+              rawMax -
+              rawMin
+            ) * 0.2,
+            0.5
+          );
+
+
+    temperatureMin =
+      rawMin -
+      padding;
+
+    temperatureMax =
+      rawMax +
+      padding;
+
+  }
+
+
+  const temperatureRange =
+    Math.max(
+      temperatureMax -
+      temperatureMin,
+      1
+    );
+
+
+  const drawableWidth =
+    width -
+    left -
+    right;
+
+
+  const drawableHeight =
+    height -
+    top -
+    bottom;
+
+
+  const slotWidth =
+    drawableWidth /
+    Math.max(
+      records.length,
+      1
+    );
+
+
+  const barWidth =
+    Math.min(
+      slotWidth * 0.48,
+      62
+    );
+
+
+  const bars =
+    records.map(
+      (
+        record,
+        index
+      ) => {
+
+        const rainfall =
+          Number(
+            record.rainfall_mm
+          ) || 0;
+
+
+        const centerX =
+          left +
+          slotWidth * index +
+          slotWidth / 2;
+
+
+        const barHeight =
+          (
+            rainfall /
+            rainfallMax
+          ) *
+          drawableHeight;
+
+
+        return {
+          ...record,
+
+          rainfall,
+
+          centerX,
+
+          x:
+            centerX -
+            barWidth / 2,
+
+          y:
+            top +
+            drawableHeight -
+            barHeight,
+
+          width:
+            barWidth,
+
+          height:
+            barHeight,
+        };
+
+      }
+    );
+
+
+  const temperaturePoints =
+    records
+      .map(
+        (
+          record,
+          index
+        ) => {
+
+          const value =
+            record.temperature_c;
+
+
+          if (
+            value === null ||
+            value === undefined ||
+            !Number.isFinite(
+              Number(value)
+            )
+          ) {
+            return null;
+          }
+
+
+          const centerX =
+            left +
+            slotWidth * index +
+            slotWidth / 2;
+
+
+          const y =
+            top +
+            (
+              (
+                temperatureMax -
+                Number(value)
+              ) /
+              temperatureRange
+            ) *
+            drawableHeight;
+
+
+          return {
+            x: centerX,
+            y,
+            value:
+              Number(value),
+            record,
+          };
+
+        }
+      )
+      .filter(Boolean);
+
+
+  return {
+    available: true,
+
+    bars,
+
+    temperaturePoints,
+
+    temperaturePolyline:
+      temperaturePoints
+        .map(
+          (point) =>
+            `${point.x},${point.y}`
+        )
+        .join(" "),
+
+    rainfallMax,
+
+    temperatureMin,
+
+    temperatureMax,
+  };
+
+};
+
+
+// ============================================================
+// EMPTY CHART
+// ============================================================
+
+function EmptyChartState({
+  message,
+}) {
+
+  return (
+    <div className="flex h-full min-h-[170px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-5 text-center">
+      <p className="max-w-sm text-sm text-slate-500">
+        {message}
+      </p>
+    </div>
+  );
+
+}
+
+
+// ============================================================
+// FARMER DASHBOARD
+// ============================================================
 
 export default function FarmerDashboard() {
+
+  const navigate =
+    useNavigate();
+
+
+  const {
+    kpis,
+
+    palayMarketPriceTrend,
+
+    yieldHistory,
+
+    climateOutlook,
+
+    isLoading,
+
+    error,
+
+    refreshDashboard,
+  } =
+    useFarmerDashboard();
+
+
+  const now =
+    new Date();
+
+
+  const formattedDate =
+    formatDashboardDate(
+      now
+    );
+
+
+  const formattedTime =
+    formatDashboardTime(
+      now
+    );
+
+
+  // ==========================================================
+  // KPI
+  // ==========================================================
+
+  const kpiMetrics =
+    useMemo(
+      () => [
+
+        {
+          title:
+            "AVAILABLE MILLERS",
+
+          value:
+            isLoading
+              ? "—"
+              : kpis.available_millers,
+
+          footer:
+            "Millers available in the system",
+
+          tone:
+            "success",
+
+          icon:
+            (
+              <Warehouse
+                size={18}
+                strokeWidth={2.2}
+              />
+            ),
+
+          shortcutPath:
+            "/farmer/contracts?tab=opportunities",
+
+          shortcutLabel:
+            "View available miller opportunities",
+        },
+
+
+        {
+          title:
+            "CONTRACTED MILLERS",
+
+          value:
+            isLoading
+              ? "—"
+              : kpis.contracted_millers,
+
+          footer:
+            "Millers with active contracts",
+
+          tone:
+            "neutral",
+
+          icon:
+            (
+              <FileText
+                size={18}
+                strokeWidth={2.2}
+              />
+            ),
+
+          shortcutPath:
+            "/farmer/contracts?tab=current",
+
+          shortcutLabel:
+            "View current contracts with millers",
+        },
+
+
+        {
+          title:
+            "REGISTERED HARVEST AREA",
+
+          value:
+            isLoading
+              ? "—"
+              : formatArea(
+                  kpis.registered_harvest_area_ha
+                ),
+
+          footer:
+            "Registered area currently planted",
+
+          tone:
+            "success",
+
+          icon:
+            (
+              <Leaf
+                size={18}
+                strokeWidth={2.2}
+              />
+            ),
+
+          shortcutPath:
+            "/farmer/farm-management?segment=my-farms&crop_status=planted_and_growing",
+
+          shortcutLabel:
+            "View farms with planted and growing crops",
+        },
+
+
+        {
+          title:
+            "POTENTIAL CROPPING AREA",
+
+          value:
+            isLoading
+              ? "—"
+              : formatArea(
+                  kpis.potential_cropping_area_ha
+                ),
+
+          footer:
+            "Total area available for cropping",
+
+          tone:
+            "warning",
+
+          icon:
+            (
+              <Map
+                size={18}
+                strokeWidth={2.2}
+              />
+            ),
+
+          shortcutPath:
+            "/farmer/farm-management?segment=my-farms&crop_status=available_for_planting",
+
+          shortcutLabel:
+            "View farms available for cropping",
+        },
+
+      ],
+      [
+        isLoading,
+        kpis,
+      ]
+    );
+
+
+  // ==========================================================
+  // CHART DATA
+  // ==========================================================
+
+  const marketChart =
+    useMemo(
+      () =>
+        createMarketChart(
+          palayMarketPriceTrend
+        ),
+      [
+        palayMarketPriceTrend,
+      ]
+    );
+
+
+  const yieldChart =
+    useMemo(
+      () =>
+        createYieldChart(
+          yieldHistory
+        ),
+      [
+        yieldHistory,
+      ]
+    );
+
+
+  const climateChart =
+    useMemo(
+      () =>
+        createClimateChart(
+          climateOutlook?.series ||
+            []
+        ),
+      [
+        climateOutlook,
+      ]
+    );
+
+
+  // ==========================================================
+  // RENDER
+  // ==========================================================
+
   return (
+
     <div className="space-y-5">
-      {/* ── Page Header ─────────────────────────────────────────────────────── */}
+
+
+      {/* =====================================================
+          PAGE HEADER
+      ====================================================== */}
+
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+
         <div className="space-y-1">
-          <Breadcrumbs items={[{ label: "Main" }, { label: "Dashboard" }]} />
+
+          <Breadcrumbs
+            items={[
+              {
+                label:
+                  "Main",
+              },
+              {
+                label:
+                  "Dashboard",
+              },
+            ]}
+          />
+
+
           <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-extrabold tracking-[-0.03em] text-slate-900">
             Dashboard
           </h2>
+
+
           <p className="text-sm text-slate-500">
-            Last Updated: Today · {formattedTime}
+
+            {isLoading
+              ? "Loading dashboard data..."
+              : `Last Updated: Today · ${formattedTime}`
+            }
+
           </p>
+
         </div>
+
 
         <div className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm">
-          <CalendarDays size={16} className="text-slate-500" />
-          <span>{formattedDate}</span>
-        </div>
-      </div>
 
-      {/* ── KPI Row ──────────────────────────────────────────────────────────── */}
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {kpiMetrics.map((metric) => (
-          <KPICard key={metric.title} {...metric} />
-        ))}
-      </div>
+          <CalendarDays
+            size={16}
+            className="text-slate-500"
+          />
 
-      {/* ── Charts Row 1 ───────────────────────────────────────────────────────── */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Palay Market Price Trend */}
-        <div className="rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="font-bold text-gray-900 text-lg">Palay Market Price Trend</h3>
-          <p className="text-xs text-gray-500 mb-6">Historical Buying Price (₱/kg)</p>
-          <div className="w-full h-48 relative">
-            <svg viewBox="0 0 400 150" className="w-full h-full overflow-visible">
-              <defs>
-                <linearGradient id="gradientLine" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#0F9D2A" stopOpacity="0.2"/>
-                  <stop offset="100%" stopColor="#0F9D2A" stopOpacity="0"/>
-                </linearGradient>
-              </defs>
-              {/* Y Axis */}
-              <text x="0" y="20" className="text-[9px] fill-gray-400">₱30/kg</text>
-              <text x="0" y="75" className="text-[9px] fill-gray-400">₱25/kg</text>
-              <text x="0" y="130" className="text-[9px] fill-gray-400">0</text>
-              
-              {/* Chart Line */}
-              <path d="M 40,100 Q 80,40 120,45 T 200,75 T 280,60 T 360,20" fill="url(#gradientLine)" />
-              <path d="M 40,100 Q 80,40 120,45 T 200,75 T 280,60 T 360,20" fill="none" stroke="#0F9D2A" strokeWidth="2" />
-              
-              {/* Tooltip nodes */}
-              <circle cx="120" cy="45" r="4" fill="white" stroke="#0F9D2A" strokeWidth="2" />
-              <circle cx="280" cy="60" r="4" fill="white" stroke="#0F9D2A" strokeWidth="2" />
-              <circle cx="360" cy="20" r="4" fill="white" stroke="#0F9D2A" strokeWidth="2" />
+          <span>
+            {formattedDate}
+          </span>
 
-              {/* X Axis */}
-              <text x="40" y="145" className="text-[9px] fill-gray-400 text-center" textAnchor="middle">January</text>
-              <text x="120" y="145" className="text-[9px] fill-gray-400 text-center" textAnchor="middle">February</text>
-              <text x="200" y="145" className="text-[9px] fill-gray-400 text-center" textAnchor="middle">March</text>
-              <text x="280" y="145" className="text-[9px] fill-gray-400 text-center" textAnchor="middle">April</text>
-              <text x="360" y="145" className="text-[9px] fill-gray-400 text-center" textAnchor="middle">May</text>
-            </svg>
-          </div>
         </div>
 
-        {/* Harvest & Yield History */}
-        <div className="rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="font-bold text-gray-900 text-lg">Harvest & Yield History</h3>
-          <p className="text-xs text-gray-500 mb-6">Yield (kg) per Cycle</p>
-          <div className="w-full h-48 relative">
-            <svg viewBox="0 0 400 150" className="w-full h-full overflow-visible">
-              {/* Y Axis */}
-              <text x="0" y="10" className="text-[9px] fill-gray-400">25kg</text>
-              <text x="0" y="40" className="text-[9px] fill-gray-400">20kg</text>
-              <text x="0" y="70" className="text-[9px] fill-gray-400">15kg</text>
-              <text x="0" y="100" className="text-[9px] fill-gray-400">10kg</text>
-              <text x="0" y="130" className="text-[9px] fill-gray-400">0kg</text>
-
-              {/* Bar background (gray) */}
-              <rect x="50" y="10" width="40" height="120" fill="#F8FAFC" />
-              <rect x="130" y="10" width="40" height="120" fill="#F8FAFC" />
-              <rect x="210" y="10" width="40" height="120" fill="#F8FAFC" />
-              <rect x="290" y="10" width="40" height="120" fill="#F8FAFC" />
-
-              {/* Green Bars */}
-              <rect x="50" y="30" width="40" height="100" fill="#166534" />
-              <rect x="130" y="110" width="40" height="20" fill="#166534" />
-              <rect x="210" y="55" width="40" height="75" fill="#166534" />
-              <rect x="290" y="90" width="40" height="40" fill="#166534" />
-
-              {/* X Axis */}
-              <text x="70" y="145" className="text-[9px] fill-gray-400" textAnchor="middle">Cycle 1</text>
-              <text x="150" y="145" className="text-[9px] fill-gray-400" textAnchor="middle">Cycle 2</text>
-              <text x="230" y="145" className="text-[9px] fill-gray-400" textAnchor="middle">Cycle 3</text>
-              <text x="310" y="145" className="text-[9px] fill-gray-400" textAnchor="middle">Cycle 4</text>
-            </svg>
-          </div>
-        </div>
       </div>
 
-      {/* ── Charts Row 2 ───────────────────────────────────────────────────────── */}
-      <div className="rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex justify-between items-center mb-6">
+
+      {/* =====================================================
+          ERROR
+      ====================================================== */}
+
+      {error && (
+
+        <div className="flex flex-col gap-3 rounded-[14px] border border-red-200 bg-red-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+
           <div>
-            <h3 className="font-bold text-gray-900 text-lg">6-Month Climate Outlook</h3>
-            <p className="text-xs text-gray-500 mt-1">Projected rainfall and temperature for your registered farm location.</p>
+
+            <p className="text-sm font-semibold text-red-700">
+              Unable to load some dashboard information.
+            </p>
+
+            <p className="mt-0.5 text-xs text-red-600">
+              {error}
+            </p>
+
           </div>
-          <div className="text-xs border rounded-full px-3 py-1 flex items-center gap-1">
-             <Map size={12}/> Farm Location: Meycauayan City, Bulacan
-          </div>
+
+
+          <button
+            type="button"
+            onClick={
+              refreshDashboard
+            }
+            className="self-start rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+          >
+            Retry
+          </button>
+
         </div>
-        
-        <div className="flex justify-end mb-2 mr-4 text-[10px] text-gray-600 font-medium items-center gap-3">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-green-700 block"></span> Rainfall (mm)</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-0.5 bg-yellow-500 block"></span> Temp (°C)</span>
-        </div>
 
-        <div className="w-full h-56 relative px-4">
-          <svg viewBox="0 0 800 200" className="w-full h-full overflow-visible">
-              {/* Left Y Axis (Rainfall) */}
-              <text x="-10" y="40" className="text-[10px] fill-gray-400" textAnchor="end">300mm</text>
-              <text x="-10" y="90" className="text-[10px] fill-gray-400" textAnchor="end">200mm</text>
-              <text x="-10" y="140" className="text-[10px] fill-gray-400" textAnchor="end">100mm</text>
-              <text x="-10" y="190" className="text-[10px] fill-gray-400" textAnchor="end">0mm</text>
+      )}
 
-              {/* Right Y Axis (Temp) */}
-              <text x="810" y="20" className="text-[10px] fill-gray-400">32°C</text>
-              <text x="810" y="70" className="text-[10px] fill-gray-400">30°C</text>
-              <text x="810" y="120" className="text-[10px] fill-gray-400">28°C</text>
-              <text x="810" y="170" className="text-[10px] fill-gray-400">26°C</text>
 
-              {/* Grid Lines */}
-              <line x1="0" y1="40" x2="800" y2="40" stroke="#f1f5f9" />
-              <line x1="0" y1="90" x2="800" y2="90" stroke="#f1f5f9" />
-              <line x1="0" y1="140" x2="800" y2="140" stroke="#f1f5f9" />
-              <line x1="0" y1="190" x2="800" y2="190" stroke="#f1f5f9" />
+      {/* =====================================================
+          KPI ROW
+      ====================================================== */}
 
-              {/* Bars (Rainfall) */}
-              <rect x="40" y="110" width="60" height="80" fill="#0B7A2A" />
-              <rect x="170" y="90" width="60" height="100" fill="#0B7A2A" />
-              <rect x="300" y="60" width="60" height="130" fill="#0B7A2A" />
-              <rect x="430" y="100" width="60" height="90" fill="#0B7A2A" />
-              <rect x="560" y="130" width="60" height="60" fill="#0B7A2A" />
-              <rect x="690" y="150" width="60" height="40" fill="#0B7A2A" />
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
 
-              {/* Line (Temp) */}
-              <path d="M 70,50 L 200,55 L 330,60 L 460,70 L 590,100 L 720,120" fill="none" stroke="#EAB308" strokeWidth="2" />
-              <circle cx="70" cy="50" r="3" fill="#EAB308" />
-              <circle cx="200" cy="55" r="3" fill="#EAB308" />
-              <circle cx="330" cy="60" r="3" fill="#EAB308" />
-              <circle cx="460" cy="70" r="3" fill="#EAB308" />
-              <circle cx="590" cy="100" r="3" fill="#EAB308" />
-              <circle cx="720" cy="120" r="3" fill="#EAB308" />
+        {kpiMetrics.map(
+          ({
+            shortcutPath,
+            shortcutLabel,
+            ...metric
+          }) => (
 
-              {/* X Axis */}
-              <text x="70" y="210" className="text-[11px] fill-gray-500 font-medium" textAnchor="middle">Jul</text>
-              <text x="200" y="210" className="text-[11px] fill-gray-500 font-medium" textAnchor="middle">Aug</text>
-              <text x="330" y="210" className="text-[11px] fill-gray-500 font-medium" textAnchor="middle">Sep</text>
-              <text x="460" y="210" className="text-[11px] fill-gray-500 font-medium" textAnchor="middle">Oct</text>
-              <text x="590" y="210" className="text-[11px] fill-gray-500 font-medium" textAnchor="middle">Nov</text>
-              <text x="720" y="210" className="text-[11px] fill-gray-500 font-medium" textAnchor="middle">Dec</text>
-          </svg>
-        </div>
+            <KPICard
+              key={
+                metric.title
+              }
+
+              {...metric}
+
+              ariaLabel={
+                shortcutLabel
+              }
+
+              onClick={
+                () =>
+                  navigate(
+                    shortcutPath
+                  )
+              }
+            />
+
+          )
+        )}
+
       </div>
+
+
+      {/* =====================================================
+          CHARTS ROW 1
+      ====================================================== */}
+
+      <div className="grid gap-4 lg:grid-cols-2">
+
+
+        {/* ===================================================
+            PALAY MARKET PRICE
+        ==================================================== */}
+
+        <div className="rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
+
+          <h3 className="text-lg font-bold text-gray-900">
+            Palay Market Price Trend
+          </h3>
+
+
+          <p className="mb-6 text-xs text-gray-500">
+            Historical GrainRise buying price records (₱/kg)
+          </p>
+
+
+          <div className="relative h-48 w-full">
+
+            {isLoading ? (
+
+              <div className="h-full w-full animate-pulse rounded-xl bg-slate-100" />
+
+            ) : !marketChart.available ? (
+
+              <EmptyChartState
+                message="No Palay buying price records are available yet."
+              />
+
+            ) : (
+
+              <svg
+                viewBox="0 0 400 150"
+                className="h-full w-full overflow-visible"
+              >
+
+                <defs>
+
+                  <linearGradient
+                    id="farmerMarketPriceGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+
+                    <stop
+                      offset="0%"
+                      stopColor="#0F9D2A"
+                      stopOpacity="0.20"
+                    />
+
+                    <stop
+                      offset="100%"
+                      stopColor="#0F9D2A"
+                      stopOpacity="0"
+                    />
+
+                  </linearGradient>
+
+                </defs>
+
+
+                {/* GRID */}
+
+                <line
+                  x1="42"
+                  y1="15"
+                  x2="382"
+                  y2="15"
+                  stroke="#f1f5f9"
+                />
+
+                <line
+                  x1="42"
+                  y1="68"
+                  x2="382"
+                  y2="68"
+                  stroke="#f1f5f9"
+                />
+
+                <line
+                  x1="42"
+                  y1="122"
+                  x2="382"
+                  y2="122"
+                  stroke="#f1f5f9"
+                />
+
+
+                {/* Y AXIS */}
+
+                <text
+                  x="0"
+                  y="19"
+                  className="fill-gray-400 text-[9px]"
+                >
+                  {formatPeso(
+                    marketChart.max
+                  )}
+                </text>
+
+
+                <text
+                  x="0"
+                  y="72"
+                  className="fill-gray-400 text-[9px]"
+                >
+                  {formatPeso(
+                    marketChart.middle
+                  )}
+                </text>
+
+
+                <text
+                  x="0"
+                  y="126"
+                  className="fill-gray-400 text-[9px]"
+                >
+                  {formatPeso(
+                    marketChart.min
+                  )}
+                </text>
+
+
+                {/* AREA */}
+
+                {marketChart.area && (
+
+                  <polygon
+                    points={
+                      marketChart.area
+                    }
+                    fill="url(#farmerMarketPriceGradient)"
+                  />
+
+                )}
+
+
+                {/* LINE */}
+
+                {marketChart.points.length > 1 && (
+
+                  <polyline
+                    points={
+                      marketChart.polyline
+                    }
+                    fill="none"
+                    stroke="#0F9D2A"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+
+                )}
+
+
+                {/* POINTS */}
+
+                {marketChart.points.map(
+                  (
+                    point,
+                    index
+                  ) => (
+
+                    <circle
+                      key={
+                        `${
+                          point.record.period_start
+                        }-${index}`
+                      }
+
+                      cx={
+                        point.x
+                      }
+
+                      cy={
+                        point.y
+                      }
+
+                      r="4"
+
+                      fill="white"
+
+                      stroke="#0F9D2A"
+
+                      strokeWidth="2"
+                    >
+
+                      <title>
+
+                        {`${formatMonth(
+                          point.record.period_start,
+                          "long"
+                        )}: ${formatPeso(
+                          point.value
+                        )}/kg`}
+
+                      </title>
+
+                    </circle>
+
+                  )
+                )}
+
+
+                {/* X AXIS */}
+
+                {palayMarketPriceTrend.map(
+                  (
+                    record,
+                    index
+                  ) => {
+
+                    const total =
+                      Math.max(
+                        palayMarketPriceTrend.length -
+                          1,
+                        1
+                      );
+
+
+                    const x =
+                      42 +
+                      (
+                        index /
+                        total
+                      ) *
+                        340;
+
+
+                    return (
+
+                      <text
+                        key={
+                          record.period_start ||
+                          index
+                        }
+
+                        x={
+                          x
+                        }
+
+                        y="146"
+
+                        className="fill-gray-400 text-[9px]"
+
+                        textAnchor="middle"
+                      >
+
+                        {formatMonth(
+                          record.period_start
+                        )}
+
+                      </text>
+
+                    );
+
+                  }
+                )}
+
+              </svg>
+
+            )}
+
+          </div>
+
+        </div>
+
+
+        {/* ===================================================
+            HARVEST & YIELD HISTORY
+        ==================================================== */}
+
+        <div className="rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
+
+          <h3 className="text-lg font-bold text-gray-900">
+            Harvest & Yield History
+          </h3>
+
+
+          <p className="mb-6 text-xs text-gray-500">
+            Actual yield (kg) per cropping cycle
+          </p>
+
+
+          <div className="relative h-48 w-full">
+
+            {isLoading ? (
+
+              <div className="h-full w-full animate-pulse rounded-xl bg-slate-100" />
+
+            ) : !yieldChart.available ? (
+
+              <EmptyChartState
+                message="No completed harvest records with actual yield are available yet."
+              />
+
+            ) : (
+
+              <svg
+                viewBox="0 0 400 150"
+                className="h-full w-full overflow-visible"
+              >
+
+                {/* GRID */}
+
+                <line
+                  x1="42"
+                  y1="12"
+                  x2="388"
+                  y2="12"
+                  stroke="#f1f5f9"
+                />
+
+                <line
+                  x1="42"
+                  y1="66"
+                  x2="388"
+                  y2="66"
+                  stroke="#f1f5f9"
+                />
+
+                <line
+                  x1="42"
+                  y1="120"
+                  x2="388"
+                  y2="120"
+                  stroke="#f1f5f9"
+                />
+
+
+                {/* Y AXIS */}
+
+                <text
+                  x="0"
+                  y="16"
+                  className="fill-gray-400 text-[9px]"
+                >
+                  {`${formatQuantity(
+                    yieldChart.max
+                  )} kg`}
+                </text>
+
+
+                <text
+                  x="0"
+                  y="70"
+                  className="fill-gray-400 text-[9px]"
+                >
+                  {`${formatQuantity(
+                    yieldChart.max /
+                      2
+                  )} kg`}
+                </text>
+
+
+                <text
+                  x="0"
+                  y="124"
+                  className="fill-gray-400 text-[9px]"
+                >
+                  0 kg
+                </text>
+
+
+                {/* BARS */}
+
+                {yieldChart.bars.map(
+                  (
+                    bar,
+                    index
+                  ) => (
+
+                    <g
+                      key={
+                        bar.crop_cycle_id ||
+                        index
+                      }
+                    >
+
+                      <rect
+                        x={
+                          bar.x
+                        }
+
+                        y="12"
+
+                        width={
+                          bar.width
+                        }
+
+                        height="108"
+
+                        rx="3"
+
+                        fill="#F8FAFC"
+                      />
+
+
+                      <rect
+                        x={
+                          bar.x
+                        }
+
+                        y={
+                          bar.y
+                        }
+
+                        width={
+                          bar.width
+                        }
+
+                        height={
+                          bar.height
+                        }
+
+                        rx="3"
+
+                        fill="#166534"
+                      >
+
+                        <title>
+
+                          {[
+                            bar.farm_name ||
+                              "Farm",
+
+                            bar.rice_variety ||
+                              "Rice",
+
+                            `${formatQuantity(
+                              bar.value
+                            )} kg`,
+                          ].join(
+                            " • "
+                          )}
+
+                        </title>
+
+                      </rect>
+
+
+                      <text
+                        x={
+                          bar.centerX
+                        }
+
+                        y="145"
+
+                        className="fill-gray-400 text-[9px]"
+
+                        textAnchor="middle"
+                      >
+
+                        {bar.label}
+
+                      </text>
+
+                    </g>
+
+                  )
+                )}
+
+              </svg>
+
+            )}
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      {/* =====================================================
+          6-MONTH CLIMATE OUTLOOK
+      ====================================================== */}
+
+      <div className="rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
+
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+          <div>
+
+            <h3 className="text-lg font-bold text-gray-900">
+              6-Month Climate Outlook
+            </h3>
+
+
+            <p className="mt-1 text-xs text-gray-500">
+              Projected rainfall and temperature for your registered farm location.
+            </p>
+
+          </div>
+
+
+          <div className="flex max-w-full items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-600">
+
+            <Map
+              size={12}
+              className="shrink-0"
+            />
+
+
+            <span className="truncate">
+
+              {climateOutlook?.location
+                ? `Farm Location: ${climateOutlook.location}`
+                : "No forecast location"
+              }
+
+            </span>
+
+          </div>
+
+        </div>
+
+
+        {!isLoading &&
+          climateChart.available && (
+
+            <div className="mb-2 flex justify-end gap-4 pr-4 text-[10px] font-medium text-gray-600">
+
+              <span className="flex items-center gap-1">
+
+                <span className="block h-2 w-2 bg-green-700" />
+
+                Rainfall (mm)
+
+              </span>
+
+
+              <span className="flex items-center gap-1">
+
+                <span className="block h-0.5 w-2 bg-yellow-500" />
+
+                Temp (°C)
+
+              </span>
+
+            </div>
+
+          )}
+
+
+        <div className="relative h-56 w-full px-4">
+
+          {isLoading ? (
+
+            <div className="h-full w-full animate-pulse rounded-xl bg-slate-100" />
+
+          ) : !climateChart.available ? (
+
+            <EmptyChartState
+              message="No completed 6-month climate forecast is stored yet. Generate a climate forecast first to display the outlook here."
+            />
+
+          ) : (
+
+            <svg
+              viewBox="0 0 800 200"
+              className="h-full w-full overflow-visible"
+            >
+
+              {/* GRID */}
+
+              <line
+                x1="28"
+                y1="18"
+                x2="772"
+                y2="18"
+                stroke="#f1f5f9"
+              />
+
+              <line
+                x1="28"
+                y1="69"
+                x2="772"
+                y2="69"
+                stroke="#f1f5f9"
+              />
+
+              <line
+                x1="28"
+                y1="120"
+                x2="772"
+                y2="120"
+                stroke="#f1f5f9"
+              />
+
+              <line
+                x1="28"
+                y1="172"
+                x2="772"
+                y2="172"
+                stroke="#f1f5f9"
+              />
+
+
+              {/* LEFT Y AXIS */}
+
+              <text
+                x="20"
+                y="22"
+                className="fill-gray-400 text-[9px]"
+                textAnchor="end"
+              >
+                {`${formatQuantity(
+                  climateChart.rainfallMax
+                )}mm`}
+              </text>
+
+
+              <text
+                x="20"
+                y="73"
+                className="fill-gray-400 text-[9px]"
+                textAnchor="end"
+              >
+                {`${formatQuantity(
+                  climateChart.rainfallMax *
+                    0.67
+                )}mm`}
+              </text>
+
+
+              <text
+                x="20"
+                y="124"
+                className="fill-gray-400 text-[9px]"
+                textAnchor="end"
+              >
+                {`${formatQuantity(
+                  climateChart.rainfallMax *
+                    0.33
+                )}mm`}
+              </text>
+
+
+              <text
+                x="20"
+                y="176"
+                className="fill-gray-400 text-[9px]"
+                textAnchor="end"
+              >
+                0mm
+              </text>
+
+
+              {/* RIGHT Y AXIS */}
+
+              <text
+                x="780"
+                y="22"
+                className="fill-gray-400 text-[9px]"
+              >
+                {`${climateChart.temperatureMax.toFixed(
+                  1
+                )}°C`}
+              </text>
+
+
+              <text
+                x="780"
+                y="98"
+                className="fill-gray-400 text-[9px]"
+              >
+                {`${(
+                  (
+                    climateChart.temperatureMax +
+                    climateChart.temperatureMin
+                  ) /
+                  2
+                ).toFixed(
+                  1
+                )}°C`}
+              </text>
+
+
+              <text
+                x="780"
+                y="176"
+                className="fill-gray-400 text-[9px]"
+              >
+                {`${climateChart.temperatureMin.toFixed(
+                  1
+                )}°C`}
+              </text>
+
+
+              {/* RAINFALL BARS */}
+
+              {climateChart.bars.map(
+                (
+                  bar,
+                  index
+                ) => (
+
+                  <g
+                    key={
+                      bar.period_start ||
+                      index
+                    }
+                  >
+
+                    <rect
+                      x={
+                        bar.x
+                      }
+
+                      y={
+                        bar.y
+                      }
+
+                      width={
+                        bar.width
+                      }
+
+                      height={
+                        bar.height
+                      }
+
+                      rx="2"
+
+                      fill="#0B7A2A"
+                    >
+
+                      <title>
+
+                        {`${formatMonth(
+                          bar.period_start,
+                          "long"
+                        )}: ${formatQuantity(
+                          bar.rainfall
+                        )} mm rainfall`}
+
+                      </title>
+
+                    </rect>
+
+
+                    <text
+                      x={
+                        bar.centerX
+                      }
+
+                      y="194"
+
+                      className="fill-gray-500 text-[10px] font-medium"
+
+                      textAnchor="middle"
+                    >
+
+                      {formatMonth(
+                        bar.period_start
+                      )}
+
+                    </text>
+
+                  </g>
+
+                )
+              )}
+
+
+              {/* TEMPERATURE LINE */}
+
+              {climateChart.temperaturePoints.length >
+                1 && (
+
+                  <polyline
+                    points={
+                      climateChart.temperaturePolyline
+                    }
+
+                    fill="none"
+
+                    stroke="#EAB308"
+
+                    strokeWidth="2.5"
+
+                    strokeLinecap="round"
+
+                    strokeLinejoin="round"
+                  />
+
+                )}
+
+
+              {/* TEMPERATURE POINTS */}
+
+              {climateChart.temperaturePoints.map(
+                (
+                  point,
+                  index
+                ) => (
+
+                  <circle
+                    key={
+                      `temperature-${index}`
+                    }
+
+                    cx={
+                      point.x
+                    }
+
+                    cy={
+                      point.y
+                    }
+
+                    r="3.5"
+
+                    fill="#EAB308"
+                  >
+
+                    <title>
+
+                      {`${formatMonth(
+                        point.record.period_start,
+                        "long"
+                      )}: ${point.value.toFixed(
+                        1
+                      )}°C`}
+
+                    </title>
+
+                  </circle>
+
+                )
+              )}
+
+            </svg>
+
+          )}
+
+        </div>
+
+      </div>
+
     </div>
+
   );
+
 }

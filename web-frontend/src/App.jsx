@@ -11,6 +11,13 @@ import DashboardPreview from "./DashboardPreview";
 import WarehouseManagerRegister from "./Register/WarehouseManagerRegister";
 import SupplierRegister from "./Register/SupplierRegister";
 import FarmerRegister from "./Register/FarmerRegister";
+import ConsumerLandingPage from "./Users/ConsumerAccounts/ConsumerLandingPage";
+import ConsumerMarketplace from "./Users/ConsumerAccounts/ConsumerMarketplace";
+import ConsumerOrders from "./Users/ConsumerAccounts/ConsumerOrders";
+import ConsumerPromotions from "./Users/ConsumerAccounts/ConsumerPromotions";
+import ConsumerMarketPrices from "./Users/ConsumerAccounts/ConsumerMarketPrices";
+import ConsumerWishlist from "./Users/ConsumerAccounts/ConsumerWishlist";
+import ConsumerAccountSettings from "./Users/ConsumerAccounts/ConsumerAccountSettings";
 
 import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout";
 import AdminProtectedRoute from "./Components/Major-Components/AdminProtectedRoute";
@@ -214,6 +221,7 @@ import WarehouseInfo from "./Users/AdminAccounts/AccountAdmin/WarehouseInfo";
 import RetailerManagement from "./Users/AdminAccounts/AccountAdmin/RetailerManagement";
 import FarmerManagement from "./Users/AdminAccounts/AccountAdmin/FarmerManagement";
 import EmailUsers from "./Users/AdminAccounts/AccountAdmin/EmailUsers";
+import AdminNewsUpdates from "./Users/AdminAccounts/AccountAdmin/AdminNewsUpdates";
 
 
 // ============================================================
@@ -265,6 +273,21 @@ function App() {
           ================================================== */}
 
           <Route path="/" element={<LandingPage />} />
+          <Route path="/consumer/home" element={<ConsumerLandingPage />} />
+          <Route path="/consumer/marketplace" element={<ConsumerMarketplace />} />
+          <Route path="/consumermarketplace" element={<ConsumerMarketplace />} />
+          <Route path="/marketplace" element={<ConsumerMarketplace />} />
+          <Route path="/consumer/orders" element={<ConsumerOrders />} />
+          <Route path="/consumer/promotions" element={<ConsumerPromotions />} />
+          <Route path="/promotions" element={<ConsumerPromotions />} />
+          <Route path="/consumer/market-prices" element={<ConsumerMarketPrices />} />
+          <Route path="/market-prices" element={<ConsumerMarketPrices />} />
+          <Route path="/consumer/wishlist" element={<ConsumerWishlist />} />
+          <Route path="/wishlist" element={<ConsumerWishlist />} />
+          <Route path="/consumer/account-settings" element={<ConsumerAccountSettings />} />
+          <Route path="/consumer/settings" element={<ConsumerAccountSettings />} />
+          <Route path="/consumer/profile" element={<ConsumerAccountSettings />} />
+          <Route path="/account-settings" element={<ConsumerAccountSettings />} />
           <Route path="/login" element={<Login />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/register" element={<Register />} />
@@ -1112,6 +1135,11 @@ function App() {
               <Route
                 path="/admin/email-users"
                 element={<EmailUsers />}
+              />
+
+              <Route
+                path="/admin/news-updates"
+                element={<AdminNewsUpdates />}
               />
 
               <Route
