@@ -1,46 +1,55 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import Logo from "../../assets/Logo.png";
 
 export default function GlobalLoadingScreen() {
   const { pathname } = useLocation();
+  const hasStartedLandingLoader = useRef(false);
+  const hasFinishedLandingLoader = useRef(false);
+  const hasLeftLandingPage = useRef(false);
+  const hideTimerRef = useRef(null);
+  const removeTimerRef = useRef(null);
 
   const [shouldRender, setShouldRender] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const navEntry = performance.getEntriesByType("navigation")[0];
-    const isBrowserReload = navEntry?.type === "reload" || performance.navigation?.type === 1;
-    return pathname === "/" || isBrowserReload;
+    return pathname === "/";
   });
 
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(shouldRender);
 
   useEffect(() => {
-    const navigationEntry = performance.getEntriesByType("navigation")[0];
-    const isBrowserReload = navigationEntry?.type === "reload" || performance.navigation?.type === 1;
-    const shouldLoad = pathname === "/" || isBrowserReload;
-
-    if (!shouldLoad) {
-      setShouldRender(false);
+    if (pathname !== "/") {
+      hasLeftLandingPage.current = true;
+      clearTimeout(hideTimerRef.current);
+      clearTimeout(removeTimerRef.current);
+      hideTimerRef.current = null;
+      removeTimerRef.current = null;
       setVisible(false);
+      setShouldRender(false);
       return undefined;
     }
 
+    if (hasFinishedLandingLoader.current || hasLeftLandingPage.current) {
+      return undefined;
+    }
+
+    hasStartedLandingLoader.current = true;
     setShouldRender(true);
+    setVisible(true);
 
-    // Trigger smooth fade-in agad pagka-mount
-    const showTimer = requestAnimationFrame(() => {
-      setVisible(true);
-    });
-
-    // Fade-out at unmount timers
-    const hideTimer = setTimeout(() => {
+    // Trigger visual fade-out right before unmounting
+    hideTimerRef.current = setTimeout(() => {
       setVisible(false);
-      setTimeout(() => setShouldRender(false), 300); // 300ms matches duration-300
-    }, 750);
+      removeTimerRef.current = setTimeout(() => {
+        hasFinishedLandingLoader.current = true;
+        setShouldRender(false);
+      }, 400);
+    }, 850);
 
     return () => {
-      cancelAnimationFrame(showTimer);
-      clearTimeout(hideTimer);
+      clearTimeout(hideTimerRef.current);
+      clearTimeout(removeTimerRef.current);
+      hideTimerRef.current = null;
+      removeTimerRef.current = null;
     };
   }, [pathname]);
 
@@ -59,30 +68,46 @@ export default function GlobalLoadingScreen() {
 
   return (
     <div
-      className={`fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-[#F9FCF9] pointer-events-auto select-none transition-opacity duration-300 ease-in-out ${
-        visible ? "opacity-100" : "opacity-0"
+      className={`global-loading-screen fixed inset-0 z-[999999] flex flex-col items-center justify-center transition-all duration-400 ease-in-out pointer-events-auto select-none ${
+        visible
+          ? "opacity-100 scale-100"
+          : "opacity-0 scale-95 pointer-events-none"
       }`}
     >
-      <div className="mb-12 animate-pulse transition-transform duration-700 ease-in-out">
-        <img src={Logo} alt="GrainRise Logo" className="h-12 object-contain drop-shadow-sm" />
+      {/* Brand Logo with Smooth Scaling Pulse */}
+      <div className="mb-8 transition-transform duration-700 ease-in-out transform hover:scale-105">
+        <img
+          src={Logo}
+          alt="GrainRise Logo"
+          className="h-12 md:h-14 object-contain drop-shadow-xs animate-pulse"
+          style={{ animationDuration: "2s" }}
+        />
       </div>
 
-      <div className="text-green-700 font-bold text-xl tracking-wider mb-8 animate-pulse">
+      {/* Loading Label with Soft Fade Pulse */}
+      <div
+        className="text-green-700 font-bold text-lg md:text-xl tracking-wider mb-8 animate-pulse"
+        style={{ animationDuration: "1.5s" }}
+      >
         Loading...
       </div>
 
-      <div className="relative flex items-center justify-center w-32 h-32 bg-green-200/40 backdrop-blur-xs rounded-full shadow-inner">
+      {/* Custom Petal Spinner Container */}
+      <div className="relative flex items-center justify-center w-28 h-28 bg-green-100/50 backdrop-blur-sm rounded-full shadow-inner border border-green-200/40">
         <div
-          className="w-20 h-20 relative animate-spin"
-          style={{ animationDuration: "1.8s", animationTimingFunction: "linear" }}
+          className="w-16 h-16 relative animate-spin will-change-transform"
+          style={{
+            animationDuration: "1.4s",
+            animationTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+          }}
         >
           {petals.map((petal, index) => (
             <div
               key={index}
-              className={`absolute top-0 left-1/2 w-2.5 h-5 ${petal.color} rounded-full shadow-xs`}
+              className={`absolute top-0 left-1/2 w-2.5 h-4.5 ${petal.color} rounded-full shadow-xs`}
               style={{
                 transform: `translateX(-50%) rotate(${petal.angle}deg)`,
-                transformOrigin: "50% 160%",
+                transformOrigin: "50% 170%",
               }}
             />
           ))}
