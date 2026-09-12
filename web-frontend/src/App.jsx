@@ -1,5 +1,6 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import React from "react";
+import { useEffect } from "react";
 import { LoadingProvider } from "./Components/context/LoadingContext";
 
 import LandingPage from "./LandingPage";
@@ -263,10 +264,21 @@ import FarmerMessages from "./Users/FarmersAccounts/FarmerMessages";
 // APP
 // ============================================================
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
 function App() {
   return (
     <LoadingProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <GlobalLoadingScreen />
 
         <Routes>

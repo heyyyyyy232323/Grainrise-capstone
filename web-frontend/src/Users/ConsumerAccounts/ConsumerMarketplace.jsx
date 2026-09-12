@@ -23,7 +23,7 @@ import Logo from "../../assets/Logo.png";
 import ConsumerNavbar from "../../Components/Major-Components/ConsumerNavbar";
 
 // ============================================================
-// MOCK DATA & CONSTANTS (MATCHING FIGMA SPECIFICATIONS)
+// MOCK DATA & CONSTANTS
 // ============================================================
 
 const NAV_LINKS = [
@@ -337,26 +337,23 @@ function RiceSackCard({ variety, weight, theme = "dinorado" }) {
 
   return (
     <div
-      className={`w-28 h-36 rounded-xl border-2 flex flex-col items-center justify-center p-3 relative shadow-sm select-none transition-transform duration-200 group-hover:scale-105 ${style.card}`}
+      className={`w-22 h-30 rounded-lg border-2 flex flex-col items-center justify-center p-2 relative shadow-2xs select-none transition-transform duration-200 group-hover:scale-105 ${style.card}`}
     >
-      {/* Sack top stitch accent */}
-      <div className="w-12 h-1 rounded-full bg-black/10 mb-auto" />
+      <div className="w-9 h-0.5 rounded-full bg-black/10 mb-auto" />
 
-      {/* Sack Label Content */}
       <div className="flex flex-col items-center justify-center my-auto text-center">
         <span
-          className={`text-[11px] font-black tracking-widest uppercase leading-tight ${style.textTitle}`}
+          className={`text-[10px] font-black tracking-wider uppercase leading-tight ${style.textTitle}`}
         >
           {variety}
         </span>
-        <div className={`w-6 h-0.5 my-1.5 rounded-full ${style.accent}`} />
-        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+        <div className={`w-5 h-0.5 my-1 rounded-full ${style.accent}`} />
+        <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">
           {weight}
         </span>
       </div>
 
-      {/* Sack bottom stitch line */}
-      <div className="w-10 h-0.5 border-b border-dashed border-black/20 mt-auto" />
+      <div className="w-8 h-0.5 border-b border-dashed border-black/20 mt-auto" />
     </div>
   );
 }
@@ -394,8 +391,8 @@ export default function ConsumerMarketplace() {
   // Interactivity States
   const [favorites, setFavorites] = useState({});
   const [compareList, setCompareList] = useState([
-    INITIAL_PRODUCTS[0], // Pre-selected as in Figma screenshot
-    INITIAL_PRODUCTS[1], // Pre-selected as in Figma screenshot
+    INITIAL_PRODUCTS[0],
+    INITIAL_PRODUCTS[1],
   ]);
   const [detailsModalProduct, setDetailsModalProduct] = useState(null);
   const [compareModalOpen, setCompareModalOpen] = useState(false);
@@ -474,7 +471,6 @@ export default function ConsumerMarketplace() {
   // Filter & Sort Logic
   const filteredProducts = useMemo(() => {
     return INITIAL_PRODUCTS.filter((prod) => {
-      // Search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchName = prod.name.toLowerCase().includes(q);
@@ -484,46 +480,31 @@ export default function ConsumerMarketplace() {
         if (!matchName && !matchVariety && !matchSeller && !matchLoc) return false;
       }
 
-      // Product Type
       if (productType !== "All Products" && prod.productType !== productType) {
         return false;
       }
-
-      // Rice Variety
       if (riceVariety !== "All Varieties" && prod.variety !== riceVariety) {
         return false;
       }
-
-      // Quality Grade
       if (qualityGrade !== "All Grades" && prod.grade !== qualityGrade) {
         return false;
       }
-
-      // Packaging Size
       if (packagingSize !== "All Sizes" && prod.packageSize !== packagingSize) {
         return false;
       }
-
-      // Seller Location
       if (sellerLocation !== "All Locations" && prod.location !== sellerLocation) {
         return false;
       }
-
-      // Availability
       if (availability !== "All Availability" && prod.stockStatus !== availability) {
         return false;
       }
-
-      // Seller Type
       if (sellerType !== "All Sellers" && prod.sellerType !== sellerType) {
         return false;
       }
 
-      // Price Range
       if (minPrice && prod.price < parseFloat(minPrice)) return false;
       if (maxPrice && prod.price > parseFloat(maxPrice)) return false;
 
-      // Rating
       if (ratingFilter !== "All Ratings") {
         const minRate = parseFloat(ratingFilter);
         if (!isNaN(minRate) && prod.rating < minRate) return false;
@@ -535,7 +516,7 @@ export default function ConsumerMarketplace() {
       if (sortBy === "Price: High to Low") return b.price - a.price;
       if (sortBy === "Highest Rated") return b.rating - a.rating;
       if (sortBy === "Popularity") return b.reviews - a.reviews;
-      return 0; // Recommended default order
+      return 0;
     });
   }, [
     searchQuery,
@@ -554,9 +535,7 @@ export default function ConsumerMarketplace() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-gray-900 flex flex-col font-sans relative pb-16">
-      {/* ========================================================
-          1. HEADER / NAVBAR (SHARED ACROSS ALL CONSUMER PAGES)
-      ======================================================== */}
+      {/* 1. HEADER / NAVBAR */}
       <ConsumerNavbar
         activePath="/consumer/marketplace"
         cartCount={cartCount}
@@ -565,11 +544,8 @@ export default function ConsumerMarketplace() {
         onCartClick={() => showToast(`Cart contains ${cartCount} items.`)}
       />
 
-      {/* ========================================================
-          2. PAGE TITLE & STATUS BAR
-      ======================================================== */}
+      {/* 2. PAGE TITLE & STATUS BAR */}
       <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-6 flex flex-col gap-6">
-        {/* Breadcrumb & Title */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <span className="text-xs font-semibold text-[#00580C] uppercase tracking-wider">
@@ -583,18 +559,15 @@ export default function ConsumerMarketplace() {
             </p>
           </div>
 
-          {/* Sync Time Pill */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-gray-600 text-xs shadow-2xs self-start md:self-auto">
             <Clock size={13} className="text-[#00580C]" />
             <span>Market prices synced today: <strong className="font-semibold text-gray-800">10:42 AM</strong></span>
           </div>
         </div>
 
-        {/* ========================================================
-            3. SEARCH & COMPREHENSIVE FILTERS PANEL (EXACT FIGMA REPLICA)
-        ======================================================== */}
+        {/* 3. SEARCH & FILTERS PANEL */}
         <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 flex flex-col gap-3.5 shadow-none">
-          {/* Row 1: Search Input & Search Button */}
+          {/* Row 1: Search Input */}
           <div className="flex flex-col sm:flex-row gap-2.5">
             <div className="relative flex-1">
               <Search
@@ -619,13 +592,10 @@ export default function ConsumerMarketplace() {
             </button>
           </div>
 
-          {/* Row 2: Filter Selects (6 Dropdowns in 1 row) */}
+          {/* Row 2: Filter Selects */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {/* Product Type */}
             <div className="flex flex-col">
-              <label className="text-[11px] font-normal text-gray-500 mb-1">
-                Product Type
-              </label>
+              <label className="text-[11px] font-normal text-gray-500 mb-1">Product Type</label>
               <div className="relative">
                 <select
                   value={productType}
@@ -639,18 +609,12 @@ export default function ConsumerMarketplace() {
                   <option>Glutinous Rice</option>
                   <option>Palay</option>
                 </select>
-                <ChevronDown
-                  size={13}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                />
+                <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
-            {/* Rice Variety */}
             <div className="flex flex-col">
-              <label className="text-[11px] font-normal text-gray-500 mb-1">
-                Rice Variety
-              </label>
+              <label className="text-[11px] font-normal text-gray-500 mb-1">Rice Variety</label>
               <div className="relative">
                 <select
                   value={riceVariety}
@@ -667,18 +631,12 @@ export default function ConsumerMarketplace() {
                   <option>Rc 10</option>
                   <option>Malagkit</option>
                 </select>
-                <ChevronDown
-                  size={13}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                />
+                <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
-            {/* Quality Grade */}
             <div className="flex flex-col">
-              <label className="text-[11px] font-normal text-gray-500 mb-1">
-                Quality Grade
-              </label>
+              <label className="text-[11px] font-normal text-gray-500 mb-1">Quality Grade</label>
               <div className="relative">
                 <select
                   value={qualityGrade}
@@ -693,18 +651,12 @@ export default function ConsumerMarketplace() {
                   <option>Regular Milled</option>
                   <option>Whole Grain</option>
                 </select>
-                <ChevronDown
-                  size={13}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                />
+                <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
-            {/* Packaging Size */}
             <div className="flex flex-col">
-              <label className="text-[11px] font-normal text-gray-500 mb-1">
-                Packaging Size
-              </label>
+              <label className="text-[11px] font-normal text-gray-500 mb-1">Packaging Size</label>
               <div className="relative">
                 <select
                   value={packagingSize}
@@ -716,18 +668,12 @@ export default function ConsumerMarketplace() {
                   <option>25 kg</option>
                   <option>50 kg</option>
                 </select>
-                <ChevronDown
-                  size={13}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                />
+                <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
-            {/* Seller Location */}
             <div className="flex flex-col">
-              <label className="text-[11px] font-normal text-gray-500 mb-1">
-                Seller Location
-              </label>
+              <label className="text-[11px] font-normal text-gray-500 mb-1">Seller Location</label>
               <div className="relative">
                 <select
                   value={sellerLocation}
@@ -742,18 +688,12 @@ export default function ConsumerMarketplace() {
                   <option>Isabela</option>
                   <option>Manila</option>
                 </select>
-                <ChevronDown
-                  size={13}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                />
+                <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
-            {/* Availability */}
             <div className="flex flex-col">
-              <label className="text-[11px] font-normal text-gray-500 mb-1">
-                Availability
-              </label>
+              <label className="text-[11px] font-normal text-gray-500 mb-1">Availability</label>
               <div className="relative">
                 <select
                   value={availability}
@@ -765,18 +705,14 @@ export default function ConsumerMarketplace() {
                   <option>Limited Stock</option>
                   <option>Out of Stock</option>
                 </select>
-                <ChevronDown
-                  size={13}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                />
+                <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
           </div>
 
-          {/* Row 3: Horizontal Inline Secondary Filters & Reset */}
+          {/* Row 3: Secondary Filters */}
           <div className="flex flex-wrap items-center justify-between gap-y-2 pt-0.5">
             <div className="flex flex-wrap items-center gap-4 text-xs">
-              {/* Price (₱): Min — Max */}
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-500 text-xs font-normal">Price (₱):</span>
                 <input
@@ -796,7 +732,6 @@ export default function ConsumerMarketplace() {
                 />
               </div>
 
-              {/* Seller Type: Dropdown */}
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-500 text-xs font-normal">Seller Type:</span>
                 <div className="relative">
@@ -809,14 +744,10 @@ export default function ConsumerMarketplace() {
                     <option>Retailer</option>
                     <option>Miller / Supplier</option>
                   </select>
-                  <ChevronDown
-                    size={12}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  />
+                  <ChevronDown size={12} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 </div>
               </div>
 
-              {/* Rating: Dropdown */}
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-500 text-xs font-normal">Rating:</span>
                 <div className="relative">
@@ -830,15 +761,11 @@ export default function ConsumerMarketplace() {
                     <option value="4.5">4.5 &amp; above</option>
                     <option value="4.0">4.0 &amp; above</option>
                   </select>
-                  <ChevronDown
-                    size={12}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  />
+                  <ChevronDown size={12} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 </div>
               </div>
             </div>
 
-            {/* Reset All Filters link on right */}
             <button
               onClick={handleResetFilters}
               className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer font-normal"
@@ -848,9 +775,7 @@ export default function ConsumerMarketplace() {
           </div>
         </div>
 
-        {/* ========================================================
-            4. RESULTS COUNT & SORTING CONTROLS
-        ======================================================== */}
+        {/* 4. RESULTS COUNT & SORTING CONTROLS */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
           <div>
             <p className="text-sm font-bold text-gray-900">
@@ -862,7 +787,6 @@ export default function ConsumerMarketplace() {
           </div>
 
           <div className="flex items-center gap-3 self-end sm:self-auto">
-            {/* Sort Dropdown */}
             <div className="flex items-center gap-1.5 text-xs text-gray-600">
               <span className="font-medium">Sort by:</span>
               <div className="relative">
@@ -877,14 +801,10 @@ export default function ConsumerMarketplace() {
                   <option>Highest Rated</option>
                   <option>Popularity</option>
                 </select>
-                <ChevronDown
-                  size={12}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                />
+                <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
-            {/* View Mode Toggle Buttons */}
             <div className="flex items-center border border-gray-200 rounded-lg p-0.5 bg-white shadow-2xs">
               <button
                 onClick={() => setViewMode("grid")}
@@ -912,9 +832,7 @@ export default function ConsumerMarketplace() {
           </div>
         </div>
 
-        {/* ========================================================
-            5. PRODUCTS GRID / LIST (EXACT FIGMA REPLICA)
-        ======================================================== */}
+        {/* 5. PRODUCTS GRID (STRICTLY 5 PER ROW ON DESKTOP) */}
         {filteredProducts.length === 0 ? (
           <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center flex flex-col items-center justify-center my-6">
             <Package size={48} className="text-gray-300 mb-3" />
@@ -930,7 +848,7 @@ export default function ConsumerMarketplace() {
             </button>
           </div>
         ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-4 items-stretch">
             {filteredProducts.map((prod) => {
               const isFav = !!favorites[prod.id];
               const isCompared = compareList.some((p) => p.id === prod.id);
@@ -939,42 +857,39 @@ export default function ConsumerMarketplace() {
               return (
                 <div
                   key={prod.id}
-                  className="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between group relative"
-                  style={{ minHeight: "429px" }}
+                  className="bg-white border border-gray-200 rounded-xl p-3 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between group relative"
+                  style={{ minHeight: "385px" }}
                 >
                   <div>
-                    {/* Top Image Canvas Container */}
-                    <div className="bg-[#F8FAFC] border border-gray-100/80 rounded-xl p-3 relative flex flex-col justify-between items-center min-h-[160px] mb-3">
-                      {/* Top Badges & Wishlist Heart */}
+                    {/* Top Canvas Container */}
+                    <div className="bg-[#F8FAFC] border border-gray-100/80 rounded-lg p-2.5 relative flex flex-col justify-between items-center min-h-[145px] mb-2.5">
                       <div className="w-full flex items-center justify-between z-10">
-                        {/* Status Badge */}
                         {prod.stockType === "in_stock" && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E8F5E9] text-[#0F533A] border border-emerald-200 shadow-2xs">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#E8F5E9] text-[#0F533A] border border-emerald-200 shadow-2xs">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#0F533A]" />
                             In Stock
                           </span>
                         )}
                         {prod.stockType === "limited" && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FEF3C7] text-[#D97706] border border-amber-200 shadow-2xs">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#FEF3C7] text-[#D97706] border border-amber-200 shadow-2xs">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#D97706]" />
-                            Limited Stock
+                            Limited
                           </span>
                         )}
                         {prod.stockType === "out_of_stock" && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500 border border-gray-200 shadow-2xs">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-gray-100 text-gray-500 border border-gray-200 shadow-2xs">
                             <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
                             Out of Stock
                           </span>
                         )}
 
-                        {/* Wishlist Heart Toggle */}
                         <button
                           onClick={() => toggleFavorite(prod.id, prod.name)}
                           className="p-1 rounded-full bg-white/80 hover:bg-white border border-gray-100 shadow-2xs transition cursor-pointer text-gray-400 hover:text-rose-500"
                           title={isFav ? "Remove from wishlist" : "Add to wishlist"}
                         >
                           <Heart
-                            size={16}
+                            size={14}
                             className={
                               isFav
                                 ? "fill-rose-500 text-rose-500"
@@ -984,7 +899,7 @@ export default function ConsumerMarketplace() {
                         </button>
                       </div>
 
-                      {/* Center Rice Sack Graphic */}
+                      {/* Rice Sack Visual */}
                       <div className="py-1 flex justify-center items-center my-auto">
                         <RiceSackCard
                           variety={prod.varietyDisplay}
@@ -994,45 +909,45 @@ export default function ConsumerMarketplace() {
                       </div>
                     </div>
 
-                    {/* Category / Grade & Weight Row */}
-                    <div className="flex items-center justify-between gap-2 text-xs">
-                      <span className="text-gray-400 font-medium text-[11px] truncate">
+                    {/* Category / Grade & Weight */}
+                    <div className="flex items-center justify-between gap-1 text-[10px]">
+                      <span className="text-gray-400 font-medium truncate">
                         {prod.categoryGrade}
                       </span>
-                      <span className="text-gray-400 font-medium text-[11px] shrink-0">
+                      <span className="text-gray-400 font-medium shrink-0">
                         {prod.packageSize}
                       </span>
                     </div>
 
                     {/* Product Name */}
-                    <h3 className="font-bold text-gray-900 text-sm sm:text-base mt-0.5 leading-snug group-hover:text-[#00580C] transition line-clamp-1">
+                    <h3 className="font-bold text-gray-900 text-xs mt-0.5 leading-snug group-hover:text-[#00580C] transition line-clamp-1">
                       {prod.name}
                     </h3>
 
                     {/* Seller Details */}
-                    <div className="mt-1">
-                      <p className="text-xs font-semibold text-gray-700 leading-tight">
+                    <div className="mt-0.5">
+                      <p className="text-[11px] font-semibold text-gray-700 leading-tight truncate">
                         {prod.seller}
                       </p>
-                      <p className="text-[11px] text-gray-400 leading-tight mt-0.5">
+                      <p className="text-[10px] text-gray-400 leading-tight mt-0.5 truncate">
                         {prod.sellerType} • {prod.location}
                       </p>
                     </div>
 
-                    {/* Price & Stock Stats Row */}
-                    <div className="flex items-end justify-between mt-3 pt-2.5 border-t border-gray-100">
+                    {/* Price & Stock Stats */}
+                    <div className="flex items-end justify-between mt-2 pt-2 border-t border-gray-100">
                       <div>
-                        <div className="text-base sm:text-lg font-black text-gray-900 leading-tight">
+                        <div className="text-sm font-black text-gray-900 leading-tight">
                           ₱{prod.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                         </div>
-                        <div className="text-[11px] text-gray-400 font-medium">
+                        <div className="text-[10px] text-gray-400 font-medium">
                           {prod.pricePerKg}
                         </div>
                       </div>
 
                       <div className="text-right">
                         <div
-                          className={`text-xs font-bold leading-tight ${
+                          className={`text-[10px] font-bold leading-tight ${
                             isOutOfStock
                               ? "text-rose-500"
                               : prod.stockType === "limited"
@@ -1042,8 +957,8 @@ export default function ConsumerMarketplace() {
                         >
                           {prod.stockText}
                         </div>
-                        <div className="flex items-center justify-end gap-1 text-[11px] text-gray-500 mt-0.5">
-                          <Star size={11} className="fill-amber-400 text-amber-400" />
+                        <div className="flex items-center justify-end gap-0.5 text-[10px] text-gray-500 mt-0.5">
+                          <Star size={10} className="fill-amber-400 text-amber-400" />
                           <span className="font-bold text-gray-800">{prod.rating}</span>
                           <span className="text-gray-400">({prod.reviews})</span>
                         </div>
@@ -1051,43 +966,40 @@ export default function ConsumerMarketplace() {
                     </div>
                   </div>
 
-                  {/* Card Bottom: Compare Checkbox, View Details & Add to Cart */}
-                  <div className="mt-3 pt-2.5 border-t border-gray-100 flex flex-col gap-2">
-                    <div className="flex items-center justify-between text-xs">
-                      {/* Compare Checkbox */}
-                      <label className="flex items-center gap-1.5 text-gray-600 font-medium cursor-pointer select-none text-[11px]">
+                  {/* Card Actions */}
+                  <div className="mt-2.5 pt-2 border-t border-gray-100 flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <label className="flex items-center gap-1 text-gray-600 font-medium cursor-pointer select-none text-[10px]">
                         <input
                           type="checkbox"
                           checked={isCompared}
                           onChange={() => toggleCompare(prod)}
-                          className="w-3.5 h-3.5 rounded text-[#00580C] accent-[#00580C] focus:ring-0 cursor-pointer"
+                          className="w-3 h-3 rounded text-[#00580C] accent-[#00580C] focus:ring-0 cursor-pointer"
                         />
                         <span>Compare</span>
                       </label>
 
-                      {/* View Details Link */}
                       <button
                         onClick={() => setDetailsModalProduct(prod)}
-                        className="text-[11px] font-semibold text-gray-500 hover:text-gray-900 transition cursor-pointer"
+                        className="text-[10px] font-semibold text-gray-500 hover:text-gray-900 transition cursor-pointer"
                       >
-                        View Details
+                        Details
                       </button>
                     </div>
 
-                    {/* Add to Cart Button */}
                     {isOutOfStock ? (
                       <button
                         disabled
-                        className="w-full py-2 rounded-xl text-xs font-semibold bg-gray-100 text-gray-400 border border-gray-200 flex items-center justify-center gap-1.5 cursor-not-allowed"
+                        className="w-full py-1.5 rounded-lg text-[11px] font-semibold bg-gray-100 text-gray-400 border border-gray-200 flex items-center justify-center gap-1 cursor-not-allowed"
                       >
-                        <Ban size={13} /> Out of Stock
+                        <Ban size={12} /> Out of Stock
                       </button>
                     ) : (
                       <button
                         onClick={() => handleAddToCart(prod)}
-                        className="w-full py-2 rounded-xl text-xs font-bold bg-[#00580C] hover:bg-[#016f0e] text-white flex items-center justify-center gap-1.5 shadow-xs transition cursor-pointer active:scale-[0.99]"
+                        className="w-full py-1.5 rounded-lg text-[11px] font-bold bg-[#00580C] hover:bg-[#016f0e] text-white flex items-center justify-center gap-1 shadow-2xs transition cursor-pointer active:scale-[0.99]"
                       >
-                        <ShoppingCart size={13} /> Add to Cart
+                        <ShoppingCart size={12} /> Add to Cart
                       </button>
                     )}
                   </div>
@@ -1096,7 +1008,7 @@ export default function ConsumerMarketplace() {
             })}
           </div>
         ) : (
-          /* List View Alternative */
+          /* List View */
           <div className="flex flex-col gap-3">
             {filteredProducts.map((prod) => {
               const isFav = !!favorites[prod.id];
@@ -1106,7 +1018,7 @@ export default function ConsumerMarketplace() {
               return (
                 <div
                   key={prod.id}
-                  className="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs hover:shadow-md transition flex flex-col sm:flex-row items-center justify-between gap-4"
+                  className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-2xs hover:shadow-md transition flex flex-col sm:flex-row items-center justify-between gap-4"
                 >
                   <div className="flex items-center gap-4 w-full sm:w-auto">
                     <div className="shrink-0">
@@ -1137,13 +1049,13 @@ export default function ConsumerMarketplace() {
                           {prod.categoryGrade}
                         </span>
                       </div>
-                      <h3 className="font-bold text-gray-900 text-lg mt-0.5">
+                      <h3 className="font-bold text-gray-900 text-base mt-0.5">
                         {prod.name}
                       </h3>
                       <p className="text-xs text-gray-600">
                         {prod.seller} • {prod.sellerType} • {prod.location}
                       </p>
-                      <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
                         <span className="flex items-center gap-1 font-bold text-gray-800">
                           <Star size={12} className="fill-amber-400 text-amber-400" /> {prod.rating} ({prod.reviews})
                         </span>
@@ -1157,7 +1069,7 @@ export default function ConsumerMarketplace() {
 
                   <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-48 gap-3 shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-gray-100">
                     <div className="text-left sm:text-right">
-                      <div className="text-xl font-black text-gray-900">
+                      <div className="text-lg font-black text-gray-900">
                         ₱{prod.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </div>
                       <div className="text-xs text-gray-500">{prod.pricePerKg}</div>
@@ -1193,9 +1105,7 @@ export default function ConsumerMarketplace() {
           </div>
         )}
 
-        {/* ========================================================
-            6. PAGINATION BAR (MATCHING FIGMA SPEC)
-        ======================================================== */}
+        {/* 6. PAGINATION BAR */}
         <div className="mt-4 pt-4 border-t border-dashed border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-gray-600">
             Showing <strong className="font-bold text-gray-900">1–8</strong> of{" "}
@@ -1252,13 +1162,10 @@ export default function ConsumerMarketplace() {
         </div>
       </main>
 
-      {/* ========================================================
-          8. PRODUCT DETAILS MODAL
-      ======================================================== */}
+      {/* 8. PRODUCT DETAILS MODAL */}
       {detailsModalProduct && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 p-6 relative animate-in zoom-in-95 duration-150">
-            {/* Close Button */}
             <button
               onClick={() => setDetailsModalProduct(null)}
               className="absolute top-5 right-5 p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition cursor-pointer"
@@ -1266,7 +1173,6 @@ export default function ConsumerMarketplace() {
               <X size={18} />
             </button>
 
-            {/* Modal Content */}
             <div className="flex flex-col sm:flex-row gap-6 items-start mt-2">
               <div className="mx-auto sm:mx-0 shrink-0">
                 <RiceSackCard
@@ -1339,7 +1245,6 @@ export default function ConsumerMarketplace() {
               </div>
             </div>
 
-            {/* Description & Specifications Matrix */}
             <div className="mt-6 border-t border-gray-100 pt-4">
               <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">
                 Product Overview
@@ -1379,7 +1284,6 @@ export default function ConsumerMarketplace() {
               </div>
             </div>
 
-            {/* Modal Bottom Actions */}
             <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
               <button
                 onClick={() => toggleCompare(detailsModalProduct)}
@@ -1422,13 +1326,10 @@ export default function ConsumerMarketplace() {
         </div>
       )}
 
-      {/* ========================================================
-          9. COMPARE PRODUCTS MODAL
-      ======================================================== */}
+      {/* 9. COMPARE PRODUCTS MODAL */}
       {compareModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 p-6 relative animate-in zoom-in-95 duration-150">
-            {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-100 pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-[#00580C] text-white flex items-center justify-center">
@@ -1451,7 +1352,6 @@ export default function ConsumerMarketplace() {
               </button>
             </div>
 
-            {/* Comparison Columns */}
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {compareList.map((item) => (
                 <div
@@ -1480,7 +1380,6 @@ export default function ConsumerMarketplace() {
                       <span className="text-xs text-gray-500 ml-1.5">({item.pricePerKg})</span>
                     </div>
 
-                    {/* Feature Rows */}
                     <div className="space-y-2 text-xs text-gray-700">
                       <div className="flex justify-between py-1 border-b border-gray-200/60">
                         <span className="text-gray-500">Package Size</span>
@@ -1543,13 +1442,10 @@ export default function ConsumerMarketplace() {
         </div>
       )}
 
-      {/* ========================================================
-          9.5 STICKY COMPARE PRODUCTS FLOATING BAR
-      ======================================================== */}
+      {/* 9.5 STICKY COMPARE FLOATING BAR */}
       {compareList.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-4xl animate-in slide-in-from-bottom-5 duration-200">
           <div className="bg-[#18181B] text-white rounded-2xl px-4 py-3.5 sm:px-6 sm:py-4 shadow-2xl border border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-4">
-            {/* Left Info */}
             <div className="flex items-center gap-3 w-full md:w-auto">
               <div className="w-10 h-10 rounded-xl bg-[#00580C] text-white flex items-center justify-center shrink-0 shadow-sm">
                 <BarChart2 size={20} />
@@ -1562,7 +1458,6 @@ export default function ConsumerMarketplace() {
               </div>
             </div>
 
-            {/* Middle Pills */}
             <div className="flex items-center gap-2 flex-wrap justify-start md:justify-center w-full md:w-auto flex-1 px-0 md:px-3">
               {compareList.map((item) => (
                 <div
@@ -1581,7 +1476,6 @@ export default function ConsumerMarketplace() {
               ))}
             </div>
 
-            {/* Right Actions */}
             <div className="flex items-center justify-end gap-4 w-full md:w-auto shrink-0">
               <button
                 onClick={clearAllCompare}
@@ -1600,12 +1494,10 @@ export default function ConsumerMarketplace() {
         </div>
       )}
 
-      {/* ========================================================
-          10. INTERACTION TOAST NOTIFICATION
-      ======================================================== */}
+      {/* 10. TOAST NOTIFICATION */}
       {toastMessage && (
         <div className="fixed top-20 right-5 z-50 bg-[#00580C] text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-semibold animate-in slide-in-from-top-2 duration-150">
-          <ShieldCheck size={16} className="text-white" />
+          <ShieldCheck size={16} className="text-[#00580C]" />
           <span>{toastMessage}</span>
         </div>
       )}

@@ -13,13 +13,7 @@ import {
   Warehouse,
   Package,
   FileText,
-  CheckCircle,
-  ChevronRight,
   ArrowRight,
-  ChevronLeft,
-  BarChart3,
-  TrendingUp,
-  Wrench,
   Download,
   Tractor,
   ClipboardCheck,
@@ -38,48 +32,14 @@ import {
 } from 'lucide-react';
 
 // Images
-import dashboardMockup from './assets/dashboardd.png';
 import mockup10 from './assets/10.png';
 import phoneMockup from './assets/phone3.png';
-import grainHands from './assets/handss.png';
-import groceryImg from './assets/Grocery.png';
-import warehouseImg from './assets/supplier-warehouse.jpg';
-import bluescreenImg from './assets/bluescreen.jpg';
-import talkieImg from './assets/talkie.jpg';
-import pinkscreenImg from './assets/pinkscreen.jpg';
-import stockImg from './assets/stock.jpg';
-import phoneImg from './assets/phone.jpg';
-import phone2Img from './assets/phone2.jpg';
-import ctaBgImg from './assets/adminloginBG.png';
-import grainBgImg from './assets/grainnn.jpg';
-import fieldBgImg from './assets/field2.png';
 import riceBgImg from './assets/ricee.jpg';
 import heroBgImg from './assets/greenery.jpg';
 import glassImg from './assets/glass.png';
 import headsetImg from './assets/headset.png';
 
-// ─── Animated counter ─────────────────────────────────────────────────────────
-function useCounter(target, duration, trigger) {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    if (!trigger) return;
-    let current = 0;
-    const step = target / (duration / 16);
-    const timer = setInterval(() => {
-      current += step;
-      if (current >= target) {
-        setCount(target);
-        clearInterval(timer);
-      } else {
-        setCount(Math.floor(current));
-      }
-    }, 16);
-    return () => clearInterval(timer);
-  }, [trigger, target, duration]);
-  return count;
-}
-
-// ─── Intersection observer ────────────────────────────────────────────────────
+// ─── Intersection Observer Hook ───────────────────────────────────────────────
 function useInView(threshold = 0.12, rootMargin = '0px 0px -40px 0px') {
   const ref = useRef(null);
   const [inView, setInView] = useState(false);
@@ -99,46 +59,48 @@ function useInView(threshold = 0.12, rootMargin = '0px 0px -40px 0px') {
 }
 
 // ─── Scroll Reveal Wrapper ────────────────────────────────────────────────────
-function AnimatedSection({ children, className = '', id, tag: Tag = 'section', animation = 'fade-up' }) {
+function AnimatedSection({ children, className = '', id, tag: Tag = 'section', animation = 'fade-up', delay = 0, ...props }) {
   const [ref, inView] = useInView(0.15);
   return (
     <Tag
       ref={ref}
       id={id}
+      style={{ transitionDelay: `${delay}ms` }}
       className={`${className} lp-reveal lp-reveal--${animation} ${inView ? 'lp-reveal--visible' : ''}`}
+      {...props}
     >
       {children}
     </Tag>
   );
 }
 
-// ─── Landing Page ─────────────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function LandingPage() {
-  const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const [scrollY, setScrollY] = useState(0);
   const navigate = useNavigate();
   const { hash } = useLocation();
 
-  // Scroll to hash element on load or hash change (e.g. when navigating from /login)
+  // Scroll depth tracking for smooth parallax interactions
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Smooth scroll to sections via hash or header clicks
+  const scrollTo = (id) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   useEffect(() => {
     if (hash) {
       const id = hash.replace('#', '');
-      const element = document.getElementById(id);
-      if (element) {
-        setTimeout(() => {
-          element.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-      }
+      setTimeout(() => scrollTo(id), 100);
     }
   }, [hash]);
-
-  const [statsRef, statsInView] = useInView(0.3);
-  const c500 = useCounter(500, 2000, statsInView);
-  const c120 = useCounter(120, 2200, statsInView);
-  const c98  = useCounter(98,  1800, statsInView);
-
-  const scrollTo = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   const ECOSYSTEM_STEPS = [
     { icon: <Tractor size={22} strokeWidth={1.8} />,        label: 'Farmers'    },
@@ -151,41 +113,42 @@ export default function LandingPage() {
     { icon: <User size={22} strokeWidth={1.8} />,           label: 'Consumer'   },
   ];
 
+  // Restored: All 5 Role Portals & Routes
   const ROLE_PORTALS = [
     {
       icon: <Tractor size={24} strokeWidth={1.8} />,
       title: 'Farmer Portal',
       desc: 'Log harvests, monitor field agro-climatic advisories, verify moisture grades, and access forward pricing contracts.',
       linkText: 'Continue as Farmer',
-      path: '/login',
+      path: '/register/farmer',
     },
     {
       icon: <Building2 size={24} strokeWidth={1.8} />,
       title: 'Miller Portal',
       desc: 'Oversee paddy intake lots, run continuous milling schedules, bid on co-op tenders, and generate milled output manifests.',
       linkText: 'Continue as Miller',
-      path: '/login',
+      path: '/register/supplier',
     },
     {
       icon: <ShoppingBag size={24} strokeWidth={1.8} />,
       title: 'Consumer Portal',
       desc: 'Execute institutional procurement, bid on commercial rice parcels, review provenance dossiers, and manage contracts.',
       linkText: 'Continue as Consumer',
-      path: '/login',
+      path: '/register',
     },
     {
       icon: <ShoppingCart size={24} strokeWidth={1.8} />,
       title: 'Retailer Portal',
       desc: 'Source authenticated milled sacks, coordinate freight drop-offs, track inbound delivery shipments, and update inventory.',
       linkText: 'Continue as Retailer',
-      path: '/login',
+      path: '/register/retailer',
     },
     {
       icon: <Warehouse size={24} strokeWidth={1.8} />,
       title: 'Warehouse Portal',
       desc: 'Audit buffer stock silos, orchestrate pallet movements, manage bay storage thermography, and validate dispatch waybills.',
       linkText: 'Continue as Warehouse',
-      path: '/login',
+      path: '/register/warehouse-manager',
     },
   ];
 
@@ -253,59 +216,18 @@ export default function LandingPage() {
     },
   ];
 
-  const TESTIMONIALS = [
-    {
-      body: "GrainRise has completely revolutionized how we handle seasonal spikes. Our inventory accuracy jumped from 82% to 99% in just three months. It's the brain of our operation.",
-      initials: "RM",
-      color: "#2d6a35",
-      name: "Ricardo Mendoza",
-      role: "Warehouse Manager",
-    },
-    {
-      body: "The logistics tracking is a game-changer. Being able to give our retailers precise ETAs has strengthened our relationships and reduced support calls by half.",
-      initials: "SC",
-      color: "#4a7a4a",
-      name: "Sarah Chen",
-      role: "Distribution Lead",
-    },
-    {
-      body: "As a cooperative, we need transparency. GrainRise provides a single source of truth that both farmers and buyers trust. It makes procurement effortless.",
-      initials: "AB",
-      color: "#1a5c28",
-      name: "Antonio Bautista",
-      role: "Co-Op Director",
-    }
-  ];
-
-  const SERVICES = [
-    { icon: <BarChart3 size={20} strokeWidth={1.8} />, name: 'Stock Awareness',    desc: 'See current stock levels instantly to prevent shortages and overstocking.' },
-    { icon: <Package  size={20} strokeWidth={1.8} />, name: 'Inventory Control',  desc: 'Track inflow and outflow with accurate inventory records.' },
-    { icon: <TrendingUp size={20} strokeWidth={1.8} />, name: 'Demand Forecasting', desc: 'Predict demand using historical data for smarter restocking.' },
-    { icon: <Truck    size={20} strokeWidth={1.8} />, name: 'Delivery Tracking',  desc: 'Monitor deliveries in real time with clear route visibility.' },
-    { icon: <Wrench   size={20} strokeWidth={1.8} />, name: 'Operation Tools',    desc: 'Built-in tools for smoother workflows and coordination.' },
-  ];
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTestimonial(p => (p + 1) % TESTIMONIALS.length);
-    }, 4500);
-    return () => clearInterval(timer);
-  }, []);
-
   return (
     <div className="lp-root animate-page-fade">
       
-      {/* Reusable Landing Page Header */}
-      <LandingHeader />
+      {/* Restored: Header navigation handlers */}
+      <LandingHeader scrollTo={scrollTo} onNavigate={scrollTo} />
 
       {/* ── HERO ─── */}
       <section className="lp-hero" id="hero">
-        {/* Field/landscape bg image — faded at bottom */}
         <div className="lp-hero__bg" style={{ backgroundImage: `url(${heroBgImg})` }} />
         <div className="lp-hero__overlay" />
 
         <div className="lp-hero__inner">
-          {/* Left Column: Badge, Headline, Subtitle & CTAs */}
           <div className="lp-hero__content">
             <div className="lp-hero__badge">
               <ShieldCheck size={15} strokeWidth={2.2} />
@@ -343,11 +265,10 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Right Column: Dashboard Mockup */}
           <div className="lp-hero__mockup-wrap">
             <img
               src={mockup10}
-              alt="GrainRise Supply Chain Portal Dashboard on Laptop and Mobile"
+              alt="GrainRise Supply Chain Portal Dashboard"
               className="lp-hero__mockup"
             />
           </div>
@@ -356,8 +277,9 @@ export default function LandingPage() {
 
       {/* ── ECOSYSTEM, PORTALS & EXPLORE WRAPPER ─── */}
       <div className="lp-ecosystem-portals-wrapper">
-        {/* ── ECOSYSTEM ─── */}
-        <AnimatedSection className="lp-ecosystem" id="ecosystem">
+        
+        {/* ── ECOSYSTEM (Fade Up Effect) ─── */}
+        <AnimatedSection className="lp-ecosystem" id="ecosystem" animation="fade-up">
           <div className="lp-ecosystem__badge">How it works</div>
           <h2 className="lp-section-headline lp-section-headline--center">
             Connected Supply Chain Ecosystem
@@ -377,8 +299,8 @@ export default function LandingPage() {
           </div>
         </AnimatedSection>
 
-        {/* ── ROLE PORTALS ─── */}
-        <AnimatedSection className="lp-portals" id="portal-access">
+        {/* ── ROLE PORTALS (Staggered Cards with Scale & Fade-Up Effect) ─── */}
+        <AnimatedSection className="lp-portals" id="portal-access" animation="scale">
           <div className="lp-portals__inner">
             <div className="lp-portals__header">
               <h2 className="lp-section-headline lp-section-headline--center">
@@ -390,9 +312,12 @@ export default function LandingPage() {
             </div>
 
             <div className="lp-portals__grid">
-              {ROLE_PORTALS.map((portal) => (
-                <div
+              {ROLE_PORTALS.map((portal, index) => (
+                <AnimatedSection
                   key={portal.title}
+                  tag="div"
+                  animation="fade-up"
+                  delay={index * 100}
                   className="lp-portal-card"
                   onClick={() => navigate(portal.path)}
                   role="button"
@@ -405,14 +330,14 @@ export default function LandingPage() {
                     <span>{portal.linkText}</span>
                     <ArrowRight size={15} strokeWidth={2} />
                   </div>
-                </div>
+                </AnimatedSection>
               ))}
             </div>
           </div>
         </AnimatedSection>
 
-        {/* ── EXPLORE GRAINRISE ─── */}
-        <AnimatedSection className="lp-explore" id="explore-grainrise">
+        {/* ── EXPLORE GRAINRISE (Zoom & Blur Effect) ─── */}
+        <AnimatedSection className="lp-explore" id="explore-grainrise" animation="zoom">
           <div className="lp-explore__bg" style={{ backgroundImage: `url(${glassImg})` }} />
           <div className="lp-explore__inner">
             <div className="lp-explore__header">
@@ -425,8 +350,14 @@ export default function LandingPage() {
             </div>
 
             <div className="lp-explore__grid">
-              {EXPLORE_FEATURES.map((item) => (
-                <div key={item.title} className="lp-explore-card">
+              {EXPLORE_FEATURES.map((item, idx) => (
+                <AnimatedSection 
+                  key={item.title} 
+                  tag="div" 
+                  animation="fade-up" 
+                  delay={idx * 80} 
+                  className="lp-explore-card"
+                >
                   <div className="lp-explore-card__icon-wrap">
                     {item.icon}
                   </div>
@@ -434,31 +365,33 @@ export default function LandingPage() {
                     <h3 className="lp-explore-card__title">{item.title}</h3>
                     <p className="lp-explore-card__desc">{item.desc}</p>
                   </div>
-                </div>
+                </AnimatedSection>
               ))}
             </div>
           </div>
         </AnimatedSection>
       </div>
 
-      {/* ── TAKE GRAINRISE ANYWHERE (MOBILE PROMO) ─── */}
-      <AnimatedSection className="lp-mobile-app" id="mobile-promo">
+      {/* ── TAKE GRAINRISE ANYWHERE (Slide Left & Right Parallel Split) ─── */}
+      <section className="lp-mobile-app" id="mobile-promo">
         <div className="lp-mobile-app__bg" style={{ backgroundImage: `url(${riceBgImg})` }} />
         <div className="lp-mobile-app__overlay" />
         <div className="lp-mobile-app__glow lp-mobile-app__glow--1" />
         <div className="lp-mobile-app__glow lp-mobile-app__glow--2" />
         <div className="lp-mobile-app__inner">
-          <div className="lp-mobile-app__phone-col">
+          
+          <AnimatedSection className="lp-mobile-app__phone-col" animation="slide-left">
             <div className="lp-phone-orb lp-phone-orb--top" />
             <div className="lp-phone-orb lp-phone-orb--bottom" />
             <img
               src={phoneMockup}
-              alt="GrainRise Mobile Application on Smartphone"
+              alt="GrainRise Mobile Application"
               className="lp-mobile-app__phone-img"
+              style={{ transform: `translateY(${Math.min(18, scrollY * 0.02)}px)` }}
             />
-          </div>
+          </AnimatedSection>
 
-          <div className="lp-mobile-app__content-col">
+          <AnimatedSection className="lp-mobile-app__content-col" animation="slide-right">
             <h2 className="lp-mobile-app__headline">
               Take GrainRise<br />Anywhere
             </h2>
@@ -472,12 +405,12 @@ export default function LandingPage() {
               <Download size={16} strokeWidth={2} />
               <span>Install on Mobile</span>
             </button>
-          </div>
+          </AnimatedSection>
         </div>
-      </AnimatedSection>
+      </section>
 
-      {/* ── OPERATIONAL SUPPORT / HELP ─── */}
-      <AnimatedSection className="lp-help" id="help">
+      {/* ── OPERATIONAL SUPPORT / HELP (Scale Reveal) ─── */}
+      <AnimatedSection className="lp-help" id="help" animation="scale">
         <div className="lp-help__inner">
           <div className="lp-help__left">
             <div className="lp-help__badge">Operational Support</div>
@@ -489,9 +422,12 @@ export default function LandingPage() {
           </div>
 
           <div className="lp-help__grid">
-            {HELP_CARDS.map((card) => (
-              <div
+            {HELP_CARDS.map((card, idx) => (
+              <AnimatedSection
                 key={card.title}
+                tag="div"
+                animation="fade-up"
+                delay={idx * 100}
                 className="lp-help-card"
                 onClick={card.action}
                 role="button"
@@ -506,7 +442,7 @@ export default function LandingPage() {
                   <span>{card.linkText}</span>
                   <ArrowRight size={14} strokeWidth={2} />
                 </div>
-              </div>
+              </AnimatedSection>
             ))}
           </div>
         </div>

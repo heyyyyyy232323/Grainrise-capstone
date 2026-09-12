@@ -43,28 +43,34 @@ const NAV_LINKS = [
 
 const CATEGORIES = [
   {
-    icon: <Package size={22} className="text-[#00580C]" />,
+    icon: <Package size={20} className="text-[#00580C]" />,
     iconBg: "bg-[#EFF9F3]",
     title: "Milled Rice",
     desc: "Ready-to-cook daily rice products for home consumption.",
   },
   {
-    icon: <Sparkles size={22} className="text-[#D97706]" />,
+    icon: <Sparkles size={20} className="text-[#D97706]" />,
     iconBg: "bg-[#FEF9EE]",
     title: "Premium Rice",
     desc: "Selected fragrant and export-grade high-quality varieties.",
   },
   {
-    icon: <Sprout size={22} className="text-[#16A34A]" />,
+    icon: <Sprout size={20} className="text-[#16A34A]" />,
     iconBg: "bg-[#F0FDF4]",
     title: "Palay",
     desc: "Direct unmilled dry palay grain direct from agricultural co-ops.",
   },
   {
-    icon: <LayoutGrid size={22} className="text-[#2563EB]" />,
+    icon: <LayoutGrid size={20} className="text-[#2563EB]" />,
     iconBg: "bg-[#EFF6FF]",
     title: "Bulk Rice",
-    desc: "Larger 50 kg sacks for household reserves and small business supply.",
+    desc: "Larger 50 kg sacks for household reserves and business supply.",
+  },
+  {
+    icon: <ShoppingBag size={20} className="text-[#9333EA]" />,
+    iconBg: "bg-[#FAF5FF]",
+    title: "Specialty Rice",
+    desc: "Organic brown, glutinous malagkit, and specialty grains.",
   },
 ];
 
@@ -73,21 +79,21 @@ const QUICK_ACCESS = [
     icon: <Truck size={18} className="text-[#00580C]" />,
     iconBg: "bg-[#EFF9F3]",
     label: "Track My Order",
-    desc: "See where your current order is",
+    desc: "See where your order is",
     path: "/consumer/orders",
   },
   {
     icon: <RefreshCcw size={18} className="text-[#2563EB]" />,
     iconBg: "bg-[#EFF6FF]",
     label: "Buy Again",
-    desc: "Reorder from past purchases",
+    desc: "Reorder past purchases",
     path: "/consumer/buy-again",
   },
   {
     icon: <Heart size={18} className="text-[#E11D48]" />,
     iconBg: "bg-[#FFF1F2]",
     label: "My Wishlist",
-    desc: "View products you've saved",
+    desc: "View saved items",
     badge: 12,
     path: "/consumer/wishlist",
   },
@@ -95,8 +101,15 @@ const QUICK_ACCESS = [
     icon: <Bell size={18} className="text-[#D97706]" />,
     iconBg: "bg-[#FEF9EE]",
     label: "Price Alerts",
-    desc: "Check prices you're monitoring",
+    desc: "Check monitored prices",
     path: "/consumer/price-alerts",
+  },
+  {
+    icon: <BarChart2 size={18} className="text-[#16A34A]" />,
+    iconBg: "bg-[#F0FDF4]",
+    label: "Market Trends",
+    desc: "Compare daily rates",
+    path: "/consumer/market-prices",
   },
 ];
 
@@ -156,12 +169,28 @@ const RECOMMENDED = [
     theme: "jasmine",
     categoryGrade: "Jasmine • Premium Grade",
     name: "Premium Jasmine Rice",
-    store: "North Caloocan Rice Store • Caloocan City",
+    store: "North Caloocan Rice Store",
     price: "₱1,525.00",
     pricePerKg: "₱61.00/kg",
     rating: 4.9,
     reviews: 152,
     weightBadge: "25 kg",
+    tag: "In Stock",
+    tagType: "stock",
+  },
+  {
+    id: 5,
+    variety: "RC 160",
+    weightText: "50 KG",
+    theme: "rc222",
+    categoryGrade: "NSIC Rc 160 • Well-Milled",
+    name: "NSIC Rc 160 Special",
+    store: "Central Luzon Miller Co.",
+    price: "₱2,350.00",
+    pricePerKg: "₱47.00/kg",
+    rating: 4.7,
+    reviews: 63,
+    weightBadge: "50 kg",
     tag: "In Stock",
     tagType: "stock",
   },
@@ -231,13 +260,13 @@ const OFFERS = [
 ];
 
 const MARKET_PRICES = [
-  { variety: "Dinorado",     avg: "₱58.00 / kg", trend: "+ ₱2.00", trendType: "up",     grade: "Premium Grade"    },
+  { variety: "Dinorado",    avg: "₱58.00 / kg", trend: "+ ₱2.00", trendType: "up",    grade: "Premium Grade"    },
   { variety: "Sinandomeng",  avg: "₱52.00 / kg", trend: "↓ ₱1.00", trendType: "down",   grade: "Well-Milled"      },
   { variety: "NSIC Rc 222",  avg: "₱49.00 / kg", trend: "— Stable", trendType: "stable", grade: "Grade A"          },
-  { variety: "Jasmine",      avg: "₱61.00 / kg", trend: "+ ₱1.50", trendType: "up",     grade: "Special Fragrant" },
+  { variety: "Jasmine",      avg: "₱61.00 / kg", trend: "+ ₱1.50", trendType: "up",    grade: "Special Fragrant" },
 ];
 
-const POPULAR_TAGS = ["Dinorado", "NSic Rc 222", "Jasmine", "Sinandomeng", "Malagkit", "Brown Rice"];
+const POPULAR_TAGS = ["Dinorado", "NSIC Rc 222", "Jasmine", "Sinandomeng", "Malagkit", "Brown Rice"];
 
 // ============================================================
 // REUSABLE SACK MOCKUP COMPONENT
@@ -267,19 +296,19 @@ function RiceSackCard({ variety, weight, theme = "dinorado", size = "normal" }) 
 
   if (size === "small") {
     return (
-      <div className={`w-14 h-16 rounded-lg border flex flex-col items-center justify-center p-1 relative select-none shrink-0 ${style.card}`}>
-        <span className="text-[8px] font-black tracking-wider uppercase leading-tight text-center">{variety}</span>
-        <span className="text-[7px] text-gray-500 font-medium mt-0.5">{weight}</span>
-        <div className={`w-4 h-0.5 mt-1 rounded-full ${style.accent}`} />
+      <div className={`w-12 h-14 rounded-lg border flex flex-col items-center justify-center p-1 relative select-none shrink-0 ${style.card}`}>
+        <span className="text-[7px] font-black tracking-wider uppercase leading-tight text-center">{variety}</span>
+        <span className="text-[6px] text-gray-500 font-medium mt-0.5">{weight}</span>
+        <div className={`w-3 h-0.5 mt-0.5 rounded-full ${style.accent}`} />
       </div>
     );
   }
 
   return (
-    <div className={`w-24 h-32 rounded-xl border flex flex-col items-center justify-center p-2 relative shadow-inner select-none ${style.card}`}>
-      <span className="text-[10px] font-black tracking-widest uppercase text-center leading-snug">{variety}</span>
-      <span className="text-[9px] text-gray-500 font-semibold mt-1">{weight}</span>
-      <div className={`w-7 h-0.5 mt-2 rounded-full ${style.accent}`} />
+    <div className={`w-20 h-28 rounded-xl border flex flex-col items-center justify-center p-2 relative shadow-inner select-none ${style.card}`}>
+      <span className="text-[9px] font-black tracking-wider uppercase text-center leading-snug">{variety}</span>
+      <span className="text-[8px] text-gray-500 font-semibold mt-0.5">{weight}</span>
+      <div className={`w-6 h-0.5 mt-1.5 rounded-full ${style.accent}`} />
     </div>
   );
 }
@@ -291,15 +320,6 @@ function RiceSackCard({ variety, weight, theme = "dinorado", size = "normal" }) 
 function HeroSection() {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
-
-  const popularTags = [
-    "Dinorado",
-    "NSIC Rc 222",
-    "Jasmine",
-    "Sinandomeng",
-    "Malagkit",
-    "Brown Rice",
-  ];
 
   const handleSearch = (e) => {
     e?.preventDefault();
@@ -317,29 +337,24 @@ function HeroSection() {
         `,
       }}
     >
-      {/* Background Lighting Circles / Glowing Orbs (Exact placement) */}
       <div className="absolute -top-16 right-[12%] w-[420px] h-[420px] rounded-full bg-emerald-400/25 blur-[95px] pointer-events-none" />
       <div className="absolute top-4 right-[-40px] w-[340px] h-[340px] rounded-full bg-lime-400/18 blur-[85px] pointer-events-none" />
       <div className="absolute -bottom-20 -left-16 w-[280px] h-[280px] rounded-full bg-emerald-950/50 blur-[75px] pointer-events-none" />
 
       <div className="relative z-10 p-6 sm:p-8 md:p-10">
-        {/* Top Badge: • Direct Farm & Market Sourced */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-black/25 border border-white/15 text-white/95 text-[11px] sm:text-xs font-semibold backdrop-blur-md mb-3 shadow-2xs">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-xs" />
           <span>Direct Farm &amp; Market Sourced</span>
         </div>
 
-        {/* Heading */}
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight leading-tight mb-2">
           Find Rice Products That Fit Your Needs
         </h1>
 
-        {/* Subtitle */}
         <p className="text-xs sm:text-sm text-white/85 font-normal leading-relaxed mb-6 max-w-2xl">
           Browse rice and grain products from verified GrainRise sellers and compare prices before you buy.
         </p>
 
-        {/* Full-width Search Bar */}
         <form onSubmit={handleSearch} className="w-full mb-4">
           <div className="w-full bg-white rounded-full p-1.5 flex items-center shadow-lg border border-white/30">
             <Search size={18} className="text-gray-400 ml-3.5 shrink-0" />
@@ -361,7 +376,6 @@ function HeroSection() {
           </div>
         </form>
 
-        {/* Action Buttons Row */}
         <div className="flex flex-wrap items-center gap-2.5 mb-5">
           <button
             onClick={() => navigate("/consumer/marketplace")}
@@ -379,10 +393,9 @@ function HeroSection() {
           </button>
         </div>
 
-        {/* Popular Tags Row */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-white/70 font-normal mr-1">Popular:</span>
-          {popularTags.map((tag) => (
+          {POPULAR_TAGS.map((tag) => (
             <button
               key={tag}
               type="button"
@@ -401,9 +414,8 @@ function HeroSection() {
   );
 }
 
-
 // ============================================================
-// SHOP BY CATEGORY (Screenshot 4 - Top)
+// SHOP BY CATEGORY (5 COLUMNS ON DESKTOP)
 // ============================================================
 
 function ShopByCategory() {
@@ -424,19 +436,19 @@ function ShopByCategory() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-3.5">
         {CATEGORIES.map((cat) => (
           <div
             key={cat.title}
             onClick={() => navigate("/consumer/marketplace")}
-            className="flex items-start gap-3.5 p-4 sm:p-5 rounded-2xl bg-white border border-gray-200/90 hover:border-[#00580C]/40 hover:shadow-sm transition-all cursor-pointer group"
+            className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-gray-200/90 hover:border-[#00580C]/40 hover:shadow-sm transition-all cursor-pointer group"
           >
-            <div className={`w-10 h-10 rounded-xl ${cat.iconBg} flex items-center justify-center shrink-0`}>
+            <div className={`w-9 h-9 rounded-xl ${cat.iconBg} flex items-center justify-center shrink-0`}>
               {cat.icon}
             </div>
             <div>
-              <p className="text-sm font-bold text-gray-900 group-hover:text-[#00580C] transition-colors">{cat.title}</p>
-              <p className="text-xs text-gray-500 mt-0.5 leading-snug">{cat.desc}</p>
+              <p className="text-xs font-bold text-gray-900 group-hover:text-[#00580C] transition-colors">{cat.title}</p>
+              <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">{cat.desc}</p>
             </div>
           </div>
         ))}
@@ -445,9 +457,8 @@ function ShopByCategory() {
   );
 }
 
-
 // ============================================================
-// QUICK ACCESS (Screenshot 4 - Bottom)
+// QUICK ACCESS (5 COLUMNS ON DESKTOP)
 // ============================================================
 
 function QuickAccess() {
@@ -460,30 +471,30 @@ function QuickAccess() {
         <p className="text-xs text-gray-500">Get to your most-used GrainRise features quickly.</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-3.5">
         {QUICK_ACCESS.map((item) => (
           <div
             key={item.label}
             onClick={() => navigate(item.path)}
-            className="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-200/90 hover:border-[#00580C]/40 hover:shadow-sm transition-all cursor-pointer group"
+            className="flex items-center justify-between p-3.5 bg-white rounded-2xl border border-gray-200/90 hover:border-[#00580C]/40 hover:shadow-sm transition-all cursor-pointer group"
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className={`w-9 h-9 rounded-xl ${item.iconBg} flex items-center justify-center shrink-0`}>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className={`w-8 h-8 rounded-xl ${item.iconBg} flex items-center justify-center shrink-0`}>
                 {item.icon}
               </div>
               <div className="text-left min-w-0">
-                <p className="text-sm font-bold text-gray-900 flex items-center gap-1.5 truncate">
+                <p className="text-xs font-bold text-gray-900 flex items-center gap-1 truncate">
                   {item.label}
                   {item.badge && (
-                    <span className="text-[10px] font-bold bg-[#FFE4E6] text-[#E11D48] rounded-full px-1.5 py-0.2 leading-tight">
+                    <span className="text-[9px] font-bold bg-[#FFE4E6] text-[#E11D48] rounded-full px-1.5 py-0.2 leading-tight">
                       {item.badge}
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-gray-500 leading-tight truncate">{item.desc}</p>
+                <p className="text-[10px] text-gray-500 leading-tight truncate">{item.desc}</p>
               </div>
             </div>
-            <ChevronRight size={16} className="text-gray-300 group-hover:text-[#00580C] group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+            <ChevronRight size={14} className="text-gray-300 group-hover:text-[#00580C] group-hover:translate-x-0.5 transition-all shrink-0 ml-1" />
           </div>
         ))}
       </div>
@@ -491,9 +502,8 @@ function QuickAccess() {
   );
 }
 
-
 // ============================================================
-// RECOMMENDED FOR YOU (Screenshot 3)
+// RECOMMENDED FOR YOU (5 COLUMNS ON DESKTOP)
 // ============================================================
 
 function RecommendedProducts() {
@@ -517,25 +527,24 @@ function RecommendedProducts() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-4">
         {RECOMMENDED.map((p) => (
           <div
             key={p.id}
-            className="bg-white rounded-2xl border border-gray-200/90 hover:border-[#00580C]/40 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden p-4 group"
-            style={{ minHeight: "420px" }}
+            className="bg-white rounded-2xl border border-gray-200/90 hover:border-[#00580C]/40 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden p-3.5 group"
+            style={{ minHeight: "385px" }}
           >
             <div>
               {/* Top Image Mockup Canvas */}
-              <div className="relative bg-[#F8FAFC] border border-gray-100 rounded-xl p-3 flex flex-col items-center justify-between min-h-[160px] mb-3">
-                {/* Top status & wishlist */}
+              <div className="relative bg-[#F8FAFC] border border-gray-100 rounded-xl p-2.5 flex flex-col items-center justify-between min-h-[145px] mb-2.5">
                 <div className="w-full flex items-center justify-between z-10">
                   {p.tagType === "stock" ? (
-                    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold bg-[#E8F5E9] text-[#00580C] border border-emerald-200 px-2.5 py-0.5 rounded-full shadow-2xs">
+                    <span className="inline-flex items-center gap-1 text-[9px] font-bold bg-[#E8F5E9] text-[#00580C] border border-emerald-200 px-2 py-0.5 rounded-full shadow-2xs">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#00580C]" /> In Stock
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold bg-[#FEF3C7] text-[#D97706] border border-amber-200 px-2.5 py-0.5 rounded-full shadow-2xs">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#D97706]" /> Limited Stock
+                    <span className="inline-flex items-center gap-1 text-[9px] font-bold bg-[#FEF3C7] text-[#D97706] border border-amber-200 px-2 py-0.5 rounded-full shadow-2xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#D97706]" /> Limited
                     </span>
                   )}
 
@@ -544,34 +553,33 @@ function RecommendedProducts() {
                     onClick={() => toggleWish(p.id)}
                     className="p-1 rounded-full bg-white/80 hover:bg-white border border-gray-100 shadow-2xs text-gray-400 hover:text-rose-500 transition cursor-pointer"
                   >
-                    <Heart size={16} fill={wishlisted[p.id] ? "#E11D48" : "none"} className={wishlisted[p.id] ? "text-[#E11D48]" : "text-gray-400"} />
+                    <Heart size={14} fill={wishlisted[p.id] ? "#E11D48" : "none"} className={wishlisted[p.id] ? "text-[#E11D48]" : "text-gray-400"} />
                   </button>
                 </div>
 
-                {/* Sack Graphic */}
                 <div className="py-1 flex justify-center items-center my-auto">
                   <RiceSackCard variety={p.variety} weight={p.weightText} theme={p.theme} />
                 </div>
               </div>
 
-              {/* Category & Weight Row */}
-              <div className="flex items-center justify-between gap-2 text-xs">
-                <span className="text-gray-400 font-medium text-[11px] truncate">{p.categoryGrade}</span>
-                <span className="text-gray-400 font-medium text-[11px] shrink-0">{p.weightBadge}</span>
+              {/* Category & Weight */}
+              <div className="flex items-center justify-between gap-1 text-[10px]">
+                <span className="text-gray-400 font-medium truncate">{p.categoryGrade}</span>
+                <span className="text-gray-400 font-medium shrink-0">{p.weightBadge}</span>
               </div>
 
               {/* Product Title */}
-              <h3 className="font-bold text-gray-900 text-sm sm:text-base mt-0.5 leading-snug group-hover:text-[#00580C] transition line-clamp-1">{p.name}</h3>
-              <p className="text-xs text-gray-500 mt-0.5 truncate">{p.store}</p>
+              <h3 className="font-bold text-gray-900 text-xs mt-0.5 leading-snug group-hover:text-[#00580C] transition line-clamp-1">{p.name}</h3>
+              <p className="text-[10px] text-gray-400 mt-0.5 truncate">{p.store}</p>
 
               {/* Price & Rating */}
-              <div className="flex items-baseline justify-between mt-3 pt-2.5 border-t border-gray-100">
+              <div className="flex items-baseline justify-between mt-2 pt-2 border-t border-gray-100">
                 <div>
-                  <span className="text-base sm:text-lg font-black text-gray-900 leading-tight">{p.price}</span>
-                  <p className="text-[11px] text-gray-400 font-medium">{p.pricePerKg}</p>
+                  <span className="text-sm sm:text-base font-black text-gray-900 leading-tight">{p.price}</span>
+                  <p className="text-[10px] text-gray-400 font-medium">{p.pricePerKg}</p>
                 </div>
-                <div className="flex items-center gap-1 text-xs">
-                  <Star size={12} className="text-amber-400 fill-amber-400" />
+                <div className="flex items-center gap-0.5 text-[10px]">
+                  <Star size={10} className="text-amber-400 fill-amber-400" />
                   <span className="font-bold text-gray-800">{p.rating}</span>
                   <span className="text-gray-400">({p.reviews})</span>
                 </div>
@@ -579,17 +587,17 @@ function RecommendedProducts() {
             </div>
 
             {/* Action Buttons */}
-            <div className="mt-3 pt-2.5 border-t border-gray-100 flex flex-col gap-1.5">
+            <div className="mt-2.5 pt-2 border-t border-gray-100 flex flex-col gap-1">
               <button
                 id={`consumer-add-cart-${p.id}`}
                 onClick={() => alert(`Added ${p.name} to cart`)}
-                className="w-full py-2 rounded-xl bg-[#00580C] hover:bg-[#004709] text-white text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.99]"
+                className="w-full py-1.5 rounded-xl bg-[#00580C] hover:bg-[#004709] text-white text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1 shadow-2xs active:scale-[0.99]"
               >
-                <ShoppingBag size={13} /> Add to Cart
+                <ShoppingBag size={12} /> Add to Cart
               </button>
               <button
                 onClick={() => navigate("/consumer/marketplace")}
-                className="w-full py-1 text-[11px] font-semibold text-gray-500 hover:text-gray-900 transition cursor-pointer text-center"
+                className="w-full py-0.5 text-[10px] font-semibold text-gray-500 hover:text-gray-900 transition cursor-pointer text-center"
               >
                 View Details
               </button>
@@ -601,9 +609,8 @@ function RecommendedProducts() {
   );
 }
 
-
 // ============================================================
-// OFFERS & MARKET PRICE SNAPSHOT (Screenshot 2)
+// OFFERS & MARKET PRICE SNAPSHOT
 // ============================================================
 
 function OffersAndMarket() {
@@ -736,9 +743,8 @@ function OffersAndMarket() {
   );
 }
 
-
 // ============================================================
-// YOUR LATEST ORDER (Screenshot 1 - Top)
+// YOUR LATEST ORDER
 // ============================================================
 
 function LatestOrderTracker() {
@@ -746,7 +752,6 @@ function LatestOrderTracker() {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200/90 p-5 shadow-sm">
-      {/* Header */}
       <div className="flex items-start justify-between mb-5">
         <div>
           <div className="flex items-center gap-2">
@@ -766,9 +771,7 @@ function LatestOrderTracker() {
         </div>
       </div>
 
-      {/* Main Content: Product (Left) | Stepper (Center) | Actions (Right) */}
       <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-        {/* Left: Product preview */}
         <div className="flex items-center gap-3 w-full lg:w-auto shrink-0">
           <RiceSackCard variety="DINORADO" weight="25 KG" theme="dinorado" size="small" />
           <div>
@@ -778,10 +781,8 @@ function LatestOrderTracker() {
           </div>
         </div>
 
-        {/* Center: Stepper */}
         <div className="flex-1 w-full max-w-xl">
           <div className="relative flex items-center justify-between">
-            {/* Step 1 */}
             <div className="flex flex-col items-center text-center z-10">
               <div className="w-7 h-7 rounded-full bg-[#00580C] text-white flex items-center justify-center text-xs font-bold shadow-sm">
                 <Check size={14} />
@@ -790,10 +791,8 @@ function LatestOrderTracker() {
               <p className="text-[10px] text-gray-400 mt-0.5">Sep 08, 9:20 AM</p>
             </div>
 
-            {/* Line 1 */}
             <div className="flex-1 h-0.5 bg-[#00580C] -mt-6 mx-1" />
 
-            {/* Step 2 */}
             <div className="flex flex-col items-center text-center z-10">
               <div className="w-7 h-7 rounded-full bg-[#00580C] text-white flex items-center justify-center text-xs font-bold shadow-sm">
                 <Check size={14} />
@@ -802,10 +801,8 @@ function LatestOrderTracker() {
               <p className="text-[10px] text-gray-400 mt-0.5">Sep 08, 11:45 AM</p>
             </div>
 
-            {/* Line 2 */}
             <div className="flex-1 h-0.5 bg-[#00580C] -mt-6 mx-1" />
 
-            {/* Step 3 */}
             <div className="flex flex-col items-center text-center z-10">
               <div className="w-7 h-7 rounded-full bg-[#00580C] text-white flex items-center justify-center text-xs font-bold shadow-sm">
                 <Check size={14} />
@@ -814,10 +811,8 @@ function LatestOrderTracker() {
               <p className="text-[10px] text-gray-400 mt-0.5">Sep 09, 3:10 PM</p>
             </div>
 
-            {/* Line 3 (amber connecting to current active) */}
             <div className="flex-1 h-0.5 bg-[#F59E0B] -mt-6 mx-1" />
 
-            {/* Step 4 (Current) */}
             <div className="flex flex-col items-center text-center z-10">
               <div className="w-7 h-7 rounded-full bg-[#F59E0B] text-white flex items-center justify-center text-xs font-bold shadow-md ring-4 ring-[#FEF3C7]">
                 <span className="w-2 h-2 bg-white rounded-full" />
@@ -828,7 +823,6 @@ function LatestOrderTracker() {
           </div>
         </div>
 
-        {/* Right: Actions */}
         <div className="flex flex-col gap-2 w-full lg:w-32 shrink-0">
           <button
             id="consumer-track-order-btn"
@@ -849,9 +843,8 @@ function LatestOrderTracker() {
   );
 }
 
-
 // ============================================================
-// BUY AGAIN (Screenshot 1 - Middle)
+// BUY AGAIN
 // ============================================================
 
 function BuyAgainSection() {
@@ -901,9 +894,8 @@ function BuyAgainSection() {
   );
 }
 
-
 // ============================================================
-// YOUR GRAINRISE REWARDS (Screenshot 1 - Bottom)
+// YOUR GRAINRISE REWARDS
 // ============================================================
 
 function RewardsBanner() {
@@ -919,7 +911,6 @@ function RewardsBanner() {
         background: "linear-gradient(90deg, #FEF9EE 0%, #F5FBF7 40%, #EDF8F2 100%)",
       }}
     >
-      {/* Left: Star Icon & Info */}
       <div className="flex items-center gap-3.5">
         <div className="w-11 h-11 rounded-xl bg-[#F59E0B] flex items-center justify-center text-white shrink-0 shadow-sm">
           <Star size={22} className="fill-white" />
@@ -942,7 +933,6 @@ function RewardsBanner() {
         </div>
       </div>
 
-      {/* Right: Progress bar & CTA button */}
       <div className="w-full md:w-auto flex flex-col md:flex-row items-stretch md:items-center gap-4">
         <div className="w-full md:w-48">
           <div className="flex justify-between text-[11px] font-semibold text-gray-500 mb-1">
@@ -971,7 +961,6 @@ function RewardsBanner() {
     </div>
   );
 }
-
 
 // ============================================================
 // MAIN PAGE

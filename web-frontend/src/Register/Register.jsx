@@ -50,7 +50,7 @@ const roles = [
     description: "Buy rice products for personal or household needs.",
     image: consumerImg,
     imagePosition: "center top",
-    path: "/register/farmer",
+    path: "/register",
   },
 ];
 

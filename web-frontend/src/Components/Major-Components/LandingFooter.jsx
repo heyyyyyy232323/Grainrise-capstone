@@ -53,15 +53,33 @@ export default function LandingFooter() {
             Transforming rice supply chains with intelligent technology and data-driven insights for a sustainable future.
           </p>
           <div className="lp-footer__socials">
-            <button className="lp-footer__social-btn" aria-label="Facebook">
+            <a
+              className="lp-footer__social-btn"
+              aria-label="Facebook"
+              href="https://www.facebook.com/profile.php?id=61594411016375"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <FacebookIcon size={14} />
-            </button>
-            <button className="lp-footer__social-btn" aria-label="Instagram">
+            </a>
+            <a
+              className="lp-footer__social-btn"
+              aria-label="Instagram"
+              href="https://www.instagram.com/grainrise.ai/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <InstagramIcon size={14} />
-            </button>
-            <button className="lp-footer__social-btn" aria-label="X">
+            </a>
+            <a
+              className="lp-footer__social-btn"
+              aria-label="X"
+              href="https://x.com/Grainrise"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <XIcon size={12} />
-            </button>
+            </a>
           </div>
         </div>
 
