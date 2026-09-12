@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Heart,
@@ -6,7 +6,9 @@ import {
   Bell,
   ChevronDown,
   CircleUserRound,
+  CircleHelp,
   LogOut,
+  Moon,
 } from "lucide-react";
 import Logo from "../../assets/Logo.png";
 
@@ -15,6 +17,23 @@ export const CONSUMER_NAV_LINKS = [
   { label: "Marketplace", path: "/consumer/marketplace" },
   { label: "Orders", path: "/consumer/orders" },
   { label: "Promotions & Rewards", path: "/consumer/promotions" },
+];
+
+const DEFAULT_CONSUMER_NOTIFICATIONS = [
+  {
+    id: "consumer-notification-1",
+    title: "Order update",
+    description: "Your recent rice order is being prepared for delivery.",
+    time: "15 mins",
+    read: false,
+  },
+  {
+    id: "consumer-notification-2",
+    title: "New market price update",
+    description: "Market prices are available for your preferred rice varieties.",
+    time: "1 hour",
+    read: false,
+  },
 ];
 
 export default function ConsumerNavbar({
@@ -30,10 +49,30 @@ export default function ConsumerNavbar({
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
   const [cartPanelOpen, setCartPanelOpen] = useState(false);
   const [cartPanelTab, setCartPanelTab] = useState("cart");
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState(DEFAULT_CONSUMER_NOTIFICATIONS);
+  const menuRef = useRef(null);
+  const notificationRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
 
   const currentPath = activePath || location.pathname;
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setProfileOpen(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setNotificationOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const unreadNotificationCount = notifications.filter((item) => !item.read).length;
 
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-200">
@@ -246,21 +285,75 @@ export default function ConsumerNavbar({
           </div>
 
           {/* Notifications */}
-          <button
-            id="consumer-nav-notifications"
-            onClick={onNotificationsClick || (() => {})}
-            className="relative p-1.5 sm:p-2 rounded-full hover:bg-gray-100 text-gray-700 transition cursor-pointer"
-            title="Notifications"
-          >
-            <Bell size={19} className="text-gray-700" />
-            <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-amber-400 border-2 border-white rounded-full" />
-          </button>
+          <div ref={notificationRef} className="relative">
+            <button
+              id="consumer-nav-notifications"
+              onClick={() => {
+                setNotificationOpen((isOpen) => !isOpen);
+                onNotificationsClick?.();
+                setProfileOpen(false);
+              }}
+              className="relative p-1.5 sm:p-2 rounded-full hover:bg-gray-100 text-gray-700 transition cursor-pointer"
+              title="Notifications"
+              aria-label="Notifications"
+              aria-expanded={notificationOpen}
+            >
+              <Bell size={19} className="text-gray-700" />
+              {unreadNotificationCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                  {unreadNotificationCount}
+                </span>
+              )}
+            </button>
+
+            {notificationOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-gray-200 bg-white shadow-xl z-50 overflow-hidden">
+                <div className="flex items-center justify-between gap-3 px-3 py-2 border-b border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-gray-900">Notifications</h3>
+                    {unreadNotificationCount > 0 && (
+                      <span className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-red-50 px-1.5 text-[10px] font-bold text-red-600">
+                        {unreadNotificationCount}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNotifications((items) => items.map((item) => ({ ...item, read: true })))}
+                    disabled={unreadNotificationCount === 0}
+                    className="text-[11px] font-semibold text-[#0B7A2A] hover:text-[#096322] disabled:text-gray-300 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    Mark all as read
+                  </button>
+                </div>
+                <div className="max-h-80 overflow-y-auto px-2 py-2">
+                  {notifications.length > 0 ? notifications.map((item) => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      onClick={() => setNotifications((items) => items.map((notification) => notification.id === item.id ? { ...notification, read: true } : notification))}
+                      className={`w-full p-3 text-left border-b border-gray-100 last:border-b-0 ${item.read ? "bg-white" : "bg-[#F0F8F1]"}`}
+                    >
+                      <p className="text-xs font-bold text-gray-900">{item.title}</p>
+                      <p className="mt-1 text-[11px] text-gray-600">{item.description}</p>
+                      <p className="mt-1 text-[10px] text-gray-400">{item.time}</p>
+                    </button>
+                  )) : (
+                    <p className="py-8 text-center text-xs text-gray-500">No notifications</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Profile User Info */}
-          <div className="relative pl-1 sm:pl-2">
+          <div ref={menuRef} className="relative pl-1 sm:pl-2">
             <button
               id="consumer-nav-profile"
-              onClick={() => setProfileOpen((v) => !v)}
+              onClick={() => {
+                setProfileOpen((v) => !v);
+                setNotificationOpen(false);
+              }}
               className="flex items-center gap-2 py-1 text-left transition cursor-pointer select-none"
             >
               {/* User Avatar Circle */}
@@ -301,6 +394,29 @@ export default function ConsumerNavbar({
                 >
                   <CircleUserRound size={15} /> Account Settings
                 </button>
+                <button
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-gray-700 hover:bg-gray-50 cursor-pointer text-left font-medium"
+                  onClick={() => alert("Open Help Center")}
+                >
+                  <CircleHelp size={15} /> Help Center
+                </button>
+                <div className="flex items-center justify-between px-4 py-2.5 text-xs text-gray-700">
+                  <span className="flex items-center gap-2">
+                    <Moon size={15} /> Dark Mode
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Toggle dark mode"
+                    onClick={() => {
+                      const isDark = !document.documentElement.classList.contains("light");
+                      document.documentElement.classList.toggle("light", isDark);
+                      localStorage.setItem("theme", isDark ? "light" : "dark");
+                    }}
+                    className="h-5 w-9 rounded-full bg-[#0B7A2A] p-0.5"
+                  >
+                    <span className="block h-4 w-4 translate-x-4 rounded-full bg-white" />
+                  </button>
+                </div>
                 <hr className="my-1 border-gray-100" />
                 <button
                   className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-red-600 hover:bg-red-50 cursor-pointer text-left font-medium"

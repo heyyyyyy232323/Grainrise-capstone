@@ -770,7 +770,7 @@ export default function ConsumerMarketPrices() {
   ).length;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-gray-800 flex flex-col font-sans">
+    <div className="consumer-page min-h-screen bg-[#F8FAFC] text-gray-800 flex flex-col font-sans">
       {/* Top Global Consumer Navbar */}
       <ConsumerNavbar activePath="/consumer/market-prices" />
 

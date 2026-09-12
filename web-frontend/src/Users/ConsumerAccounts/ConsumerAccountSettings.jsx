@@ -409,7 +409,7 @@ export default function ConsumerAccountSettings() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans pb-16">
+    <div className="consumer-page min-h-screen bg-[#F8FAFC] text-slate-800 font-sans pb-16">
       {/* ── Top Consumer Navigation ────────────────────────── */}
       <ConsumerNavbar activePath="/consumer/account-settings" />
 

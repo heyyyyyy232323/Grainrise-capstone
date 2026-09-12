@@ -412,7 +412,7 @@ export default function ConsumerPromotions() {
   const pointsRemaining = Math.max(0, NEXT_REWARD_TARGET - currentPoints);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-gray-800 flex flex-col font-sans">
+    <div className="consumer-page min-h-screen bg-[#F8FAFC] text-gray-800 flex flex-col font-sans">
       {/* Top Global Consumer Navbar */}
       <ConsumerNavbar activePath="/consumer/promotions" />
 

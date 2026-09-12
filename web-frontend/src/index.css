@@ -199,6 +199,11 @@ html:not(.light) .bg-slate-100, html:not(.light) .bg-slate-200 { background-colo
 html:not(.light) .hover\:bg-gray-100:hover { background-color: rgba(255,255,255,0.03) !important; }
 html:not(.light) .hover\:bg-gray-50:hover { background-color: rgba(255,255,255,0.02) !important; }
 
+html:not(.light) .consumer-page {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
 /* Page transition animation */
 @keyframes pageFade {
   from {

@@ -534,7 +534,7 @@ export default function ConsumerMarketplace() {
   ]);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-gray-900 flex flex-col font-sans relative pb-16">
+    <div className="consumer-page min-h-screen bg-[#F8FAFC] text-gray-900 flex flex-col font-sans relative pb-16">
       {/* 1. HEADER / NAVBAR */}
       <ConsumerNavbar
         activePath="/consumer/marketplace"

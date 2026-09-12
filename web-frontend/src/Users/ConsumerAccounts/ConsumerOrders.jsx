@@ -440,7 +440,7 @@ export default function ConsumerOrders() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-gray-800 antialiased">
+    <div className="consumer-page min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-gray-800 antialiased">
       <ConsumerNavbar activePath="/consumer/orders" />
 
       <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-5 sm:py-6">
