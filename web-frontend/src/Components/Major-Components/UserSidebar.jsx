@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import React from "react";
 import {
   LayoutDashboard,
   Truck,
@@ -21,7 +21,6 @@ import {
   Archive,
   Mail,
   Newspaper,
-  MessageSquare,
   MessagesSquare,
   FileText,
   ClipboardCheck,
@@ -29,67 +28,67 @@ import {
   CircleDollarSign,
   Tractor,
 } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import Logo from "../../assets/Logo.png";
 
 export const getUserSidebarConfig = (role = "admin") => {
   const menuConfigs = {
-admin: {
-  panelLabel: "Admin Panel",
-  sections: [
-    {
-      title: "MAIN",
-      items: [
+    admin: {
+      sections: [
         {
-          label: "Dashboard",
-          icon: LayoutDashboard,
-          path: "/admin/dashboard",
+          title: "MAIN",
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/admin/dashboard",
+            },
+          ],
+        },
+        {
+          title: "MANAGEMENT",
+          items: [
+            {
+              label: "Miller Management",
+              icon: Truck,
+              path: "/admin/suppliers",
+            },
+            {
+              label: "Warehouse Management",
+              icon: Warehouse,
+              path: "/admin/warehouses",
+            },
+            {
+              label: "Retailer Management",
+              icon: Store,
+              path: "/admin/retailers",
+            },
+            {
+              label: "Farmer Management",
+              icon: Users,
+              path: "/admin/farmers",
+            },
+          ],
+        },
+        {
+          title: "COMMUNICATION",
+          items: [
+            {
+              label: "Email Users",
+              icon: Mail,
+              path: "/admin/email-users",
+            },
+            {
+              label: "News & Updates",
+              icon: Newspaper,
+              path: "/admin/news-updates",
+            },
+          ],
         },
       ],
     },
-    {
-      title: "MANAGEMENT",
-      items: [
-        {
-          label: "Miller Management",
-          icon: Truck,
-          path: "/admin/suppliers",
-        },
-        {
-          label: "Warehouse Management",
-          icon: Warehouse,
-          path: "/admin/warehouses",
-        },
-        {
-          label: "Retailer Management",
-          icon: Store,
-          path: "/admin/retailers",
-        },
-        {
-          label: "Farmer Management",
-          icon: Users,
-          path: "/admin/farmers",
-        },
-      ],
-    },
-    {
-      title: "COMMUNICATION",
-      items: [
-        {
-          label: "Email Users",
-          icon: Mail,
-          path: "/admin/email-users",
-        },
-        {
-          label: "News & Updates",
-          icon: Newspaper,
-          path: "/admin/news-updates",
-        },
-      ],
-    },
-  ],
-},
+
     supplier: {
-      panelLabel: "Supplier Panel",
       sections: [
         {
           title: "MAIN",
@@ -120,7 +119,6 @@ admin: {
     },
 
     retailer: {
-      panelLabel: "Retailer Panel",
       sections: [
         {
           title: "MAIN",
@@ -206,7 +204,6 @@ admin: {
     },
 
     warehouse_encoder: {
-      panelLabel: "Warehouse Encoder Panel",
       sections: [
         {
           title: "MAIN",
@@ -242,7 +239,6 @@ admin: {
     },
 
     warehouse_sales: {
-      panelLabel: "Warehouse Sales Panel",
       sections: [
         {
           title: "MAIN",
@@ -283,7 +279,6 @@ admin: {
     },
 
     warehouse_logistics: {
-      panelLabel: "Warehouse Logistics Panel",
       sections: [
         {
           title: "MAIN",
@@ -344,7 +339,6 @@ admin: {
     },
 
     warehouse_procurement: {
-      panelLabel: "Warehouse Procurement Panel",
       sections: [
         {
           title: "MAIN",
@@ -405,7 +399,6 @@ admin: {
     },
 
     warehouse_finance: {
-      panelLabel: "Warehouse Finance Panel",
       sections: [
         {
           title: "MAIN",
@@ -451,7 +444,6 @@ admin: {
     },
 
     supplier_encoder: {
-      panelLabel: "Miller Encoder Panel",
       sections: [
         {
           title: "MAIN",
@@ -487,7 +479,6 @@ admin: {
     },
 
     miller_sales: {
-      panelLabel: "Miller Sales Panel",
       sections: [
         {
           title: "MAIN",
@@ -528,7 +519,6 @@ admin: {
     },
 
     miller_logistics: {
-      panelLabel: "Miller Logistics Panel",
       sections: [
         {
           title: "MAIN",
@@ -589,7 +579,6 @@ admin: {
     },
 
     miller_finance: {
-      panelLabel: "Miller Finance Panel",
       sections: [
         {
           title: "MAIN",
@@ -635,7 +624,6 @@ admin: {
     },
 
     warehouse_manager: {
-      panelLabel: "WAREHOUSE MANAGER PANEL",
       sections: [
         {
           title: "MAIN",
@@ -711,7 +699,6 @@ admin: {
     },
 
     branch_manager: {
-      panelLabel: "BRANCH MANAGER PANEL",
       sections: [
         {
           title: "MAIN",
@@ -782,7 +769,6 @@ admin: {
     },
 
     warehouse_driver: {
-      panelLabel: "WAREHOUSE DRIVER PANEL",
       sections: [
         {
           title: "MAIN",
@@ -848,7 +834,6 @@ admin: {
     },
 
     miller_driver: {
-      panelLabel: "MILLER DRIVER PANEL",
       sections: [
         {
           title: "MAIN",
@@ -914,7 +899,6 @@ admin: {
     },
 
     miller_manager: {
-      panelLabel: "MILLER MANAGER PANEL",
       sections: [
         {
           title: "MAIN",
@@ -1005,7 +989,6 @@ admin: {
     },
 
     farmer: {
-      panelLabel: "FARMER PANEL",
       sections: [
         {
           title: "MAIN",
@@ -1069,7 +1052,6 @@ admin: {
         },
       ],
     },
-
   };
 
   return menuConfigs[role] || menuConfigs.admin;
@@ -1098,7 +1080,6 @@ export const userSidebarRoles = [
 
 const UserSidebar = ({
   role = "admin",
-  panelLabel,
   sections,
   logo = Logo,
   isMinimized = false,
@@ -1106,27 +1087,33 @@ const UserSidebar = ({
   onClose,
 }) => {
   const location = useLocation();
+  const currentPath = location.pathname;
+
   const sidebarConfig = getUserSidebarConfig(role);
-  const resolvedPanelLabel = panelLabel ?? sidebarConfig.panelLabel;
   const resolvedSections = sections ?? sidebarConfig.sections;
 
   return (
     <aside
       className={`fixed md:relative inset-y-0 left-0 h-screen bg-white border-r border-gray-200 flex flex-col shrink-0 z-40 md:z-30 transition-[width] duration-300 ease-in-out select-none
-        ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 overflow-hidden
+        ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0 overflow-hidden
         ${isMinimized ? "md:w-20" : "md:w-72"} w-72
       `}
     >
+    {/* Header Container - Height matched to Navbar (h-18.25) */}
       <div
-        className={`h-16 flex items-center border-b border-gray-100 px-5 transition-all duration-300 ease-in-out shrink-0 ${
-          isMinimized ? "md:justify-center md:px-0" : "justify-start"
+        className={`h-18.25 flex items-center border-b border-gray-200 px-5 transition-all duration-300 ease-in-out shrink-0 ${
+          isMinimized
+            ? "md:justify-center md:px-0"
+            : "justify-start"
         }`}
       >
         <img
           src={logo}
           alt="GrainRise Logo"
           className={`object-contain transition-all duration-300 ease-in-out ${
-            isMinimized ? "md:h-6 h-8" : "h-8"
+            isMinimized ? "md:h-7 h-8" : "h-10 md:h-11 w-auto max-h-12"
           }`}
         />
 
@@ -1139,21 +1126,11 @@ const UserSidebar = ({
         </button>
       </div>
 
-      <div
-        className={`bg-linear-to-r from-[#0B5D1E] to-[#D6A62D] transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
-          isMinimized
-            ? "md:h-0 md:py-0 md:opacity-0"
-            : "h-10 py-2.5 px-4 opacity-100 flex items-center"
-        }`}
-      >
-        <span className="text-white font-bold text-xs tracking-wider uppercase whitespace-nowrap truncate">
-          {resolvedPanelLabel}
-        </span>
-      </div>
-
+      {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4">
         {resolvedSections.map((section) => (
           <div key={section.title} className="mb-5">
+            {/* Section Title */}
             <div
               className={`px-5 mb-1.5 transition-all duration-300 ease-in-out overflow-hidden ${
                 isMinimized
@@ -1166,10 +1143,12 @@ const UserSidebar = ({
               </p>
             </div>
 
+            {/* Menu Items */}
             <div className="flex flex-col gap-1 px-3">
               {section.items.map((item) => {
                 const Icon = item.icon;
-                const isActive = location.pathname === item.path;
+
+                const isActive = currentPath === item.path;
 
                 return (
                   <Link
@@ -1187,7 +1166,12 @@ const UserSidebar = ({
                         : "text-gray-600 hover:bg-gray-100"
                     }`}
                   >
-                    {Icon && <Icon size={19} className="shrink-0" />}
+                    {Icon && (
+                      <Icon
+                        size={19}
+                        className="shrink-0"
+                      />
+                    )}
 
                     <span
                       className={`whitespace-nowrap transition-all duration-300 ease-in-out ${

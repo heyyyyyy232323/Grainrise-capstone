@@ -1,7 +1,5 @@
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import React from "react";
-import { useEffect } from "react";
-import { LoadingProvider } from "./Components/context/LoadingContext";
 
 import LandingPage from "./LandingPage";
 import Login from "./Login/UserLogin";
@@ -25,7 +23,7 @@ import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout
 import AdminProtectedRoute from "./Components/Major-Components/AdminProtectedRoute";
 
 import FloatingChatbot from "./Components/Minor-Components/FloatingChatbot";
-import GlobalLoadingScreen from "./Components/Minor-Components/GlobalLoadingScreen";
+import GlobalLoadingScreen from "./Components/Minor-Components/GlobalLoadingScreen.jsx";
 
 
 // ============================================================
@@ -264,24 +262,12 @@ import FarmerMessages from "./Users/FarmersAccounts/FarmerMessages";
 // APP
 // ============================================================
 
-function ScrollToTop() {
-  const { pathname } = useLocation();
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
-
-  return null;
-}
-
 function App() {
   return (
-    <LoadingProvider>
-      <BrowserRouter>
-        <ScrollToTop />
-        <GlobalLoadingScreen />
+    <BrowserRouter>
+      <GlobalLoadingScreen />
 
-        <Routes>
+      <Routes>
 
           {/* ==================================================
               PUBLIC
@@ -1184,12 +1170,10 @@ function App() {
             </Route>
           </Route>
 
-        </Routes>
-      </BrowserRouter>
+      </Routes>
 
       <FloatingChatbot />
-
-    </LoadingProvider>
+    </BrowserRouter>
   );
 }
 
