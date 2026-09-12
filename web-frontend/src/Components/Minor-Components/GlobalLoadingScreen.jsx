@@ -4,6 +4,11 @@ import Logo from "../../assets/Logo.png";
 
 export default function GlobalLoadingScreen() {
   const { pathname } = useLocation();
+  const initialPathname = useRef(pathname);
+  const isBrowserReload = useRef(() => {
+    const navigationEntry = performance.getEntriesByType("navigation")[0];
+    return navigationEntry?.type === "reload" || performance.navigation?.type === 1;
+  }).current();
   const hasStartedLandingLoader = useRef(false);
   const hasFinishedLandingLoader = useRef(false);
   const hasLeftLandingPage = useRef(false);
@@ -11,13 +16,17 @@ export default function GlobalLoadingScreen() {
   const removeTimerRef = useRef(null);
 
   const [shouldRender, setShouldRender] = useState(() => {
-    return pathname === "/";
+    const navigationEntry = performance.getEntriesByType("navigation")[0];
+    const reloaded = navigationEntry?.type === "reload" || performance.navigation?.type === 1;
+    return pathname === "/" || reloaded;
   });
 
   const [visible, setVisible] = useState(shouldRender);
 
   useEffect(() => {
-    if (pathname !== "/") {
+    const isInitialEntry = pathname === initialPathname.current;
+
+    if (!isInitialEntry && hasStartedLandingLoader.current) {
       hasLeftLandingPage.current = true;
       clearTimeout(hideTimerRef.current);
       clearTimeout(removeTimerRef.current);
@@ -25,6 +34,10 @@ export default function GlobalLoadingScreen() {
       removeTimerRef.current = null;
       setVisible(false);
       setShouldRender(false);
+      return undefined;
+    }
+
+    if (!hasStartedLandingLoader.current && pathname !== "/" && !isBrowserReload) {
       return undefined;
     }
 
