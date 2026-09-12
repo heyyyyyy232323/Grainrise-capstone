@@ -13,21 +13,23 @@ import Logo from "../../assets/Logo.png";
 export const CONSUMER_NAV_LINKS = [
   { label: "Home", path: "/consumer/home" },
   { label: "Marketplace", path: "/consumer/marketplace" },
-  { label: "Retailers Nearby", path: "/consumer/retailers-nearby" },
   { label: "Orders", path: "/consumer/orders" },
   { label: "Promotions & Rewards", path: "/consumer/promotions" },
-  { label: "Market Prices", path: "/consumer/market-prices" },
 ];
 
 export default function ConsumerNavbar({
   activePath,
   cartCount = 3,
   wishlistCount = 12,
-  onWishlistClick,
+  cartItems = [],
+  wishlistItems = [],
   onCartClick,
   onNotificationsClick,
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
+  const [marketplaceOpen, setMarketplaceOpen] = useState(false);
+  const [cartPanelOpen, setCartPanelOpen] = useState(false);
+  const [cartPanelTab, setCartPanelTab] = useState("cart");
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -47,12 +49,100 @@ export default function ConsumerNavbar({
           </div>
 
           {/* Navigation Links */}
-          <div className="hidden md:flex items-center gap-1 sm:gap-1.5">
+          <div className="hidden md:flex items-center gap-2 sm:gap-2.5">
             {CONSUMER_NAV_LINKS.map((link) => {
               const isActive =
                 currentPath === link.path ||
                 (link.path === "/consumer/marketplace" &&
                   currentPath === "/consumermarketplace");
+
+              if (link.label === "Marketplace") {
+                const marketplaceSectionActive =
+                  isActive ||
+                  currentPath === "/consumer/retailers-nearby" ||
+                  currentPath === "/consumer/nearby-retailers" ||
+                  currentPath === "/retailers-nearby" ||
+                  currentPath === "/nearby-retailers" ||
+                  currentPath === "/consumer/market-prices" ||
+                  currentPath === "/market-prices";
+
+                return (
+                  <div key={link.label} className="relative">
+                    <div
+                      className={`flex items-center rounded-lg text-xs sm:text-sm font-semibold transition cursor-pointer select-none ${
+                        marketplaceSectionActive
+                          ? "bg-[#00580C] text-white shadow-xs"
+                          : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        aria-haspopup="menu"
+                        aria-expanded={marketplaceOpen}
+                        onClick={() => setMarketplaceOpen((isOpen) => !isOpen)}
+                        className="px-3.5 py-1.5 font-semibold cursor-pointer"
+                      >
+                        {link.label}
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Open Marketplace menu"
+                        aria-expanded={marketplaceOpen}
+                        aria-haspopup="menu"
+                        onClick={() => setMarketplaceOpen((isOpen) => !isOpen)}
+                        className="pr-2.5 py-1.5 cursor-pointer"
+                      >
+                        <ChevronDown
+                          size={13}
+                          className={`transition-transform ${marketplaceOpen ? "rotate-180" : ""}`}
+                        />
+                      </button>
+                    </div>
+
+                    {marketplaceOpen && (
+                      <div
+                        role="menu"
+                        className="absolute left-0 top-full mt-2 w-44 rounded-xl border border-gray-200 bg-white py-1 shadow-xl z-50"
+                      >
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setMarketplaceOpen(false);
+                            navigate("/consumer/marketplace");
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+                        >
+                          Marketplace
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setMarketplaceOpen(false);
+                            navigate("/consumer/retailers-nearby");
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+                        >
+                          Retailers Nearby
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setMarketplaceOpen(false);
+                            navigate("/consumer/market-prices");
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+                        >
+                          Market Price
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               return (
                 <button
                   key={link.label}
@@ -70,41 +160,90 @@ export default function ConsumerNavbar({
           </div>
         </div>
 
-        {/* Right: Actions (Wishlist, Cart, Bell) & User Profile */}
+        {/* Right: Actions (Cart, Bell) & User Profile */}
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-          {/* Wishlist */}
-          <button
-            id="consumer-nav-wishlist"
-            onClick={
-              onWishlistClick ||
-              (() => navigate("/consumer/wishlist"))
-            }
-            className="relative p-1.5 sm:p-2 rounded-full hover:bg-gray-100 text-[#00580C] transition cursor-pointer"
-            title="Wishlist"
-          >
-            <Heart size={19} className="text-[#00580C]" />
-            {wishlistCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#00580C] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                {wishlistCount}
-              </span>
-            )}
-          </button>
-
           {/* Cart */}
-          <button
-            id="consumer-nav-cart"
-            onClick={
-              onCartClick ||
-              (() => navigate("/consumer/marketplace"))
-            }
-            className="relative p-1.5 sm:p-2 rounded-full hover:bg-gray-100 text-gray-700 transition cursor-pointer"
-            title="Cart"
-          >
-            <ShoppingCart size={19} className="text-gray-700" />
-            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#00580C] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-              {cartCount}
-            </span>
-          </button>
+          <div className="relative">
+            <button
+              id="consumer-nav-cart"
+              onClick={() => {
+                setCartPanelOpen((isOpen) => !isOpen);
+              }}
+              className="relative p-1.5 sm:p-2 rounded-full hover:bg-gray-100 text-gray-700 transition cursor-pointer"
+              title="Cart and Wishlist"
+              aria-label="Open cart and wishlist"
+              aria-expanded={cartPanelOpen}
+            >
+              <ShoppingCart size={19} className="text-gray-700" />
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#00580C] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                {cartCount}
+              </span>
+            </button>
+
+            {cartPanelOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-gray-200 bg-white shadow-xl z-50 overflow-hidden">
+                <div className="flex border-b border-gray-200">
+                  {[
+                    { key: "cart", label: "Cart", count: cartCount, icon: ShoppingCart },
+                    { key: "wishlist", label: "Wishlist", count: wishlistCount, icon: Heart },
+                  ].map(({ key, label, count, icon: TabIcon }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setCartPanelTab(key)}
+                      className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-3 text-xs font-semibold transition ${
+                        cartPanelTab === key
+                          ? "border-b-2 border-[#00580C] text-[#00580C]"
+                          : "text-gray-500 hover:bg-gray-50"
+                      }`}
+                    >
+                      <TabIcon size={14} />
+                      {label}
+                      <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
+                        {count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="max-h-72 overflow-y-auto p-3">
+                  {(cartPanelTab === "cart" ? cartItems : wishlistItems).length > 0 ? (
+                    <div className="space-y-2">
+                      {(cartPanelTab === "cart" ? cartItems : wishlistItems).map((item, index) => (
+                        <div key={item.id || item.name || index} className="flex items-center gap-3 rounded-lg bg-gray-50 p-2.5">
+                          {item.image ? (
+                            <img src={item.image} alt="" className="h-10 w-10 rounded-md object-cover" />
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-green-100 text-[#00580C]">
+                              {cartPanelTab === "cart" ? <ShoppingCart size={16} /> : <Heart size={16} />}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-semibold text-gray-800">
+                              {item.name || item.title || "Saved product"}
+                            </p>
+                            {item.price != null && (
+                              <p className="text-[11px] text-gray-500">₱{item.price}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center text-xs text-gray-500">
+                      {cartPanelTab === "cart"
+                        ? cartCount > 0
+                          ? `${cartCount} item${cartCount === 1 ? "" : "s"} in your cart.`
+                          : "Your cart is empty."
+                        : wishlistCount > 0
+                          ? `${wishlistCount} saved item${wishlistCount === 1 ? "" : "s"}.`
+                          : "Your wishlist is empty."}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Notifications */}
           <button
