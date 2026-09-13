@@ -72,16 +72,20 @@ const UserLogin = () => {
       const role = response.user?.role;
 
       const roleRoutes = {
-        farmer: "/farmer/dashboard",
+  farmer: "/farmer/dashboard",
 
-        retailer: "/retailer/point-of-sale",
+  retailer: "/retailer/point-of-sale",
 
-        warehouse_manager:
-          "/warehouse-manager/dashboard",
+  warehouse_manager:
+    "/warehouse-manager/dashboard",
 
-        supplier:
-          "/miller/dashboard",
-      };
+  miller_manager:
+    "/miller-manager/dashboard",
+
+  // legacy compatibility
+  supplier:
+    "/miller-manager/dashboard",
+};
 
       const destination =
         roleRoutes[role] || "/dashboard-preview";

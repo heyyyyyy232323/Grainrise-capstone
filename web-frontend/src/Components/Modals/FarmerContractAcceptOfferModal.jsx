@@ -14,6 +14,8 @@ import {
   X,
 } from "lucide-react";
 
+import SignaturePad from "../Minor-Components/SignaturePad";
+
 
 // ============================================================
 // HELPERS
@@ -245,6 +247,27 @@ export default function FarmerContractAcceptOfferModal({
 
 
   // ==========================================================
+  // SIGNATURE CHANGE
+  // ==========================================================
+
+  const handleSignatureChange = (
+    value
+  ) => {
+    setSignature(
+      value || ""
+    );
+
+    if (
+      validationError
+    ) {
+      setValidationError(
+        ""
+      );
+    }
+  };
+
+
+  // ==========================================================
   // SUBMIT
   // ==========================================================
 
@@ -255,24 +278,20 @@ export default function FarmerContractAcceptOfferModal({
 
 
     const normalizedSignature =
-      signature.trim();
-
-
-    if (!normalizedSignature) {
-      setValidationError(
-        "Electronic signature is required."
-      );
-
-      return;
-    }
+      String(
+        signature || ""
+      ).trim();
 
 
     if (
-      normalizedSignature.length <
-      3
+      !normalizedSignature
+      ||
+      !normalizedSignature.startsWith(
+        "data:image/"
+      )
     ) {
       setValidationError(
-        "Please enter your complete name as your electronic signature."
+        "Electronic signature is required."
       );
 
       return;
@@ -296,6 +315,17 @@ export default function FarmerContractAcceptOfferModal({
         normalizedSignature,
     });
   };
+
+
+  // ==========================================================
+  // SIGNATURE ERROR
+  // ==========================================================
+
+  const signatureError =
+    validationError ===
+    "Electronic signature is required."
+      ? validationError
+      : "";
 
 
   // ==========================================================
@@ -617,79 +647,69 @@ export default function FarmerContractAcceptOfferModal({
               ELECTRONIC SIGNATURE
           ================================================= */}
 
-          <div>
-            <label
-              htmlFor="farmer-offer-electronic-signature"
+          <section>
+            <div
               className="
-                mb-1.5
-                block
-                text-sm
-                font-semibold
-                text-slate-700
+                flex
+                items-start
+                gap-2
               "
             >
-              Electronic Signature
-              <span className="ml-1 text-red-500">
-                *
-              </span>
-            </label>
+              <FileSignature
+                size={17}
+                className="
+                  mt-0.5
+                  shrink-0
+                  text-green-700
+                "
+              />
+
+              <div>
+                <h4
+                  className="
+                    text-sm
+                    font-bold
+                    text-slate-900
+                  "
+                >
+                  Electronic Signature
+                  <span className="ml-1 text-red-500">
+                    *
+                  </span>
+                </h4>
+
+                <p
+                  className="
+                    mt-0.5
+                    text-xs
+                    leading-5
+                    text-slate-500
+                  "
+                >
+                  Draw your signature using your mouse on desktop or your finger/stylus on mobile.
+                  Your signature confirms your acceptance of this Miller offer.
+                </p>
+              </div>
+            </div>
 
 
-            <input
-              id="farmer-offer-electronic-signature"
-              type="text"
-              autoComplete="name"
-              maxLength={150}
-              disabled={isSaving}
-              value={signature}
-              onChange={(
-                event
-              ) => {
-                setSignature(
-                  event.target.value
-                );
-
-                if (
-                  validationError
-                ) {
-                  setValidationError(
-                    ""
-                  );
+            <div className="mt-4">
+              <SignaturePad
+                value={
+                  signature
                 }
-              }}
-              placeholder="Type your complete name"
-              className="
-                w-full
-                rounded-lg
-                border
-                border-slate-300
-                px-3
-                py-2.5
-                text-sm
-                text-slate-800
-                outline-none
-                transition
-                placeholder:text-slate-400
-                focus:border-green-600
-                focus:ring-1
-                focus:ring-green-600
-                disabled:cursor-not-allowed
-                disabled:bg-slate-100
-              "
-            />
-
-
-            <p
-              className="
-                mt-1.5
-                text-xs
-                leading-5
-                text-slate-500
-              "
-            >
-              Your typed name will be recorded as your electronic signature for this offer acceptance.
-            </p>
-          </div>
+                onChange={
+                  handleSignatureChange
+                }
+                disabled={
+                  isSaving
+                }
+                error={
+                  signatureError
+                }
+              />
+            </div>
+          </section>
 
 
           {/* =================================================
@@ -825,7 +845,11 @@ export default function FarmerContractAcceptOfferModal({
             type="submit"
             disabled={
               isSaving ||
-              !signature.trim() ||
+              !String(
+                signature || ""
+              ).startsWith(
+                "data:image/"
+              ) ||
               !termsAccepted
             }
             className="

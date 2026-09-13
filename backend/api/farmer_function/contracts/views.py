@@ -32,6 +32,7 @@ from .services import (
     accept_bidding_offer,
     decline_bidding_offer,
 
+    sign_contract,
     request_contract_void,
 
     send_farmer_message,
@@ -988,6 +989,71 @@ def current_contract_details(
 
         return Response(
             item,
+            status=status.HTTP_200_OK,
+        )
+
+
+    except Exception as error:
+        return _handle_error(
+            error
+        )
+
+
+# ============================================================
+# SIGN CURRENT CONTRACT
+# ============================================================
+
+@api_view([
+    "POST",
+])
+@farmer_required
+def contract_sign(
+    request,
+    contract_id,
+):
+    try:
+        farmer_user_id = (
+            _get_farmer_user_id(
+                request
+            )
+        )
+
+
+        farmer_signature_path = (
+            request.data.get(
+                "farmer_signature_path"
+            )
+        )
+
+
+        result = (
+            sign_contract(
+                farmer_user_id=(
+                    farmer_user_id
+                ),
+
+                contract_id=(
+                    contract_id
+                ),
+
+                farmer_signature_path=(
+                    farmer_signature_path
+                ),
+            )
+        )
+
+
+        return Response(
+            {
+                "success": True,
+
+                "message": (
+                    "Contract signed "
+                    "successfully."
+                ),
+
+                "contract": result,
+            },
             status=status.HTTP_200_OK,
         )
 
