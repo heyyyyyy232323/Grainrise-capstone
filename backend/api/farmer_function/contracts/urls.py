@@ -103,6 +103,12 @@ urlpatterns = [
     ),
 
     path(
+        "current/<int:contract_id>/sign/",
+        views.contract_sign,
+        name="farmer-contract-sign",
+    ),
+
+    path(
         "current/<int:contract_id>/void-request/",
         views.contract_void_request,
         name="farmer-contract-void-request",

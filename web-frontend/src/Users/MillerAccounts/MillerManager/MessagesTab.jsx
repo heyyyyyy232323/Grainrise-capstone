@@ -1,281 +1,1947 @@
-import { useState } from "react";
-import { Search, Paperclip, Send, FileText } from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
-// ── Mock Conversation Data ──────────────────────────────────────────────
-const INITIAL_CONVERSATIONS = [
-  {
-    id: "conv-1",
-    name: "ABC Rice Mill",
-    reference: "APP-2026-0018",
-    status: "Application Under Review",
-    statusColor: "text-emerald-700 bg-emerald-50",
-    time: "10:42 AM",
-    unreadCount: 2,
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120",
-    messages: [
-      {
-        id: "m1",
-        sender: "them",
-        text: "Hello. We've received your application (APP-2026-0018) for the long-grain rice contract. Could you please provide the updated moisture analysis report from your latest harvest? We need this to proceed with the review.",
-        time: "10:42 AM",
-      },
-      {
-        id: "m2",
-        sender: "me",
-        text: "Hi, thanks for reaching out. Yes, I have the latest moisture analysis report ready. I will attach it here momentarily. The levels are consistent with our historical data.",
-        time: "11:15 AM",
-      },
-      {
-        id: "m3",
-        sender: "me",
-        attachment: {
-          name: "Moisture_Report_Oct24.pdf",
-          size: "1.2 MB",
-        },
-        time: "11:16 AM",
-      },
-    ],
-  },
-  {
-    id: "conv-2",
-    name: "Golden Harvest Milling",
-    reference: "OFR-2026-0042",
-    status: "Offer Open",
-    statusColor: "text-amber-700 bg-amber-50",
-    time: "Yesterday",
-    unreadCount: 2,
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120",
-    messages: [
-      {
-        id: "m1",
-        sender: "them",
-        text: "The revised offer details have been sent. Please review the delivery schedule for precision.",
-        time: "Yesterday",
-      },
-    ],
-  },
-  {
-    id: "conv-3",
-    name: "Delta Agro Co.",
-    reference: "CON-2025-0112",
-    status: "Current Contract",
-    statusColor: "text-blue-700 bg-blue-50",
-    time: "Oct 12",
-    unreadCount: 2,
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120",
-    messages: [
-      {
-        id: "m1",
-        sender: "them",
-        text: "Delivery confirmed for shipment #4. Payment will be processed within 5 business days.",
-        time: "Oct 12",
-      },
-    ],
-  },
-];
+import {
+  FileCheck2,
+  FileText,
+  Gavel,
+  Loader2,
+  MessageCircle,
+  RefreshCw,
+  Search,
+  Send,
+  UserRound,
+} from "lucide-react";
 
-export default function MessagesTab() {
-  const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS);
-  const [activeConvId, setActiveConvId] = useState("conv-1");
-  const [search, setSearch] = useState("");
-  const [inputMessage, setInputMessage] = useState("");
+import useMillerContractMessages from "../../../Components/hooks/Miller/useMillerContractMessages";
 
-  const activeConv = conversations.find((c) => c.id === activeConvId) || conversations[0];
 
-  const filteredConversations = conversations.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.reference.toLowerCase().includes(search.toLowerCase())
-  );
+// ============================================================
+// HELPERS
+// ============================================================
 
-  const handleSendMessage = (e) => {
-    e.preventDefault();
-    if (!inputMessage.trim()) return;
+function threadKey(
+  thread
+) {
+  if (!thread) {
+    return "";
+  }
 
-    const newMessage = {
-      id: `msg-${Date.now()}`,
-      sender: "me",
-      text: inputMessage,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    };
+  return [
+    thread.farmer_user_id,
+    thread.reference_type,
+    thread.reference_id,
+  ].join(":");
+}
 
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === activeConvId
-          ? { ...c, messages: [...c.messages, newMessage] }
-          : c
-      )
+
+function titleCase(
+  value
+) {
+  return String(
+    value || ""
+  )
+    .replaceAll(
+      "_",
+      " "
+    )
+    .replace(
+      /\b\w/g,
+      (
+        character
+      ) =>
+        character.toUpperCase()
     );
+}
 
-    setInputMessage("");
-  };
+
+function getInitials(
+  name
+) {
+  const words =
+    String(
+      name || "Farmer"
+    )
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+
+  if (!words.length) {
+    return "F";
+  }
+
+
+  if (
+    words.length === 1
+  ) {
+    return words[0]
+      .slice(
+        0,
+        1
+      )
+      .toUpperCase();
+  }
+
 
   return (
-    <div className="flex h-[680px] rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-      {/* ── Left Sidebar: Conversation List ──────────────────────────────── */}
-      <div className="w-80 border-r border-slate-200 flex flex-col bg-white shrink-0">
-        <div className="p-3.5 border-b border-slate-100">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search conversations"
-              className="w-full pl-9 pr-3 py-1.5 border border-gray-200 rounded-xl text-xs focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] outline-none bg-white placeholder-gray-400"
-            />
-          </div>
-        </div>
+    words[0][0]
+    + words[
+      words.length - 1
+    ][0]
+  ).toUpperCase();
+}
 
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-          {filteredConversations.map((conv) => {
-            const lastMsg = conv.messages[conv.messages.length - 1];
-            const isSelected = conv.id === activeConvId;
 
-            return (
-              <button
-                key={conv.id}
-                type="button"
-                onClick={() => setActiveConvId(conv.id)}
-                className={`w-full p-3.5 text-left transition flex items-start gap-3 cursor-pointer ${
-                  isSelected ? "bg-emerald-50/60" : "hover:bg-slate-50"
-                }`}
-              >
-                <img src={conv.avatar} alt={conv.name} className="h-9 w-9 rounded-full object-cover shrink-0" />
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-gray-900 truncate">{conv.name}</h4>
-                    <span className="text-[10px] text-gray-400 whitespace-nowrap">{conv.time}</span>
-                  </div>
+function formatTimestamp(
+  value
+) {
+  if (!value) {
+    return "";
+  }
 
-                  <div className="flex items-center gap-1.5 text-[10px] font-medium">
-                    <span className="text-gray-400">{conv.reference}</span>
-                    <span className="text-gray-300">•</span>
-                    <span className={`px-1.5 py-0.2 rounded ${conv.statusColor}`}>{conv.status}</span>
-                  </div>
 
-                  <p className="text-xs text-gray-500 truncate leading-snug">
-                    {lastMsg?.text || (lastMsg?.attachment ? `📎 ${lastMsg.attachment.name}` : "")}
-                  </p>
-                </div>
+  const parsed =
+    new Date(
+      value
+    );
 
-                {conv.unreadCount > 0 && !isSelected && (
-                  <span className="ml-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-[9px] font-bold text-white">
-                    {conv.unreadCount}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+
+  if (
+    Number.isNaN(
+      parsed.getTime()
+    )
+  ) {
+    return String(
+      value
+    );
+  }
+
+
+  const today =
+    new Date();
+
+
+  const sameDay =
+    parsed.getFullYear()
+      === today.getFullYear()
+    && parsed.getMonth()
+      === today.getMonth()
+    && parsed.getDate()
+      === today.getDate();
+
+
+  if (sameDay) {
+    return new Intl.DateTimeFormat(
+      "en-PH",
+      {
+        hour:
+          "numeric",
+
+        minute:
+          "2-digit",
+      }
+    ).format(
+      parsed
+    );
+  }
+
+
+  return new Intl.DateTimeFormat(
+    "en-PH",
+    {
+      month:
+        "short",
+
+      day:
+        "numeric",
+    }
+  ).format(
+    parsed
+  );
+}
+
+
+function formatFullTimestamp(
+  value
+) {
+  if (!value) {
+    return "";
+  }
+
+
+  const parsed =
+    new Date(
+      value
+    );
+
+
+  if (
+    Number.isNaN(
+      parsed.getTime()
+    )
+  ) {
+    return String(
+      value
+    );
+  }
+
+
+  return new Intl.DateTimeFormat(
+    "en-PH",
+    {
+      year:
+        "numeric",
+
+      month:
+        "short",
+
+      day:
+        "numeric",
+
+      hour:
+        "numeric",
+
+      minute:
+        "2-digit",
+    }
+  ).format(
+    parsed
+  );
+}
+
+
+function referenceLabel(
+  referenceType
+) {
+  const value =
+    String(
+      referenceType || ""
+    ).toLowerCase();
+
+
+  if (
+    value === "application"
+  ) {
+    return "Posting Application";
+  }
+
+
+  if (
+    value === "bidding_offer"
+  ) {
+    return "Bidding Offer";
+  }
+
+
+  if (
+    value === "contract"
+  ) {
+    return "Current Contract";
+  }
+
+
+  if (
+    value === "bidding"
+  ) {
+    return "Farmer Bidding";
+  }
+
+
+  if (
+    value === "posting"
+  ) {
+    return "Procurement Posting";
+  }
+
+
+  return titleCase(
+    value
+  ) || "Reference";
+}
+
+
+function referenceStyles(
+  referenceType
+) {
+  const value =
+    String(
+      referenceType || ""
+    ).toLowerCase();
+
+
+  if (
+    value === "contract"
+  ) {
+    return (
+      "bg-blue-50 text-blue-700 "
+      + "border-blue-100"
+    );
+  }
+
+
+  if (
+    value === "application"
+  ) {
+    return (
+      "bg-emerald-50 text-emerald-700 "
+      + "border-emerald-100"
+    );
+  }
+
+
+  if (
+    value === "bidding_offer"
+    || value === "bidding"
+  ) {
+    return (
+      "bg-amber-50 text-amber-700 "
+      + "border-amber-100"
+    );
+  }
+
+
+  return (
+    "bg-slate-50 text-slate-600 "
+    + "border-slate-200"
+  );
+}
+
+
+function ReferenceIcon({
+  type,
+  size = 15,
+}) {
+  if (
+    type === "contract"
+  ) {
+    return (
+      <FileCheck2
+        size={size}
+      />
+    );
+  }
+
+
+  if (
+    type === "application"
+    || type === "posting"
+  ) {
+    return (
+      <FileText
+        size={size}
+      />
+    );
+  }
+
+
+  if (
+    type === "bidding_offer"
+    || type === "bidding"
+  ) {
+    return (
+      <Gavel
+        size={size}
+      />
+    );
+  }
+
+
+  return (
+    <MessageCircle
+      size={size}
+    />
+  );
+}
+
+
+// ============================================================
+// THREAD ITEM
+// ============================================================
+
+function ThreadItem({
+  thread,
+  selected,
+  onSelect,
+}) {
+  const unread =
+    Number(
+      thread.unread_count
+      || 0
+    );
+
+
+  return (
+    <button
+      type="button"
+      onClick={
+        onSelect
+      }
+      className={`
+        flex
+        w-full
+        items-start
+        gap-3
+        border-b
+        border-slate-100
+        p-4
+        text-left
+        transition
+
+        ${
+          selected
+            ? "bg-emerald-50/70"
+            : "bg-white hover:bg-slate-50"
+        }
+      `}
+    >
+      <div
+        className={`
+          flex
+          h-10
+          w-10
+          shrink-0
+          items-center
+          justify-center
+          rounded-full
+          text-xs
+          font-bold
+
+          ${
+            selected
+              ? "bg-[#0B5D1E] text-white"
+              : "bg-slate-100 text-slate-600"
+          }
+        `}
+      >
+        {getInitials(
+          thread.farmer_name
+        )}
       </div>
 
-      {/* ── Right Main Chat Area ────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col bg-slate-50/50">
-        {/* Thread Header */}
-        <div className="px-6 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={activeConv.avatar} alt={activeConv.name} className="h-9 w-9 rounded-full object-cover" />
-            <div>
-              <h3 className="text-sm font-bold text-gray-900">{activeConv.name}</h3>
-              <p className="text-xs text-gray-500 font-medium">
-                Reference: {activeConv.reference} <span className="text-gray-300"> • </span>
-                <span className="text-gray-600">{activeConv.status}</span>
-              </p>
+
+      <div
+        className="
+          min-w-0
+          flex-1
+        "
+      >
+        <div
+          className="
+            flex
+            items-start
+            justify-between
+            gap-2
+          "
+        >
+          <h4
+            className="
+              truncate
+              text-sm
+              font-semibold
+              text-slate-900
+            "
+          >
+            {thread.farmer_name
+              || "Farmer"}
+          </h4>
+
+
+          <span
+            className="
+              shrink-0
+              text-[10px]
+              text-slate-400
+            "
+          >
+            {formatTimestamp(
+              thread.latest_message_at
+            )}
+          </span>
+        </div>
+
+
+        <p
+          className="
+            mt-0.5
+            truncate
+            text-xs
+            text-slate-500
+          "
+        >
+          {thread.farm_name
+            || "Registered Farm"}
+        </p>
+
+
+        <div
+          className="
+            mt-2
+            flex
+            min-w-0
+            items-center
+            gap-1.5
+          "
+        >
+          <span
+            className={`
+              inline-flex
+              shrink-0
+              items-center
+              gap-1
+              rounded-md
+              border
+              px-1.5
+              py-0.5
+              text-[9px]
+              font-semibold
+
+              ${referenceStyles(
+                thread.reference_type
+              )}
+            `}
+          >
+            <ReferenceIcon
+              type={
+                thread.reference_type
+              }
+              size={10}
+            />
+
+            {referenceLabel(
+              thread.reference_type
+            )}
+          </span>
+
+
+          <span
+            className="
+              truncate
+              text-[10px]
+              font-medium
+              text-slate-400
+            "
+          >
+            {thread.reference_code
+              || `#${thread.reference_id}`}
+          </span>
+        </div>
+
+
+        <div
+          className="
+            mt-2
+            flex
+            items-center
+            gap-2
+          "
+        >
+          <p
+            className={`
+              min-w-0
+              flex-1
+              truncate
+              text-xs
+
+              ${
+                unread > 0
+                ? "font-semibold text-slate-700"
+                : "font-normal text-slate-500"
+              }
+            `}
+          >
+            {thread.sender_type
+              === "miller"
+              ? "You: "
+              : ""}
+
+            {thread.latest_message
+              || "No messages yet."}
+          </p>
+
+
+          {unread > 0
+            && !selected && (
+            <span
+              className="
+                flex
+                h-5
+                min-w-5
+                shrink-0
+                items-center
+                justify-center
+                rounded-full
+                bg-[#0B5D1E]
+                px-1.5
+                text-[9px]
+                font-bold
+                text-white
+              "
+            >
+              {unread > 99
+                ? "99+"
+                : unread}
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+
+// ============================================================
+// MAIN
+// ============================================================
+
+export default function MessagesTab({
+  initialConversation = null,
+}) {
+  const {
+    threads,
+    activeThread,
+
+    messages,
+
+    isThreadsLoading,
+    isMessagesLoading,
+    isSending,
+
+    threadsError,
+    messagesError,
+    sendError,
+
+    loadThreads,
+    selectThread,
+    sendMessage,
+    refreshActiveThread,
+
+    clearSendError,
+  } = useMillerContractMessages();
+
+
+  const [
+    search,
+    setSearch,
+  ] = useState("");
+
+
+  const [
+    inputMessage,
+    setInputMessage,
+  ] = useState("");
+
+
+  const threadEndRef =
+    useRef(null);
+
+
+  const textareaRef =
+    useRef(null);
+
+
+  const openedTargetRef =
+    useRef("");
+
+
+  // ==========================================================
+  // LOAD THREADS
+  // ==========================================================
+
+  useEffect(
+    () => {
+      const timer =
+        window.setTimeout(
+          () => {
+            loadThreads(
+              search
+            ).catch(
+              () => {}
+            );
+          },
+          250
+        );
+
+
+      return () => {
+        window.clearTimeout(
+          timer
+        );
+      };
+    },
+    [
+      search,
+      loadThreads,
+    ]
+  );
+
+
+  // ==========================================================
+  // OPEN REQUESTED CONVERSATION
+  // ==========================================================
+
+  useEffect(
+    () => {
+      if (
+        !initialConversation?.farmer_user_id
+        || !initialConversation?.reference_type
+        || !initialConversation?.reference_id
+      ) {
+        return;
+      }
+
+
+      const targetKey = [
+        initialConversation.farmer_user_id,
+        initialConversation.reference_type,
+        initialConversation.reference_id,
+      ].join(":");
+
+
+      if (
+        openedTargetRef.current ===
+        targetKey
+      ) {
+        return;
+      }
+
+
+      openedTargetRef.current =
+        targetKey;
+
+      clearSendError();
+
+      setInputMessage(
+        ""
+      );
+
+
+      selectThread({
+        farmer_user_id:
+          initialConversation.farmer_user_id,
+
+        farmer_name:
+          initialConversation.farmer_name
+          || "Farmer",
+
+        farm_name:
+          initialConversation.farm_name
+          || "Registered Farm",
+
+        reference_type:
+          initialConversation.reference_type,
+
+        reference_id:
+          initialConversation.reference_id,
+
+        reference_code:
+          initialConversation.reference_code
+          || null,
+
+        unread_count:
+          0,
+      }).catch(
+        () => {}
+      );
+    },
+    [
+      initialConversation,
+      selectThread,
+      clearSendError,
+    ]
+  );
+
+
+  // ==========================================================
+  // SCROLL TO LATEST
+  // ==========================================================
+
+  useEffect(
+    () => {
+      if (
+        !activeThread
+        || isMessagesLoading
+      ) {
+        return;
+      }
+
+
+      window.setTimeout(
+        () => {
+          threadEndRef.current
+            ?.scrollIntoView({
+              behavior:
+                "smooth",
+
+              block:
+                "end",
+            });
+        },
+        30
+      );
+    },
+    [
+      activeThread,
+      messages,
+      isMessagesLoading,
+    ]
+  );
+
+
+  // ==========================================================
+  // SELECT
+  // ==========================================================
+
+  const handleSelectThread =
+    async (
+      thread
+    ) => {
+      clearSendError();
+
+      setInputMessage(
+        ""
+      );
+
+
+      try {
+        await selectThread(
+          thread
+        );
+
+      } catch {
+        // Hook exposes the visible error.
+      }
+    };
+
+
+  // ==========================================================
+  // SEND
+  // ==========================================================
+
+  const handleSend =
+    async (
+      event
+    ) => {
+      event?.preventDefault?.();
+
+
+      const message =
+        inputMessage.trim();
+
+
+      if (
+        !message
+        || isSending
+      ) {
+        return;
+      }
+
+
+      try {
+        await sendMessage(
+          message
+        );
+
+
+        setInputMessage(
+          ""
+        );
+
+
+        textareaRef.current
+          ?.focus();
+
+      } catch {
+        // Error displayed by hook.
+      }
+    };
+
+
+  const handleMessageKeyDown =
+    (
+      event
+    ) => {
+      if (
+        event.key === "Enter"
+        && !event.shiftKey
+      ) {
+        event.preventDefault();
+
+        handleSend(
+          event
+        );
+      }
+    };
+
+
+  // ==========================================================
+  // ACTIVE THREAD INFO
+  // ==========================================================
+
+  const selectedReferenceLabel =
+    useMemo(
+      () =>
+        activeThread
+          ? referenceLabel(
+              activeThread.reference_type
+            )
+          : "",
+      [
+        activeThread,
+      ]
+    );
+
+
+  const activeKey =
+    threadKey(
+      activeThread
+    );
+
+
+  return (
+    <div
+      className="
+        overflow-hidden
+        rounded-2xl
+        border
+        border-slate-200
+        bg-white
+        shadow-sm
+      "
+    >
+      <div
+        className="
+          flex
+          min-h-[680px]
+          flex-col
+          lg:h-[680px]
+          lg:flex-row
+        "
+      >
+
+        {/* ==================================================
+            LEFT - CONVERSATION LIST
+        ================================================== */}
+
+        <aside
+          className="
+            flex
+            max-h-[330px]
+            w-full
+            flex-col
+            border-b
+            border-slate-200
+            bg-white
+            lg:max-h-none
+            lg:w-[360px]
+            lg:shrink-0
+            lg:border-b-0
+            lg:border-r
+          "
+        >
+          {/* SEARCH */}
+
+          <div
+            className="
+              border-b
+              border-slate-100
+              p-4
+            "
+          >
+            <div
+              className="
+                flex
+                items-center
+                gap-2
+              "
+            >
+              <div
+                className="
+                  relative
+                  min-w-0
+                  flex-1
+                "
+              >
+                <Search
+                  size={15}
+                  className="
+                    absolute
+                    left-3
+                    top-1/2
+                    -translate-y-1/2
+                    text-slate-400
+                  "
+                />
+
+                <input
+                  type="text"
+                  value={
+                    search
+                  }
+                  onChange={
+                    (
+                      event
+                    ) =>
+                      setSearch(
+                        event.target.value
+                      )
+                  }
+                  placeholder="Search Farmer or reference"
+                  className="
+                    w-full
+                    rounded-xl
+                    border
+                    border-slate-200
+                    bg-white
+                    py-2.5
+                    pl-9
+                    pr-3
+                    text-xs
+                    font-normal
+                    text-slate-700
+                    outline-none
+                    transition
+                    placeholder:text-slate-400
+                    focus:border-[#0B5D1E]
+                    focus:ring-1
+                    focus:ring-[#0B5D1E]
+                  "
+                />
+              </div>
+
+
+              <button
+                type="button"
+                onClick={
+                  () =>
+                    loadThreads(
+                      search
+                    ).catch(
+                      () => {}
+                    )
+                }
+                disabled={
+                  isThreadsLoading
+                }
+                title="Refresh conversations"
+                className="
+                  flex
+                  h-[38px]
+                  w-[38px]
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-white
+                  text-slate-500
+                  transition
+                  hover:bg-slate-50
+                  hover:text-[#0B5D1E]
+                  disabled:opacity-50
+                "
+              >
+                <RefreshCw
+                  size={15}
+                  className={
+                    isThreadsLoading
+                      ? "animate-spin"
+                      : ""
+                  }
+                />
+              </button>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => alert(`Viewing reference details: ${activeConv.reference}`)}
-            className="rounded-xl border border-emerald-700 px-3 py-1.5 text-xs font-bold text-emerald-800 hover:bg-emerald-50 transition cursor-pointer"
+
+          {/* THREAD LIST */}
+
+          <div
+            className="
+              flex-1
+              overflow-y-auto
+            "
           >
-            View Reference
-          </button>
-        </div>
+            {isThreadsLoading
+              && threads.length === 0 ? (
+              <div
+                className="
+                  flex
+                  h-full
+                  min-h-48
+                  items-center
+                  justify-center
+                "
+              >
+                <div
+                  className="
+                    text-center
+                  "
+                >
+                  <Loader2
+                    size={23}
+                    className="
+                      mx-auto
+                      animate-spin
+                      text-[#0B5D1E]
+                    "
+                  />
 
-        {/* Message Thread Window */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          <div className="text-center my-2">
-            <span className="rounded-full bg-slate-200/70 px-3 py-1 text-[11px] font-semibold text-gray-500">
-              Today, October 15, 2024
-            </span>
-          </div>
-
-          {activeConv.messages.map((msg) => {
-            const isMe = msg.sender === "me";
-
-            return (
-              <div key={msg.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
-                <div className={`flex gap-2 max-w-[70%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                  {/* Bubble Container */}
-                  <div
-                    className={`rounded-2xl p-4 text-xs leading-relaxed ${
-                      isMe
-                        ? "bg-[#0B5D1E] text-white rounded-br-xs"
-                        : "bg-white text-gray-800 border border-slate-200/80 shadow-xs rounded-bl-xs"
-                    }`}
+                  <p
+                    className="
+                      mt-2
+                      text-xs
+                      text-slate-500
+                    "
                   >
-                    {msg.text && <p>{msg.text}</p>}
+                    Loading conversations...
+                  </p>
+                </div>
+              </div>
 
-                    {/* File Attachment Bubble */}
-                    {msg.attachment && (
-                      <div className="flex items-center gap-3 rounded-xl bg-slate-100 p-2.5 text-gray-800 border border-slate-200/60">
-                        <div className="p-2 bg-slate-200 rounded-lg text-gray-600">
-                          <FileText size={16} />
-                        </div>
-                        <div className="pr-4">
-                          <p className="font-bold text-xs">{msg.attachment.name}</p>
-                          <p className="text-[10px] text-gray-500">{msg.attachment.size}</p>
-                        </div>
-                      </div>
+            ) : threadsError ? (
+              <div
+                className="
+                  p-4
+                "
+              >
+                <div
+                  className="
+                    rounded-xl
+                    border
+                    border-red-200
+                    bg-red-50
+                    px-3
+                    py-3
+                    text-xs
+                    leading-5
+                    text-red-700
+                  "
+                >
+                  {threadsError}
+                </div>
+              </div>
+
+            ) : threads.length === 0 ? (
+              <div
+                className="
+                  flex
+                  min-h-52
+                  flex-col
+                  items-center
+                  justify-center
+                  px-6
+                  text-center
+                "
+              >
+                <div
+                  className="
+                    flex
+                    h-11
+                    w-11
+                    items-center
+                    justify-center
+                    rounded-full
+                    bg-slate-100
+                    text-slate-400
+                  "
+                >
+                  <MessageCircle
+                    size={20}
+                  />
+                </div>
+
+                <p
+                  className="
+                    mt-3
+                    text-sm
+                    font-semibold
+                    text-slate-600
+                  "
+                >
+                  No conversations found
+                </p>
+
+                <p
+                  className="
+                    mt-1
+                    text-xs
+                    leading-5
+                    text-slate-400
+                  "
+                >
+                  Farmer messages related to applications, bidding offers, and contracts will appear here.
+                </p>
+              </div>
+
+            ) : (
+              threads.map(
+                (
+                  thread
+                ) => (
+                  <ThreadItem
+                    key={
+                      threadKey(
+                        thread
+                      )
+                    }
+                    thread={
+                      thread
+                    }
+                    selected={
+                      threadKey(
+                        thread
+                      ) === activeKey
+                    }
+                    onSelect={
+                      () =>
+                        handleSelectThread(
+                          thread
+                        )
+                    }
+                  />
+                )
+              )
+            )}
+          </div>
+        </aside>
+
+
+        {/* ==================================================
+            RIGHT - CHAT
+        ================================================== */}
+
+        <main
+          className="
+            flex
+            min-h-[500px]
+            min-w-0
+            flex-1
+            flex-col
+            bg-slate-50/50
+          "
+        >
+          {!activeThread ? (
+
+            /* EMPTY CONVERSATION */
+
+            <div
+              className="
+                flex
+                flex-1
+                items-center
+                justify-center
+                p-8
+              "
+            >
+              <div
+                className="
+                  max-w-md
+                  text-center
+                "
+              >
+                <div
+                  className="
+                    mx-auto
+                    flex
+                    h-14
+                    w-14
+                    items-center
+                    justify-center
+                    rounded-full
+                    bg-emerald-50
+                    text-[#0B5D1E]
+                  "
+                >
+                  <MessageCircle
+                    size={25}
+                  />
+                </div>
+
+
+                <h3
+                  className="
+                    mt-4
+                    text-base
+                    font-bold
+                    text-slate-800
+                  "
+                >
+                  Select a conversation
+                </h3>
+
+
+                <p
+                  className="
+                    mt-2
+                    text-sm
+                    leading-6
+                    text-slate-500
+                  "
+                >
+                  Choose a Farmer conversation from the left to review and continue your transaction-related discussion.
+                </p>
+              </div>
+            </div>
+
+          ) : (
+            <>
+              {/* ==============================================
+                  HEADER
+              ============================================== */}
+
+              <div
+                className="
+                  flex
+                  flex-wrap
+                  items-center
+                  justify-between
+                  gap-3
+                  border-b
+                  border-slate-200
+                  bg-white
+                  px-5
+                  py-4
+                "
+              >
+                <div
+                  className="
+                    flex
+                    min-w-0
+                    items-center
+                    gap-3
+                  "
+                >
+                  <div
+                    className="
+                      flex
+                      h-10
+                      w-10
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-full
+                      bg-[#0B5D1E]
+                      text-xs
+                      font-bold
+                      text-white
+                    "
+                  >
+                    {getInitials(
+                      activeThread.farmer_name
                     )}
                   </div>
 
-                  {!isMe && (
-                    <div className="self-end mb-1 text-slate-300">
-                      <div className="h-6 w-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-gray-600">
-                        🏛️
-                      </div>
-                    </div>
-                  )}
 
-                  {isMe && (
-                    <img
-                      src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120"
-                      alt="Avatar"
-                      className="h-6 w-6 rounded-full object-cover self-end mb-1"
-                    />
-                  )}
+                  <div
+                    className="
+                      min-w-0
+                    "
+                  >
+                    <h3
+                      className="
+                        truncate
+                        text-sm
+                        font-bold
+                        text-slate-900
+                      "
+                    >
+                      {activeThread.farmer_name
+                        || "Farmer"}
+                    </h3>
+
+
+                    <p
+                      className="
+                        mt-0.5
+                        truncate
+                        text-xs
+                        text-slate-500
+                      "
+                    >
+                      {activeThread.farm_name
+                        || "Registered Farm"}
+                    </p>
+                  </div>
                 </div>
 
-                <span className="text-[10px] text-gray-400 mt-1 px-1">{msg.time}</span>
-              </div>
-            );
-          })}
-        </div>
 
-        {/* Message Input Footer */}
-        <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 bg-white">
-          <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-1.5 focus-within:ring-1 focus-within:ring-[#0B5D1E] focus-within:border-[#0B5D1E]">
-            <button type="button" className="text-gray-400 hover:text-gray-600 transition cursor-pointer">
-              <Paperclip size={18} />
-            </button>
-            <input
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Type a message..."
-              className="flex-1 text-xs outline-none bg-transparent placeholder-gray-400 text-gray-700 py-1"
-            />
-            <button
-              type="submit"
-              className="inline-flex items-center gap-1 rounded-xl bg-[#0B5D1E] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-800 transition cursor-pointer"
-            >
-              <span>Send</span>
-              <Send size={12} />
-            </button>
-          </div>
-        </form>
+                <button
+                  type="button"
+                  onClick={
+                    () =>
+                      refreshActiveThread()
+                        .catch(
+                          () => {}
+                        )
+                  }
+                  disabled={
+                    isMessagesLoading
+                  }
+                  className="
+                    inline-flex
+                    items-center
+                    gap-1.5
+                    rounded-xl
+                    border
+                    border-slate-200
+                    bg-white
+                    px-3
+                    py-2
+                    text-xs
+                    font-normal
+                    text-slate-600
+                    transition
+                    hover:bg-slate-50
+                    disabled:opacity-50
+                  "
+                >
+                  <RefreshCw
+                    size={13}
+                    className={
+                      isMessagesLoading
+                        ? "animate-spin"
+                        : ""
+                    }
+                  />
+
+                  Refresh
+                </button>
+              </div>
+
+
+              {/* ==============================================
+                  TRANSACTION REFERENCE
+              ============================================== */}
+
+              <div
+                className="
+                  border-b
+                  border-slate-200
+                  bg-white
+                  px-5
+                  py-3
+                "
+              >
+                <div
+                  className="
+                    flex
+                    flex-wrap
+                    items-center
+                    gap-2
+                  "
+                >
+                  <span
+                    className={`
+                      inline-flex
+                      items-center
+                      gap-1.5
+                      rounded-lg
+                      border
+                      px-2.5
+                      py-1
+                      text-[10px]
+                      font-semibold
+
+                      ${referenceStyles(
+                        activeThread.reference_type
+                      )}
+                    `}
+                  >
+                    <ReferenceIcon
+                      type={
+                        activeThread.reference_type
+                      }
+                      size={12}
+                    />
+
+                    {selectedReferenceLabel}
+                  </span>
+
+
+                  <span
+                    className="
+                      text-xs
+                      font-semibold
+                      text-slate-700
+                    "
+                  >
+                    {activeThread.reference_code
+                      || `Reference #${activeThread.reference_id}`}
+                  </span>
+                </div>
+
+
+                <p
+                  className="
+                    mt-1.5
+                    text-[11px]
+                    text-slate-400
+                  "
+                >
+                  This conversation is linked to this GrainRise transaction reference.
+                </p>
+              </div>
+
+
+              {/* ==============================================
+                  CHAT MESSAGES
+              ============================================== */}
+
+              <div
+                className="
+                  flex-1
+                  overflow-y-auto
+                  p-4
+                  sm:p-6
+                "
+              >
+                {isMessagesLoading ? (
+                  <div
+                    className="
+                      flex
+                      h-full
+                      min-h-64
+                      items-center
+                      justify-center
+                    "
+                  >
+                    <div
+                      className="
+                        text-center
+                      "
+                    >
+                      <Loader2
+                        size={25}
+                        className="
+                          mx-auto
+                          animate-spin
+                          text-[#0B5D1E]
+                        "
+                      />
+
+                      <p
+                        className="
+                          mt-3
+                          text-xs
+                          text-slate-500
+                        "
+                      >
+                        Loading conversation...
+                      </p>
+                    </div>
+                  </div>
+
+                ) : messagesError ? (
+                  <div
+                    className="
+                      mx-auto
+                      max-w-lg
+                      rounded-xl
+                      border
+                      border-red-200
+                      bg-red-50
+                      px-4
+                      py-3
+                      text-center
+                      text-sm
+                      text-red-700
+                    "
+                  >
+                    {messagesError}
+                  </div>
+
+                ) : messages.length === 0 ? (
+                  <div
+                    className="
+                      flex
+                      h-full
+                      min-h-64
+                      items-center
+                      justify-center
+                    "
+                  >
+                    <div
+                      className="
+                        max-w-sm
+                        text-center
+                      "
+                    >
+                      <UserRound
+                        size={29}
+                        className="
+                          mx-auto
+                          text-slate-300
+                        "
+                      />
+
+                      <p
+                        className="
+                          mt-3
+                          text-sm
+                          font-semibold
+                          text-slate-600
+                        "
+                      >
+                        Start the conversation
+                      </p>
+
+                      <p
+                        className="
+                          mt-1
+                          text-xs
+                          leading-5
+                          text-slate-400
+                        "
+                      >
+                        Send a message about this transaction to the Farmer.
+                      </p>
+                    </div>
+                  </div>
+
+                ) : (
+                  <div
+                    className="
+                      space-y-3
+                    "
+                  >
+                    {messages.map(
+                      (
+                        message
+                      ) => {
+                        const mine =
+                          message.sender_type
+                          === "miller";
+
+
+                        return (
+                          <div
+                            key={
+                              message.message_id
+                            }
+                            className={`
+                              flex
+                              w-full
+
+                              ${
+                                mine
+                                  ? "justify-end"
+                                  : "justify-start"
+                              }
+                            `}
+                          >
+                            <div
+                              className={`
+                                flex
+                                max-w-[86%]
+                                items-end
+                                gap-2
+                                sm:max-w-[72%]
+
+                                ${
+                                  mine
+                                    ? "flex-row-reverse"
+                                    : "flex-row"
+                                }
+                              `}
+                            >
+                              {!mine && (
+                                <div
+                                  className="
+                                    flex
+                                    h-7
+                                    w-7
+                                    shrink-0
+                                    items-center
+                                    justify-center
+                                    rounded-full
+                                    bg-slate-200
+                                    text-[9px]
+                                    font-bold
+                                    text-slate-600
+                                  "
+                                >
+                                  {getInitials(
+                                    activeThread.farmer_name
+                                  )}
+                                </div>
+                              )}
+
+
+                              <div>
+                                <div
+                                  className={`
+                                    rounded-2xl
+                                    px-4
+                                    py-3
+                                    text-sm
+                                    leading-6
+
+                                    ${
+                                      mine
+                                        ? `
+                                          rounded-br-md
+                                          bg-[#0B5D1E]
+                                          text-white
+                                        `
+                                        : `
+                                          rounded-bl-md
+                                          border
+                                          border-slate-200
+                                          bg-white
+                                          text-slate-700
+                                          shadow-sm
+                                        `
+                                    }
+                                  `}
+                                >
+                                  <p
+                                    className="
+                                      whitespace-pre-wrap
+                                      break-words
+                                    "
+                                  >
+                                    {message.message_text}
+                                  </p>
+                                </div>
+
+
+                                <p
+                                  className={`
+                                    mt-1
+                                    text-[10px]
+                                    text-slate-400
+
+                                    ${
+                                      mine
+                                        ? "text-right"
+                                        : "text-left"
+                                    }
+                                  `}
+                                  title={
+                                    formatFullTimestamp(
+                                      message.created_at
+                                    )
+                                  }
+                                >
+                                  {formatFullTimestamp(
+                                    message.created_at
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                    )}
+
+
+                    <div
+                      ref={
+                        threadEndRef
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+
+
+              {/* ==============================================
+                  SEND ERROR
+              ============================================== */}
+
+              {sendError && (
+                <div
+                  className="
+                    border-t
+                    border-red-100
+                    bg-red-50
+                    px-5
+                    py-2.5
+                    text-xs
+                    text-red-700
+                  "
+                >
+                  {sendError}
+                </div>
+              )}
+
+
+              {/* ==============================================
+                  MESSAGE COMPOSER
+              ============================================== */}
+
+              <form
+                onSubmit={
+                  handleSend
+                }
+                className="
+                  border-t
+                  border-slate-200
+                  bg-white
+                  p-4
+                "
+              >
+                <div
+                  className="
+                    flex
+                    items-end
+                    gap-2
+                  "
+                >
+                  <div
+                    className="
+                      min-w-0
+                      flex-1
+                    "
+                  >
+                    <textarea
+                      ref={
+                        textareaRef
+                      }
+                      rows={2}
+                      maxLength={5000}
+                      value={
+                        inputMessage
+                      }
+                      onChange={
+                        (
+                          event
+                        ) => {
+                          setInputMessage(
+                            event.target.value
+                          );
+
+                          clearSendError();
+                        }
+                      }
+                      onKeyDown={
+                        handleMessageKeyDown
+                      }
+                      disabled={
+                        isSending
+                      }
+                      placeholder="Write a message to the Farmer..."
+                      className="
+                        max-h-32
+                        min-h-[48px]
+                        w-full
+                        resize-none
+                        rounded-xl
+                        border
+                        border-slate-200
+                        bg-white
+                        px-4
+                        py-3
+                        text-sm
+                        leading-5
+                        text-slate-700
+                        outline-none
+                        transition
+                        placeholder:text-slate-400
+                        focus:border-[#0B5D1E]
+                        focus:ring-1
+                        focus:ring-[#0B5D1E]
+                        disabled:bg-slate-50
+                      "
+                    />
+
+
+                    <div
+                      className="
+                        mt-1
+                        flex
+                        justify-between
+                        gap-3
+                        px-1
+                      "
+                    >
+                      <p
+                        className="
+                          text-[10px]
+                          text-slate-400
+                        "
+                      >
+                        Enter to send • Shift + Enter for a new line
+                      </p>
+
+                      <p
+                        className={`
+                          text-[10px]
+
+                          ${
+                            inputMessage.length
+                            > 4800
+                              ? "text-red-500"
+                              : "text-slate-400"
+                          }
+                        `}
+                      >
+                        {inputMessage.length}/5000
+                      </p>
+                    </div>
+                  </div>
+
+
+                  <button
+                    type="submit"
+                    disabled={
+                      !inputMessage.trim()
+                      || isSending
+                    }
+                    className="
+                      inline-flex
+                      h-12
+                      shrink-0
+                      items-center
+                      justify-center
+                      gap-2
+                      rounded-xl
+                      bg-[#0B5D1E]
+                      px-4
+                      text-sm
+                      font-normal
+                      text-white
+                      transition
+                      hover:bg-[#094d19]
+                      disabled:cursor-not-allowed
+                      disabled:opacity-50
+                    "
+                  >
+                    {isSending ? (
+                      <Loader2
+                        size={16}
+                        className="
+                          animate-spin
+                        "
+                      />
+
+                    ) : (
+                      <Send
+                        size={16}
+                      />
+                    )}
+
+
+                    <span
+                      className="
+                        hidden
+                        sm:inline
+                      "
+                    >
+                      Send
+                    </span>
+                  </button>
+                </div>
+              </form>
+            </>
+          )}
+        </main>
       </div>
     </div>
   );

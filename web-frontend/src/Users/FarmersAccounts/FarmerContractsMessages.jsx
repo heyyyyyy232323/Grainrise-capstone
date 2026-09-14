@@ -203,7 +203,9 @@ function getThreadSecondaryName(thread) {
 // COMPONENT
 // ============================================================
 
-export default function FarmerContractsMessages() {
+export default function FarmerContractsMessages({
+  initialConversation = null,
+}) {
   const {
     messageThreads,
     messages,
@@ -242,16 +244,135 @@ export default function FarmerContractsMessages() {
   );
 
 
+  const openedTargetRef = useRef(
+    ""
+  );
+
+
   // ==========================================================
-  // LOAD THREADS
+  // LOAD THREADS + OPEN REQUESTED CONVERSATION
   // ==========================================================
 
   useEffect(
     () => {
-      loadMessageThreads();
+      let cancelled = false;
+
+
+      const load = async () => {
+        const threads =
+          await loadMessageThreads();
+
+
+        if (
+          cancelled
+          || !initialConversation?.supplier_profile_id
+          || !initialConversation?.reference_type
+          || !initialConversation?.reference_id
+        ) {
+          return;
+        }
+
+
+        const targetKey = [
+          initialConversation.supplier_profile_id,
+          initialConversation.reference_type,
+          initialConversation.reference_id,
+        ].join(":");
+
+
+        if (
+          openedTargetRef.current ===
+          targetKey
+        ) {
+          return;
+        }
+
+
+        const matchingThread =
+          Array.isArray(threads)
+            ? threads.find(
+                (thread) => (
+                  Number(
+                    thread.supplier_profile_id
+                  )
+                    ===
+                  Number(
+                    initialConversation.supplier_profile_id
+                  )
+                  &&
+                  thread.reference_type
+                    ===
+                  initialConversation.reference_type
+                  &&
+                  Number(
+                    thread.reference_id
+                  )
+                    ===
+                  Number(
+                    initialConversation.reference_id
+                  )
+                )
+              )
+            : null;
+
+
+        openedTargetRef.current =
+          targetKey;
+
+
+        setMessageText(
+          ""
+        );
+
+
+        await selectMessageThread(
+          matchingThread
+          || {
+            supplier_profile_id:
+              initialConversation.supplier_profile_id,
+
+            reference_type:
+              initialConversation.reference_type,
+
+            reference_id:
+              initialConversation.reference_id,
+
+            reference_code:
+              initialConversation.reference_code
+              || null,
+
+            miller_name:
+              initialConversation.miller_name
+              || "Miller",
+
+            miller_business_name:
+              initialConversation.business_name
+              || initialConversation.miller_business_name
+              || "Miller",
+
+            business_name:
+              initialConversation.business_name
+              || initialConversation.miller_business_name
+              || null,
+
+            unread_count:
+              0,
+          }
+        );
+      };
+
+
+      load();
+
+
+      return () => {
+        cancelled = true;
+      };
     },
     [
+      initialConversation,
       loadMessageThreads,
+      selectMessageThread,
     ]
   );
 
@@ -263,7 +384,8 @@ export default function FarmerContractsMessages() {
   useEffect(
     () => {
       if (
-        selectedMessageThread
+        initialConversation
+        || selectedMessageThread
         || messageThreads.length === 0
       ) {
         return;
@@ -275,6 +397,7 @@ export default function FarmerContractsMessages() {
       );
     },
     [
+      initialConversation,
       messageThreads,
       selectedMessageThread,
       selectMessageThread,

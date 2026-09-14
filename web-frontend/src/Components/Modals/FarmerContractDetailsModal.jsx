@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useState,
 } from "react";
 
 import {
@@ -18,6 +19,8 @@ import {
   Package,
   X,
 } from "lucide-react";
+
+import SignaturePad from "../Minor-Components/SignaturePad";
 
 
 // ============================================================
@@ -479,17 +482,50 @@ export default function FarmerContractDetailsModal({
   contract,
 
   isLoading = false,
+  isSaving = false,
   error = "",
 
   onClose,
   onMessage,
   onRequestVoid,
   onDownload,
-
-  // Ready for later backend support.
   onSign,
   onMarkCompleted,
 }) {
+  const [
+    showSignaturePanel,
+    setShowSignaturePanel,
+  ] = useState(false);
+
+
+  const [
+    signatureValue,
+    setSignatureValue,
+  ] = useState("");
+
+
+  const [
+    signatureError,
+    setSignatureError,
+  ] = useState("");
+
+
+  // ==========================================================
+  // RESET SIGNATURE STATE
+  // ==========================================================
+
+  useEffect(
+    () => {
+      setShowSignaturePanel(false);
+      setSignatureValue("");
+      setSignatureError("");
+    },
+    [
+      open,
+      contract?.contract_id,
+    ]
+  );
+
 
   // ==========================================================
   // BODY SCROLL LOCK
@@ -582,6 +618,114 @@ export default function FarmerContractDetailsModal({
     buildBusinessAddress(
       contract
     );
+
+
+  // ==========================================================
+  // SIGNATURE ACTIONS
+  // ==========================================================
+
+  const handleOpenSignature =
+    () => {
+      if (!canSign) {
+        return;
+      }
+
+      setSignatureError(
+        ""
+      );
+
+      setShowSignaturePanel(
+        true
+      );
+    };
+
+
+  const handleSignatureChange =
+    (value) => {
+      setSignatureValue(
+        value || ""
+      );
+
+      if (value) {
+        setSignatureError(
+          ""
+        );
+      }
+    };
+
+
+  const handleCancelSignature =
+    () => {
+      if (isSaving) {
+        return;
+      }
+
+      setShowSignaturePanel(
+        false
+      );
+
+      setSignatureValue(
+        ""
+      );
+
+      setSignatureError(
+        ""
+      );
+    };
+
+
+  const handleConfirmSignature =
+    async () => {
+      const normalizedSignature =
+        String(
+          signatureValue || ""
+        ).trim();
+
+
+      if (
+        !normalizedSignature
+        || !normalizedSignature.startsWith(
+          "data:image/"
+        )
+      ) {
+        setSignatureError(
+          "Please draw your electronic signature first."
+        );
+
+        return;
+      }
+
+
+      if (!onSign) {
+        return;
+      }
+
+
+      setSignatureError(
+        ""
+      );
+
+
+      const result =
+        await onSign(
+          normalizedSignature
+        );
+
+
+      if (result) {
+        setShowSignaturePanel(
+          false
+        );
+
+        setSignatureValue(
+          ""
+        );
+
+        setSignatureError(
+          ""
+        );
+      }
+    };
 
 
   // ==========================================================
@@ -1192,6 +1336,128 @@ export default function FarmerContractDetailsModal({
 
 
                 {/* ==========================================
+                    FARMER E-SIGNATURE
+                ========================================== */}
+
+                {showSignaturePanel &&
+                  canSign && (
+                    <DetailSection
+                      icon={FileSignature}
+                      title="E-Sign Contract"
+                      description="Draw your handwritten signature below. It will be saved as your electronic confirmation for this contract."
+                    >
+                      <div
+                        className="
+                          sm:col-span-2
+                        "
+                      >
+                        <SignaturePad
+                          value={
+                            signatureValue
+                          }
+                          onChange={
+                            handleSignatureChange
+                          }
+                          disabled={
+                            isSaving
+                          }
+                          error={
+                            signatureError
+                          }
+                        />
+
+
+                        <div
+                          className="
+                            mt-4
+                            flex
+                            flex-wrap
+                            items-center
+                            justify-end
+                            gap-2
+                          "
+                        >
+                          <button
+                            type="button"
+                            onClick={
+                              handleCancelSignature
+                            }
+                            disabled={
+                              isSaving
+                            }
+                            className="
+                              rounded-lg
+                              border
+                              border-slate-300
+                              bg-white
+                              px-4
+                              py-2.5
+                              text-sm
+                              font-semibold
+                              text-slate-700
+                              transition
+                              hover:bg-slate-50
+                              disabled:cursor-not-allowed
+                              disabled:opacity-50
+                            "
+                          >
+                            Cancel
+                          </button>
+
+
+                          <button
+                            type="button"
+                            onClick={
+                              handleConfirmSignature
+                            }
+                            disabled={
+                              isSaving ||
+                              !signatureValue
+                            }
+                            className="
+                              inline-flex
+                              items-center
+                              justify-center
+                              gap-2
+                              rounded-lg
+                              bg-green-700
+                              px-4
+                              py-2.5
+                              text-sm
+                              font-semibold
+                              text-white
+                              transition
+                              hover:bg-green-800
+                              disabled:cursor-not-allowed
+                              disabled:opacity-50
+                            "
+                          >
+                            {isSaving ? (
+                              <>
+                                <Loader2
+                                  size={16}
+                                  className="animate-spin"
+                                />
+
+                                Signing...
+                              </>
+                            ) : (
+                              <>
+                                <FileSignature
+                                  size={16}
+                                />
+
+                                Confirm E-Signature
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </DetailSection>
+                  )}
+
+
+                {/* ==========================================
                     VOID REQUEST
                 ========================================== */}
 
@@ -1334,12 +1600,17 @@ export default function FarmerContractDetailsModal({
             )}
 
 
-          {/* FUTURE E-SIGN */}
+          {/* E-SIGN */}
 
           {canSign && (
             <button
               type="button"
-              onClick={onSign}
+              onClick={
+                handleOpenSignature
+              }
+              disabled={
+                isSaving
+              }
               className="
                 inline-flex
                 items-center
@@ -1356,6 +1627,8 @@ export default function FarmerContractDetailsModal({
                 text-green-700
                 transition
                 hover:bg-green-50
+                disabled:cursor-not-allowed
+                disabled:opacity-50
               "
             >
               <FileSignature

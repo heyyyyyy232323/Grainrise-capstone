@@ -1179,6 +1179,80 @@ export default function useFarmerContracts() {
 
 
   // ==========================================================
+  // SIGN CURRENT CONTRACT
+  // ==========================================================
+
+  const signContract = useCallback(
+    async (
+      contractId,
+      signatureDataUrl
+    ) => {
+      if (!contractId) {
+        setError(
+          "Invalid Contract ID."
+        );
+
+        return null;
+      }
+
+
+      if (
+        !String(
+          signatureDataUrl
+          || ""
+        ).startsWith(
+          "data:image/"
+        )
+      ) {
+        setError(
+          "Please draw your electronic signature first."
+        );
+
+        return null;
+      }
+
+
+      const result = await runWrite(
+        (
+          "/farmer/contracts/"
+          + `current/${contractId}/sign/`
+        ),
+
+        {
+          method: "POST",
+
+          body: {
+            farmer_signature_path:
+              signatureDataUrl,
+          },
+        }
+      );
+
+
+      if (
+        result
+        && !result.blocked
+      ) {
+        await Promise.all([
+          loadContracts(),
+          loadContractDetails(
+            contractId
+          ),
+        ]);
+      }
+
+
+      return result;
+    },
+    [
+      runWrite,
+      loadContracts,
+      loadContractDetails,
+    ]
+  );
+
+
+  // ==========================================================
   // REQUEST VOID
   // ==========================================================
 
@@ -1686,6 +1760,7 @@ export default function useFarmerContracts() {
 
     loadContracts,
     loadContractDetails,
+    signContract,
     requestVoid,
 
 

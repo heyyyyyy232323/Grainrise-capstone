@@ -9,11 +9,14 @@ import {
 } from "react-dom";
 
 import {
+  FileSignature,
   Gavel,
   ImageOff,
   Loader2,
   X,
 } from "lucide-react";
+
+import SignaturePad from "../Minor-Components/SignaturePad";
 
 
 // ============================================================
@@ -35,6 +38,8 @@ const EMPTY_FORM = {
 
   additional_terms: "",
   notes_to_millers: "",
+
+  farmer_signature_path: "",
 };
 
 
@@ -584,6 +589,18 @@ export default function FarmerContractOpenBiddingModal({
     }
 
 
+    if (
+      !form.farmer_signature_path
+      || !String(
+        form.farmer_signature_path
+      ).startsWith(
+        "data:image/"
+      )
+    ) {
+      return "Electronic signature is required.";
+    }
+
+
     return "";
   };
 
@@ -654,6 +671,9 @@ export default function FarmerContractOpenBiddingModal({
 
       notes_to_millers:
         form.notes_to_millers.trim(),
+
+      farmer_signature_path:
+        form.farmer_signature_path,
     });
   };
 
@@ -998,8 +1018,6 @@ export default function FarmerContractOpenBiddingModal({
                     "
                   >
 
-                    {/* IMAGE */}
-
                     {selectedProduct.product_image ? (
                       <img
                         src={
@@ -1043,8 +1061,6 @@ export default function FarmerContractOpenBiddingModal({
                       </div>
                     )}
 
-
-                    {/* DETAILS */}
 
                     <div
                       className="
@@ -1105,9 +1121,7 @@ export default function FarmerContractOpenBiddingModal({
                           "—"
                         }
                       />
-
                     </div>
-
                   </div>
 
 
@@ -1144,7 +1158,6 @@ export default function FarmerContractOpenBiddingModal({
                       </p>
                     </div>
                   )}
-
                 </div>
               )}
 
@@ -1589,6 +1602,96 @@ export default function FarmerContractOpenBiddingModal({
                 />
               </FormField>
 
+            </div>
+          </section>
+
+
+          {/* =================================================
+              ELECTRONIC SIGNATURE
+          ================================================= */}
+
+          <section
+            className="
+              overflow-hidden
+              rounded-xl
+              border
+              border-slate-200
+              bg-white
+            "
+          >
+            <div
+              className="
+                flex
+                items-start
+                gap-2
+                border-b
+                border-slate-100
+                bg-slate-50
+                px-4
+                py-3
+              "
+            >
+              <FileSignature
+                size={17}
+                className="
+                  mt-0.5
+                  shrink-0
+                  text-green-700
+                "
+              />
+
+              <div>
+                <h4
+                  className="
+                    text-sm
+                    font-bold
+                    text-slate-900
+                  "
+                >
+                  Electronic Signature
+                  <span className="ml-1 text-red-500">
+                    *
+                  </span>
+                </h4>
+
+                <p
+                  className="
+                    mt-0.5
+                    text-xs
+                    leading-5
+                    text-slate-500
+                  "
+                >
+                  Draw your signature using your mouse on desktop or your finger/stylus on mobile.
+                  Your signature confirms this Farmer open bidding.
+                </p>
+              </div>
+            </div>
+
+
+            <div className="p-4">
+              <SignaturePad
+                value={
+                  form.farmer_signature_path
+                }
+                onChange={(
+                  signature
+                ) =>
+                  updateField(
+                    "farmer_signature_path",
+                    signature
+                  )
+                }
+                disabled={
+                  isSaving
+                }
+                error={
+                  localError ===
+                  "Electronic signature is required."
+                    ? localError
+                    : ""
+                }
+              />
             </div>
           </section>
 

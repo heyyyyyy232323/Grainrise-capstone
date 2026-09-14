@@ -224,6 +224,28 @@ urlpatterns = [
 
 
     # ========================================================
+    # MILLER MANAGER FUNCTIONS
+    # ========================================================
+    #
+    # Current Miller modules:
+    #
+    # /api/miller/contracts/
+    #
+    # All Miller Contracts endpoints are protected by the
+    # Miller JWT guard and resolve the supplier_profile_id
+    # from the authenticated Miller Manager account.
+    #
+    # Never use a supplier_profile_id sent by the frontend as
+    # ownership authority.
+    # ========================================================
+
+    path(
+        "miller/",
+        include("api.miller_function.urls"),
+    ),
+
+
+    # ========================================================
     # CENTRALIZED NEWS & UPDATES
     # ========================================================
     #

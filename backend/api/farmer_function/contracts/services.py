@@ -21,6 +21,7 @@ from api.chat_moderation import (
 # - Create Open Bidding
 # - Accept Miller Offer
 # - Decline Miller Offer
+# - Sign Current Contract
 # - Request Contract Void
 # - Farmer -> Miller Message
 #
@@ -1425,6 +1426,17 @@ def create_open_bidding(
     )
 
 
+    farmer_signature = _text(
+        data.get(
+            "farmer_signature_path"
+        ),
+        required=True,
+        field_name=(
+            "Farmer Electronic Signature"
+        ),
+    )
+
+
     if (
         fulfillment_method
         not in {
@@ -1687,6 +1699,9 @@ def create_open_bidding(
                 additional_terms,
                 notes_to_millers,
 
+                farmer_signature_path,
+                farmer_signed_at,
+
                 bidding_status,
 
                 created_at,
@@ -1716,6 +1731,9 @@ def create_open_bidding(
                 %s,
                 %s,
 
+                %s,
+                CURRENT_TIMESTAMP,
+
                 'open',
 
                 CURRENT_TIMESTAMP,
@@ -1736,6 +1754,7 @@ def create_open_bidding(
                 preferred_fulfillment_date,
                 additional_terms,
                 notes_to_millers,
+                farmer_signed_at,
                 bidding_status,
                 created_at,
                 updated_at
@@ -1762,6 +1781,8 @@ def create_open_bidding(
 
                 additional_terms or None,
                 notes or None,
+
+                farmer_signature,
             ],
         )
 
@@ -2531,6 +2552,154 @@ def decline_bidding_offer(
             """,
             [
                 offer_id,
+            ],
+        )
+
+
+        return _row_to_dict(
+            cursor
+        )
+
+
+# ============================================================
+# SIGN CURRENT CONTRACT
+# ============================================================
+
+@transaction.atomic
+def sign_contract(
+    farmer_user_id,
+    contract_id,
+    farmer_signature_path,
+):
+    farmer_id = (
+        _normalize_farmer_id(
+            farmer_user_id
+        )
+    )
+
+
+    contract_id = (
+        _positive_id(
+            contract_id,
+            "Contract ID",
+        )
+    )
+
+
+    farmer_signature = _text(
+        farmer_signature_path,
+        required=True,
+        field_name=(
+            "Farmer Electronic Signature"
+        ),
+    )
+
+
+    with connection.cursor() as cursor:
+
+        _assert_active_farmer(
+            cursor,
+            farmer_id,
+        )
+
+
+        cursor.execute(
+            """
+            SELECT
+                contract_id,
+                contract_status,
+                farmer_signature_path
+
+            FROM contracts
+
+            WHERE
+                contract_id =
+                    %s
+
+                AND farmer_user_id =
+                    %s
+
+            FOR UPDATE
+            """,
+            [
+                contract_id,
+                farmer_id,
+            ],
+        )
+
+
+        row = cursor.fetchone()
+
+
+        if not row:
+            raise ValueError(
+                "Contract was not found."
+            )
+
+
+        (
+            _contract_id,
+            contract_status,
+            existing_signature,
+        ) = row
+
+
+        if (
+            contract_status !=
+            "active"
+        ):
+            raise ValueError(
+                (
+                    "Only an active contract can "
+                    "be electronically signed."
+                )
+            )
+
+
+        if existing_signature:
+            raise ValueError(
+                (
+                    "This contract has already "
+                    "been signed by the Farmer."
+                )
+            )
+
+
+        cursor.execute(
+            """
+            UPDATE contracts
+
+            SET
+                farmer_signature_path =
+                    %s,
+
+                farmer_signed_at =
+                    CURRENT_TIMESTAMP,
+
+                updated_at =
+                    CURRENT_TIMESTAMP
+
+            WHERE
+                contract_id =
+                    %s
+
+                AND farmer_user_id =
+                    %s
+
+            RETURNING
+                contract_id,
+                contract_code,
+                farmer_user_id,
+                supplier_profile_id,
+                farmer_signed_at,
+                miller_signed_at,
+                contract_status,
+                updated_at
+            """,
+            [
+                farmer_signature,
+                contract_id,
+                farmer_id,
             ],
         )
 

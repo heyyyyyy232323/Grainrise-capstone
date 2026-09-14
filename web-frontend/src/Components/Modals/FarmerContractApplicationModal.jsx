@@ -16,6 +16,8 @@ import {
   X,
 } from "lucide-react";
 
+import SignaturePad from "../Minor-Components/SignaturePad";
+
 
 // ============================================================
 // DEFAULT FORM
@@ -546,18 +548,14 @@ export default function FarmerContractApplicationModal({
 
 
     if (
-      !form.farmer_signature_path.trim()
+      !form.farmer_signature_path
+      || !String(
+        form.farmer_signature_path
+      ).startsWith(
+        "data:image/"
+      )
     ) {
       return "Electronic signature is required.";
-    }
-
-
-    if (
-      form.farmer_signature_path
-        .trim()
-        .length < 3
-    ) {
-      return "Please enter your complete name as your electronic signature.";
     }
 
 
@@ -1539,52 +1537,42 @@ export default function FarmerContractApplicationModal({
               "
             >
               <div>
-                <label
+                <p
                   className="
-                    mb-1.5
-                    block
-                    text-sm
-                    font-semibold
-                    text-slate-700
+                    text-xs
+                    leading-5
+                    text-slate-500
                   "
                 >
-                  Your Full Name
-                  <span className="ml-1 text-red-500">
-                    *
-                  </span>
-                </label>
+                  Draw your signature using your mouse on desktop or your finger/stylus on mobile.
+                  Your signature confirms this Farmer application.
+                </p>
 
 
-                <input
-                  type="text"
-                  maxLength={150}
-                  disabled={isSaving}
-                  value={
-                    form.farmer_signature_path
-                  }
-                  onChange={(
-                    event
-                  ) =>
-                    updateField(
-                      "farmer_signature_path",
-                      event.target.value
-                    )
-                  }
-                  placeholder="Type your complete name"
-                  className="
-                    w-full
-                    rounded-lg
-                    border
-                    border-slate-300
-                    px-3
-                    py-2.5
-                    text-sm
-                    outline-none
-                    focus:border-green-600
-                    focus:ring-1
-                    focus:ring-green-600
-                  "
-                />
+                <div className="mt-4">
+                  <SignaturePad
+                    value={
+                      form.farmer_signature_path
+                    }
+                    onChange={(
+                      signature
+                    ) =>
+                      updateField(
+                        "farmer_signature_path",
+                        signature
+                      )
+                    }
+                    disabled={
+                      isSaving
+                    }
+                    error={
+                      validationError ===
+                      "Electronic signature is required."
+                        ? validationError
+                        : ""
+                    }
+                  />
+                </div>
               </div>
 
 
