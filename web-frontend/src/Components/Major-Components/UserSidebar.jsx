@@ -644,6 +644,11 @@ export const getUserSidebarConfig = (role = "admin") => {
               path: "/warehouse-manager/branches",
             },
             {
+              label: "Messages",
+              icon: MessagesSquare,
+              path: "/warehouse-manager/messages",
+            },
+            {
               label: "Order Approval",
               icon: ClipboardList,
               path: "/warehouse-manager/order-approval",
@@ -1030,7 +1035,7 @@ export const getUserSidebarConfig = (role = "admin") => {
             },
             {
               label: "Point of Sale",
-              icon: CreditCard,
+              icon: ShoppingCart,
               path: "/farmer/point-of-sale",
             },
             {

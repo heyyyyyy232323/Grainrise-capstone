@@ -209,6 +209,7 @@ export default function RevenueExpenseTrendChart({
                         fill="none"
                         stroke={serie.lineColor}
                         strokeWidth={serie.strokeWidth ?? 1.2}
+                        strokeDasharray={serie.strokeDasharray || (serie.dashed ? "4,4" : undefined)}
                         strokeLinejoin="round"
                         strokeLinecap="round"
                       />

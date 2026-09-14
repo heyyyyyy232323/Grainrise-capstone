@@ -12,6 +12,7 @@ import Dropdown from "../../../Components/Minor-Components/Dropdown";
 import CustomTextbox from "../../../Components/Minor-Components/CustomTextbox";
 import CustomGreenButton from "../../../Components/Minor-Components/CustomGreenButton";
 import RichTextEditor from "../../../Components/Minor-Components/RichTextEditor";
+import Toast from "../../../Components/Modals/Toast";
 
 // ─── Static Option Data ────────────────────────────────────────────────────────
 const PRODUCT_VARIANTS = [
@@ -137,10 +138,35 @@ export default function WarehouseEncoderNewRequest() {
   const onDragOver   = (e) => { e.preventDefault(); setDragging(true); };
   const onDragLeave  = () => setDragging(false);
   const removeFile   = (i) => setFiles((prev) => prev.filter((_, idx) => idx !== i));
+  const [toast, setToast] = useState(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Submit", { variant, supplier, batchNumber, stockQty, arrivalDate, requiredDate, notes, files });
+    if (!variant || !stockQty) {
+      setToast({
+        type: "error",
+        title: "Save Failed",
+        message: "Unable to submit supply request.\nPlease select a variant and specify the quantity.",
+        actionLabel: "Retry",
+        actionType: "button",
+        onAction: () => setToast(null),
+      });
+      return;
+    }
+
+    const selectedVariantObj = PRODUCT_VARIANTS.find((p) => p.value === variant);
+    const variantName = selectedVariantObj?.label || "Rice Product";
+
+    setToast({
+      type: "success",
+      title: "Success",
+      message: `Supply request for ${variantName} (${stockQty} kg) has been submitted successfully.`,
+    });
+
+    // Reset optional fields
+    setStockQty("");
+    setNotes("");
+    setFiles([]);
   };
 
   return (
@@ -392,6 +418,21 @@ export default function WarehouseEncoderNewRequest() {
           </SideCard>
         </div>
       </div>
+
+      {/* Figma Toast Notification */}
+      {toast && (
+        <Toast
+          isOpen={Boolean(toast)}
+          type={toast.type}
+          title={toast.title}
+          message={toast.message}
+          actionLabel={toast.actionLabel}
+          actionType={toast.actionType}
+          onAction={toast.onAction}
+          duration={toast.duration || 4000}
+          onClose={() => setToast(null)}
+        />
+      )}
     </form>
   );
 }

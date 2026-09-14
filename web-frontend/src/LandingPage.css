@@ -171,20 +171,55 @@
 .lp-hamburger {
   display: none;
   flex-direction: column;
+  justify-content: center;
+  align-items: center;
   gap: 5px;
   background: none;
-  border: none;
+  border: 1.5px solid rgba(45, 106, 53, 0.2);
+  border-radius: 8px;
   cursor: pointer;
-  padding: 4px;
+  padding: 8px 9px;
+  transition: background 0.2s ease;
+}
+
+.lp-hamburger:hover {
+  background: rgba(0, 88, 12, 0.06);
 }
 
 .lp-hamburger span {
   display: block;
-  width: 22px;
+  width: 20px;
   height: 2px;
   background: #2d6a35;
   border-radius: 2px;
-  transition: 0.2s;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  transform-origin: center;
+}
+
+/* Animated X state */
+.lp-hamburger--open span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.lp-hamburger--open span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+.lp-hamburger--open span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+/* Mobile menu backdrop */
+.lp-nav__backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  z-index: 998;
+  backdrop-filter: blur(2px);
+}
+
+.lp-nav__backdrop--open {
+  display: block;
 }
 
 /* ─── Buttons ────────────────────────────────────────────────── */
@@ -1851,18 +1886,89 @@
   .lp-nav__links--open {
     display: flex;
     flex-direction: column;
-    position: absolute;
-    top: 64px;
+    position: fixed;
+    top: 0;
     left: 0;
     right: 0;
+    bottom: 0;
     background: #ffffff;
-    border-bottom: 1px solid rgba(45, 106, 53, 0.15);
+    z-index: 999;
+    padding: 80px 28px 32px;
+    gap: 6px;
+    overflow-y: auto;
+    animation: lp-menu-slide-in 0.25s ease;
+  }
+
+  .lp-nav__links--open li button {
+    font-size: 18px;
+    font-weight: 600;
+    padding: 14px 16px;
+    border-radius: 10px;
+    width: 100%;
+    text-align: left;
+    color: #1a2e1a;
+  }
+
+  .lp-nav__links--open li button:hover {
+    background: rgba(0, 88, 12, 0.06);
+    color: #00580C;
+  }
+
+  /* Mobile close button inside open menu */
+  .lp-nav__mobile-close {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
     padding: 16px 24px;
-    gap: 4px;
+    background: #ffffff;
+    border-bottom: 1px solid rgba(45, 106, 53, 0.1);
+    z-index: 1000;
+  }
+
+  /* Mobile action buttons inside open menu */
+  .lp-nav__mobile-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(45, 106, 53, 0.1);
+  }
+
+  .lp-nav__mobile-actions .lp-nav__login-btn {
+    width: 100%;
+    justify-content: center;
+    border: 1.5px solid rgba(45, 106, 53, 0.25);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+
+  .lp-nav__mobile-actions .lp-nav__download-btn {
+    width: 100%;
+    padding: 13px 16px;
+    border-radius: 10px;
+    font-size: 15px;
+    text-align: center;
   }
 
   .lp-hamburger {
     display: flex;
+  }
+
+  /* Hide action buttons from inline navbar on mobile */
+  .lp-nav__actions .lp-nav__login-btn,
+  .lp-nav__actions .lp-nav__download-btn {
+    display: none;
+  }
+
+  @keyframes lp-menu-slide-in {
+    from { opacity: 0; transform: translateY(-12px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   .lp-footer__inner {

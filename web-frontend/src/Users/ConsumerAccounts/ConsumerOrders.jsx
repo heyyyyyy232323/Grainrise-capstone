@@ -501,32 +501,64 @@ export default function ConsumerOrders() {
         {activeTab === "active" && (
           <>
             {/* Filter row */}
-            <div className="bg-white border border-gray-200 rounded-xl px-3 py-2.5 mb-4 shadow-2xs flex flex-wrap items-center gap-2">
-              <div className="flex-1 min-w-[200px] relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 mb-5 shadow-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+              <div className="flex-1 relative">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 <input
-                  type="text" value={activeSearch} onChange={(e) => setActiveSearch(e.target.value)}
+                  type="text"
+                  value={activeSearch}
+                  onChange={(e) => setActiveSearch(e.target.value)}
                   placeholder="Search order number, product, or retailer..."
-                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-gray-200 rounded-lg placeholder:text-gray-400 focus:outline-none focus:border-[#00580C] transition"
+                  className="w-full pl-10 pr-9 py-2.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl text-gray-800 placeholder:text-gray-400 font-medium focus:outline-none focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] shadow-2xs transition"
                 />
+                {activeSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer p-0.5"
+                    title="Clear search"
+                  >
+                    <X size={15} />
+                  </button>
+                )}
               </div>
-              {[
-                { val: activeRetailer, set: setActiveRetailer, opts: ["All Retailers","Greenfield Rice Store","Bulacan Rice Hub","GrainMart","North Caloocan Rice Store"], prefix: "Retailer: " },
-                { val: activeStatus, set: setActiveStatus, opts: ["All Statuses","Out for Delivery","In Transit","Processing","Order Confirmed"], prefix: "Status: " },
-                { val: activeSort, set: setActiveSort, opts: ["Soonest Delivery","Latest Placed","Highest Total"], prefix: "Sort: " },
-              ].map((f, i) => (
-                <div key={i} className="relative">
-                  <select value={f.val} onChange={(e) => f.set(e.target.value)}
-                    className="appearance-none bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-1.5 text-xs text-gray-700 focus:border-[#00580C] outline-none cursor-pointer">
-                    {f.opts.map(o => <option key={o} value={o}>{i < 2 ? f.prefix : ""}{o}</option>)}
-                  </select>
-                  <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                </div>
-              ))}
-              <button onClick={() => { setActiveSearch(""); setActiveRetailer("All Retailers"); setActiveStatus("All Statuses"); }}
-                className="text-xs font-semibold text-gray-500 hover:text-gray-800 hover:bg-gray-100 px-2.5 py-1.5 rounded-lg transition cursor-pointer">
-                Reset
-              </button>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                {[
+                  { val: activeRetailer, set: setActiveRetailer, opts: ["All Retailers","Greenfield Rice Store","Bulacan Rice Hub","GrainMart","North Caloocan Rice Store"], prefix: "Retailer: " },
+                  { val: activeStatus, set: setActiveStatus, opts: ["All Statuses","Out for Delivery","In Transit","Processing","Order Confirmed"], prefix: "Status: " },
+                  { val: activeSort, set: setActiveSort, opts: ["Soonest Delivery","Latest Placed","Highest Total"], prefix: "Sort: " },
+                ].map((f, i) => (
+                  <div key={i} className="relative">
+                    <select
+                      value={f.val}
+                      onChange={(e) => f.set(e.target.value)}
+                      className="appearance-none bg-white border border-gray-200 rounded-xl pl-3.5 pr-8 py-2.5 text-xs sm:text-sm font-semibold text-gray-700 hover:border-gray-300 focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] outline-none shadow-2xs cursor-pointer transition"
+                    >
+                      {f.opts.map((o) => (
+                        <option key={o} value={o}>
+                          {i < 2 ? f.prefix : ""}{o}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSearch("");
+                    setActiveRetailer("All Retailers");
+                    setActiveStatus("All Statuses");
+                    setActiveSort("Soonest Delivery");
+                  }}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#00580C] hover:bg-emerald-50/60 px-3 py-2.5 rounded-xl transition cursor-pointer"
+                >
+                  <RotateCcw size={13} />
+                  Reset
+                </button>
+              </div>
             </div>
 
             {/* Order cards */}
@@ -624,51 +656,80 @@ export default function ConsumerOrders() {
         ══════════════════════════════════════════════ */}
         {activeTab === "history" && (
           <>
-            {/* Search bar (full width) */}
-            <div className="bg-white border border-gray-200 rounded-xl px-3 py-2.5 mb-0 shadow-2xs">
+            {/* Search & Filters Container */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 mb-5 shadow-xs flex flex-col gap-3.5">
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 <input
-                  type="text" value={histSearch} onChange={(e) => { setHistSearch(e.target.value); setHistPage(1); }}
+                  type="text"
+                  value={histSearch}
+                  onChange={(e) => { setHistSearch(e.target.value); setHistPage(1); }}
                   placeholder="Search order number, product, or retailer..."
-                  className="w-full pl-9 pr-4 py-2 text-xs bg-transparent placeholder:text-gray-400 focus:outline-none text-gray-700"
+                  className="w-full pl-10 pr-9 py-2.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl text-gray-800 placeholder:text-gray-400 font-medium focus:outline-none focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] shadow-2xs transition"
                 />
+                {histSearch && (
+                  <button
+                    type="button"
+                    onClick={() => { setHistSearch(""); setHistPage(1); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer p-0.5"
+                    title="Clear search"
+                  >
+                    <X size={15} />
+                  </button>
+                )}
               </div>
 
               {/* Second filter row */}
-              <div className="flex flex-wrap items-center justify-between gap-2 mt-2 pt-2 border-t border-gray-100">
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-y-3 pt-3 border-t border-gray-100">
+                <div className="flex flex-wrap items-center gap-3">
                   {[
-                    { label: "Year:", val: histYear, set: setHistYear, opts: ["All","2026","2025"] },
-                    { label: "Month:", val: histMonth, set: setHistMonth, opts: ["All","January","February","March","April","May","June","July","August","September","October","November","December"] },
-                    { label: "Status:", val: histStatus, set: setHistStatus, opts: ["All","Delivered","Refunded","Received & Exchanged"] },
-                    { label: "Payment:", val: histPayment, set: setHistPayment, opts: ["All","GCash","COD","Refunded"] },
-                    { label: "Retailer:", val: histRetailer, set: setHistRetailer, opts: ["All Retailers","GrainMart","North Caloocan Rice Store","Baliwag Rice Center","Greenfield Rice Store","Bulacan Rice Hub"] },
+                    { label: "Year", val: histYear, set: setHistYear, opts: ["All","2026","2025"] },
+                    { label: "Month", val: histMonth, set: setHistMonth, opts: ["All","January","February","March","April","May","June","July","August","September","October","November","December"] },
+                    { label: "Status", val: histStatus, set: setHistStatus, opts: ["All","Delivered","Refunded","Received & Exchanged"] },
+                    { label: "Payment", val: histPayment, set: setHistPayment, opts: ["All","GCash","COD","Refunded"] },
+                    { label: "Retailer", val: histRetailer, set: setHistRetailer, opts: ["All Retailers","GrainMart","North Caloocan Rice Store","Baliwag Rice Center","Greenfield Rice Store","Bulacan Rice Hub"] },
                   ].map((f, i) => (
-                    <div key={i} className="relative flex items-center gap-1">
-                      <span className="text-xs text-gray-500">{f.label}</span>
-                      <select value={f.val} onChange={(e) => { f.set(e.target.value); setHistPage(1); }}
-                        className="appearance-none bg-white border border-gray-200 rounded-md pl-2 pr-5 py-1 text-xs text-gray-700 focus:border-[#00580C] outline-none cursor-pointer">
-                        {f.opts.map(o => <option key={o}>{o}</option>)}
-                      </select>
-                      <ChevronDown size={11} className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    <div key={i} className="flex items-center gap-1.5">
+                      <span className="text-xs font-semibold text-gray-600">{f.label}:</span>
+                      <div className="relative">
+                        <select
+                          value={f.val}
+                          onChange={(e) => { f.set(e.target.value); setHistPage(1); }}
+                          className="appearance-none bg-white border border-gray-200 rounded-xl pl-3 pr-7 py-1.5 text-xs sm:text-sm font-medium text-gray-700 hover:border-gray-300 focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] outline-none shadow-2xs cursor-pointer transition"
+                        >
+                          {f.opts.map((o) => (
+                            <option key={o} value={o}>{o}</option>
+                          ))}
+                        </select>
+                        <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      </div>
                     </div>
                   ))}
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="relative flex items-center gap-1">
-                    <span className="text-xs text-gray-500">Sort:</span>
-                    <select value={histSort} onChange={(e) => setHistSort(e.target.value)}
-                      className="appearance-none bg-white border border-gray-200 rounded-md pl-2 pr-5 py-1 text-xs text-gray-700 focus:border-[#00580C] outline-none cursor-pointer">
-                      <option>Newest First</option>
-                      <option>Oldest First</option>
-                      <option>Highest Amount</option>
-                    </select>
-                    <ChevronDown size={11} className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-gray-600">Sort:</span>
+                    <div className="relative">
+                      <select
+                        value={histSort}
+                        onChange={(e) => setHistSort(e.target.value)}
+                        className="appearance-none bg-white border border-gray-200 rounded-xl pl-3 pr-7 py-1.5 text-xs sm:text-sm font-semibold text-gray-800 hover:border-gray-300 focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] outline-none shadow-2xs cursor-pointer transition"
+                      >
+                        <option>Newest First</option>
+                        <option>Oldest First</option>
+                        <option>Highest Amount</option>
+                      </select>
+                      <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    </div>
                   </div>
-                  <button onClick={resetHistFilters}
-                    className="text-xs font-semibold text-gray-500 hover:text-gray-800 hover:bg-gray-100 px-2.5 py-1 rounded-md transition cursor-pointer">
+
+                  <button
+                    type="button"
+                    onClick={resetHistFilters}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#00580C] transition cursor-pointer px-3 py-1.5 rounded-lg hover:bg-gray-50"
+                  >
+                    <RotateCcw size={13} />
                     Reset Filters
                   </button>
                 </div>

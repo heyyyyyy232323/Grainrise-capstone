@@ -21,6 +21,7 @@ import ConsumerRetailersNearby from "./Users/ConsumerAccounts/ConsumerRetailersN
 
 import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout";
 import AdminProtectedRoute from "./Components/Major-Components/AdminProtectedRoute";
+import ToastPreviewPage from "./Components/Modals/ToastPreviewPage";
 
 import FloatingChatbot from "./Components/Minor-Components/FloatingChatbot";
 import GlobalLoadingScreen from "./Components/Minor-Components/GlobalLoadingScreen.jsx";
@@ -106,6 +107,7 @@ import ProcurementReceivingHistory from "./Users/WarehouseAccounts/WarehouseMana
 import FinanceManagementHistory from "./Users/WarehouseAccounts/WarehouseManager/FinanceManagementHistory";
 import WarehouseManagerNewsUpdates from "./Users/WarehouseAccounts/WarehouseManager/WarehouseManagerNewsUpdates";
 import WarehouseManagerNewsArticle from "./Users/WarehouseAccounts/WarehouseManager/WarehouseManagerNewsArticle";
+import WarehouseManagerMessages from "./Users/WarehouseAccounts/WarehouseManager/WarehouseManagerMessages";
 
 // ============================================================
 // BRANCH MANAGER
@@ -310,6 +312,16 @@ function App() {
           <Route
             path="/dashboard-preview"
             element={<DashboardPreview />}
+          />
+
+          <Route
+            path="/toast-preview"
+            element={<ToastPreviewPage />}
+          />
+
+          <Route
+            path="/toasts"
+            element={<ToastPreviewPage />}
           />
 
           <Route
@@ -593,6 +605,11 @@ function App() {
             <Route
               path="/warehouse-manager/news-updates/:id"
               element={<WarehouseManagerNewsArticle />}
+            />
+
+            <Route
+              path="/warehouse-manager/messages"
+              element={<WarehouseManagerMessages />}
             />
 
             <Route

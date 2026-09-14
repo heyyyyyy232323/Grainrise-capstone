@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { DollarSign, Package, ShoppingCart, TrendingUp, UserPlus, Users } from "lucide-react";
+import { DollarSign, Package, ShoppingCart, TrendingUp, UserPlus, Users, BellRing } from "lucide-react";
 import UserNavbar, { getUserNavbarMenuItems } from "./Components/Major-Components/UserNavbar";
 import UserSidebar, { getUserSidebarConfig, userSidebarRoles } from "./Components/Major-Components/UserSidebar";
 import KPICard from "./Components/Graphs/KPICard";
@@ -10,6 +10,7 @@ import SalesTrendCard from "./Components/Graphs/LineGraphsCard";
 import RecentActivityCard from "./Components/Graphs/RecentActivityCard";
 import PendingReviewsCard from "./Components/Graphs/PendingReviewsCard";
 import SectionedTableCard from "./Components/Minor-Components/SectionedTableCard";
+import Toast from "./Components/Modals/Toast";
 import Logo from "./assets/Logo.png";
 
 const DashboardPreview = () => {
@@ -18,6 +19,7 @@ const DashboardPreview = () => {
   const [userRole, setUserRole] = useState("admin");
   const [salesRange, setSalesRange] = useState("Week");
   const [updatesPage, setUpdatesPage] = useState(1);
+  const [activeToast, setActiveToast] = useState(null);
   const navigate = useNavigate();
 
   const handleToggleSidebar = () => {
@@ -259,6 +261,87 @@ const DashboardPreview = () => {
                 </div>
               </div>
 
+              {/* ── Figma Toast Notification Showcase ────────────────────────── */}
+              <div className="mb-8 pb-8 border-b border-gray-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <BellRing size={20} className="text-[#0B7A2A]" />
+                  <h2 className="text-lg font-semibold text-gray-800">Figma Toast Notifications Preview</h2>
+                </div>
+                <p className="text-xs text-gray-500 mb-4">Click any button below to trigger and preview the Figma toast notification designs live on screen:</p>
+                <div className="flex flex-wrap gap-2.5">
+                  <button
+                    onClick={() => setActiveToast({
+                      type: "success",
+                      title: "Success",
+                      message: "Supplier account has been added successfully.",
+                    })}
+                    className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 transition cursor-pointer"
+                  >
+                    1. Success Toast
+                  </button>
+                  <button
+                    onClick={() => setActiveToast({
+                      type: "error",
+                      title: "Save Failed",
+                      message: "Unable to save the inventory changes.\nPlease try again.",
+                      actionLabel: "Retry",
+                      actionType: "button",
+                      onAction: () => alert("Retry action triggered!"),
+                    })}
+                    className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-red-50 text-red-700 border border-red-300 hover:bg-red-100 transition cursor-pointer"
+                  >
+                    2. Save Failed (with Retry)
+                  </button>
+                  <button
+                    onClick={() => setActiveToast({
+                      type: "warning",
+                      title: "Low Stock Alert",
+                      message: "Rice stock for this product is below the recommended level.",
+                      actionLabel: "Review Stock",
+                      actionType: "link",
+                      onAction: () => alert("Review Stock link clicked!"),
+                    })}
+                    className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 transition cursor-pointer"
+                  >
+                    3. Low Stock Alert (with Link)
+                  </button>
+                  <button
+                    onClick={() => setActiveToast({
+                      type: "info",
+                      title: "Data Refreshed",
+                      message: "Inventory data has been refreshed.",
+                    })}
+                    className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-300 hover:bg-blue-100 transition cursor-pointer"
+                  >
+                    4. Data Refreshed
+                  </button>
+                  <button
+                    onClick={() => setActiveToast({
+                      type: "processing",
+                      title: "Processing",
+                      message: "Generating your inventory report...",
+                      duration: 4000,
+                    })}
+                    className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 transition cursor-pointer"
+                  >
+                    5. Processing
+                  </button>
+                  <button
+                    onClick={() => setActiveToast({
+                      type: "deactivated",
+                      title: "Account Deactivated",
+                      message: "Juan Dela Cruz's account has been deactivated.",
+                      actionLabel: "Undo Action",
+                      actionType: "link-right",
+                      onAction: () => alert("Undo Action triggered!"),
+                    })}
+                    className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-gray-100 text-gray-800 border border-gray-300 hover:bg-gray-200 transition cursor-pointer"
+                  >
+                    6. Account Deactivated (with Undo)
+                  </button>
+                </div>
+              </div>
+
               <div className="space-y-6">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 sm:px-5">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -345,6 +428,21 @@ const DashboardPreview = () => {
           </div>
         </div>
       </div>
+
+      {/* Live Toast Component Preview */}
+      {activeToast && (
+        <Toast
+          isOpen={Boolean(activeToast)}
+          type={activeToast.type}
+          title={activeToast.title}
+          message={activeToast.message}
+          actionLabel={activeToast.actionLabel}
+          actionType={activeToast.actionType}
+          onAction={activeToast.onAction}
+          duration={activeToast.duration || 4000}
+          onClose={() => setActiveToast(null)}
+        />
+      )}
     </div>
   );
 };

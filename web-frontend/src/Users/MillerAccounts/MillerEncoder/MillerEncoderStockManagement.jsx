@@ -11,6 +11,7 @@ import RestoreProductModal from "../../../Components/Modals/RestoreProductModal"
 import DeleteProductModal from "../../../Components/Modals/DeleteProductModal";
 import AddProductModal from "../../../Components/Modals/AddProductModal";
 import ViewProductModal from "../../../Components/Modals/ViewProductModal";
+import Toast from "../../../Components/Modals/Toast";
 
 // ─── Static Data ───────────────────────────────────────────────────────────────
 const generateProducts = (count, archived = false) =>
@@ -132,12 +133,15 @@ const sortProducts = (products, sortBy, stockFilter) => {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function MillerEncoderStockManagement() {
-  const [activeTab,     setActiveTab]     = useState("active");
-  const [search,        setSearch]        = useState("");
-  const [stockFilter,   setStockFilter]   = useState("all");
-  const [sortBy,        setSortBy]        = useState("variant-asc");
-  const [currentPage,   setCurrentPage]   = useState(1);
-  const [modalState,    setModalState]    = useState({ type: null, product: null });
+  const [activeTab,        setActiveTab]        = useState("active");
+  const [activeProducts,   setActiveProducts]   = useState(ACTIVE_PRODUCTS);
+  const [archivedProducts, setArchivedProducts] = useState(ARCHIVED_PRODUCTS);
+  const [search,           setSearch]           = useState("");
+  const [stockFilter,      setStockFilter]      = useState("all");
+  const [sortBy,           setSortBy]           = useState("variant-asc");
+  const [currentPage,      setCurrentPage]      = useState(1);
+  const [modalState,       setModalState]       = useState({ type: null, product: null });
+  const [toast,            setToast]            = useState(null);
 
   const [showStockDrop, setShowStockDrop] = useState(false);
   const [showSortDrop,  setShowSortDrop]  = useState(false);
@@ -162,12 +166,99 @@ export default function MillerEncoderStockManagement() {
   const handleSearch = (v) => { setSearch(v);    setCurrentPage(1); };
   const handleSort   = (v) => { setSortBy(v);    setCurrentPage(1); };
 
-  const handleSaveProduct = (formData) => {
-    console.log("Product Saved:", formData);
+  // ─── Actions with Figma Toast Notifications ──────────────────────────────
+  const handleAddProduct = (formData) => {
+    const newProd = {
+      id: `prod-act-${Date.now()}`,
+      productCode: formData.productCode || `WR-${String(Math.floor(100 + Math.random() * 900))}`,
+      variant: formData.variant || "New Rice Variant",
+      expiry: formData.expirationDate ? `Exp ${formData.expirationDate}` : "Exp Dec 31, 2026",
+      variantBadge: "Incoming",
+      stockQty: formData.stockQuantity ? `${formData.stockQuantity} kg` : "500 kg",
+      stockLevel: Number(formData.stockQuantity) > 150 ? "in" : Number(formData.stockQuantity) > 0 ? "low" : "out",
+      supplier: formData.supplier || "AgriGrain Co.",
+      archived: false,
+    };
+
+    setActiveProducts((prev) => [newProd, ...prev]);
     setModalState({ type: null, product: null });
+
+    setToast({
+      type: "success",
+      title: "Success",
+      message: `Product ${newProd.variant} (${newProd.productCode}) has been added successfully.`,
+    });
   };
 
-  const basePool = activeTab === "archive" ? ARCHIVED_PRODUCTS : ACTIVE_PRODUCTS;
+  const handleEditProduct = (formData) => {
+    const targetId = modalState.product?.id;
+    if (targetId) {
+      setActiveProducts((prev) =>
+        prev.map((p) =>
+          p.id === targetId
+            ? {
+                ...p,
+                variant: formData.variant || p.variant,
+                supplier: formData.supplier || p.supplier,
+                stockQty: formData.stockQuantity ? `${formData.stockQuantity} kg` : p.stockQty,
+              }
+            : p
+        )
+      );
+    }
+    setModalState({ type: null, product: null });
+
+    setToast({
+      type: "success",
+      title: "Success",
+      message: `Product details for ${formData.variant || "item"} updated successfully.`,
+    });
+  };
+
+  const handleArchiveProduct = (product) => {
+    if (!product) return;
+    setActiveProducts((prev) => prev.filter((p) => p.id !== product.id));
+    setArchivedProducts((prev) => [{ ...product, archived: true }, ...prev]);
+    setModalState({ type: null, product: null });
+
+    setToast({
+      type: "deactivated",
+      title: "Product Archived",
+      message: `Product ${product.variant} (${product.productCode}) has been moved to archive.`,
+      actionLabel: "Undo Action",
+      actionType: "link-right",
+      onAction: () => {
+        handleRestoreProduct(product);
+      },
+    });
+  };
+
+  const handleRestoreProduct = (product) => {
+    if (!product) return;
+    setArchivedProducts((prev) => prev.filter((p) => p.id !== product.id));
+    setActiveProducts((prev) => [{ ...product, archived: false }, ...prev]);
+    setModalState({ type: null, product: null });
+
+    setToast({
+      type: "info",
+      title: "Product Restored",
+      message: `Product ${product.variant} (${product.productCode}) has been retrieved and restored to active stock.`,
+    });
+  };
+
+  const handleDeleteProduct = (product) => {
+    if (!product) return;
+    setArchivedProducts((prev) => prev.filter((p) => p.id !== product.id));
+    setModalState({ type: null, product: null });
+
+    setToast({
+      type: "error",
+      title: "Product Deleted",
+      message: `Product ${product.variant} (${product.productCode}) has been permanently deleted.`,
+    });
+  };
+
+  const basePool = activeTab === "archive" ? archivedProducts : activeProducts;
 
   const filtered = useMemo(() => {
     let result = basePool;
@@ -459,32 +550,47 @@ export default function MillerEncoderStockManagement() {
       <AddProductModal
         isOpen={modalState.type === "add"}
         onClose={() => setModalState({ type: null, product: null })}
-        onSave={handleSaveProduct}
+        onSave={handleAddProduct}
       />
       <ViewProductModal
         isOpen={modalState.type === "view"}
         onClose={() => setModalState({ type: null, product: null })}
         product={modalState.product}
-        onSave={handleSaveProduct}
+        onSave={handleEditProduct}
       />
       <ArchiveProductModal
         isOpen={modalState.type === "archive"}
         onClose={() => setModalState({ type: null, product: null })}
         productName={modalState.product?.variant || "Product"}
-        onArchive={() => setModalState({ type: null, product: null })}
+        onArchive={() => handleArchiveProduct(modalState.product)}
       />
       <RestoreProductModal
         isOpen={modalState.type === "restore"}
         onClose={() => setModalState({ type: null, product: null })}
         productName={modalState.product?.variant || "Product"}
-        onRestore={() => setModalState({ type: null, product: null })}
+        onRestore={() => handleRestoreProduct(modalState.product)}
       />
       <DeleteProductModal
         isOpen={modalState.type === "delete"}
         onClose={() => setModalState({ type: null, product: null })}
         productName={modalState.product?.variant || "Product"}
-        onDelete={() => setModalState({ type: null, product: null })}
+        onDelete={() => handleDeleteProduct(modalState.product)}
       />
+
+      {/* Figma Toast Notification */}
+      {toast && (
+        <Toast
+          isOpen={Boolean(toast)}
+          type={toast.type}
+          title={toast.title}
+          message={toast.message}
+          actionLabel={toast.actionLabel}
+          actionType={toast.actionType}
+          onAction={toast.onAction}
+          duration={toast.duration || 4000}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

@@ -1,8 +1,9 @@
 import { Plus } from "lucide-react";
 import CustomGreenButton from "./CustomGreenButton";
+import defaultRiceImg from "../../assets/graintablee.jpg";
 
 export default function ProductCard({
-  image,
+  image = defaultRiceImg,
   name,
   sku,
   price,

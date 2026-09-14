@@ -9,14 +9,21 @@ import {
   CircleHelp,
   LogOut,
   Moon,
+  Menu,
+  X,
+  Home,
+  Store,
+  PackageCheck,
+  Tag,
+  TrendingUp,
 } from "lucide-react";
 import Logo from "../../assets/Logo.png";
 
 export const CONSUMER_NAV_LINKS = [
-  { label: "Home", path: "/consumer/home" },
-  { label: "Marketplace", path: "/consumer/marketplace" },
-  { label: "Orders", path: "/consumer/orders" },
-  { label: "Promotions & Rewards", path: "/consumer/promotions" },
+  { label: "Home", path: "/consumer/home", icon: Home },
+  { label: "Marketplace", path: "/consumer/marketplace", icon: Store },
+  { label: "Orders", path: "/consumer/orders", icon: PackageCheck },
+  { label: "Promotions & Rewards", path: "/consumer/promotions", icon: Tag },
 ];
 
 const DEFAULT_CONSUMER_NOTIFICATIONS = [
@@ -45,8 +52,10 @@ export default function ConsumerNavbar({
   onCartClick,
   onNotificationsClick,
 }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
+  const [mobileMarketplaceOpen, setMobileMarketplaceOpen] = useState(false);
   const [cartPanelOpen, setCartPanelOpen] = useState(false);
   const [cartPanelTab, setCartPanelTab] = useState("cart");
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -57,6 +66,10 @@ export default function ConsumerNavbar({
   const location = useLocation();
 
   const currentPath = activePath || location.pathname;
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -76,9 +89,19 @@ export default function ConsumerNavbar({
 
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-200">
-      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 flex items-center justify-between h-14 sm:h-16">
-        {/* Left: Logo & Nav Links together */}
-        <div className="flex items-center gap-4 lg:gap-6">
+      <div className="w-full px-3 sm:px-6 lg:px-8 xl:px-10 flex items-center justify-between h-14 sm:h-16">
+        {/* Left: Mobile Hamburger, Logo & Desktop Nav Links */}
+        <div className="flex items-center gap-2 sm:gap-4 lg:gap-6">
+          {/* Hamburger button for mobile */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen((o) => !o)}
+            aria-label="Toggle navigation menu"
+            className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition cursor-pointer"
+          >
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+
           {/* Logo */}
           <div
             className="flex items-center gap-2 shrink-0 cursor-pointer select-none"
@@ -87,7 +110,7 @@ export default function ConsumerNavbar({
             <img src={Logo} alt="GrainRise" className="h-7 sm:h-8 w-auto object-contain" />
           </div>
 
-          {/* Navigation Links */}
+          {/* Navigation Links (Desktop) */}
           <div className="hidden md:flex items-center gap-2 sm:gap-2.5">
             {CONSUMER_NAV_LINKS.map((link) => {
               const isActive =
@@ -429,6 +452,217 @@ export default function ConsumerNavbar({
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Navigation Drawer Backdrop */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-40 md:hidden transition-opacity"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Mobile Navigation Drawer */}
+      <div
+        className={`fixed top-0 left-0 bottom-0 w-[280px] sm:w-[320px] bg-white z-50 md:hidden shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {/* Mobile Header */}
+        <div className="h-14 sm:h-16 px-4 border-b border-gray-100 flex items-center justify-between">
+          <div
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              navigate("/consumer/home");
+            }}
+          >
+            <img src={Logo} alt="GrainRise" className="h-7 w-auto object-contain" />
+          </div>
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Close menu"
+            className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition cursor-pointer"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Navigation Items */}
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+          <p className="px-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+            Navigation
+          </p>
+
+          {CONSUMER_NAV_LINKS.map((link) => {
+            const Icon = link.icon;
+            const isActive =
+              currentPath === link.path ||
+              (link.path === "/consumer/marketplace" &&
+                currentPath === "/consumermarketplace");
+
+            if (link.label === "Marketplace") {
+              const marketplaceSectionActive =
+                isActive ||
+                currentPath === "/consumer/retailers-nearby" ||
+                currentPath === "/consumer/nearby-retailers" ||
+                currentPath === "/retailers-nearby" ||
+                currentPath === "/nearby-retailers" ||
+                currentPath === "/consumer/market-prices" ||
+                currentPath === "/market-prices";
+
+              return (
+                <div key={link.label} className="space-y-1">
+                  <div
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition cursor-pointer ${
+                      marketplaceSectionActive
+                        ? "bg-[#00580C] text-white"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        navigate("/consumer/marketplace");
+                      }}
+                      className="flex items-center gap-3 flex-1 text-left font-medium"
+                    >
+                      <Icon size={18} />
+                      <span>{link.label}</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Toggle marketplace sub-links"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMobileMarketplaceOpen((v) => !v);
+                      }}
+                      className="p-1 cursor-pointer"
+                    >
+                      <ChevronDown
+                        size={16}
+                        className={`transition-transform duration-200 ${
+                          mobileMarketplaceOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Submenu for Marketplace */}
+                  {mobileMarketplaceOpen && (
+                    <div className="pl-6 space-y-1 py-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          navigate("/consumer/marketplace");
+                        }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition ${
+                          currentPath === "/consumer/marketplace" || currentPath === "/consumermarketplace"
+                            ? "bg-green-50 text-[#00580C] font-bold"
+                            : "text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        <Store size={15} />
+                        Marketplace
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          navigate("/consumer/retailers-nearby");
+                        }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition ${
+                          currentPath.includes("retailers")
+                            ? "bg-green-50 text-[#00580C] font-bold"
+                            : "text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        <Store size={15} />
+                        Retailers Nearby
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          navigate("/consumer/market-prices");
+                        }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition ${
+                          currentPath.includes("market-prices")
+                            ? "bg-green-50 text-[#00580C] font-bold"
+                            : "text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        <TrendingUp size={15} />
+                        Market Price
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <button
+                key={link.label}
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  navigate(link.path);
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition cursor-pointer text-left ${
+                  isActive
+                    ? "bg-[#00580C] text-white"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {Icon && <Icon size={18} />}
+                <span>{link.label}</span>
+              </button>
+            );
+          })}
+
+          <div className="pt-4 mt-4 border-t border-gray-100">
+            <p className="px-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+              Account
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                navigate("/consumer/account-settings");
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer text-left"
+            >
+              <CircleUserRound size={18} />
+              <span>Account Settings</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                alert("Open Help Center");
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer text-left"
+            >
+              <CircleHelp size={18} />
+              <span>Help Center</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                navigate("/login");
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 transition cursor-pointer text-left"
+            >
+              <LogOut size={18} />
+              <span>Logout</span>
+            </button>
           </div>
         </div>
       </div>

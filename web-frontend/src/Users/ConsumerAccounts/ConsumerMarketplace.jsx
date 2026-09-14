@@ -566,13 +566,13 @@ export default function ConsumerMarketplace() {
         </div>
 
         {/* 3. SEARCH & FILTERS PANEL */}
-        <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 flex flex-col gap-3.5 shadow-none">
-          {/* Row 1: Search Input */}
-          <div className="flex flex-col sm:flex-row gap-2.5">
+        <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 flex flex-col gap-4 shadow-xs">
+          {/* Row 1: Search Input & Action */}
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search
                 size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
               />
               <input
                 id="search-input"
@@ -580,27 +580,37 @@ export default function ConsumerMarketplace() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search rice variety, product, or seller (e.g. Dinorado, NSIC Rc 222, Greenfield Rice Store)"
-                className="w-full pl-9 pr-4 py-2 rounded-md text-xs bg-white border border-gray-200 focus:bg-white focus:border-[#00580C] text-gray-700 placeholder:text-gray-400 outline-none transition"
+                className="w-full pl-10 pr-9 py-2.5 rounded-xl text-xs sm:text-sm bg-white border border-gray-200 focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] text-gray-800 placeholder:text-gray-400 font-medium outline-none transition shadow-2xs"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer p-0.5"
+                  title="Clear search"
+                >
+                  <X size={15} />
+                </button>
+              )}
             </div>
 
             <button
               id="search-button"
-              className="px-5 py-2 bg-[#00580C] hover:bg-[#016f0e] text-white text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition cursor-pointer shrink-0 shadow-xs"
+              className="px-6 py-2.5 bg-[#00580C] hover:bg-[#016f0e] text-white text-xs sm:text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition cursor-pointer shrink-0 shadow-xs active:scale-[0.98]"
             >
-              <Search size={14} /> Search
+              <Search size={15} /> Search
             </button>
           </div>
 
           {/* Row 2: Filter Selects */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <div className="flex flex-col">
-              <label className="text-[11px] font-normal text-gray-500 mb-1">Product Type</label>
+              <label className="text-xs font-semibold text-gray-600 mb-1.5">Product Type</label>
               <div className="relative">
                 <select
                   value={productType}
                   onChange={(e) => setProductType(e.target.value)}
-                  className="w-full appearance-none bg-white border border-gray-200 rounded-md px-3 py-1.5 text-xs text-gray-700 font-normal focus:border-[#00580C] outline-none pr-7 cursor-pointer"
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-gray-800 font-medium hover:border-gray-300 focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] outline-none pr-8 cursor-pointer shadow-2xs transition"
                 >
                   <option>All Products</option>
                   <option>Milled Rice</option>
@@ -609,17 +619,17 @@ export default function ConsumerMarketplace() {
                   <option>Glutinous Rice</option>
                   <option>Palay</option>
                 </select>
-                <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
             <div className="flex flex-col">
-              <label className="text-[11px] font-normal text-gray-500 mb-1">Rice Variety</label>
+              <label className="text-xs font-semibold text-gray-600 mb-1.5">Rice Variety</label>
               <div className="relative">
                 <select
                   value={riceVariety}
                   onChange={(e) => setRiceVariety(e.target.value)}
-                  className="w-full appearance-none bg-white border border-gray-200 rounded-md px-3 py-1.5 text-xs text-gray-700 font-normal focus:border-[#00580C] outline-none pr-7 cursor-pointer"
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-gray-800 font-medium hover:border-gray-300 focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] outline-none pr-8 cursor-pointer shadow-2xs transition"
                 >
                   <option>All Varieties</option>
                   <option>Dinorado</option>
@@ -631,17 +641,17 @@ export default function ConsumerMarketplace() {
                   <option>Rc 10</option>
                   <option>Malagkit</option>
                 </select>
-                <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
             <div className="flex flex-col">
-              <label className="text-[11px] font-normal text-gray-500 mb-1">Quality Grade</label>
+              <label className="text-xs font-semibold text-gray-600 mb-1.5">Quality Grade</label>
               <div className="relative">
                 <select
                   value={qualityGrade}
                   onChange={(e) => setQualityGrade(e.target.value)}
-                  className="w-full appearance-none bg-white border border-gray-200 rounded-md px-3 py-1.5 text-xs text-gray-700 font-normal focus:border-[#00580C] outline-none pr-7 cursor-pointer"
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-gray-800 font-medium hover:border-gray-300 focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] outline-none pr-8 cursor-pointer shadow-2xs transition"
                 >
                   <option>All Grades</option>
                   <option>Premium Grade</option>
@@ -651,34 +661,34 @@ export default function ConsumerMarketplace() {
                   <option>Regular Milled</option>
                   <option>Whole Grain</option>
                 </select>
-                <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
             <div className="flex flex-col">
-              <label className="text-[11px] font-normal text-gray-500 mb-1">Packaging Size</label>
+              <label className="text-xs font-semibold text-gray-600 mb-1.5">Packaging Size</label>
               <div className="relative">
                 <select
                   value={packagingSize}
                   onChange={(e) => setPackagingSize(e.target.value)}
-                  className="w-full appearance-none bg-white border border-gray-200 rounded-md px-3 py-1.5 text-xs text-gray-700 font-normal focus:border-[#00580C] outline-none pr-7 cursor-pointer"
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-gray-800 font-medium hover:border-gray-300 focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] outline-none pr-8 cursor-pointer shadow-2xs transition"
                 >
                   <option>All Sizes</option>
                   <option>10 kg</option>
                   <option>25 kg</option>
                   <option>50 kg</option>
                 </select>
-                <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
             <div className="flex flex-col">
-              <label className="text-[11px] font-normal text-gray-500 mb-1">Seller Location</label>
+              <label className="text-xs font-semibold text-gray-600 mb-1.5">Seller Location</label>
               <div className="relative">
                 <select
                   value={sellerLocation}
                   onChange={(e) => setSellerLocation(e.target.value)}
-                  className="w-full appearance-none bg-white border border-gray-200 rounded-md px-3 py-1.5 text-xs text-gray-700 font-normal focus:border-[#00580C] outline-none pr-7 cursor-pointer"
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-gray-800 font-medium hover:border-gray-300 focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] outline-none pr-8 cursor-pointer shadow-2xs transition"
                 >
                   <option>All Locations</option>
                   <option>Caloocan City</option>
@@ -688,88 +698,90 @@ export default function ConsumerMarketplace() {
                   <option>Isabela</option>
                   <option>Manila</option>
                 </select>
-                <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
             <div className="flex flex-col">
-              <label className="text-[11px] font-normal text-gray-500 mb-1">Availability</label>
+              <label className="text-xs font-semibold text-gray-600 mb-1.5">Availability</label>
               <div className="relative">
                 <select
                   value={availability}
                   onChange={(e) => setAvailability(e.target.value)}
-                  className="w-full appearance-none bg-white border border-gray-200 rounded-md px-3 py-1.5 text-xs text-gray-700 font-normal focus:border-[#00580C] outline-none pr-7 cursor-pointer"
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-gray-800 font-medium hover:border-gray-300 focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] outline-none pr-8 cursor-pointer shadow-2xs transition"
                 >
                   <option>All Availability</option>
                   <option>In Stock</option>
                   <option>Limited Stock</option>
                   <option>Out of Stock</option>
                 </select>
-                <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
           </div>
 
           {/* Row 3: Secondary Filters */}
-          <div className="flex flex-wrap items-center justify-between gap-y-2 pt-0.5">
-            <div className="flex flex-wrap items-center gap-4 text-xs">
-              <div className="flex items-center gap-1.5">
-                <span className="text-gray-500 text-xs font-normal">Price (₱):</span>
+          <div className="flex flex-wrap items-center justify-between gap-y-3 pt-3 border-t border-gray-100">
+            <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600 font-medium">Price (₱):</span>
                 <input
                   type="number"
                   placeholder="Min"
                   value={minPrice}
                   onChange={(e) => setMinPrice(e.target.value)}
-                  className="w-14 bg-white border border-gray-200 rounded-md px-2 py-1 text-xs text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-[#00580C] text-center"
+                  className="w-20 bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm font-medium text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] text-center shadow-2xs"
                 />
-                <span className="text-gray-400 text-xs">—</span>
+                <span className="text-gray-400 font-medium">—</span>
                 <input
                   type="number"
                   placeholder="Max"
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(e.target.value)}
-                  className="w-14 bg-white border border-gray-200 rounded-md px-2 py-1 text-xs text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-[#00580C] text-center"
+                  className="w-20 bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm font-medium text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] text-center shadow-2xs"
                 />
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <span className="text-gray-500 text-xs font-normal">Seller Type:</span>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600 font-medium">Seller Type:</span>
                 <div className="relative">
                   <select
                     value={sellerType}
                     onChange={(e) => setSellerType(e.target.value)}
-                    className="appearance-none bg-white border border-gray-200 rounded-md px-2.5 py-1 text-xs text-gray-700 focus:outline-none focus:border-[#00580C] pr-6 cursor-pointer"
+                    className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 hover:border-gray-300 focus:outline-none focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] pr-7 cursor-pointer shadow-2xs transition"
                   >
                     <option>All Sellers</option>
                     <option>Retailer</option>
                     <option>Miller / Supplier</option>
                   </select>
-                  <ChevronDown size={12} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <span className="text-gray-500 text-xs font-normal">Rating:</span>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600 font-medium">Rating:</span>
                 <div className="relative">
                   <select
                     value={ratingFilter}
                     onChange={(e) => setRatingFilter(e.target.value)}
-                    className="appearance-none bg-white border border-gray-200 rounded-md px-2.5 py-1 text-xs text-gray-700 focus:outline-none focus:border-[#00580C] pr-6 cursor-pointer"
+                    className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 hover:border-gray-300 focus:outline-none focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] pr-7 cursor-pointer shadow-2xs transition"
                   >
                     <option>All Ratings</option>
                     <option value="4.8">4.8 &amp; above</option>
                     <option value="4.5">4.5 &amp; above</option>
                     <option value="4.0">4.0 &amp; above</option>
                   </select>
-                  <ChevronDown size={12} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 </div>
               </div>
             </div>
 
             <button
+              type="button"
               onClick={handleResetFilters}
-              className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer font-normal"
+              className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#00580C] transition cursor-pointer px-3 py-1.5 rounded-lg hover:bg-gray-50"
             >
+              <RotateCcw size={13} />
               Reset All Filters
             </button>
           </div>
@@ -778,22 +790,22 @@ export default function ConsumerMarketplace() {
         {/* 4. RESULTS COUNT & SORTING CONTROLS */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
           <div>
-            <p className="text-sm font-bold text-gray-900">
-              124 Products Available{" "}
-              <span className="font-normal text-xs text-gray-500 ml-1 hidden sm:inline">
+            <p className="text-sm sm:text-base font-bold text-gray-900">
+              {filteredProducts.length} Products Available{" "}
+              <span className="font-normal text-xs text-gray-500 ml-1.5 hidden sm:inline">
                 Showing products that match your selected filters.
               </span>
             </p>
           </div>
 
           <div className="flex items-center gap-3 self-end sm:self-auto">
-            <div className="flex items-center gap-1.5 text-xs text-gray-600">
-              <span className="font-medium">Sort by:</span>
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+              <span className="font-semibold">Sort by:</span>
               <div className="relative">
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-800 font-semibold focus:border-[#00580C] outline-none pr-7 shadow-2xs cursor-pointer"
+                  className="appearance-none bg-white border border-gray-200 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-gray-800 font-semibold hover:border-gray-300 focus:border-[#00580C] focus:ring-1 focus:ring-[#00580C] outline-none pr-8 shadow-2xs cursor-pointer transition"
                 >
                   <option>Recommended</option>
                   <option>Price: Low to High</option>
@@ -801,32 +813,32 @@ export default function ConsumerMarketplace() {
                   <option>Highest Rated</option>
                   <option>Popularity</option>
                 </select>
-                <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
-            <div className="flex items-center border border-gray-200 rounded-lg p-0.5 bg-white shadow-2xs">
+            <div className="flex items-center border border-gray-200 rounded-xl p-1 bg-white shadow-2xs">
               <button
                 onClick={() => setViewMode("grid")}
-                className={`p-1.5 rounded transition cursor-pointer ${
+                className={`p-1.5 rounded-lg transition cursor-pointer ${
                   viewMode === "grid"
                     ? "bg-[#00580C] text-white"
                     : "text-gray-500 hover:bg-gray-100"
                 }`}
                 title="Grid View"
               >
-                <LayoutGrid size={14} />
+                <LayoutGrid size={15} />
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`p-1.5 rounded transition cursor-pointer ${
+                className={`p-1.5 rounded-lg transition cursor-pointer ${
                   viewMode === "list"
                     ? "bg-[#00580C] text-white"
                     : "text-gray-500 hover:bg-gray-100"
                 }`}
                 title="List View"
               >
-                <List size={14} />
+                <List size={15} />
               </button>
             </div>
           </div>
