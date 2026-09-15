@@ -880,7 +880,7 @@ const FarmerRegister = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
+    <div className="dark-readable-registration-form min-h-screen flex flex-col relative overflow-hidden">
       {/* Gradient background matching Figma design */}
       <div className="absolute inset-0" style={{
         background: "linear-gradient(135deg, #e8f5e9 0%, #f5faf5 35%, #ffffff 65%, #bcead1 100%)"

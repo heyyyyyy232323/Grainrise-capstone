@@ -292,6 +292,83 @@ html:not(.light) .dark-readable-register-subtitle {
   color: #cbd5e1 !important;
 }
 
+html:not(.light) .dark-readable-registration-form {
+  background: #0b1711 !important;
+  color: #e2e8f0;
+}
+
+html:not(.light) .dark-readable-registration-form > div[style*="linear-gradient"] {
+  background: linear-gradient(135deg, #0c2416 0%, #10251a 45%, #17271e 100%) !important;
+}
+
+html:not(.light) .dark-readable-registration-form > div[style*="radial-gradient"] {
+  opacity: 0.35 !important;
+}
+
+html:not(.light) .dark-readable-registration-form > .bg-cover {
+  opacity: 0.16 !important;
+  filter: brightness(0.55) saturate(0.7);
+  mix-blend-mode: normal !important;
+}
+
+html:not(.light) .dark-readable-registration-form .bg-white {
+  background-color: #111c18 !important;
+  border-color: rgba(255,255,255,0.14) !important;
+}
+
+html:not(.light) .dark-readable-registration-form .bg-gray-50,
+html:not(.light) .dark-readable-registration-form .bg-gray-50\/50,
+html:not(.light) .dark-readable-registration-form .bg-\[\#f8faf7\],
+html:not(.light) .dark-readable-registration-form .bg-\[\#f3f9f4\] {
+  background-color: #182820 !important;
+}
+
+html:not(.light) .dark-readable-registration-form .bg-\[\#eaf5ec\] {
+  background-color: #203b2a !important;
+}
+
+html:not(.light) .dark-readable-registration-form .text-gray-800,
+html:not(.light) .dark-readable-registration-form .text-gray-700,
+html:not(.light) .dark-readable-registration-form .text-gray-600 {
+  color: #dbeafe !important;
+}
+
+html:not(.light) .dark-readable-registration-form .text-gray-500 {
+  color: #a8b7ae !important;
+}
+
+html:not(.light) .dark-readable-registration-form .border-gray-100,
+html:not(.light) .dark-readable-registration-form .border-gray-200,
+html:not(.light) .dark-readable-registration-form .border-gray-300 {
+  border-color: rgba(255,255,255,0.18) !important;
+}
+
+html:not(.light) .dark-readable-registration-form button.bg-white,
+html:not(.light) .dark-readable-registration-form button.bg-\[\#FFFFFF\] {
+  background-color: #182820 !important;
+  border-color: rgba(167, 243, 208, 0.3) !important;
+  color: #e2e8f0 !important;
+}
+
+html:not(.light) .dark-readable-registration-form button.hover\:bg-gray-300:hover,
+html:not(.light) .dark-readable-registration-form button.hover\:bg-gray-50:hover,
+html:not(.light) .dark-readable-registration-form button.hover\:bg-emerald-50:hover,
+html:not(.light) .dark-readable-registration-form button.hover\:bg-emerald-50\/60:hover {
+  background-color: #24352d !important;
+  color: #ffffff !important;
+}
+
+html:not(.light) .dark-readable-registration-form button.text-gray-700,
+html:not(.light) .dark-readable-registration-form button.text-gray-800,
+html:not(.light) .dark-readable-registration-form button.text-gray-600 {
+  color: #dbeafe !important;
+}
+
+html:not(.light) .dark-readable-registration-form footer {
+  background-color: #0f1c14 !important;
+  color: #cbd5e1 !important;
+}
+
 html:not(.light) .dark-readable-auth-panel {
   background-color: #0b1711 !important;
 }

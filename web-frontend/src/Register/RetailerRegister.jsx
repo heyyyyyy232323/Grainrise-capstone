@@ -1160,7 +1160,7 @@ const RetailerRegister = () => {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen flex flex-col relative overflow-hidden">
+      <div className="dark-readable-registration-form min-h-screen flex flex-col relative overflow-hidden">
         <div
           className="absolute inset-0"
           style={{
@@ -1228,7 +1228,7 @@ const RetailerRegister = () => {
   // =========================================================
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
+    <div className="dark-readable-registration-form min-h-screen flex flex-col relative overflow-hidden">
       <div
         className="absolute inset-0"
         style={{
