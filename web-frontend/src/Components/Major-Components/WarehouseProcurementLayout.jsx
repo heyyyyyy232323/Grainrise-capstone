@@ -35,12 +35,14 @@ const WarehouseProcurementLayout = () => {
       />
 
       {/* Overlay for mobile */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black bg-opacity-50 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      <div
+        className={`fixed inset-0 z-30 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ease-in-out md:hidden ${
+          sidebarOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setSidebarOpen(false)}
+      />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">

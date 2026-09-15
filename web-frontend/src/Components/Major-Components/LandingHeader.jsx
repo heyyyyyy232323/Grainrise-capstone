@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShieldCheck, HelpCircle, LogIn } from 'lucide-react';
+import { ShieldCheck, HelpCircle, LogIn, Moon, Sun } from 'lucide-react';
 import logoImg from '../../assets/Logo.png';
 import '../../LandingPage.css';
 
@@ -13,6 +13,7 @@ const GrainRiseLogo = () => (
 export default function LandingHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => !document.documentElement.classList.contains('light'));
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -29,6 +30,13 @@ export default function LandingHeader() {
     } else {
       navigate(`/#${id}`);
     }
+  };
+
+  const toggleTheme = () => {
+    const nextIsDark = !isDarkMode;
+    document.documentElement.classList.toggle('light', !nextIsDark);
+    localStorage.setItem('theme', nextIsDark ? 'dark' : 'light');
+    setIsDarkMode(nextIsDark);
   };
 
   return (
@@ -103,6 +111,15 @@ export default function LandingHeader() {
           </ul>
 
           <div className="lp-nav__actions">
+            <button
+              type="button"
+              className="lp-nav__theme-toggle"
+              onClick={toggleTheme}
+              aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
             <button
               className="lp-nav__login-btn"
               id="nav-login-btn"

@@ -80,7 +80,7 @@ export default function DistributionCard({
 
   return (
     <article
-      className={`w-full rounded-[22px] border border-slate-200 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.08)] ${className}`}
+      className={`dark-readable-graph w-full rounded-[22px] border border-slate-200 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.08)] ${className}`}
     >
       <header className="border-b border-slate-200 px-5 py-4">
         <h3 className="text-[18px] font-bold leading-tight text-slate-900">{title}</h3>

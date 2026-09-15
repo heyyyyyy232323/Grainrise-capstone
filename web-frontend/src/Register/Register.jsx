@@ -64,7 +64,7 @@ const RoleCard = ({ title, description, image, imagePosition = "center", onClick
       cursor: "pointer",
       animation: `fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms both`,
     }}
-    className="group rounded-xl overflow-hidden border border-gray-200 bg-white transition-all duration-300 hover:shadow-xl hover:border-green-400 hover:-translate-y-1"
+    className="dark-readable-register-card group rounded-xl overflow-hidden border border-gray-200 bg-white transition-all duration-300 hover:shadow-xl hover:border-green-400 hover:-translate-y-1"
   >
     {/* Image fills top — tall to maximize card */}
     <div className="w-full flex-shrink-0 overflow-hidden" style={{ height: "210px" }}>
@@ -108,6 +108,7 @@ const RegisterGateway = () => {
 
   return (
     <div
+      className="dark-readable-register"
       style={{
         minHeight: "100vh",
         display: "flex",
@@ -161,6 +162,7 @@ const RegisterGateway = () => {
         >
           <button
             onClick={() => navigate("/")}
+            className="dark-readable-register-back"
             style={{
               display: "flex",
               alignItems: "center",
@@ -213,6 +215,7 @@ const RegisterGateway = () => {
 
             {/* Title */}
             <h1
+              className="dark-readable-register-title"
               style={{
                 fontSize: "clamp(26px, 3vw, 36px)",
                 fontWeight: 800,
@@ -227,6 +230,7 @@ const RegisterGateway = () => {
 
             {/* Subtitle */}
             <p
+              className="dark-readable-register-subtitle"
               style={{
                 fontSize: "14px",
                 color: "#6b7280",

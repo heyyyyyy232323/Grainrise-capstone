@@ -104,10 +104,11 @@ const UserLogin = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col animate-page-fade">
+    <div className="dark-readable-auth min-h-screen flex flex-col animate-page-fade">
       <div className="flex flex-1 flex-col md:flex-row">
         <div
           className="
+            dark-readable-auth-hero
             relative
             w-full
             md:w-1/2
@@ -215,6 +216,8 @@ const UserLogin = () => {
 
           <div
             className="
+              dark-readable-auth-card
+              dark-readable-auth-panel
               relative
               z-10
               w-full

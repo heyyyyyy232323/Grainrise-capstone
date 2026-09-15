@@ -1099,7 +1099,7 @@ const UserSidebar = ({
 
   return (
     <aside
-      className={`fixed md:relative inset-y-0 left-0 h-screen bg-white border-r border-gray-200 flex flex-col shrink-0 z-40 md:z-30 transition-[width] duration-300 ease-in-out select-none
+      className={`dark-readable-sidebar fixed md:relative inset-y-0 left-0 h-screen bg-white border-r border-gray-200 flex flex-col shrink-0 z-40 md:z-30 transition-all duration-300 ease-out will-change-transform select-none
         ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 overflow-hidden

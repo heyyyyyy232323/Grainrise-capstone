@@ -47,7 +47,7 @@ export default function KPICard({
             "aria-label": ariaLabel || `${title}: ${value}`,
           }
         : {})}
-      className={`w-full rounded-[22px] border p-5 text-left shadow-[0_12px_32px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.1)] ${
+      className={`dark-readable-graph w-full rounded-[22px] border p-5 text-left shadow-[0_12px_32px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.1)] ${
         isClickable
           ? "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0B7A2A] focus-visible:ring-offset-2"
           : ""

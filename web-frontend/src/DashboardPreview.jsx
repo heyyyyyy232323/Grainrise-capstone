@@ -209,17 +209,29 @@ const DashboardPreview = () => {
         <UserSidebar role={userRole} logo={Logo} isMinimized={sidebarMinimized} />
       </div>
 
-      {sidebarOpen && (
-        <>
-          <div
-            className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
-            onClick={() => setSidebarOpen(false)}
-          />
-          <div className="md:hidden fixed left-0 top-0 h-screen z-30 w-64">
-            <UserSidebar role={userRole} logo={Logo} isMinimized={false} />
-          </div>
-        </>
-      )}
+      <div
+        className={`md:hidden fixed inset-0 z-20 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${
+          sidebarOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setSidebarOpen(false)}
+      />
+      <div
+        className={`md:hidden fixed left-0 top-0 h-screen z-30 w-64 transition-opacity duration-300 ${
+          sidebarOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-100 pointer-events-none"
+        }`}
+      >
+        <UserSidebar
+          role={userRole}
+          logo={Logo}
+          isMinimized={false}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+      </div>
 
       <div className="flex flex-col flex-1 w-full overflow-hidden">
         <UserNavbar

@@ -21,7 +21,7 @@ export default function RecentActivityCard({
 }) {
   return (
     <article
-      className={`w-full overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.06)] ${className}`}
+      className={`dark-readable-graph w-full overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.06)] ${className}`}
     >
       <header className="border-b border-slate-200 px-4 py-2.5">
         <h3 className="text-[18px] font-bold leading-tight tracking-[-0.02em] text-slate-900 sm:text-[20px]">

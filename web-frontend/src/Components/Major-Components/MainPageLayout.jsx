@@ -35,12 +35,14 @@ const MainPageLayout = ({ role = "warehouse_encoder" }) => {
       />
 
       {/* Overlay for mobile */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 md:hidden bg-black/20 backdrop-blur-sm"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      <div
+        className={`fixed inset-0 z-30 md:hidden bg-black/20 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${
+          sidebarOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setSidebarOpen(false)}
+      />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">

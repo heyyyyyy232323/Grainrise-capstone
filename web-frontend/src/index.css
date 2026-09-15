@@ -199,6 +199,512 @@ html:not(.light) .bg-slate-100, html:not(.light) .bg-slate-200 { background-colo
 html:not(.light) .hover\:bg-gray-100:hover { background-color: rgba(255,255,255,0.03) !important; }
 html:not(.light) .hover\:bg-gray-50:hover { background-color: rgba(255,255,255,0.02) !important; }
 
+/* Normalize manually styled table headers in dark mode. */
+html:not(.light) table thead,
+html:not(.light) table thead tr,
+html:not(.light) table thead th {
+  background-color: #24352d !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  color: #e2e8f0 !important;
+}
+
+html:not(.light) table tbody tr {
+  border-color: rgba(255,255,255,0.1) !important;
+}
+
+html:not(.light) table tbody tr:hover {
+  background-color: rgba(255,255,255,0.06) !important;
+}
+
+html:not(.light) .bg-\[\#EBF7EE\],
+html:not(.light) .bg-emerald-50\/60,
+html:not(.light) .bg-gray-50\/80,
+html:not(.light) .bg-slate-50\/70,
+html:not(.light) .bg-slate-50\/50 {
+  background-color: #24352d !important;
+}
+
+html:not(.light) .border-emerald-100,
+html:not(.light) .border-gray-100,
+html:not(.light) .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(255,255,255,0.12) !important;
+}
+
+html:not(.light) .bg-slate-50\/70 .text-gray-500,
+html:not(.light) .bg-slate-50\/70 > span {
+  color: #cbd5e1 !important;
+}
+
+html:not(.light) .dark-readable-pagination,
+html:not(.light) .dark-readable-pagination .bg-white {
+  background-color: #111c18 !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+
+html:not(.light) .dark-readable-pagination button {
+  background-color: #182820 !important;
+  border-color: rgba(255,255,255,0.16) !important;
+  color: #dbeafe !important;
+}
+
+html:not(.light) .dark-readable-pagination button:hover {
+  background-color: #24352d !important;
+  color: #ffffff !important;
+}
+
+html:not(.light) .dark-readable-pagination p,
+html:not(.light) .dark-readable-pagination span {
+  color: #cbd5e1 !important;
+}
+
+html:not(.light) .dark-readable-auth,
+html:not(.light) .dark-readable-register {
+  color: #e2e8f0;
+}
+
+html:not(.light) .dark-readable-auth .bg-white,
+html:not(.light) .dark-readable-register .bg-white,
+html:not(.light) .dark-readable-register-card {
+  background-color: #111c18 !important;
+  border-color: rgba(255,255,255,0.14) !important;
+}
+
+html:not(.light) .dark-readable-register {
+  background-color: #0b1711 !important;
+}
+
+html:not(.light) .dark-readable-register > div:first-of-type {
+  opacity: 0.16 !important;
+  filter: brightness(0.55) saturate(0.7);
+}
+
+html:not(.light) .dark-readable-register-back {
+  background-color: #182820 !important;
+  border-color: rgba(167, 243, 208, 0.28) !important;
+  color: #e2e8f0 !important;
+}
+
+html:not(.light) .dark-readable-register-title {
+  color: #f8fafc !important;
+}
+
+html:not(.light) .dark-readable-register-subtitle {
+  color: #cbd5e1 !important;
+}
+
+html:not(.light) .dark-readable-auth-panel {
+  background-color: #0b1711 !important;
+}
+
+html:not(.light) .dark-readable-auth-hero {
+  background: #07120c !important;
+}
+
+html:not(.light) .dark-readable-auth-hero > .bg-gradient-to-b {
+  background-image: linear-gradient(to bottom, #063b17, #725b12) !important;
+  opacity: 0.9 !important;
+}
+
+html:not(.light) .dark-readable-auth-hero.bg-gradient-to-b {
+  background-image: linear-gradient(to bottom, #063b17, #725b12) !important;
+}
+
+html:not(.light) .dark-readable-auth .bg-\[\#FFFFFF\] {
+  background-color: #182820 !important;
+  color: #e2e8f0 !important;
+  border-color: rgba(167, 243, 208, 0.28) !important;
+}
+
+html:not(.light) .dark-readable-auth .hover\:bg-gray-300:hover {
+  background-color: #24352d !important;
+}
+
+html:not(.light) .dark-readable-auth-hero > .bg-cover {
+  filter: brightness(0.58) saturate(0.8);
+}
+
+html:not(.light) .dark-readable-auth-panel > .bg-\[\#F9F9FF\] {
+  background-color: #0b1711 !important;
+  opacity: 0.82 !important;
+}
+
+html:not(.light) .dark-readable-auth-card {
+  background-color: rgba(17, 28, 24, 0.94) !important;
+  border: 1px solid rgba(167, 243, 208, 0.16);
+  color: #f8fafc;
+}
+
+html:not(.light) .dark-readable-auth input,
+html:not(.light) .dark-readable-register input,
+html:not(.light) .dark-readable-register select,
+html:not(.light) .dark-readable-register textarea {
+  background-color: #182820 !important;
+  border-color: rgba(255,255,255,0.2) !important;
+  color: #f8fafc !important;
+}
+
+html:not(.light) .dark-readable-auth input::placeholder,
+html:not(.light) .dark-readable-register input::placeholder,
+html:not(.light) .dark-readable-register textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html:not(.light) .dark-readable-auth label,
+html:not(.light) .dark-readable-register label,
+html:not(.light) .dark-readable-register-card h3 {
+  color: #e2e8f0 !important;
+}
+
+html:not(.light) .dark-readable-auth .text-gray-500,
+html:not(.light) .dark-readable-auth .text-gray-600,
+html:not(.light) .dark-readable-register .text-gray-500,
+html:not(.light) .dark-readable-register .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+html:not(.light) .dark-readable-auth hr,
+html:not(.light) .dark-readable-register hr {
+  border-color: rgba(255,255,255,0.14) !important;
+}
+
+html:not(.light) .dark-readable-auth footer,
+html:not(.light) .dark-readable-register footer {
+  background-color: #0f1c14 !important;
+  color: #cbd5e1 !important;
+}
+
+html:not(.light) input,
+html:not(.light) select,
+html:not(.light) textarea {
+  background-color: #182820 !important;
+  border-color: rgba(255,255,255,0.2) !important;
+  color: #f8fafc !important;
+}
+
+html:not(.light) input::placeholder,
+html:not(.light) textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html:not(.light) footer.bg-green-50 {
+  background-color: #0f1c14 !important;
+  color: #cbd5e1 !important;
+}
+
+/* Shared dashboard contrast for the custom class-based dark theme. */
+html:not(.light) .dark-readable-sidebar .text-gray-600 {
+  color: #dbeafe !important;
+}
+
+html:not(.light) .dark-readable-sidebar .hover\:bg-gray-100:hover {
+  background-color: rgba(255,255,255,0.08) !important;
+}
+
+html:not(.light) .dark-readable-sidebar .border-gray-200 {
+  border-color: rgba(255,255,255,0.12) !important;
+}
+
+html:not(.light) .dark-readable-tabs {
+  border-color: rgba(255,255,255,0.14) !important;
+}
+
+html:not(.light) .dark-readable-tabs .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+html:not(.light) .dark-readable-tabs .hover\:text-gray-900:hover {
+  color: #ffffff !important;
+}
+
+html:not(.light) .dark-readable-navbar {
+  background-color: #111c18 !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+
+html:not(.light) .dark-readable-navbar button.border-gray-200 {
+  border-color: rgba(255,255,255,0.16) !important;
+  color: #dbeafe !important;
+}
+
+html:not(.light) .dark-readable-navbar button.hover\:bg-gray-50:hover {
+  background-color: rgba(255,255,255,0.08) !important;
+}
+
+html:not(.light) .dark-readable-navbar input {
+  background-color: #182820 !important;
+  border-color: rgba(255,255,255,0.14) !important;
+  color: #f8fafc !important;
+}
+
+html:not(.light) .dark-readable-navbar input::placeholder {
+  color: #94a3b8 !important;
+}
+
+html:not(.light) .dark-readable-notifications {
+  background-color: #111c18 !important;
+  border-color: rgba(255,255,255,0.14) !important;
+}
+
+html:not(.light) .dark-readable-notifications .dark-readable-notification-item {
+  border-color: rgba(255,255,255,0.1) !important;
+}
+
+html:not(.light) .dark-readable-notifications .dark-readable-notification-item.bg-white {
+  background-color: #182820 !important;
+}
+
+html:not(.light) .dark-readable-notifications .dark-readable-notification-item.bg-\[\#F0F8F1\] {
+  background-color: #203b2a !important;
+}
+
+html:not(.light) .dark-readable-notifications .text-gray-900 {
+  color: #f8fafc !important;
+}
+
+html:not(.light) .dark-readable-notifications .text-gray-500,
+html:not(.light) .dark-readable-notifications .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+html:not(.light) .dark-readable-account {
+  background-color: #111c18 !important;
+  border-color: rgba(255,255,255,0.14) !important;
+}
+
+html:not(.light) .dark-readable-account button.bg-\[\#DDE7DF\] {
+  background-color: #203b2a !important;
+  color: #bbf7d0 !important;
+}
+
+html:not(.light) .dark-readable-account button.hover\:bg-\[\#d0dfd3\]:hover {
+  background-color: #2d5139 !important;
+}
+
+html:not(.light) .dark-readable-account .text-gray-500 {
+  color: #cbd5e1 !important;
+}
+
+html:not(.light) .dark-readable-account .hover\:text-gray-700:hover {
+  color: #f8fafc !important;
+}
+
+html:not(.light) .dark-readable-account .border-gray-300 {
+  border-color: rgba(255,255,255,0.16) !important;
+}
+
+html:not(.light) .dark-readable-notifications {
+  border-color: rgba(255,255,255,0.14) !important;
+  background-color: #111c18 !important;
+}
+
+html:not(.light) .dark-readable-notifications .border-gray-200,
+html:not(.light) .dark-readable-notifications .border-slate-100 {
+  border-color: rgba(255,255,255,0.1) !important;
+}
+
+html:not(.light) .dark-readable-notifications .text-gray-900 {
+  color: #f8fafc !important;
+}
+
+html:not(.light) .dark-readable-notifications .text-gray-600,
+html:not(.light) .dark-readable-notifications .text-gray-500 {
+  color: #cbd5e1 !important;
+}
+
+html:not(.light) .dark-readable-notifications .text-gray-400,
+html:not(.light) .dark-readable-notifications .text-gray-300 {
+  color: #94a3b8 !important;
+}
+
+html:not(.light) .dark-readable-notification-item.bg-white {
+  background-color: #111c18 !important;
+}
+
+html:not(.light) .dark-readable-notification-item.bg-\[\#F0F8F1\] {
+  background-color: #1b3827 !important;
+}
+
+html:not(.light) .dark-readable-account {
+  border-color: rgba(255,255,255,0.14) !important;
+  background-color: #16251d !important;
+}
+
+html:not(.light) .dark-readable-account .bg-\[\#DDE7DF\] {
+  background-color: #244331 !important;
+  color: #d1fae5 !important;
+}
+
+html:not(.light) .dark-readable-account .hover\:bg-\[\#d0dfd3\]:hover {
+  background-color: #2d543d !important;
+}
+
+html:not(.light) .dark-readable-account .text-gray-500 {
+  color: #cbd5e1 !important;
+}
+
+html:not(.light) .dark-readable-account .text-gray-700,
+html:not(.light) .dark-readable-account .hover\:text-gray-700:hover {
+  color: #e2e8f0 !important;
+}
+
+html:not(.light) .dark-readable-account .border-gray-300 {
+  border-color: rgba(255,255,255,0.16) !important;
+}
+
+html:not(.light) .dark-readable-pagination {
+  border-color: rgba(255,255,255,0.12) !important;
+  background-color: #182820 !important;
+}
+
+html:not(.light) .dark-readable-pagination p {
+  color: #cbd5e1 !important;
+}
+
+html:not(.light) .dark-readable-pagination button {
+  border-color: rgba(255,255,255,0.16) !important;
+  background-color: #24352d !important;
+  color: #e2e8f0 !important;
+}
+
+html:not(.light) .dark-readable-pagination button:hover {
+  border-color: #34d399 !important;
+  color: #ffffff !important;
+}
+
+html:not(.light) .dark-readable-pagination button:disabled {
+  opacity: 0.45;
+}
+
+html:not(.light) .dark-readable-pagination button.bg-\[\#018311\] {
+  background-color: #018311 !important;
+  color: #ffffff !important;
+}
+
+html:not(.light) .dark-readable-pagination span {
+  color: #94a3b8 !important;
+}
+
+html:not(.light) .dark-readable-table {
+  border-color: rgba(255,255,255,0.12) !important;
+  background-color: #111c18 !important;
+}
+
+html:not(.light) .dark-readable-table thead tr {
+  background-color: #24352d !important;
+  color: #e2e8f0 !important;
+}
+
+html:not(.light) .dark-readable-table tbody tr {
+  border-color: rgba(255,255,255,0.1) !important;
+}
+
+html:not(.light) .dark-readable-table tbody tr:hover {
+  background-color: rgba(255,255,255,0.06) !important;
+}
+
+html:not(.light) .dark-readable-table tbody td {
+  color: #dbeafe !important;
+}
+
+html:not(.light) .dark-readable-table tbody td.bg-white {
+  background-color: #182820 !important;
+}
+
+html:not(.light) .dark-readable-table button {
+  border-color: rgba(255,255,255,0.2) !important;
+  color: #dbeafe !important;
+}
+
+html:not(.light) .floating-chatbot-window {
+  background: #101d16 !important;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3) !important;
+}
+
+html:not(.light) .floating-chatbot-messages,
+html:not(.light) .floating-chatbot-quick-replies {
+  background: #0f1c14 !important;
+  border-color: rgba(167,243,208,0.16) !important;
+}
+
+html:not(.light) .floating-chatbot-bubble--bot,
+html:not(.light) .floating-chatbot-typing {
+  background: #1d3025 !important;
+  color: #f8fafc !important;
+}
+
+html:not(.light) .floating-chatbot-bubble--user {
+  color: #ffffff !important;
+}
+
+html:not(.light) .floating-chatbot-quick-reply {
+  background: #17271e !important;
+  border-color: #6ee7a0 !important;
+  color: #d1fae5 !important;
+}
+
+html:not(.light) .floating-chatbot-input-row {
+  background: #101d16 !important;
+  border-color: rgba(167,243,208,0.16) !important;
+}
+
+html:not(.light) .floating-chatbot-input {
+  background: #17271e !important;
+  border-color: #3f6650 !important;
+  color: #f8fafc !important;
+}
+
+html:not(.light) .floating-chatbot-input::placeholder {
+  color: #a8b7ae !important;
+}
+
+html:not(.light) .floating-chatbot-tooltip {
+  background: #1d3025 !important;
+  color: #f8fafc !important;
+}
+
+html:not(.light) .dark-readable-graph {
+  border-color: rgba(255,255,255,0.12) !important;
+  background-color: #111c18 !important;
+  color: #e2e8f0 !important;
+}
+
+html:not(.light) .dark-readable-graph .border-slate-200 {
+  border-color: rgba(255,255,255,0.12) !important;
+}
+
+html:not(.light) .dark-readable-graph .text-slate-900,
+html:not(.light) .dark-readable-graph .text-slate-800 {
+  color: #f8fafc !important;
+}
+
+html:not(.light) .dark-readable-graph .text-slate-700,
+html:not(.light) .dark-readable-graph .text-slate-600,
+html:not(.light) .dark-readable-graph .text-slate-500 {
+  color: #cbd5e1 !important;
+}
+
+html:not(.light) .dark-readable-graph .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+html:not(.light) .dark-readable-graph .bg-white {
+  background-color: #182820 !important;
+}
+
+html:not(.light) .dark-readable-graph .bg-slate-50,
+html:not(.light) .dark-readable-graph .bg-slate-100\/80 {
+  background-color: #24352d !important;
+}
+
+html:not(.light) .dark-readable-graph select {
+  background-color: #182820 !important;
+  color: #e2e8f0 !important;
+}
+
+html:not(.light) .dark-readable-graph .hover\:text-slate-700:hover {
+  color: #f8fafc !important;
+}
+
 html:not(.light) .consumer-page {
   background: var(--bg-primary) !important;
   color: var(--text-primary) !important;

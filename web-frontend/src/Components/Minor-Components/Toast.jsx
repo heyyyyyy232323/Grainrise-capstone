@@ -15,7 +15,7 @@ const ICONS = {
 const Toast = ({ toasts, removeToast }) => {
   return (
     <div
-      className="fixed top-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none"
+      className="fixed top-0 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"
       aria-live="polite"
     >
       {toasts.map((toast) => {
@@ -54,10 +54,10 @@ const ToastItem = ({ toast, config, Icon, removeToast }) => {
     <div
       className={`
         pointer-events-auto
-        flex items-start gap-3
-        max-w-sm w-full
-        px-4 py-3.5
-        rounded-2xl
+        flex items-start gap-2
+        max-w-xs w-[calc(100vw-2rem)]
+        px-3 py-2.5
+        rounded-xl
         border shadow-lg shadow-black/10
         backdrop-blur-sm
         transition-all duration-300 ease-out
@@ -68,23 +68,23 @@ const ToastItem = ({ toast, config, Icon, removeToast }) => {
       `}
       role="alert"
     >
-      <Icon size={18} className={`shrink-0 mt-0.5 ${config.icon_color}`} />
+      <Icon size={16} className={`shrink-0 mt-0.5 ${config.icon_color}`} />
       <div className="flex-1 min-w-0">
         {toast.title && (
-          <p className={`text-sm font-bold leading-snug ${config.text_color}`}>
+          <p className={`text-xs font-bold leading-snug ${config.text_color} dark:text-slate-100`}>
             {toast.title}
           </p>
         )}
-        <p className={`text-xs leading-relaxed mt-0.5 ${config.text_color} opacity-90`}>
+        <p className={`text-[11px] leading-snug mt-0.5 ${config.text_color} opacity-90 dark:text-slate-200`}>
           {toast.message}
         </p>
       </div>
       <button
         onClick={handleDismiss}
-        className={`shrink-0 mt-0.5 opacity-50 hover:opacity-100 transition ${config.text_color}`}
+        className={`shrink-0 mt-0.5 opacity-70 hover:opacity-100 transition ${config.text_color} dark:text-slate-300`}
         aria-label="Dismiss notification"
       >
-        <X size={15} />
+        <X size={13} />
       </button>
     </div>
   );

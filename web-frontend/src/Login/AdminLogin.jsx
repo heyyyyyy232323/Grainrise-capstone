@@ -67,8 +67,8 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="relative flex-1 flex items-center justify-center px-6 py-10 overflow-hidden">
+    <div className="dark-readable-auth min-h-screen flex flex-col">
+      <div className="dark-readable-auth-hero relative flex-1 flex items-center justify-center px-6 py-10 overflow-hidden">
         {/* Background image */}
         <div
           className="absolute inset-0 bg-cover bg-center"

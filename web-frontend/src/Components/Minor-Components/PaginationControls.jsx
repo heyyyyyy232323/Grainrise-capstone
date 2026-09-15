@@ -32,7 +32,7 @@ export default function PaginationControls({
 
   return (
     <div
-      className={`flex flex-col gap-3 border-t border-slate-200 bg-[#F3F5FF] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 ${className}`}
+      className={`dark-readable-pagination flex flex-col gap-3 border-t border-slate-200 bg-[#F3F5FF] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 ${className}`}
     >
       <p className="text-sm text-slate-500">{pageLabel}</p>
 

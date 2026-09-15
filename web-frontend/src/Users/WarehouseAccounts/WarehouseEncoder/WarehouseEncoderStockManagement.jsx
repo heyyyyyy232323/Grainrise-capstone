@@ -2,7 +2,7 @@ import { useMemo, useState, useRef, useEffect } from "react";
 import { Search, ChevronDown, X, Plus } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import Tabs from "../../../Components/Minor-Components/Tabs";
-import PaginationControls from "../../../Components/Minor-Components/PaginationControls";
+import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import CustomGreenButton from "../../../Components/Minor-Components/CustomGreenButton";
 import CustomAmberButton from "../../../Components/Minor-Components/CustomAmberButton";
 import CustomRedButton from "../../../Components/Minor-Components/CustomRedButton";
@@ -109,14 +109,6 @@ function VariantBadge({ badge }) {
 }
 
 // Adjusted column percentages to minimize unwanted gaps
-const COLUMNS = [
-  { label: "Product Code",   width: "20%" },
-  { label: "Variant",        width: "22%" },
-  { label: "Stock Qty (kg)", width: "18%" },
-  { label: "Supplier",       width: "22%" },
-  { label: "Action",         width: "18%", align: "center" },
-];
-
 // ─── Sort helper ───────────────────────────────────────────────────────────────
 const sortProducts = (products, sortBy, stockFilter) => {
   let arr = [...products];
@@ -286,6 +278,71 @@ export default function WarehouseEncoderStockManagement() {
           filtered.length
         )} of ${filtered.length} ${activeTab === "archive" ? "archived products" : "products"}`;
 
+    const tableColumns = [
+      { key: "productCode", label: "Product Code", width: "20%", cellClassName: "font-bold text-slate-800" },
+      {
+        key: "variant",
+        label: "Variant",
+        width: "22%",
+        render: (product) => (
+          <div className="flex flex-col items-start">
+            <span className="text-[13px] font-semibold text-slate-800">{product.variant}</span>
+            <span className="text-[11px] text-slate-400">{product.expiry}</span>
+            <VariantBadge badge={product.variantBadge} />
+          </div>
+        ),
+      },
+      {
+        key: "stockQty",
+        label: "Stock Qty (kg)",
+        width: "18%",
+        render: (product) => (
+          <span className="inline-flex items-center gap-2 text-[13px] text-slate-700">
+            <StockDot level={product.stockLevel} />
+            {product.stockQty}
+          </span>
+        ),
+      },
+      { key: "supplier", label: "Supplier", width: "22%", cellClassName: "text-slate-600" },
+      {
+        key: "action",
+        label: "Action",
+        width: "18%",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
+        render: (product) =>
+          activeTab === "active" ? (
+            <div className="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setModalState({ type: "view", product })}
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
+              >
+                View Details
+              </button>
+              <CustomAmberButton
+                text="Archive"
+                className="px-3 py-1.5 text-[11px] rounded-lg"
+                onClick={() => setModalState({ type: "archive", product })}
+              />
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2">
+              <CustomGreenButton
+                text="Restore"
+                className="px-3 py-1.5 text-[11px] rounded-lg"
+                onClick={() => setModalState({ type: "restore", product })}
+              />
+              <CustomRedButton
+                text="Delete"
+                className="px-4 py-1.5 text-[11px] rounded-lg"
+                onClick={() => setModalState({ type: "delete", product })}
+              />
+            </div>
+          ),
+      },
+    ];
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -442,110 +499,16 @@ export default function WarehouseEncoderStockManagement() {
         </div>
       )}
 
-      {/* Table Card */}
-      <article className="w-full overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.06)]">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse table-auto">
-            <thead>
-              <tr className="bg-[#EDEDED] text-[13px] font-bold text-slate-700">
-                {COLUMNS.map((col) => (
-                  <th
-                    key={col.label}
-                    className={`whitespace-nowrap px-4 py-3.5 align-middle first:pl-6 last:pr-6 ${col.align === "center" ? "text-center" : "text-left"}`}
-                    style={{ width: col.width }}
-                  >
-                    {col.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-
-            <tbody>
-              {pageSlice.length === 0 ? (
-                <tr>
-                  <td colSpan={COLUMNS.length} className="px-5 py-16 text-center text-sm text-slate-400">
-                    No matching products found.
-                  </td>
-                </tr>
-              ) : (
-                pageSlice.map((product) => (
-                  <tr
-                    key={product.id}
-                    className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70 transition-colors"
-                  >
-                    <td className="whitespace-nowrap px-4 py-3 pl-6 text-[13px] font-bold text-slate-800">
-                      {product.productCode}
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col items-start">
-                        <span className="text-[13px] font-semibold text-slate-800">
-                          {product.variant}
-                        </span>
-                        <span className="text-[11px] text-slate-400">{product.expiry}</span>
-                        <VariantBadge badge={product.variantBadge} />
-                      </div>
-                    </td>
-
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <span className="inline-flex items-center gap-2 text-[13px] text-slate-700">
-                        <StockDot level={product.stockLevel} />
-                        {product.stockQty}
-                      </span>
-                    </td>
-
-                    <td className="px-4 py-3 text-[13px] text-slate-600 whitespace-nowrap">
-                      <span className="font-medium">{product.supplier}</span>
-                    </td>
-
-                    <td className="whitespace-nowrap px-4 py-3 pr-6">
-                      {activeTab === "active" ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setModalState({ type: "view", product })}
-                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
-                          >
-                            View Details
-                          </button>
-                          <CustomAmberButton
-                            text="Archive"
-                            className="px-3 py-1.5 text-[11px] rounded-lg"
-                            onClick={() => setModalState({ type: "archive", product })}
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center gap-2">
-                          <CustomGreenButton
-                            text="Restore"
-                            className="px-3 py-1.5 text-[11px] rounded-lg"
-                            onClick={() => setModalState({ type: "restore", product })}
-                          />
-                          <CustomRedButton
-                            text="Delete"
-                            className="px-4 py-1.5 text-[11px] rounded-lg"
-                            onClick={() => setModalState({ type: "delete", product })}
-                          />
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {filtered.length > 0 && (
-          <PaginationControls
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            pageLabel={footerLabel}
-          />
-        )}
-      </article>
+      <SectionedTableCard
+        columns={tableColumns}
+        sections={[{ id: activeTab, rows: pageSlice }]}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        footerLabel={footerLabel}
+        emptyStateTitle="No matching products found."
+        emptyStateDescription="Try adjusting your search or stock filters."
+      />
 
       {/* Modals */}
       <AddProductModal

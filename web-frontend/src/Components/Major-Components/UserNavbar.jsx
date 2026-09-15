@@ -1053,7 +1053,7 @@ const UserNavbar = ({
   // =========================================================
 
   return (
-    <header className="h-18.25 w-full bg-white border-b border-gray-200 flex items-center gap-2 sm:gap-4 px-4 sm:px-6 z-30">
+    <header className="dark-readable-navbar h-18.25 w-full bg-white border-b border-gray-200 flex items-center gap-2 sm:gap-4 px-4 sm:px-6 z-30">
 
       {/* =====================================================
           SIDEBAR TOGGLE
@@ -1147,7 +1147,7 @@ const UserNavbar = ({
 
         {
           notificationOpen && (
-            <div className="absolute right-0 mt-2 w-[min(88vw,20rem)] rounded-xl border border-slate-200 bg-white shadow-2xl z-50 overflow-hidden">
+            <div className="dark-readable-notifications absolute right-0 mt-2 w-[min(88vw,20rem)] rounded-xl border border-slate-200 bg-white shadow-2xl z-50 overflow-hidden">
 
               {/* =============================================
                   HEADER
@@ -1277,7 +1277,7 @@ const UserNavbar = ({
                             key={
                               itemId
                             }
-                            className={`p-3 border-b border-slate-100 last:border-b-0 ${
+                            className={`dark-readable-notification-item p-3 border-b border-slate-100 last:border-b-0 ${
                               itemRead
                                 ? "bg-white"
                                 : "bg-[#F0F8F1]"
@@ -1512,7 +1512,7 @@ const UserNavbar = ({
 
         {
           menuOpen && (
-            <div className="absolute right-0 mt-2 w-[min(80vw,15rem)] rounded-xl border border-gray-200 bg-[#EDF4EE] shadow-2xl z-50 overflow-hidden p-2">
+            <div className="dark-readable-account absolute right-0 mt-2 w-[min(80vw,15rem)] rounded-xl border border-gray-200 bg-[#EDF4EE] shadow-2xl z-50 overflow-hidden p-2">
 
               {/* =============================================
                   MY ACCOUNT

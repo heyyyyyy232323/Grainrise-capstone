@@ -145,9 +145,9 @@ const TOAST_VARIANTS = {
 };
 
 const POSITION_STYLES = {
-  "top-right": "top-5 right-5",
-  "top-left": "top-5 left-5",
-  "top-center": "top-5 left-1/2 -translate-x-1/2",
+  "top-right": "top-1 right-5",
+  "top-left": "top-1 left-5",
+  "top-center": "top-1 left-1/2 -translate-x-1/2",
   "bottom-right": "bottom-5 right-5",
   "bottom-left": "bottom-5 left-5",
   "bottom-center": "bottom-5 left-1/2 -translate-x-1/2",
@@ -187,18 +187,18 @@ export const ToastNotification = ({
 
   return (
     <div
-      className={`fixed ${POSITION_STYLES[position] || POSITION_STYLES["top-right"]} z-[9999] max-w-sm w-full pointer-events-none transition-all duration-300 ease-out`}
+      className={`fixed ${POSITION_STYLES[position] || POSITION_STYLES["top-right"]} z-9999 max-w-xs w-[calc(100vw-2rem)] pointer-events-none transition-all duration-300 ease-out`}
     >
       <div
         role="alert"
         aria-live="polite"
-        className={`pointer-events-auto bg-white rounded-xl border ${variant.borderColor} border-l-[3.5px] ${variant.accentBorder} shadow-[0_4px_16px_rgba(0,0,0,0.08)] p-3.5 sm:p-4 animate-toast-slide-in relative select-none ${className}`}
+        className={`pointer-events-auto bg-white dark:bg-slate-800 rounded-lg border ${variant.borderColor} border-l-[3px] ${variant.accentBorder} shadow-[0_3px_12px_rgba(0,0,0,0.08)] p-2.5 animate-toast-slide-in relative select-none ${className}`}
       >
         {/* Top Header Row with Icon, Title, and Close Button */}
-        <div className="flex items-start justify-between gap-2.5">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <variant.Icon />
-            <h4 className="text-sm font-bold text-gray-900 leading-snug tracking-tight">
+            <h4 className="text-xs font-bold text-gray-900 dark:text-white leading-snug tracking-tight">
               {displayTitle}
             </h4>
           </div>
@@ -208,9 +208,9 @@ export const ToastNotification = ({
               type="button"
               onClick={onClose}
               aria-label="Close notification"
-              className="text-gray-300 hover:text-gray-500 rounded-md p-0.5 transition cursor-pointer shrink-0 ml-1"
+              className="text-gray-300 dark:text-slate-400 hover:text-gray-500 dark:hover:text-slate-200 rounded-md p-0.5 transition cursor-pointer shrink-0 ml-1"
             >
-              <X size={14} strokeWidth={2.5} />
+              <X size={13} strokeWidth={2.5} />
             </button>
           )}
         </div>
@@ -218,7 +218,7 @@ export const ToastNotification = ({
         {/* Message Body */}
         {displayMessage && (
           <div className="pl-7.5 pr-2 mt-1">
-            <p className="text-xs text-gray-500 font-normal leading-relaxed whitespace-pre-line">
+            <p className="text-[11px] text-gray-500 dark:text-slate-300 font-normal leading-snug whitespace-pre-line">
               {displayMessage}
             </p>
           </div>
@@ -237,7 +237,7 @@ export const ToastNotification = ({
               <button
                 type="button"
                 onClick={onAction}
-                className="inline-flex items-center justify-center px-3.5 py-1 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 active:bg-gray-100 transition shadow-2xs cursor-pointer"
+                className="inline-flex items-center justify-center px-2.5 py-0.5 text-[11px] font-semibold text-gray-700 dark:text-slate-100 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md hover:bg-gray-50 dark:hover:bg-slate-600 active:bg-gray-100 transition shadow-2xs cursor-pointer"
               >
                 {actionLabel}
               </button>
@@ -247,7 +247,7 @@ export const ToastNotification = ({
               <button
                 type="button"
                 onClick={onAction}
-                className="text-xs font-semibold text-gray-700 hover:text-gray-900 hover:underline transition cursor-pointer text-left"
+                className="text-xs font-semibold text-gray-700 dark:text-slate-100 hover:text-gray-900 dark:hover:text-white hover:underline transition cursor-pointer text-left"
               >
                 {actionLabel}
               </button>
@@ -257,7 +257,7 @@ export const ToastNotification = ({
               <button
                 type="button"
                 onClick={onAction}
-                className="text-xs font-semibold text-gray-600 hover:text-gray-900 hover:underline transition cursor-pointer text-right"
+                className="text-xs font-semibold text-gray-600 dark:text-slate-200 hover:text-gray-900 dark:hover:text-white hover:underline transition cursor-pointer text-right"
               >
                 {actionLabel}
               </button>

@@ -68,7 +68,7 @@ export default function FloatingChatbot() {
   return (
     <div style={{ position: "fixed", bottom: 28, right: 28, zIndex: 9999 }}>
       {/* Chat window */}
-      <div style={{ position: "absolute", bottom: 72, right: 0, width: 340, borderRadius: 20, background: "#fff", boxShadow: "0 12px 48px rgba(30,90,40,0.18), 0 2px 8px rgba(0,0,0,0.10)", overflow: "hidden", display: "flex", flexDirection: "column", transformOrigin: "bottom right", transform: open ? "scale(1)" : "scale(0.85)", opacity: open ? 1 : 0, pointerEvents: open ? "auto" : "none", transition: "transform 0.22s cubic-bezier(.34,1.56,.64,1), opacity 0.18s ease" }}>
+      <div className="floating-chatbot-window" style={{ position: "absolute", bottom: 72, right: 0, width: 340, borderRadius: 20, background: "#fff", boxShadow: "0 12px 48px rgba(30,90,40,0.18), 0 2px 8px rgba(0,0,0,0.10)", overflow: "hidden", display: "flex", flexDirection: "column", transformOrigin: "bottom right", transform: open ? "scale(1)" : "scale(0.85)", opacity: open ? 1 : 0, pointerEvents: open ? "auto" : "none", transition: "transform 0.22s cubic-bezier(.34,1.56,.64,1), opacity 0.18s ease" }}>
         {/* Header */}
         <div style={{ background: "linear-gradient(135deg, #2d6a35 0%, #4a9e56 100%)", padding: "14px 18px", display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.18)", border: "2px solid rgba(255,255,255,0.45)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
@@ -85,7 +85,7 @@ export default function FloatingChatbot() {
         </div>
 
         {/* Messages */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "16px 14px 8px", display: "flex", flexDirection: "column", gap: 10, maxHeight: 300, background: "#f6faf6" }}>
+        <div className="floating-chatbot-messages" style={{ flex: 1, overflowY: "auto", padding: "16px 14px 8px", display: "flex", flexDirection: "column", gap: 10, maxHeight: 300, background: "#f6faf6" }}>
           {messages.map((msg) => (
             <div key={msg.id} style={{ display: "flex", flexDirection: msg.from === "user" ? "row-reverse" : "row", alignItems: "flex-end", gap: 8 }}>
               {msg.from === "bot" && (
@@ -94,7 +94,7 @@ export default function FloatingChatbot() {
                 </div>
               )}
               <div style={{ maxWidth: "75%" }}>
-                <div style={{ background: msg.from === "user" ? "linear-gradient(135deg,#2d6a35,#4a9e56)" : "#fff", color: msg.from === "user" ? "#fff" : "#1a2e1a", padding: "9px 13px", borderRadius: msg.from === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: 13, lineHeight: 1.5, boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>{msg.text}</div>
+                <div className={`floating-chatbot-bubble ${msg.from === "user" ? "floating-chatbot-bubble--user" : "floating-chatbot-bubble--bot"}`} style={{ background: msg.from === "user" ? "linear-gradient(135deg,#2d6a35,#4a9e56)" : "#fff", color: msg.from === "user" ? "#fff" : "#1a2e1a", padding: "9px 13px", borderRadius: msg.from === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: 13, lineHeight: 1.5, boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>{msg.text}</div>
                 <div style={{ fontSize: 10, color: "#999", marginTop: 3, textAlign: msg.from === "user" ? "right" : "left", paddingLeft: msg.from === "bot" ? 4 : 0, paddingRight: msg.from === "user" ? 4 : 0 }}>{msg.time}</div>
               </div>
             </div>
@@ -104,7 +104,7 @@ export default function FloatingChatbot() {
               <div style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg,#2d6a35,#4a9e56)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
                 <img src={Logo} alt="" style={{ width: 18, objectFit: "contain" }} />
               </div>
-              <div style={{ background: "#fff", borderRadius: "18px 18px 18px 4px", padding: "10px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.08)", display: "flex", gap: 4, alignItems: "center" }}>
+              <div className="floating-chatbot-typing" style={{ background: "#fff", borderRadius: "18px 18px 18px 4px", padding: "10px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.08)", display: "flex", gap: 4, alignItems: "center" }}>
                 {[0, 1, 2].map((i) => (<span key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "#4a9e56", display: "inline-block", animation: "chatbotDot 1.2s infinite", animationDelay: `${i * 0.2}s` }} />))}
               </div>
             </div>
@@ -113,9 +113,9 @@ export default function FloatingChatbot() {
         </div>
 
         {/* Quick replies */}
-        <div style={{ padding: "8px 14px", display: "flex", gap: 6, flexWrap: "wrap", borderTop: "1px solid #e8f4e8", background: "#f6faf6" }}>
+          <div className="floating-chatbot-quick-replies" style={{ padding: "8px 14px", display: "flex", gap: 6, flexWrap: "wrap", borderTop: "1px solid #e8f4e8", background: "#f6faf6" }}>
           {QUICK_REPLIES.map((q) => (
-            <button key={q} onClick={() => sendMessage(q)} style={{ background: "#fff", border: "1.5px solid #2d6a35", borderRadius: 20, padding: "4px 12px", fontSize: 11, color: "#2d6a35", cursor: "pointer", fontWeight: 500, whiteSpace: "nowrap" }}
+            <button className="floating-chatbot-quick-reply" key={q} onClick={() => sendMessage(q)} style={{ background: "#fff", border: "1.5px solid #2d6a35", borderRadius: 20, padding: "4px 12px", fontSize: 11, color: "#2d6a35", cursor: "pointer", fontWeight: 500, whiteSpace: "nowrap" }}
               onMouseEnter={(e) => { e.currentTarget.style.background = "#2d6a35"; e.currentTarget.style.color = "#fff"; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = "#2d6a35"; }}>
               {q}
@@ -124,8 +124,8 @@ export default function FloatingChatbot() {
         </div>
 
         {/* Input */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderTop: "1px solid #e8f4e8", background: "#fff" }}>
-          <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Type a message..." style={{ flex: 1, border: "1.5px solid #d4ead4", borderRadius: 20, padding: "8px 14px", fontSize: 13, outline: "none", background: "#f6faf6", color: "#1a2e1a" }}
+        <div className="floating-chatbot-input-row" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderTop: "1px solid #e8f4e8", background: "#fff" }}>
+          <input className="floating-chatbot-input" ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Type a message..." style={{ flex: 1, border: "1.5px solid #d4ead4", borderRadius: 20, padding: "8px 14px", fontSize: 13, outline: "none", background: "#f6faf6", color: "#1a2e1a" }}
             onFocus={(e) => (e.target.style.borderColor = "#2d6a35")} onBlur={(e) => (e.target.style.borderColor = "#d4ead4")} />
           <button onClick={() => sendMessage(input)} disabled={!input.trim()} style={{ width: 36, height: 36, borderRadius: "50%", background: input.trim() ? "linear-gradient(135deg,#2d6a35,#4a9e56)" : "#d4ead4", border: "none", cursor: input.trim() ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0, transition: "background 0.2s" }}>
             <Send size={15} />
@@ -135,7 +135,7 @@ export default function FloatingChatbot() {
 
       {/* Tooltip */}
       {!open && showTooltip && (
-        <div style={{ position: "absolute", bottom: 66, right: 4, background: "#fff", borderRadius: 12, padding: "8px 14px", fontSize: 13, color: "#333", fontWeight: 600, boxShadow: "0 4px 18px rgba(30,90,40,0.15)", whiteSpace: "nowrap", animation: "chatbotFadeIn 0.3s ease", pointerEvents: "none" }}>
+        <div className="floating-chatbot-tooltip" style={{ position: "absolute", bottom: 66, right: 4, background: "#fff", borderRadius: 12, padding: "8px 14px", fontSize: 13, color: "#333", fontWeight: 600, boxShadow: "0 4px 18px rgba(30,90,40,0.15)", whiteSpace: "nowrap", animation: "chatbotFadeIn 0.3s ease", pointerEvents: "none" }}>
           How can I help you?
           <span style={{ position: "absolute", bottom: -6, right: 20, width: 12, height: 12, background: "#fff", transform: "rotate(45deg)", boxShadow: "2px 2px 4px rgba(0,0,0,0.06)", zIndex: -1 }} />
         </div>
