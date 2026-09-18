@@ -85,8 +85,9 @@ export default function LandingFooter() {
 
         {/* Right side navigation links */}
         <div className="lp-footer__nav-links">
-          <button onClick={() => scrollTo('help')}>Help / Support</button>
-          <button onClick={() => { window.location.href = 'mailto:grainriseph@gmail.com'; }}>Contact</button>
+          <button onClick={() => navigate('/contact-support')}>Help / Support</button>
+          <button onClick={() => navigate('/contact-us')}>Contact Us</button>
+          <button onClick={() => navigate('/faqs')}>FAQs</button>
           <button onClick={() => alert('Privacy Policy coming soon!')}>Privacy Policy</button>
           <button onClick={() => alert('Terms & Policies coming soon!')}>Terms / Policies</button>
         </div>

@@ -51,7 +51,7 @@ const roles = [
     description: "Buy rice products for personal or household needs.",
     image: consumerImg,
     imagePosition: "center top",
-    path: "/register",
+    path: "/register/consumer",
   },
 ];
 
@@ -108,7 +108,7 @@ const RegisterGateway = () => {
 
   return (
     <div
-      className="dark-readable-register"
+      className="dark-readable-register animate-page-fade"
       style={{
         minHeight: "100vh",
         display: "flex",

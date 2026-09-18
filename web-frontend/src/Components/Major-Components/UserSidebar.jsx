@@ -1131,6 +1131,13 @@ const UserSidebar = ({
         </button>
       </div>
 
+      {/* Role Banner for Retailer Panel */}
+      {!isMinimized && role === "retailer" && (
+        <div className="bg-gradient-to-r from-[#00580C] via-[#657B10] to-[#B8860B] px-5 py-2 text-white text-[11px] font-extrabold uppercase tracking-wider shadow-sm shrink-0">
+          RETAILER PANEL
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4">
         {resolvedSections.map((section) => (

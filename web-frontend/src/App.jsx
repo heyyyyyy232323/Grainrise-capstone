@@ -6,6 +6,7 @@ import Login from "./Login/UserLogin";
 import AdminLogin from "./Login/AdminLogin";
 import Register from "./Register/Register";
 import RetailerRegister from "./Register/RetailerRegister";
+import ConsumerRegister from "./Register/ConsumerRegister";
 import DashboardPreview from "./DashboardPreview";
 import WarehouseManagerRegister from "./Register/WarehouseManagerRegister";
 import SupplierRegister from "./Register/SupplierRegister";
@@ -25,6 +26,11 @@ import ToastPreviewPage from "./Components/Modals/ToastPreviewPage";
 
 import FloatingChatbot from "./Components/Minor-Components/FloatingChatbot";
 import GlobalLoadingScreen from "./Components/Minor-Components/GlobalLoadingScreen.jsx";
+import ContactUs from "./Support/ContactUs";
+import ContactSupport from "./Support/ContactSupport";
+import LoginAssistance from "./Support/LoginAssistance";
+import FrequentlyAskedQuestions from "./Support/FrequentlyAskedQuestions";
+import RegistrationGuide from "./Support/RegistrationGuide";
 
 
 // ============================================================
@@ -310,6 +316,11 @@ function App() {
           />
 
           <Route
+            path="/register/consumer"
+            element={<ConsumerRegister />}
+          />
+
+          <Route
             path="/dashboard-preview"
             element={<DashboardPreview />}
           />
@@ -338,6 +349,23 @@ function App() {
             path="/register/farmer"
             element={<FarmerRegister />}
           />
+
+          {/* ==================================================
+              OPERATION SUPPORT & PUBLIC INQUIRIES
+          ================================================== */}
+
+          <Route path="/contact-us" element={<ContactUs />} />
+          <Route path="/contact" element={<ContactUs />} />
+          <Route path="/contact-support" element={<ContactSupport />} />
+          <Route path="/support" element={<ContactSupport />} />
+          <Route path="/login-assistance" element={<LoginAssistance />} />
+          <Route path="/recover-access" element={<LoginAssistance />} />
+          <Route path="/faqs" element={<FrequentlyAskedQuestions />} />
+          <Route path="/faq" element={<FrequentlyAskedQuestions />} />
+          <Route path="/help" element={<FrequentlyAskedQuestions />} />
+          <Route path="/registration-guide" element={<RegistrationGuide />} />
+          <Route path="/register-guide" element={<RegistrationGuide />} />
+          <Route path="/guide" element={<RegistrationGuide />} />
 
 
           {/* ==================================================

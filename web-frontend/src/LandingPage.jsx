@@ -191,28 +191,28 @@ export default function LandingPage() {
       title: 'Login Assistance',
       desc: 'Recover account access or reset credentials.',
       linkText: 'Recover Access',
-      action: () => navigate('/login'),
+      action: () => navigate('/login-assistance'),
     },
     {
       icon: <HelpCircle size={18} strokeWidth={2} />,
       title: 'Frequently Asked Questions',
       desc: 'Find answers about portal access and system use.',
       linkText: 'Read FAQs',
-      action: () => alert('Frequently Asked Questions coming soon!'),
+      action: () => navigate('/faqs'),
     },
     {
       icon: <FileText size={18} strokeWidth={2} />,
       title: 'Registration Guide',
       desc: 'Get guidance on registering for GrainRise.',
       linkText: 'View Guide',
-      action: () => navigate('/register'),
+      action: () => navigate('/registration-guide'),
     },
     {
       icon: <Headphones size={18} strokeWidth={2} />,
       title: 'Contact Support',
       desc: 'Contact the GrainRise support team.',
       linkText: 'Contact Desk',
-      action: () => { window.location.href = 'mailto:grainriseph@gmail.com'; },
+      action: () => navigate('/contact-support'),
     },
   ];
 
@@ -430,8 +430,10 @@ export default function LandingPage() {
                 delay={idx * 100}
                 className="lp-help-card"
                 onClick={card.action}
+                onKeyDown={(e) => e.key === 'Enter' && card.action()}
                 role="button"
                 tabIndex={0}
+                style={{ cursor: 'pointer' }}
               >
                 <div className="lp-help-card__icon-wrap">
                   {card.icon}
@@ -444,6 +446,7 @@ export default function LandingPage() {
                 </div>
               </AnimatedSection>
             ))}
+
           </div>
         </div>
       </AnimatedSection>

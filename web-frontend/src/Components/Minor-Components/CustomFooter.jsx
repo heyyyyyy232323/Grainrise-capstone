@@ -12,7 +12,7 @@ const CustomFooter = () => {
           Terms of Service
         </a>
         <span className="text-gray-400">|</span>
-        <a href="#" className="hover:text-green-700 transition">
+        <a href="/contact-support" className="hover:text-green-700 transition">
           Contact Support
         </a>
       </div>

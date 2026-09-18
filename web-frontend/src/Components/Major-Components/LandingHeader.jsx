@@ -10,23 +10,37 @@ const GrainRiseLogo = () => (
   </div>
 );
 
-export default function LandingHeader() {
+export default function LandingHeader({ scrollTo: customScrollTo }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => !document.documentElement.classList.contains('light'));
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      return savedTheme === 'dark';
+    }
+    return !document.documentElement.classList.contains('light');
+  });
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
+    document.documentElement.classList.toggle('light', !isDarkMode);
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [isDarkMode]);
 
   const scrollTo = (id) => {
     setMenuOpen(false);
+    if (customScrollTo) {
+      customScrollTo(id);
+      return;
+    }
     if (location.pathname === "/") {
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
     } else {
       navigate(`/#${id}`);
     }
@@ -48,7 +62,7 @@ export default function LandingHeader() {
             <ShieldCheck size={15} className="lp-topbar__icon" />
             <span>Official GrainRise Portal</span>
           </div>
-          <div className="lp-topbar__right" onClick={() => scrollTo('footer')} role="button" tabIndex={0}>
+          <div className="lp-topbar__right" onClick={() => navigate('/contact-support')} role="button" tabIndex={0}>
             <HelpCircle size={15} className="lp-topbar__icon" />
             <span>Help &amp; Support</span>
           </div>
@@ -68,6 +82,7 @@ export default function LandingHeader() {
             onClick={() => setMenuOpen(false)}
           />
 
+          {/* Exact 4 Navigation Items from Figma */}
           <ul className={`lp-nav__links ${menuOpen ? 'lp-nav__links--open' : ''}`}>
             {menuOpen && (
               <li className="lp-nav__mobile-close">
@@ -84,9 +99,9 @@ export default function LandingHeader() {
               </li>
             )}
             <li><button onClick={() => scrollTo('hero')}>Home</button></li>
-            <li><button onClick={() => scrollTo('about')}>Portal Access</button></li>
-            <li><button onClick={() => scrollTo('services')}>Explore Grainrise</button></li>
-            <li><button onClick={() => scrollTo('footer')}>Help &amp; Support</button></li>
+            <li><button onClick={() => scrollTo('portal-access')}>Portal Access</button></li>
+            <li><button onClick={() => scrollTo('explore-grainrise')}>Explore Grainrise</button></li>
+            <li><button onClick={() => scrollTo('help')}>Help &amp; Support</button></li>
 
             {menuOpen && (
               <li className="lp-nav__mobile-actions">

@@ -1,3 +1,7 @@
+html {
+  scroll-behavior: smooth;
+}
+
 /* ─── Landing Page Root ──────────────────────────────────────── */
 .lp-root {
   font-family: 'Inter', system-ui, sans-serif;
@@ -99,6 +103,70 @@ html:not(.light) .lp-root .lp-footer__nav-links button {
 
 html:not(.light) .lp-root .lp-footer__nav-links button:hover {
   color: #ffffff;
+}
+
+/* Hero Section Dark Mode Overrides */
+html:not(.light) .lp-root .lp-hero {
+  background: linear-gradient(180deg, #0b1711 0%, #0d2116 100%);
+}
+
+html:not(.light) .lp-root .lp-hero__overlay {
+  background: linear-gradient(
+    to bottom,
+    rgba(11, 23, 17, 0.95) 0%,
+    rgba(11, 23, 17, 0.7) 40%,
+    rgba(13, 33, 22, 0.3) 100%
+  );
+}
+
+html:not(.light) .lp-root .lp-hero__headline,
+html:not(.light) .lp-root .lp-hero__headline span {
+  color: #f8fafc;
+}
+
+html:not(.light) .lp-root .lp-hero__sub {
+  color: #cbd5e1;
+}
+
+html:not(.light) .lp-root .lp-hero__badge {
+  background: rgba(167, 243, 208, 0.1);
+  color: #a7f3d0;
+  border-color: rgba(167, 243, 208, 0.2);
+}
+
+/* Mobile App Section Dark Mode Overrides */
+html:not(.light) .lp-root .lp-mobile-app {
+  background: #0b1711;
+}
+
+html:not(.light) .lp-root .lp-mobile-app__overlay {
+  background: linear-gradient(
+    135deg,
+    rgba(11, 23, 17, 0.88) 0%,
+    rgba(16, 35, 24, 0.82) 50%,
+    rgba(11, 23, 17, 0.92) 100%
+  );
+}
+
+html:not(.light) .lp-root .lp-phone-orb--top,
+html:not(.light) .lp-root .lp-phone-orb--bottom {
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.15) 75%, transparent 100%);
+  opacity: 0.6;
+}
+
+html:not(.light) .lp-root .lp-mobile-app__glow--1,
+html:not(.light) .lp-root .lp-mobile-app__glow--2 {
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+}
+
+#hero,
+#ecosystem,
+#portal-access,
+#explore-grainrise,
+#mobile-promo,
+#help,
+#footer {
+  scroll-margin-top: 80px;
 }
 
 .lp-green {
@@ -222,36 +290,6 @@ html:not(.light) .lp-root .lp-footer__nav-links button:hover {
   display: flex;
   align-items: center;
   gap: 14px;
-}
-
-.lp-nav__theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 1px solid rgba(45, 106, 53, 0.2);
-  border-radius: 8px;
-  background: transparent;
-  color: #2d6a35;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.lp-nav__theme-toggle:hover {
-  background: rgba(0, 88, 12, 0.08);
-  border-color: rgba(45, 106, 53, 0.4);
-}
-
-html:not(.light) .lp-root .lp-nav__theme-toggle {
-  border-color: rgba(167, 243, 208, 0.35);
-  color: #a7f3d0;
-}
-
-html:not(.light) .lp-root .lp-nav__theme-toggle:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: #a7f3d0;
 }
 
 .lp-nav__login-btn {
@@ -474,49 +512,6 @@ html:not(.light) .lp-root .lp-nav__theme-toggle:hover {
     rgba(231, 246, 237, 0.2) 100%
   );
   pointer-events: none;
-}
-
-html:not(.light) .lp-root .lp-hero {
-  background: linear-gradient(180deg, #0c1a12 0%, #132a1c 100%);
-}
-
-html:not(.light) .lp-root .lp-hero__bg {
-  opacity: 0.42;
-  filter: saturate(0.85) brightness(0.72);
-}
-
-html:not(.light) .lp-root .lp-hero__overlay {
-  background: linear-gradient(
-    to bottom,
-    rgba(8, 20, 13, 0.9) 0%,
-    rgba(10, 30, 18, 0.62) 48%,
-    rgba(19, 42, 28, 0.25) 100%
-  );
-}
-
-html:not(.light) .lp-root .lp-hero__badge {
-  background: rgba(16, 86, 43, 0.45);
-  color: #bbf7d0;
-  border-color: #4ade80;
-}
-
-html:not(.light) .lp-root .lp-hero__headline {
-  color: #f0fdf4;
-}
-
-html:not(.light) .lp-root .lp-hero__sub {
-  color: #d1fae5;
-}
-
-html:not(.light) .lp-root .lp-hero__btn-register {
-  background: rgba(15, 35, 24, 0.72);
-  color: #e2e8f0;
-  border-color: rgba(167, 243, 208, 0.55);
-}
-
-html:not(.light) .lp-root .lp-hero__btn-register:hover {
-  background: rgba(26, 62, 40, 0.9);
-  border-color: #a7f3d0;
 }
 
 /* Inner two-column grid */
@@ -2675,6 +2670,7 @@ html {
 /* ─── Extended Scroll Animation Variants ─────────────────────── */
 .lp-reveal {
   opacity: 0;
+  pointer-events: none;
   will-change: opacity, transform, filter;
   transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
               transform 0.85s cubic-bezier(0.16, 1, 0.3, 1),
@@ -2683,6 +2679,7 @@ html {
 
 .lp-reveal--visible {
   opacity: 1 !important;
+  pointer-events: auto;
   transform: translate(0, 0) scale(1) !important;
   filter: blur(0px) !important;
 }
