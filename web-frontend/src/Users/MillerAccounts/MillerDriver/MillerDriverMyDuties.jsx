@@ -153,19 +153,21 @@ export default function MillerDriverMyDuties() {
     {
       key: "batchNo",
       label: "Order / Delivery",
-      width: "35%",
+      width: "25%",
+      headerClassName: "w-1/4",
+      cellClassName: "w-1/4 align-top",
       renderCell: (r) => (
-        <div className="space-y-1 py-0.5">
-          <p className="font-bold text-gray-900 text-xs">{r.batchNo}</p>
-          <p className="text-[11px] text-gray-500 font-medium">{r.product}</p>
+        <div className="space-y-1 py-0.5 min-w-0">
+          <p className="font-bold text-gray-900 text-xs truncate">{r.batchNo}</p>
+          <p className="text-[11px] text-gray-500 font-medium truncate">{r.product}</p>
           <div className="space-y-0.5 text-[10px] text-gray-400 font-medium pt-0.5">
-            <p className="flex items-center gap-1.5">
+            <p className="flex items-center gap-1.5 min-w-0">
               <Store size={12} className="text-gray-400 shrink-0" />
-              <span>{r.retailer}</span>
+              <span className="truncate">{r.retailer}</span>
             </p>
-            <p className="flex items-center gap-1.5">
+            <p className="flex items-center gap-1.5 min-w-0">
               <MapPin size={12} className="text-gray-400 shrink-0" />
-              <span>{r.deliveryAddress}</span>
+              <span className="truncate">{r.deliveryAddress}</span>
             </p>
           </div>
         </div>
@@ -175,8 +177,8 @@ export default function MillerDriverMyDuties() {
       key: "paymentMethod",
       label: "Payment Method",
       width: "25%",
-      headerClassName: "text-center",
-      cellClassName: "text-center",
+      headerClassName: "w-1/4 text-center",
+      cellClassName: "w-1/4 text-center align-top",
       renderCell: (r) => (
         <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold ${METHOD_BADGE[r.paymentMethod] || "bg-gray-100 text-gray-600"}`}>
           {r.paymentMethod}
@@ -187,6 +189,8 @@ export default function MillerDriverMyDuties() {
       key: "eta",
       label: "ETA",
       width: "25%",
+      headerClassName: "w-1/4",
+      cellClassName: "w-1/4 align-top",
       renderCell: (r) => (
         <div>
           <p className="text-xs font-bold text-gray-800">{r.eta}</p>
@@ -197,14 +201,14 @@ export default function MillerDriverMyDuties() {
     {
       key: "action",
       label: "Action",
-      width: "15%",
-      headerClassName: "text-center",
-      cellClassName: "text-center",
+      width: "25%",
+      headerClassName: "w-1/4 text-center",
+      cellClassName: "w-1/4 text-center align-top",
       renderCell: (r) => (
         <button
           type="button"
           onClick={() => alert(`Start tracking duty: ${r.id}`)}
-          className="rounded-full bg-[#0B5D1E] hover:bg-emerald-800 text-white text-[11px] font-bold px-4 py-1.5 transition cursor-pointer whitespace-nowrap shadow-2xs"
+          className="rounded-lg bg-[#0B5D1E] hover:bg-emerald-800 text-white text-[11px] font-bold px-4 py-1.5 transition cursor-pointer whitespace-nowrap shadow-2xs"
         >
           Start Tracking
         </button>
@@ -259,6 +263,7 @@ export default function MillerDriverMyDuties() {
       <SectionedTableCard
         columns={columns}
         sections={sections}
+        tableClassName="table-fixed"
         currentPage={page}
         totalPages={totalPages}
         onPageChange={setPage}

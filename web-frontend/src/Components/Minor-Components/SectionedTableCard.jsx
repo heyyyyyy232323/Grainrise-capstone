@@ -62,6 +62,7 @@ export default function SectionedTableCard({
   columns = [],
   sections = [],
   className = "",
+  tableClassName = "",
   footerLabel,
   currentPage = 1,
   totalPages = 1,
@@ -89,7 +90,14 @@ export default function SectionedTableCard({
       ) : (
         <div className="overflow-x-auto overflow-y-auto max-h-72 sm:max-h-96 md:max-h-none -mx-4 md:mx-0">
           <div className="px-4 md:px-0">
-            <table className="w-full border-collapse table-auto">
+            <table className={`w-full border-collapse ${tableClassName || "table-auto"}`}>
+              {tableClassName?.includes("table-fixed") && (
+                <colgroup>
+                  {columns.map((col) => (
+                    <col key={col.key} style={col.width ? { width: col.width } : undefined} />
+                  ))}
+                </colgroup>
+              )}
             <thead>
               <tr className="bg-[#EDEDED] text-left text-[11px] font-extrabold tracking-[0.03em] text-slate-600 sm:text-[12px]">
                 {columns.map((column) => (
@@ -123,12 +131,22 @@ export default function SectionedTableCard({
                   {(section.rows || []).map((row, rowIndex) => (
                     <tr key={row.id || `${section.label || "row"}-${rowIndex}`} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70">
                       {columns.map((column) => {
+                        if (typeof column.renderCell === "function") {
+                          return (
+                            <td
+                              key={column.key}
+                              className={`px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || ""}`}
+                            >
+                              {column.renderCell(row)}
+                            </td>
+                          );
+                        }
+
                         if (typeof column.render === "function") {
                           return (
                             <td
                               key={column.key}
                               className={`px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || ""}`}
-                              style={column.width ? { width: column.width } : undefined}
                             >
                               {column.render(row)}
                             </td>

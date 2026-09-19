@@ -81,6 +81,60 @@ html:not(.light) .lp-root .lp-help-card:hover {
   border-color: rgba(167, 243, 208, 0.4);
 }
 
+/* ── Help card text: lighten so it's readable on dark backgrounds ── */
+html:not(.light) .lp-root .lp-help-card__title {
+  color: #f0fdf4;
+}
+
+html:not(.light) .lp-root .lp-help-card__desc {
+  color: #b0c4b8;
+}
+
+html:not(.light) .lp-root .lp-help-card__action {
+  color: #6ee7a0;
+}
+
+html:not(.light) .lp-root .lp-help-card:hover .lp-help-card__action {
+  color: #a7f3d0;
+}
+
+html:not(.light) .lp-root .lp-help-card__icon-wrap {
+  background: #1d3a29;
+  color: #a7f3d0;
+}
+
+/* ── Portal card text & accents: lighten for dark mode ── */
+html:not(.light) .lp-root .lp-portal-card__icon {
+  color: #4ade80;
+}
+
+html:not(.light) .lp-root .lp-portal-card__title {
+  color: #f0fdf4;
+}
+
+html:not(.light) .lp-root .lp-portal-card__desc {
+  color: #cbd5e1;
+}
+
+html:not(.light) .lp-root .lp-portal-card__action {
+  border-top-color: rgba(255, 255, 255, 0.12);
+  color: #6ee7a0;
+}
+
+html:not(.light) .lp-root .lp-portal-card:hover .lp-portal-card__action {
+  color: #a7f3d0;
+}
+
+/* ── Explore card text & accents: lighten for dark mode ── */
+html:not(.light) .lp-root .lp-explore-card__title {
+  color: #f0fdf4;
+}
+
+html:not(.light) .lp-root .lp-explore-card__desc {
+  color: #cbd5e1;
+}
+
+
 html:not(.light) .lp-root .lp-flow-icon,
 html:not(.light) .lp-root .lp-explore-card__icon-wrap,
 html:not(.light) .lp-root .lp-help__badge,
@@ -88,6 +142,7 @@ html:not(.light) .lp-root .lp-ecosystem__badge {
   background: #1d3a29;
   color: #a7f3d0;
 }
+
 
 html:not(.light) .lp-root .lp-footer {
   background: #07100b;

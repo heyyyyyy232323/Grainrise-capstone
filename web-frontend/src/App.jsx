@@ -26,6 +26,7 @@ import ToastPreviewPage from "./Components/Modals/ToastPreviewPage";
 
 import FloatingChatbot from "./Components/Minor-Components/FloatingChatbot";
 import GlobalLoadingScreen from "./Components/Minor-Components/GlobalLoadingScreen.jsx";
+import ScrollToTop from "./Components/Minor-Components/ScrollToTop";
 import ContactUs from "./Support/ContactUs";
 import ContactSupport from "./Support/ContactSupport";
 import LoginAssistance from "./Support/LoginAssistance";
@@ -136,6 +137,7 @@ import BranchManagerNewsArticle from "./Users/WarehouseAccounts/BranchManager/Wa
 
 import WarehouseDriverDashboard from "./Users/WarehouseAccounts/WarehouseDriver/WarehouseDriverDashboard";
 import DriverMyDuties from "./Users/WarehouseAccounts/WarehouseDriver/DriverMyDuties";
+import DriverAssignedHistory from "./Users/WarehouseAccounts/WarehouseDriver/DriverAssignedHistory";
 import DriverMessages from "./Users/WarehouseAccounts/WarehouseDriver/DriverMessages";
 import DriverPaymentSubmission from "./Users/WarehouseAccounts/WarehouseDriver/DriverPaymentSubmission";
 import DriverReimbursement from "./Users/WarehouseAccounts/WarehouseDriver/DriverReimbursement";
@@ -273,6 +275,7 @@ import FarmerMessages from "./Users/FarmersAccounts/FarmerMessages";
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <GlobalLoadingScreen />
 
       <Routes>
@@ -736,7 +739,7 @@ function App() {
 
             <Route
               path="/warehouse-driver/assigned-history"
-              element={<DriverMyDuties />}
+              element={<DriverAssignedHistory />}
             />
 
             <Route

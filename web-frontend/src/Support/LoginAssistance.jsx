@@ -17,6 +17,7 @@ import {
   Shield,
 } from 'lucide-react';
 import LandingFooter from '../Components/Major-Components/LandingFooter';
+import LandingHeader from '../Components/Major-Components/LandingHeader';
 import './SupportPages.css';
 
 export default function LoginAssistance() {
@@ -141,6 +142,7 @@ export default function LoginAssistance() {
 
   return (
     <div className="support-page-root animate-page-fade">
+      <LandingHeader />
       <div className="support-container">
         {/* Top Navigation */}
         <div className="support-top-nav">

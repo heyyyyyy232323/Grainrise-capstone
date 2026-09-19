@@ -3,6 +3,63 @@
    Matches Figma Specifications for Contact Us & Contact Support
    ============================================================ */
 
+/* ─── Dark Mode: LandingHeader Navbar on Support Pages ─────────── */
+/* LandingPage.css scopes dark-mode rules to .lp-root which doesn't
+   exist on support pages. These rules re-declare the same styles
+   without that ancestor so the navbar responds to the dark toggle. */
+
+html:not(.light) .lp-nav,
+html:not(.light) .lp-nav__links {
+  background: #101d16;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+html:not(.light) .lp-nav__links li button,
+html:not(.light) .lp-nav__login-btn {
+  color: #dbeafe;
+}
+
+html:not(.light) .lp-nav__links li button:hover,
+html:not(.light) .lp-nav__login-btn:hover,
+html:not(.light) .lp-hamburger:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html:not(.light) .lp-hamburger {
+  border-color: rgba(167, 243, 208, 0.35);
+}
+
+html:not(.light) .lp-hamburger span {
+  background: #a7f3d0;
+}
+
+html:not(.light) .lp-topbar {
+  background: #0d1a11;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+html:not(.light) .lp-topbar__left,
+html:not(.light) .lp-topbar__right {
+  color: #a7f3d0;
+}
+
+html:not(.light) .lp-nav__theme-toggle {
+  color: #a7f3d0;
+  border-color: rgba(167, 243, 208, 0.3);
+}
+
+html:not(.light) .lp-nav__theme-toggle:hover {
+  background: rgba(167, 243, 208, 0.1);
+}
+
+/* ─── Dark Mode: Support Page Body ─────────────────────────────── */
+html:not(.light) .support-page-root {
+  background-color: #0b1711;
+  color: #e2e8f0;
+}
+
+
 .support-page-root {
   min-height: 100vh;
   background-color: #f7faf7;
