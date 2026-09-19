@@ -244,7 +244,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 }
 
 .lp-topbar__inner {
-  max-width: 1360px;
+  max-width: min(1720px, 94vw);
   margin: 0 auto;
   padding: 7px 32px;
   display: flex;
@@ -288,7 +288,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 
 .lp-nav__inner {
   width: 100%;
-  max-width: 1360px;
+  max-width: min(1720px, 94vw);
   margin: 0 auto;
   box-sizing: border-box;
   padding: 12px 32px;
@@ -546,6 +546,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   left: 0;
   right: 0;
   height: 52%;
+  min-height: 320px;
   background-size: cover;
   background-position: center bottom;
   background-repeat: no-repeat;
@@ -572,13 +573,13 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 /* Inner two-column grid */
 .lp-hero__inner {
   width: 100%;
-  max-width: 1400px;
+  max-width: min(1720px, 94vw);
   margin: 0 auto;
-  padding: 20px 48px 40px;
+  padding: 20px clamp(24px, 3.5vw, 56px) 40px;
   display: grid;
-  grid-template-columns: minmax(500px, 1.15fr) 1.25fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
   align-items: center;
-  gap: 36px;
+  gap: clamp(24px, 3.5vw, 60px);
   position: relative;
   z-index: 5;
 }
@@ -586,7 +587,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 /* Left content column */
 .lp-hero__content {
   text-align: left;
-  max-width: 580px;
+  max-width: min(100%, 620px);
   width: 100%;
 }
 
@@ -609,7 +610,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 /* Main headline */
 .lp-hero__headline {
   font-family: 'Outfit', 'Inter', sans-serif;
-  font-size: clamp(30px, 3.2vw, 44px);
+  font-size: clamp(32px, 3vw, 48px);
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.02em;
@@ -623,8 +624,8 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   font-size: 14px;
   color: #4b5563;
   font-weight: 400;
-  line-height: 1.6;
-  max-width: 560px;
+  line-height: 1.65;
+  max-width: 580px;
   margin: 0 0 28px;
   animation: heroFadeUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.26s both;
 }
@@ -688,10 +689,11 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
 }
 
-/* Right column — mockup wrapper (no card/border container, exactly like Figma) */
+/* Right column — mockup wrapper */
 .lp-hero__mockup-wrap {
   position: relative;
   width: 100%;
+  min-width: 0;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -699,10 +701,11 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   animation: heroScaleUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.38s both;
 }
 
-/* The actual mockup image */
+/* The actual mockup image — responsive scaling for zoom in and out */
 .lp-hero__mockup {
   width: 100%;
-  max-width: 750px;
+  max-width: min(100%, 960px);
+  min-width: min(100%, 380px);
   height: auto;
   display: block;
   object-fit: contain;
@@ -714,8 +717,48 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   transform: translateY(-4px);
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
+/* Large Screens & Zoom-Out Scaling */
+@media (min-width: 1600px) {
+  .lp-hero__inner {
+    max-width: min(1880px, 94vw);
+    gap: 64px;
+  }
+  .lp-hero__mockup {
+    max-width: 1100px;
+  }
+  .lp-hero__headline {
+    font-size: clamp(40px, 2.8vw, 54px);
+  }
+  .lp-hero__sub {
+    font-size: 15px;
+    max-width: 620px;
+  }
+}
+
+@media (min-width: 2200px) {
+  .lp-hero__inner {
+    max-width: min(2400px, 92vw);
+    gap: 72px;
+  }
+  .lp-hero__mockup {
+    max-width: 1320px;
+  }
+  .lp-hero__headline {
+    font-size: clamp(48px, 2.4vw, 64px);
+  }
+  .lp-hero__sub {
+    font-size: 17px;
+    max-width: 680px;
+  }
+  .lp-hero__btn-login,
+  .lp-hero__btn-register {
+    font-size: 15px;
+    padding: 11px 22px;
+  }
+}
+
+/* Responsive: Medium and Small Screens (Zoom In) */
+@media (max-width: 1080px) {
   .lp-hero__inner {
     grid-template-columns: 1fr;
     text-align: center;
@@ -732,6 +775,10 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   }
   .lp-hero__mockup-wrap {
     justify-content: center;
+  }
+  .lp-hero__mockup {
+    max-width: min(100%, 720px);
+    min-width: 0;
   }
 }
 
