@@ -578,6 +578,66 @@ export const getUserSidebarConfig = (role = "admin") => {
       ],
     },
 
+    miller_procurement: {
+      sections: [
+        {
+          title: "MAIN",
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/miller-procurement/dashboard",
+            },
+          ],
+        },
+        {
+          title: "OPERATIONS",
+          items: [
+            {
+              label: "Receiving Orders",
+              icon: Truck,
+              path: "/miller-procurement/receiving-orders",
+            },
+            {
+              label: "Goods Receipt",
+              icon: Package,
+              path: "/miller-procurement/goods-receipt",
+            },
+            {
+              label: "Returns",
+              icon: CornerUpLeft,
+              path: "/miller-procurement/returns",
+            },
+            {
+              label: "Receiving History",
+              icon: History,
+              path: "/miller-procurement/receiving-history",
+            },
+          ],
+        },
+        {
+          title: "MASTER DATA",
+          items: [
+            {
+              label: "Suppliers",
+              icon: Truck,
+              path: "/miller-procurement/suppliers",
+            },
+          ],
+        },
+        {
+          title: "PAYMENT",
+          items: [
+            {
+              label: "Procurement Payment History",
+              icon: CreditCard,
+              path: "/miller-procurement/payment-history",
+            },
+          ],
+        },
+      ],
+    },
+
     miller_finance: {
       sections: [
         {
@@ -1078,6 +1138,7 @@ export const userSidebarRoles = [
   "supplier_encoder",
   "miller_sales",
   "miller_logistics",
+  "miller_procurement",
   "miller_finance",
   "miller_manager",
   "farmer",

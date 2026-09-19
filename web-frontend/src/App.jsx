@@ -181,6 +181,20 @@ import MillerReimbursementHistory from "./Users/MillerAccounts/MillerLogistics/M
 
 
 // ============================================================
+// MILLER PROCUREMENT
+// ============================================================
+
+import MillerProcurementLayout from "./Components/Major-Components/MillerProcurementLayout";
+import MillerProcurementDashboard from "./Users/MillerAccounts/MillerProcurement/MillerProcurementDashboard";
+import MillerReceivingOrders from "./Users/MillerAccounts/MillerProcurement/MillerReceivingOrders";
+import MillerGoodsReceipt from "./Users/MillerAccounts/MillerProcurement/MillerGoodsReceipt";
+import MillerReturns from "./Users/MillerAccounts/MillerProcurement/MillerReturns";
+import MillerReceivingHistory from "./Users/MillerAccounts/MillerProcurement/MillerReceivingHistory";
+import MillerSuppliers from "./Users/MillerAccounts/MillerProcurement/MillerSuppliers";
+import MillerPaymentHistory from "./Users/MillerAccounts/MillerProcurement/MillerPaymentHistory";
+
+
+// ============================================================
 // MILLER SALES
 // ============================================================
 
@@ -867,6 +881,53 @@ function App() {
 
             <Route
               path="/miller-logistics/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
+
+
+          {/* ==================================================
+              MILLER PROCUREMENT
+          ================================================== */}
+
+          <Route element={<MillerProcurementLayout />}>
+            <Route
+              path="/miller-procurement/dashboard"
+              element={<MillerProcurementDashboard />}
+            />
+
+            <Route
+              path="/miller-procurement/receiving-orders"
+              element={<MillerReceivingOrders />}
+            />
+
+            <Route
+              path="/miller-procurement/goods-receipt"
+              element={<MillerGoodsReceipt />}
+            />
+
+            <Route
+              path="/miller-procurement/returns"
+              element={<MillerReturns />}
+            />
+
+            <Route
+              path="/miller-procurement/receiving-history"
+              element={<MillerReceivingHistory />}
+            />
+
+            <Route
+              path="/miller-procurement/suppliers"
+              element={<MillerSuppliers />}
+            />
+
+            <Route
+              path="/miller-procurement/payment-history"
+              element={<MillerPaymentHistory />}
+            />
+
+            <Route
+              path="/miller-procurement/profile"
               element={<UserAccountProfile />}
             />
           </Route>
