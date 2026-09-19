@@ -4,11 +4,11 @@ const CustomFooter = () => {
       <p>© 2026 GrainRise. All rights reserved.</p>
 
       <div className="flex items-center gap-2">
-        <a href="#" className="hover:text-green-700 transition">
+        <a href="/privacy-policy" className="hover:text-green-700 transition">
           Privacy Policy
         </a>
         <span className="text-gray-400">|</span>
-        <a href="#" className="hover:text-green-700 transition">
+        <a href="/terms-policies" className="hover:text-green-700 transition">
           Terms of Service
         </a>
         <span className="text-gray-400">|</span>

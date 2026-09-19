@@ -32,6 +32,8 @@ import ContactSupport from "./Support/ContactSupport";
 import LoginAssistance from "./Support/LoginAssistance";
 import FrequentlyAskedQuestions from "./Support/FrequentlyAskedQuestions";
 import RegistrationGuide from "./Support/RegistrationGuide";
+import PrivacyPolicy from "./Support/PrivacyPolicy";
+import TermsPolicies from "./Support/TermsPolicies";
 
 
 // ============================================================
@@ -369,6 +371,11 @@ function App() {
           <Route path="/registration-guide" element={<RegistrationGuide />} />
           <Route path="/register-guide" element={<RegistrationGuide />} />
           <Route path="/guide" element={<RegistrationGuide />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms-policies" element={<TermsPolicies />} />
+          <Route path="/terms-and-policies" element={<TermsPolicies />} />
+          <Route path="/terms" element={<TermsPolicies />} />
 
 
           {/* ==================================================

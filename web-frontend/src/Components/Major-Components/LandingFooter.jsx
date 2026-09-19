@@ -88,8 +88,8 @@ export default function LandingFooter() {
           <button onClick={() => navigate('/contact-support')}>Help / Support</button>
           <button onClick={() => navigate('/contact-us')}>Contact Us</button>
           <button onClick={() => navigate('/faqs')}>FAQs</button>
-          <button onClick={() => alert('Privacy Policy coming soon!')}>Privacy Policy</button>
-          <button onClick={() => alert('Terms & Policies coming soon!')}>Terms / Policies</button>
+          <button onClick={() => navigate('/privacy-policy')}>Privacy Policy</button>
+          <button onClick={() => navigate('/terms-policies')}>Terms / Policies</button>
         </div>
       </div>
 

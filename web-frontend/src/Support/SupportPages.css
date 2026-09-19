@@ -59,6 +59,131 @@ html:not(.light) .support-page-root {
   color: #e2e8f0;
 }
 
+/* Legal pages use inline light-theme values, so keep their dark-mode styling scoped here. */
+html:not(.light) .legal-page-root {
+  background-color: #0b1711;
+  color: #e2e8f0;
+}
+
+html:not(.light) .legal-page-root .support-back-link {
+  color: #a7f3d0;
+}
+
+html:not(.light) .legal-page-root .support-back-link:hover {
+  color: #ecfdf5;
+}
+
+html:not(.light) .legal-page-root .support-top-badge {
+  background-color: #163b27;
+  border-color: #28613d;
+  color: #a7f3d0;
+}
+
+html:not(.light) .legal-page-root h1,
+html:not(.light) .legal-page-root h1[style] {
+  color: #f8fafc !important;
+}
+
+html:not(.light) .legal-page-root p[style*="#6b7280"] {
+  color: #a8b7ae !important;
+}
+
+html:not(.light) .legal-page-root > main > div:first-of-type > p,
+html:not(.light) .legal-page-root p[style*="#374151"] {
+  background: #12351f !important;
+  border-left-color: #34d399 !important;
+  color: #d1fae5 !important;
+}
+
+html:not(.light) .legal-page-root > main > div:nth-of-type(3) > div {
+  background: #111c18 !important;
+  border-color: #28613d !important;
+}
+
+html:not(.light) .legal-page-root > main > div:nth-of-type(3) > div > button {
+  background: #111c18 !important;
+}
+
+html:not(.light) .legal-page-root > main > div:nth-of-type(3) > div > button[style*="#f0fdf4"] {
+  background: #163b27 !important;
+}
+
+html:not(.light) .legal-page-root span[style*="#1f2937"],
+html:not(.light) .legal-page-root span[style*="#14532d"] {
+  color: #ecfdf5 !important;
+}
+
+html:not(.light) .legal-page-root p[style*="#15803d"] {
+  color: #86efac !important;
+}
+
+html:not(.light) .legal-page-root p[style*="#4b5563"] {
+  color: #cbd5e1 !important;
+}
+
+html:not(.light) .legal-page-root p[style*="#9ca3af"] {
+  color: #94a3b8 !important;
+}
+
+html:not(.light) .legal-page-root a[style*="#16a34a"] {
+  color: #6ee7b7 !important;
+}
+
+html:not(.light) .legal-page-root .lp-footer {
+  background: #101d16;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+html:not(.light) .legal-page-root .lp-footer__tagline,
+html:not(.light) .legal-page-root .lp-footer__bottom,
+html:not(.light) .legal-page-root .lp-footer__nav-links button {
+  color: #a8b7ae;
+}
+
+html:not(.light) .legal-page-root .lp-footer__nav-links button:hover {
+  color: #ffffff;
+}
+
+html:not(.light) .legal-page-root .legal-page-date {
+  color: #a8b7ae !important;
+}
+
+html:not(.light) .legal-page-root .legal-page-intro {
+  background: #12351f !important;
+  border-left-color: #34d399 !important;
+  color: #d1fae5 !important;
+}
+
+html:not(.light) .legal-page-root .legal-section-card {
+  background: #111c18 !important;
+  border-color: #28613d !important;
+}
+
+html:not(.light) .legal-page-root .legal-section-toggle,
+html:not(.light) .legal-page-root .legal-section-toggle[style] {
+  background: #111c18 !important;
+}
+
+html:not(.light) .legal-page-root .legal-section-title {
+  color: #ecfdf5 !important;
+}
+
+html:not(.light) .legal-page-root .legal-section-subtitle {
+  color: #86efac !important;
+}
+
+html:not(.light) .legal-page-root .legal-section-text {
+  color: #cbd5e1 !important;
+}
+
+html:not(.light) .legal-page-root .legal-page-note {
+  color: #94a3b8 !important;
+}
+
+html:not(.light) .legal-page-root .legal-page-note a {
+  color: #6ee7b7 !important;
+}
+
 
 .support-page-root {
   min-height: 100vh;
