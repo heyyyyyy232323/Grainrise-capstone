@@ -263,13 +263,6 @@ const DashboardPreview = () => {
                       {role.charAt(0).toUpperCase() + role.slice(1)}
                     </button>
                   ))}
-                  <button
-                    type="button"
-                    onClick={() => navigate("/consumer/home")}
-                    className="px-4 sm:px-6 py-2 rounded-lg font-medium text-sm sm:text-base bg-[#E0AC1C] text-white shadow-sm transition hover:bg-[#c99716]"
-                  >
-                    Consumer Portal
-                  </button>
                 </div>
               </div>
 

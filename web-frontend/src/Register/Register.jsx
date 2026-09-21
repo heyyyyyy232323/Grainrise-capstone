@@ -10,7 +10,6 @@ import farmerImg from "../assets/farmerr.png";
 import warehouseOwnerImg from "../assets/warehouseowner.png";
 import millerImg from "../assets/miller.png";
 import retailerImg from "../assets/retailer3.png";
-import consumerImg from "../assets/consumer.png";
 
 const roles = [
   {
@@ -44,14 +43,6 @@ const roles = [
     image: retailerImg,
     imagePosition: "center top",
     path: "/register/retailer",
-  },
-  {
-    key: "consumer",
-    title: "Consumer",
-    description: "Buy rice products for personal or household needs.",
-    image: consumerImg,
-    imagePosition: "center top",
-    path: "/register/consumer",
   },
 ];
 
@@ -242,14 +233,14 @@ const RegisterGateway = () => {
             </p>
           </div>
 
-          {/* 5 role cards — full width up to 1300px */}
+          {/* 4 role cards — full width up to 1300px */}
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(5, 1fr)",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
               gap: "20px",
               width: "100%",
-              maxWidth: "1300px",
+              maxWidth: "1200px",
             }}
           >
             {isLoaded &&

@@ -110,10 +110,9 @@ export default function LandingPage() {
     { icon: <FileText size={22} strokeWidth={1.8} />,       label: 'Orders'     },
     { icon: <Truck size={22} strokeWidth={1.8} />,          label: 'Transport'  },
     { icon: <Store size={22} strokeWidth={1.8} />,          label: 'Retailers'  },
-    { icon: <User size={22} strokeWidth={1.8} />,           label: 'Consumer'   },
   ];
 
-  // Restored: All 5 Role Portals & Routes
+  // Restored: All 4 Role Portals & Routes
   const ROLE_PORTALS = [
     {
       icon: <Tractor size={24} strokeWidth={1.8} />,
@@ -128,13 +127,6 @@ export default function LandingPage() {
       desc: 'Oversee paddy intake lots, run continuous milling schedules, bid on co-op tenders, and generate milled output manifests.',
       linkText: 'Continue as Miller',
       path: '/register/supplier',
-    },
-    {
-      icon: <ShoppingBag size={24} strokeWidth={1.8} />,
-      title: 'Consumer Portal',
-      desc: 'Execute institutional procurement, bid on commercial rice parcels, review provenance dossiers, and manage contracts.',
-      linkText: 'Continue as Consumer',
-      path: '/register',
     },
     {
       icon: <ShoppingCart size={24} strokeWidth={1.8} />,

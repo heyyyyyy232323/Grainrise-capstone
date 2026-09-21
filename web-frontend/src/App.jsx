@@ -6,19 +6,10 @@ import Login from "./Login/UserLogin";
 import AdminLogin from "./Login/AdminLogin";
 import Register from "./Register/Register";
 import RetailerRegister from "./Register/RetailerRegister";
-import ConsumerRegister from "./Register/ConsumerRegister";
-import DashboardPreview from "./DashboardPreview";
 import WarehouseManagerRegister from "./Register/WarehouseManagerRegister";
 import SupplierRegister from "./Register/SupplierRegister";
 import FarmerRegister from "./Register/FarmerRegister";
-import ConsumerLandingPage from "./Users/ConsumerAccounts/ConsumerLandingPage";
-import ConsumerMarketplace from "./Users/ConsumerAccounts/ConsumerMarketplace";
-import ConsumerOrders from "./Users/ConsumerAccounts/ConsumerOrders";
-import ConsumerPromotions from "./Users/ConsumerAccounts/ConsumerPromotions";
-import ConsumerMarketPrices from "./Users/ConsumerAccounts/ConsumerMarketPrices";
-import ConsumerWishlist from "./Users/ConsumerAccounts/ConsumerWishlist";
-import ConsumerAccountSettings from "./Users/ConsumerAccounts/ConsumerAccountSettings";
-import ConsumerRetailersNearby from "./Users/ConsumerAccounts/ConsumerRetailersNearby";
+import DashboardPreview from "./DashboardPreview";
 
 import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout";
 import AdminProtectedRoute from "./Components/Major-Components/AdminProtectedRoute";
@@ -301,25 +292,6 @@ function App() {
           ================================================== */}
 
           <Route path="/" element={<LandingPage />} />
-          <Route path="/consumer/home" element={<ConsumerLandingPage />} />
-          <Route path="/consumer/marketplace" element={<ConsumerMarketplace />} />
-          <Route path="/consumermarketplace" element={<ConsumerMarketplace />} />
-          <Route path="/marketplace" element={<ConsumerMarketplace />} />
-          <Route path="/consumer/retailers-nearby" element={<ConsumerRetailersNearby />} />
-          <Route path="/consumer/nearby-retailers" element={<ConsumerRetailersNearby />} />
-          <Route path="/retailers-nearby" element={<ConsumerRetailersNearby />} />
-          <Route path="/nearby-retailers" element={<ConsumerRetailersNearby />} />
-          <Route path="/consumer/orders" element={<ConsumerOrders />} />
-          <Route path="/consumer/promotions" element={<ConsumerPromotions />} />
-          <Route path="/promotions" element={<ConsumerPromotions />} />
-          <Route path="/consumer/market-prices" element={<ConsumerMarketPrices />} />
-          <Route path="/market-prices" element={<ConsumerMarketPrices />} />
-          <Route path="/consumer/wishlist" element={<ConsumerWishlist />} />
-          <Route path="/wishlist" element={<ConsumerWishlist />} />
-          <Route path="/consumer/account-settings" element={<ConsumerAccountSettings />} />
-          <Route path="/consumer/settings" element={<ConsumerAccountSettings />} />
-          <Route path="/consumer/profile" element={<ConsumerAccountSettings />} />
-          <Route path="/account-settings" element={<ConsumerAccountSettings />} />
           <Route path="/login" element={<Login />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/register" element={<Register />} />
@@ -332,11 +304,6 @@ function App() {
           <Route
             path="/register/retailer"
             element={<RetailerRegister />}
-          />
-
-          <Route
-            path="/register/consumer"
-            element={<ConsumerRegister />}
           />
 
           <Route

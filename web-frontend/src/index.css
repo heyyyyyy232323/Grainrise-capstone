@@ -782,10 +782,6 @@ html:not(.light) .dark-readable-graph .hover\:text-slate-700:hover {
   color: #f8fafc !important;
 }
 
-html:not(.light) .consumer-page {
-  background: var(--bg-primary) !important;
-  color: var(--text-primary) !important;
-}
 
 /* Page transition animation */
 @keyframes pageFade {

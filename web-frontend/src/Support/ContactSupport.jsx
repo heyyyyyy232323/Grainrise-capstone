@@ -266,7 +266,6 @@ export default function ContactSupport() {
                       <option value="Cooperative Rice Miller">Cooperative Rice Miller</option>
                       <option value="Warehouse Manager / Staff">Warehouse Manager / Staff</option>
                       <option value="Retailer / Buyer">Retailer / Buyer</option>
-                      <option value="Consumer">Consumer</option>
                       <option value="Other">Other</option>
                     </select>
                   </div>
