@@ -63,11 +63,6 @@ export const getUserSidebarConfig = (role = "admin") => {
               icon: Store,
               path: "/admin/retailers",
             },
-            {
-              label: "Farmer Management",
-              icon: Users,
-              path: "/admin/farmers",
-            },
           ],
         },
         {

@@ -16,7 +16,6 @@ from .utils import (
 # GRAINRISE CENTRALIZED USER LOGIN
 # ============================================================
 # Handles:
-# - Farmer
 # - Retailer
 # - Warehouse Manager
 # - Miller / Supplier Manager
@@ -151,7 +150,6 @@ def login(request):
             # Main role
             #
             # Possible examples:
-            # farmer
             # retailer
             # warehouse_manager
             # miller_manager
@@ -182,7 +180,7 @@ def login(request):
 
             # warehouse / supplier
             #
-            # None for farmer / retailer
+            # None for retailer
             "organization_type": user.get(
                 "organization_type"
             ),
@@ -268,7 +266,7 @@ def login(request):
                 ),
 
                 # Warehouse/Supplier profile ID.
-                # None for farmer / retailer.
+                # None for retailer.
                 "profile_id": user.get(
                     "profile_id"
                 ),

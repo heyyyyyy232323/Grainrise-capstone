@@ -13,14 +13,6 @@ import retailerImg from "../assets/retailer3.png";
 
 const roles = [
   {
-    key: "farmer",
-    title: "Farmer",
-    description: "Manage farms, harvests, and production.",
-    image: farmerImg,
-    imagePosition: "center top",
-    path: "/register/farmer",
-  },
-  {
     key: "warehouse-owner",
     title: "Warehouse Owner",
     description: "Oversee inventory, storage, and logistics.",

@@ -104,34 +104,6 @@ urlpatterns = [
     ),
 
 
-    # ========================================================
-    # FARMER REGISTRATION
-    # ========================================================
-
-    path(
-        "auth/farmer/send-otp",
-        views.send_farmer_otp,
-        name="farmer-send-otp",
-    ),
-
-    path(
-        "auth/farmer/verify-otp",
-        views.verify_farmer_otp,
-        name="farmer-verify-otp",
-    ),
-
-    path(
-        "auth/farmer/google-verify",
-        views.verify_farmer_google,
-        name="farmer-google-verify",
-    ),
-
-    path(
-        "auth/farmer/register",
-        views.register_farmer,
-        name="farmer-register",
-    ),
-
 
     # ========================================================
     # WAREHOUSE MANAGER REGISTRATION
@@ -213,15 +185,6 @@ urlpatterns = [
     ),
 
 
-    # ========================================================
-    # FARMER FUNCTIONS
-    # ========================================================
-
-    path(
-        "farmer/",
-        include("api.farmer_function.urls"),
-    ),
-
 
     # ========================================================
     # MILLER MANAGER FUNCTIONS
@@ -251,7 +214,6 @@ urlpatterns = [
     #
     # Shared by:
     #
-    # farmer
     # miller_manager
     # warehouse_manager
     # retailer

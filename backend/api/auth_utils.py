@@ -20,7 +20,7 @@ def get_business_user(identifier):
 
     # ========================================================
     # 1. MAIN USERS
-    # Farmer, Retailer, Warehouse Manager, Miller Manager
+    # Retailer, Warehouse Manager, Miller Manager
     # ========================================================
 
     with connection.cursor() as cursor:

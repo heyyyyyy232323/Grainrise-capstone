@@ -8,7 +8,6 @@ import Register from "./Register/Register";
 import RetailerRegister from "./Register/RetailerRegister";
 import WarehouseManagerRegister from "./Register/WarehouseManagerRegister";
 import SupplierRegister from "./Register/SupplierRegister";
-import FarmerRegister from "./Register/FarmerRegister";
 import DashboardPreview from "./DashboardPreview";
 
 import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout";
@@ -237,7 +236,6 @@ import WarehouseManagement from "./Users/AdminAccounts/AccountAdmin/WarehouseMan
 import WarehouseInfo from "./Users/AdminAccounts/AccountAdmin/WarehouseInfo";
 
 import RetailerManagement from "./Users/AdminAccounts/AccountAdmin/RetailerManagement";
-import FarmerManagement from "./Users/AdminAccounts/AccountAdmin/FarmerManagement";
 import EmailUsers from "./Users/AdminAccounts/AccountAdmin/EmailUsers";
 import AdminNewsUpdates from "./Users/AdminAccounts/AccountAdmin/AdminNewsUpdates";
 
@@ -259,20 +257,6 @@ import RetailerNewsUpdates from "./Users/RetailerAccounts/RetailerNewsUpdates";
 import RetailerNewsArticle from "./Users/RetailerAccounts/RetailerNewsArticle";
 
 
-// ============================================================
-// FARMER
-// ============================================================
-
-import FarmerDashboard from "./Users/FarmersAccounts/FarmerDashboard";
-import FarmerForecasting from "./Users/FarmersAccounts/FarmerForecasting";
-import FarmerContracts from "./Users/FarmersAccounts/FarmerContracts";
-import FarmerNewsUpdates from "./Users/FarmersAccounts/FarmerNewsUpdates";
-import FarmerNewsArticle from "./Users/FarmersAccounts/FarmerNewsArticle";
-import FarmerFarmManagement from "./Users/FarmersAccounts/FarmerFarmManagement";
-import FarmerFarmDetails from "./Users/FarmersAccounts/FarmerFarmDetails";
-import FarmerPointOfSale from "./Users/FarmersAccounts/FarmerPointOfSale";
-import FarmerTransactionHistory from "./Users/FarmersAccounts/FarmerTransactionHistory";
-import FarmerMessages from "./Users/FarmersAccounts/FarmerMessages";
 
 
 // ============================================================
@@ -329,11 +313,6 @@ function App() {
           <Route
             path="/register/supplier"
             element={<SupplierRegister />}
-          />
-
-          <Route
-            path="/register/farmer"
-            element={<FarmerRegister />}
           />
 
           {/* ==================================================
@@ -1130,67 +1109,7 @@ function App() {
           </Route>
 
 
-          {/* ==================================================
-              FARMER
-          ================================================== */}
-
-          <Route element={<WarehouseEncoderLayout role="farmer" />}>
-            <Route
-              path="/farmer/dashboard"
-              element={<FarmerDashboard />}
-            />
-
-            <Route
-              path="/farmer/forecasting"
-              element={<FarmerForecasting />}
-            />
-
-            <Route
-              path="/farmer/contracts"
-              element={<FarmerContracts />}
-            />
-
-            <Route
-              path="/farmer/messages"
-              element={<FarmerMessages />}
-            />
-
-            <Route
-              path="/farmer/news-updates"
-              element={<FarmerNewsUpdates />}
-            />
-
-            <Route
-              path="/farmer/news-updates/:id"
-              element={<FarmerNewsArticle />}
-            />
-
-            <Route
-              path="/farmer/farm-management"
-              element={<FarmerFarmManagement />}
-            />
-
-            <Route
-              path="/farmer/farm-management/:farmId"
-              element={<FarmerFarmDetails />}
-            />
-
-            <Route
-              path="/farmer/point-of-sale"
-              element={<FarmerPointOfSale />}
-            />
-
-            <Route
-              path="/farmer/transaction-history"
-              element={<FarmerTransactionHistory />}
-            />
-
-            <Route
-              path="/farmer/profile"
-              element={<UserAccountProfile />}
-            />
-          </Route>
-
+     
 
           {/* ==================================================
               ADMIN - PROTECTED
@@ -1228,11 +1147,6 @@ function App() {
               <Route
                 path="/admin/retailers"
                 element={<RetailerManagement />}
-              />
-
-              <Route
-                path="/admin/farmers"
-                element={<FarmerManagement />}
               />
 
               <Route
