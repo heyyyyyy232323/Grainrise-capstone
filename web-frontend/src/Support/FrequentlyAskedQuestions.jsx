@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import LandingFooter from '../Components/Major-Components/LandingFooter';
 import LandingHeader from '../Components/Major-Components/LandingHeader';
+import AnimatedSection from './AnimatedSection';
 import './SupportPages.css';
 
 export default function FrequentlyAskedQuestions() {
@@ -259,7 +260,7 @@ export default function FrequentlyAskedQuestions() {
         </div>
 
         {/* Centered Hero Section */}
-        <div className="faq-hero-centered">
+        <AnimatedSection className="faq-hero-centered" animation="fade-up">
           <span className="support-pill-tag">HELP &amp; SUPPORT</span>
           <h1 className="faq-hero-title">Frequently Asked Questions</h1>
           <p className="faq-hero-desc">
@@ -291,7 +292,7 @@ export default function FrequentlyAskedQuestions() {
               </button>
             ))}
           </div>
-        </div>
+        </AnimatedSection>
 
         {/* Content Sections */}
         {visibleSections.length === 0 ? (
@@ -314,8 +315,8 @@ export default function FrequentlyAskedQuestions() {
           </div>
         ) : (
           <div className="faq-sections-container">
-            {visibleSections.map((sec) => (
-              <section key={sec.id} className="faq-group-section">
+            {visibleSections.map((sec, idx) => (
+              <AnimatedSection key={sec.id} tag="section" className="faq-group-section" animation="fade-up" delay={idx * 60}>
                 {sec.tag && <span className="support-pill-tag" style={{ marginBottom: '8px' }}>{sec.tag}</span>}
                 
                 <div className="faq-group-header">
@@ -357,13 +358,13 @@ export default function FrequentlyAskedQuestions() {
                     );
                   })}
                 </div>
-              </section>
+              </AnimatedSection>
             ))}
           </div>
         )}
 
         {/* Can't Find Your Answer? CTA Box */}
-        <div className="faq-cta-banner">
+        <AnimatedSection className="faq-cta-banner" animation="fade-up" delay={80}>
           <div className="faq-cta-icon-circle">
             <HelpCircle size={20} />
           </div>
@@ -386,7 +387,7 @@ export default function FrequentlyAskedQuestions() {
               Back to GrainRise Home
             </button>
           </div>
-        </div>
+        </AnimatedSection>
       </div>
 
       <LandingFooter />

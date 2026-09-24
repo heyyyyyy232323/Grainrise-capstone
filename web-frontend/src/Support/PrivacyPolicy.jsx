@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import LandingFooter from '../Components/Major-Components/LandingFooter';
 import LandingHeader from '../Components/Major-Components/LandingHeader';
+import AnimatedSection from './AnimatedSection';
 import './SupportPages.css';
 
 const SECTIONS = [
@@ -182,7 +183,7 @@ export default function PrivacyPolicy() {
         </div>
 
         {/* ── Header ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <AnimatedSection animation="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div className="legal-page-header" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{
               width: 44, height: 44, borderRadius: 12,
@@ -205,16 +206,18 @@ export default function PrivacyPolicy() {
           <p className="legal-page-intro" style={{ fontSize: 14.5, color: '#374151', lineHeight: 1.75, marginTop: 8, padding: '16px 20px', background: '#f0fdf4', borderLeft: '4px solid #16a34a', borderRadius: '0 8px 8px 0' }}>
             GrainRise ("we", "our", or "us") is committed to protecting the privacy of individuals who use our rice supply chain management platform. This Privacy Policy explains what personal information we collect, how we use it, and the choices available to you. By using GrainRise, you agree to the practices described in this policy.
           </p>
-        </div>
+        </AnimatedSection>
 
         {/* ── Accordion Sections ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {SECTIONS.map((section) => {
+          {SECTIONS.map((section, idx) => {
             const Icon = section.icon;
             const isOpen = openSection === section.id;
             return (
-              <div
+              <AnimatedSection
                 key={section.id}
+                animation="fade-up"
+                delay={idx * 50}
                 className="legal-section-card"
                 style={{
                   border: isOpen ? '1.5px solid #16a34a' : '1.5px solid #e5e7eb',
@@ -257,16 +260,18 @@ export default function PrivacyPolicy() {
                     ))}
                   </div>
                 )}
-              </div>
+              </AnimatedSection>
             );
           })}
         </div>
 
         {/* ── Footer Note ── */}
-        <p className="legal-page-note" style={{ fontSize: 12.5, color: '#9ca3af', textAlign: 'center', marginTop: 8 }}>
-          GrainRise reserves the right to update this Privacy Policy. Continued use of the platform after changes constitutes acceptance of the revised policy. For questions, email{' '}
-          <a href="mailto:privacy@grainrise.ph" style={{ color: '#16a34a', fontWeight: 600 }}>privacy@grainrise.ph</a>.
-        </p>
+        <AnimatedSection animation="fade-up" delay={100}>
+          <p className="legal-page-note" style={{ fontSize: 12.5, color: '#9ca3af', textAlign: 'center', marginTop: 8 }}>
+            GrainRise reserves the right to update this Privacy Policy. Continued use of the platform after changes constitutes acceptance of the revised policy. For questions, email{' '}
+            <a href="mailto:privacy@grainrise.ph" style={{ color: '#16a34a', fontWeight: 600 }}>privacy@grainrise.ph</a>.
+          </p>
+        </AnimatedSection>
 
       </main>
 

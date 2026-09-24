@@ -3487,3 +3487,56 @@ html:not(.light) .support-page-root .lp-footer__social-btn:hover {
 html:not(.light) .support-page-root .lp-footer__social-btn svg {
   color: inherit !important;
 }
+
+/* ============================================================
+   SCROLL REVEAL ANIMATIONS (Support & Legal Pages)
+   ============================================================ */
+.lp-reveal {
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity, transform, filter;
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+              filter 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lp-reveal--visible {
+  opacity: 1 !important;
+  pointer-events: auto;
+  transform: translate(0, 0) scale(1) !important;
+  filter: blur(0px) !important;
+}
+
+.lp-reveal--fade-up {
+  transform: translateY(32px);
+}
+
+.lp-reveal--fade-in {
+  transform: none;
+}
+
+.lp-reveal--scale {
+  transform: translateY(24px) scale(0.96);
+}
+
+.lp-reveal--slide-left {
+  transform: translateX(-40px);
+}
+
+.lp-reveal--slide-right {
+  transform: translateX(40px);
+}
+
+.lp-reveal--zoom {
+  transform: scale(0.96);
+  filter: blur(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-reveal {
+    transition: opacity 0.3s ease-in-out !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+

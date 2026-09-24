@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import LandingFooter from '../Components/Major-Components/LandingFooter';
 import LandingHeader from '../Components/Major-Components/LandingHeader';
+import AnimatedSection from './AnimatedSection';
 import './SupportPages.css';
 
 const SECTIONS = [
@@ -198,7 +199,7 @@ export default function TermsPolicies() {
         </div>
 
         {/* ── Header ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <AnimatedSection animation="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div className="legal-page-header" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{
               width: 44, height: 44, borderRadius: 12,
@@ -221,16 +222,18 @@ export default function TermsPolicies() {
           <p className="legal-page-intro" style={{ fontSize: 14.5, color: '#374151', lineHeight: 1.75, marginTop: 8, padding: '16px 20px', background: '#f0fdf4', borderLeft: '4px solid #16a34a', borderRadius: '0 8px 8px 0' }}>
             These Terms and Policies govern your access to and use of the GrainRise rice supply chain management platform. Please read them carefully before using the platform. By creating an account or accessing GrainRise, you agree to be bound by these Terms.
           </p>
-        </div>
+        </AnimatedSection>
 
         {/* ── Accordion Sections ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {SECTIONS.map((section) => {
+          {SECTIONS.map((section, idx) => {
             const Icon = section.icon;
             const isOpen = openSection === section.id;
             return (
-              <div
+              <AnimatedSection
                 key={section.id}
+                animation="fade-up"
+                delay={idx * 50}
                 className="legal-section-card"
                 style={{
                   border: isOpen ? '1.5px solid #16a34a' : '1.5px solid #e5e7eb',
@@ -273,16 +276,18 @@ export default function TermsPolicies() {
                     ))}
                   </div>
                 )}
-              </div>
+              </AnimatedSection>
             );
           })}
         </div>
 
         {/* ── Footer Note ── */}
-        <p className="legal-page-note" style={{ fontSize: 12.5, color: '#9ca3af', textAlign: 'center', marginTop: 8 }}>
-          These Terms were last updated on September 19, 2026. For legal inquiries, contact{' '}
-          <a href="mailto:legal@grainrise.ph" style={{ color: '#16a34a', fontWeight: 600 }}>legal@grainrise.ph</a>.
-        </p>
+        <AnimatedSection animation="fade-up" delay={100}>
+          <p className="legal-page-note" style={{ fontSize: 12.5, color: '#9ca3af', textAlign: 'center', marginTop: 8 }}>
+            These Terms were last updated on September 19, 2026. For legal inquiries, contact{' '}
+            <a href="mailto:legal@grainrise.ph" style={{ color: '#16a34a', fontWeight: 600 }}>legal@grainrise.ph</a>.
+          </p>
+        </AnimatedSection>
 
       </main>
 

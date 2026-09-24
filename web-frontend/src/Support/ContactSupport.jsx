@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import LandingFooter from '../Components/Major-Components/LandingFooter';
 import LandingHeader from '../Components/Major-Components/LandingHeader';
+import AnimatedSection from './AnimatedSection';
 import './SupportPages.css';
 
 export default function ContactSupport() {
@@ -123,7 +124,7 @@ export default function ContactSupport() {
         </div>
 
         {/* Hero Card Banner */}
-        <div className="support-hero-card">
+        <AnimatedSection className="support-hero-card" animation="fade-up">
           <div className="support-hero-content">
             <span className="support-pill-tag">HELP & SUPPORT</span>
             <h1 className="support-hero-title">Contact Support</h1>
@@ -134,10 +135,10 @@ export default function ContactSupport() {
           <div className="support-hero-icon-box">
             <Headphones size={24} strokeWidth={1.8} />
           </div>
-        </div>
+        </AnimatedSection>
 
         {/* Before Contacting Support Section */}
-        <section className="support-section">
+        <AnimatedSection tag="section" className="support-section" animation="fade-up" delay={80}>
           <div className="support-section-header">
             <h2 className="support-section-title">Before Contacting Support</h2>
             <p className="support-section-subtitle">
@@ -185,10 +186,10 @@ export default function ContactSupport() {
             <AlertTriangle size={16} className="support-security-reminder__icon" />
             <span>Security Reminder: Never include your password or verification code in a support request.</span>
           </div>
-        </section>
+        </AnimatedSection>
 
         {/* Main 2-Column: Form (How Can We Help?) & Sidebar */}
-        <div className="support-main-layout">
+        <AnimatedSection className="support-main-layout" animation="fade-up" delay={120}>
           
           {/* Left Form Box */}
           <div className="support-form-card">
@@ -474,10 +475,10 @@ export default function ContactSupport() {
 
           </div>
 
-        </div>
+        </AnimatedSection>
 
         {/* Common Reasons Accordion Section */}
-        <section className="support-section">
+        <AnimatedSection tag="section" className="support-section" animation="fade-up" delay={60}>
           <div className="support-section-header">
             <h2 className="support-section-title">Common Reasons to Contact Support</h2>
             <p className="support-section-subtitle">
@@ -503,10 +504,10 @@ export default function ContactSupport() {
               </div>
             ))}
           </div>
-        </section>
+        </AnimatedSection>
 
         {/* Protect Your Account Security Banner */}
-        <div className="support-security-banner">
+        <AnimatedSection className="support-security-banner" animation="fade-up" delay={80}>
           <div className="support-security-icon">
             <ShieldCheck size={18} />
           </div>
@@ -538,15 +539,15 @@ export default function ContactSupport() {
               </div>
             </div>
           </div>
-        </div>
+        </AnimatedSection>
 
         {/* Need to Return to GrainRise? */}
-        <div className="support-return-section">
+        <AnimatedSection className="support-return-section" animation="fade-up" delay={100}>
           <h3 className="support-return-title">Need to Return to GrainRise?</h3>
           <button className="support-return-btn" onClick={() => navigate('/')}>
             Back to GrainRise Home
           </button>
-        </div>
+        </AnimatedSection>
 
       </div>
 

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import LandingFooter from '../Components/Major-Components/LandingFooter';
 import LandingHeader from '../Components/Major-Components/LandingHeader';
+import AnimatedSection from './AnimatedSection';
 import './SupportPages.css';
 
 export default function ContactUs() {
@@ -107,7 +108,7 @@ export default function ContactUs() {
         </div>
 
         {/* Hero Card Banner */}
-        <div className="support-hero-card">
+        <AnimatedSection className="support-hero-card" animation="fade-up">
           <div className="support-hero-content">
             <span className="support-pill-tag">GET IN TOUCH</span>
             <h1 className="support-hero-title">Contact Us</h1>
@@ -118,10 +119,10 @@ export default function ContactUs() {
           <div className="support-hero-icon-box">
             <MessageSquare size={24} strokeWidth={1.8} />
           </div>
-        </div>
+        </AnimatedSection>
 
         {/* How Can We Help? Section */}
-        <section className="support-section">
+        <AnimatedSection tag="section" className="support-section" animation="fade-up" delay={80}>
           <div className="support-section-header">
             <h2 className="support-section-title">How Can We Help?</h2>
             <p className="support-section-subtitle">
@@ -144,10 +145,10 @@ export default function ContactUs() {
               </div>
             ))}
           </div>
-        </section>
+        </AnimatedSection>
 
         {/* Main 2-Column: Send Us a Message & Contact Information */}
-        <div className="support-main-layout">
+        <AnimatedSection className="support-main-layout" animation="fade-up" delay={120}>
           {/* Left Form Box */}
           <div className="support-form-card">
             <div className="support-section-header">
@@ -395,7 +396,7 @@ export default function ContactUs() {
               </p>
             </div>
           </div>
-        </div>
+        </AnimatedSection>
 
         {/* Technical Help Desk Banner */}
         <div className="support-tech-banner">
@@ -419,7 +420,7 @@ export default function ContactUs() {
         </div>
 
         {/* What Happens Next? Section */}
-        <section className="support-section">
+        <AnimatedSection tag="section" className="support-section" animation="fade-up" delay={60}>
           <div className="support-section-header">
             <h2 className="support-section-title">What Happens Next?</h2>
             <p className="support-section-subtitle">
@@ -461,10 +462,10 @@ export default function ContactUs() {
               </p>
             </div>
           </div>
-        </section>
+        </AnimatedSection>
 
         {/* Your Information Matters Notice */}
-        <div className="support-security-banner">
+        <AnimatedSection className="support-security-banner" animation="fade-up" delay={80}>
           <div className="support-security-icon">
             <ShieldCheck size={20} />
           </div>
@@ -492,15 +493,15 @@ export default function ContactUs() {
               </div>
             </div>
           </div>
-        </div>
+        </AnimatedSection>
 
         {/* Ready to Return? */}
-        <div className="support-return-section">
+        <AnimatedSection className="support-return-section" animation="fade-up" delay={100}>
           <h3 className="support-return-title">Ready to Return?</h3>
           <button className="support-return-btn" onClick={() => navigate('/')}>
             Back to GrainRise Home
           </button>
-        </div>
+        </AnimatedSection>
 
       </div>
 
