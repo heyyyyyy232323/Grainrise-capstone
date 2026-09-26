@@ -10,6 +10,8 @@ import Toast from "../Components/Minor-Components/Toast";
 import useToast from "../Components/hooks/useToast";
 import useApi from "../Components/hooks/useApi";
 import GoogleVerificationModal, { GoogleIcon } from "../Components/Modals/GoogleVerificationModal";
+import TermsModal from "../Components/Modals/TermsModal";
+import PrivacyModal from "../Components/Modals/PrivacyModal";
 import logo from "../assets/Logo.png";
 import backgroundImage from "../assets/smudge.jpg";
 import useFormValidation from "../Components/hooks/useFormValidation";
@@ -118,6 +120,8 @@ const WarehouseManagerRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const { errors, setErrors, validators, validate, getPasswordStrength } = useFormValidation();
   const [validationMsg, setValidationMsg] = useState("");
   const { toasts, showToast, removeToast } = useToast();
@@ -1674,7 +1678,20 @@ const WarehouseManagerRegister = () => {
                 <div className="pt-2 flex items-start gap-3" ref={setFieldRef("agreeTerms")}>
                   <input id="agreeTerms" type="checkbox" checked={form.agreeTerms} onChange={(e) => handleInputChange("agreeTerms", e.target.checked)} className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer mt-0.5" />
                   <label htmlFor="agreeTerms" className="text-sm font-medium text-gray-700 text-left cursor-pointer select-none leading-relaxed">
-                    I agree to the <span className="text-[#08511f] font-semibold underline">Privacy Policy</span> and <span className="text-[#08511f] font-semibold underline">Terms of Service</span>.
+                    I agree to the{" "}
+                    <span
+                      className="text-[#08511f] font-semibold underline cursor-pointer"
+                      onClick={(e) => { e.preventDefault(); setIsPrivacyModalOpen(true); }}
+                    >
+                      Privacy Policy
+                    </span>{" "}
+                    and{" "}
+                    <span
+                      className="text-[#08511f] font-semibold underline cursor-pointer"
+                      onClick={(e) => { e.preventDefault(); setIsTermsModalOpen(true); }}
+                    >
+                      Terms of Service
+                    </span>.
                   </label>
                 </div>
                 {errors.agreeTerms && <span className="text-xs text-red-500 block -mt-6">{errors.agreeTerms}</span>}
@@ -2233,6 +2250,15 @@ const WarehouseManagerRegister = () => {
       <div className="relative z-10">
         <Footer />
       </div>
+
+      <TermsModal
+        isOpen={isTermsModalOpen}
+        onClose={() => setIsTermsModalOpen(false)}
+      />
+      <PrivacyModal
+        isOpen={isPrivacyModalOpen}
+        onClose={() => setIsPrivacyModalOpen(false)}
+      />
     </div>
   );
 };

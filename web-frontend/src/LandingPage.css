@@ -134,6 +134,62 @@ html:not(.light) .lp-root .lp-explore-card__desc {
   color: #cbd5e1;
 }
 
+/* ── Partner with GrainRise CTA: dark mode ── */
+html:not(.light) .lp-root .lp-partner-cta__card {
+  background: #13281a;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+
+html:not(.light) .lp-root .lp-partner-cta__headline {
+  color: #f0fdf4;
+}
+
+html:not(.light) .lp-root .lp-partner-cta__sub {
+  color: #cbd5e1;
+}
+
+html:not(.light) .lp-root .lp-partner-cta__badge {
+  background: #1d3a29;
+  color: #a7f3d0;
+  border-color: #2d6a35;
+}
+
+/* ── GrainRise Stakeholders: dark mode ── */
+html:not(.light) .lp-root .lp-stakeholders__title {
+  color: #f0fdf4;
+}
+
+html:not(.light) .lp-root .lp-stakeholders__sub {
+  color: #cbd5e1;
+}
+
+html:not(.light) .lp-root .lp-stakeholder-card {
+  background: #13281a;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+html:not(.light) .lp-root .lp-stakeholder-card:hover {
+  border-color: #4ade80;
+  box-shadow: 0 8px 26px rgba(0, 88, 12, 0.2);
+}
+
+html:not(.light) .lp-root .lp-stakeholder-card__title {
+  color: #f0fdf4;
+}
+
+html:not(.light) .lp-root .lp-stakeholder-card__desc {
+  color: #cbd5e1;
+}
+
+html:not(.light) .lp-root .lp-stakeholder-card__icon {
+  color: #4ade80;
+}
+
+html:not(.light) .lp-root .lp-stakeholders__footer-text {
+  color: #94a3b8;
+}
 
 html:not(.light) .lp-root .lp-flow-icon,
 html:not(.light) .lp-root .lp-explore-card__icon-wrap,
@@ -368,22 +424,27 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   background: rgba(0, 88, 12, 0.05);
 }
 
-.lp-nav__download-btn {
+.lp-nav__partner-btn {
   background: #00580C;
   color: #ffffff;
+  font-family: 'Inter', sans-serif;
   font-size: 13.5px;
   font-weight: 600;
   padding: 9px 18px;
   border-radius: 6px;
   border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0, 88, 12, 0.2);
   transition: all 0.2s ease;
 }
 
-.lp-nav__download-btn:hover {
+.lp-nav__partner-btn:hover {
   background: #00460a;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 88, 12, 0.25);
 }
 
 .lp-hamburger {
@@ -639,41 +700,41 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   animation: heroFadeUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.34s both;
 }
 
-/* Log In button — solid dark green */
-.lp-hero__btn-login {
+/* Partner With Us button — solid dark green */
+.lp-hero__btn-partner {
   background: #00580C;
   color: #ffffff;
   font-family: 'Inter', 'Outfit', sans-serif;
   font-size: 13.5px;
   font-weight: 600;
-  padding: 9px 20px;
+  padding: 10px 20px;
   border-radius: 8px;
   border: 1px solid #00580C;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 88, 12, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 88, 12, 0.2);
   transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.lp-hero__btn-login:hover {
+.lp-hero__btn-partner:hover {
   background: #014209;
   transform: translateY(-2px);
-  box-shadow: 0 5px 14px rgba(0, 88, 12, 0.25);
+  box-shadow: 0 5px 14px rgba(0, 88, 12, 0.28);
 }
 
-/* Register button — frosted light outline */
-.lp-hero__btn-register {
-  background: rgba(255, 255, 255, 0.6);
+/* Log In button — frosted light outline */
+.lp-hero__btn-login {
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(4px);
-  color: #334155;
+  color: #1e293b;
   font-family: 'Inter', 'Outfit', sans-serif;
   font-size: 13.5px;
   font-weight: 600;
-  padding: 9px 18px;
+  padding: 10px 22px;
   border-radius: 8px;
-  border: 1.2px solid #94a3b8;
+  border: 1.2px solid #cbd5e1;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -682,9 +743,9 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.lp-hero__btn-register:hover {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: #64748b;
+.lp-hero__btn-login:hover {
+  background: #ffffff;
+  border-color: #94a3b8;
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
 }
@@ -1052,7 +1113,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   font-weight: 800;
   line-height: 1.2;
   letter-spacing: -0.02em;
-  color: #111827;
+  color: #00580C;
   margin: 0 0 16px;
 }
 
@@ -1162,7 +1223,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 28px;
+  gap: 24px;
   position: relative;
   z-index: 1;
   box-sizing: border-box;
@@ -1181,29 +1242,31 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   font-weight: 600;
   letter-spacing: 0.2px;
   text-transform: none;
-  padding: 5px 18px;
-  border-radius: 100px;
+  padding: 4px 18px;
+  border-radius: 9999px;
   box-shadow: 0 2px 6px rgba(0, 88, 12, 0.15);
 }
 
 .lp-ecosystem .lp-section-headline {
-  margin: 0 0 12px;
-  font-size: clamp(29px, 3.1vw, 38px);
-  color: #111827;
+  margin: 0 0 16px;
+  font-size: clamp(28px, 3.2vw, 38px);
+  color: #00580C;
+  font-weight: 800;
 }
 
 .lp-ecosystem__flow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   width: 100%;
-  max-width: 1540px;
+  max-width: min(1680px, 94vw);
   margin: 0 auto;
-  gap: clamp(10px, 1.8vw, 28px);
+  gap: clamp(10px, 1.8vw, 32px);
   flex-wrap: nowrap;
   overflow-x: auto;
   padding: 16px 20px 24px;
   box-sizing: border-box;
+  scrollbar-width: thin;
 }
 
 .lp-flow-step {
@@ -1212,12 +1275,12 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
-  min-width: 80px;
+  min-width: 76px;
 }
 
 .lp-flow-icon {
-  width: 62px;
-  height: 62px;
+  width: 58px;
+  height: 58px;
   border: 1.5px solid #00580C;
   border-radius: 50%;
   display: flex;
@@ -1226,7 +1289,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   color: #00580C;
   background: #ffffff;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 8px rgba(0, 88, 12, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 88, 12, 0.05);
 }
 
 .lp-flow-icon:hover {
@@ -1237,7 +1300,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 }
 
 .lp-flow-label {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   color: #111827;
   font-family: 'Inter', sans-serif;
@@ -1246,7 +1309,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 
 .lp-flow-arrow {
   color: #374151;
-  margin-bottom: 30px;
+  margin-bottom: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1258,7 +1321,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 .lp-portals {
   width: 100%;
   background: transparent;
-  padding: 36px 24px 60px;
+  padding: 36px 24px 64px;
   position: relative;
   z-index: 1;
 }
@@ -1266,19 +1329,19 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 .lp-portals__inner {
   position: relative;
   z-index: 1;
-  max-width: 1160px;
+  max-width: 1180px;
   margin: 0 auto;
 }
 
 .lp-portals__header {
   text-align: center;
-  margin-bottom: 48px;
+  margin-bottom: 44px;
 }
 
 .lp-portals__sub {
-  font-size: 15px;
+  font-size: 14.5px;
   color: #6b7280;
-  max-width: 640px;
+  max-width: 660px;
   margin: 12px auto 0;
   line-height: 1.6;
 }
@@ -1288,21 +1351,22 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   flex-wrap: wrap;
   justify-content: center;
   gap: 24px;
-  max-width: 1140px;
+  max-width: 1160px;
   margin: 0 auto;
 }
 
 .lp-portal-card {
   background: #ffffff;
-  border-radius: 16px;
-  border: 1px solid #e1ebe3;
+  border-radius: 20px;
+  border: 1.2px solid #e1ebe3;
   box-shadow: 0 4px 16px rgba(0, 88, 12, 0.03);
-  padding: 28px 26px 22px;
+  padding: 30px 28px 22px;
   display: flex;
   flex-direction: column;
+  flex: 0 1 350px;
   width: 350px;
-  max-width: 350px;
-  min-width: 280px;
+  max-width: 360px;
+  min-width: 290px;
   box-sizing: border-box;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1312,39 +1376,41 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 .lp-portal-card:hover {
   transform: translateY(-4px);
   border-color: #86efac;
-  box-shadow: 0 16px 36px rgba(0, 88, 12, 0.1);
+  box-shadow: 0 14px 32px rgba(0, 88, 12, 0.09);
 }
 
 .lp-portal-card__icon {
   color: #00580C;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
 }
 
 .lp-portal-card__title {
   font-family: 'Outfit', sans-serif;
-  font-size: 18px;
+  font-size: 18.5px;
   font-weight: 700;
   color: #111827;
-  margin: 0 0 12px;
+  margin: 0 0 10px;
 }
 
 .lp-portal-card__desc {
   font-size: 13.5px;
   color: #4b5563;
-  line-height: 1.65;
+  line-height: 1.6;
   flex-grow: 1;
+  min-height: 68px;
   margin: 0 0 24px;
 }
 
 .lp-portal-card__action {
-  border-top: 1px solid #f0f5f1;
+  border-top: 1px solid #eef3ef;
   padding-top: 16px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   color: #00580C;
   transition: gap 0.2s ease, color 0.2s ease;
@@ -1360,7 +1426,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   position: relative;
   width: 100%;
   background: transparent;
-  padding: 50px 24px 95px;
+  padding: 60px 24px 95px;
   overflow: visible;
   border-top: none;
   z-index: 1;
@@ -1368,11 +1434,11 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 
 .lp-explore__bg {
   position: absolute;
-  top: 55%;
+  top: 54%;
   left: 50%;
-  transform: translate(-50%, -45%);
-  width: 440px;
-  height: 440px;
+  transform: translate(-50%, -46%);
+  width: 390px;
+  height: 390px;
   background-size: contain;
   background-position: center;
   background-repeat: no-repeat;
@@ -1384,7 +1450,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 .lp-explore__inner {
   position: relative;
   z-index: 1;
-  max-width: 1160px;
+  max-width: min(1560px, 94vw);
   margin: 0 auto;
 }
 
@@ -1393,18 +1459,19 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   margin-bottom: 48px;
 }
 
-.lp-explore__header .lp-section-headline {
-  font-size: clamp(29px, 3.1vw, 38px);
+.lp-explore__header .lp-section-headline,
+.lp-explore__title {
+  font-size: clamp(28px, 3.2vw, 38px);
   font-weight: 800;
-  color: #111827;
+  color: #00580C;
   letter-spacing: -0.02em;
   margin-bottom: 10px;
 }
 
 .lp-explore__sub {
-  font-size: 15px;
-  color: #6b7280;
-  max-width: 660px;
+  font-size: 14.5px;
+  color: #4b5563;
+  max-width: 680px;
   margin: 0 auto;
   line-height: 1.55;
 }
@@ -1412,37 +1479,38 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 .lp-explore__grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 22px;
+  gap: 36px 36px;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 .lp-explore-card {
-  background: #ffffff;
-  border-radius: 14px;
-  border: 1px solid #e1ebe3;
-  padding: 24px 22px;
+  background: transparent;
+  border-radius: 12px;
+  border: none;
+  padding: 10px 12px;
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-  transition: all 0.25s ease;
+  box-shadow: none;
+  transition: transform 0.2s ease, background 0.2s ease;
 }
 
 .lp-explore-card:hover {
-  transform: translateY(-3px);
-  border-color: #86efac;
-  box-shadow: 0 10px 24px rgba(0, 88, 12, 0.08);
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.45);
 }
 
 .lp-explore-card__icon-wrap {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: #e8f5e9;
-  color: #15803d;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  color: #00580C;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .lp-explore-card__content {
@@ -1451,16 +1519,16 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 
 .lp-explore-card__title {
   font-family: 'Outfit', 'Inter', sans-serif;
-  font-size: 16px;
+  font-size: 16.5px;
   font-weight: 700;
-  color: #111827;
-  margin: 0 0 5px;
+  color: #00580C;
+  margin: 0 0 6px;
   line-height: 1.3;
 }
 
 .lp-explore-card__desc {
   font-size: 13.5px;
-  color: #6b7280;
+  color: #4b5563;
   line-height: 1.5;
   margin: 0;
 }
@@ -1474,6 +1542,286 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 @media (max-width: 640px) {
   .lp-explore__grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Partner With GrainRise CTA Banner (New Figma Section) ─── */
+.lp-partner-cta {
+  position: relative;
+  width: 100%;
+  background: transparent;
+  padding: 20px clamp(16px, 3vw, 40px) 90px;
+  z-index: 1;
+}
+
+.lp-partner-cta__card {
+  max-width: min(1560px, 94vw);
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 88, 12, 0.12);
+  box-shadow: 0 4px 20px rgba(0, 88, 12, 0.04);
+  padding: clamp(36px, 3.5vw, 56px) clamp(32px, 4vw, 68px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 36px;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.lp-partner-cta__card:hover {
+  box-shadow: 0 10px 30px rgba(0, 88, 12, 0.08);
+}
+
+.lp-partner-cta__content {
+  flex: 1;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.lp-partner-cta__badge {
+  display: inline-flex;
+  align-items: center;
+  background: #e8f5e9;
+  color: #00580C;
+  border: 1px solid #c8e6c9;
+  border-radius: 9999px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 14px;
+  margin-bottom: 16px;
+  letter-spacing: 0.01em;
+}
+
+.lp-partner-cta__headline {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: clamp(26px, 2.9vw, 36px);
+  font-weight: 800;
+  color: #00580C;
+  letter-spacing: -0.02em;
+  margin: 0 0 14px;
+  line-height: 1.25;
+}
+
+.lp-partner-cta__sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 14.5px;
+  color: #4b5563;
+  line-height: 1.55;
+  margin: 0 0 24px;
+  max-width: 620px;
+}
+
+.lp-partner-cta__btn {
+  background: #00580C;
+  color: #ffffff;
+  font-family: 'Inter', 'Outfit', sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 10px 22px;
+  border-radius: 8px;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 88, 12, 0.2);
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lp-partner-cta__btn:hover {
+  background: #014209;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 14px rgba(0, 88, 12, 0.28);
+}
+
+.lp-partner-cta__img-wrap {
+  flex-shrink: 0;
+  max-width: 460px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.lp-partner-cta__img {
+  width: 100%;
+  height: auto;
+  max-height: 280px;
+  object-fit: contain;
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .lp-partner-cta__card {
+    flex-direction: column-reverse;
+    text-align: center;
+    padding: 36px 24px;
+    gap: 24px;
+  }
+
+  .lp-partner-cta__content {
+    align-items: center;
+    max-width: 100%;
+  }
+
+  .lp-partner-cta__badge {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .lp-partner-cta__sub {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .lp-partner-cta__btn {
+    margin: 0 auto;
+  }
+
+  .lp-partner-cta__img-wrap {
+    justify-content: center;
+    max-width: 320px;
+  }
+}
+
+/* ─── GrainRise Stakeholders Section (New Figma Section) ────── */
+.lp-stakeholders {
+  position: relative;
+  width: 100%;
+  background: transparent;
+  padding: 30px clamp(16px, 3vw, 40px) 95px;
+  z-index: 1;
+}
+
+.lp-stakeholders__inner {
+  max-width: min(1560px, 94vw);
+  margin: 0 auto;
+}
+
+.lp-stakeholders__header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.lp-stakeholders__title {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: clamp(28px, 3.2vw, 38px);
+  font-weight: 800;
+  color: #00580C;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+  line-height: 1.2;
+}
+
+.lp-stakeholders__sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 14.5px;
+  color: #4b5563;
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.55;
+}
+
+.lp-stakeholders__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+}
+
+.lp-stakeholder-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 88, 12, 0.12);
+  padding: 34px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  cursor: pointer;
+}
+
+.lp-stakeholder-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(0, 88, 12, 0.08);
+  border-color: #86efac;
+}
+
+.lp-stakeholder-card__icon {
+  width: 38px;
+  height: 38px;
+  color: #00580C;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 18px;
+}
+
+.lp-stakeholder-card__title {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #00580C;
+  margin: 0 0 10px;
+  line-height: 1.3;
+}
+
+.lp-stakeholder-card__desc {
+  font-family: 'Inter', sans-serif;
+  font-size: 13.5px;
+  color: #4b5563;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.lp-stakeholders__footer {
+  margin-top: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.lp-stakeholders__footer-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.lp-stakeholders__login-btn {
+  background: #00580C;
+  color: #ffffff;
+  font-family: 'Inter', 'Outfit', sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 88, 12, 0.2);
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lp-stakeholders__login-btn:hover {
+  background: #014209;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 14px rgba(0, 88, 12, 0.28);
+}
+
+@media (max-width: 900px) {
+  .lp-stakeholders__grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 }
 
@@ -1532,12 +1880,12 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 }
 
 .lp-mobile-app__inner {
-  max-width: 1100px;
+  max-width: min(1560px, 94vw);
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr 1.2fr;
   align-items: center;
-  gap: 60px;
+  gap: clamp(40px, 4.5vw, 80px);
   position: relative;
   z-index: 2;
 }
@@ -1865,16 +2213,18 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 .lp-help {
   width: 100%;
   background: #ffffff;
-  padding: 90px 24px 105px;
+  padding: 80px 24px 105px;
+  position: relative;
+  z-index: 1;
 }
 
 .lp-help__inner {
-  max-width: 1160px;
+  max-width: min(1560px, 94vw);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 1.5fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
   align-items: center;
-  gap: 56px;
+  gap: clamp(36px, 4.5vw, 68px);
 }
 
 .lp-help__left {
@@ -1882,55 +2232,58 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  position: relative;
 }
 
 .lp-help__badge {
-  display: inline-block;
-  background: #e4f5e8;
-  color: #15803d;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  padding: 6px 16px;
-  border-radius: 100px;
-  margin-bottom: 20px;
+  display: inline-flex;
+  align-items: center;
+  background: #00580C;
+  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  padding: 4px 16px;
+  border-radius: 9999px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 6px rgba(0, 88, 12, 0.15);
 }
 
 .lp-help__headline {
   font-family: 'Outfit', 'Inter', sans-serif;
-  font-size: clamp(29px, 3.1vw, 38px);
+  font-size: clamp(30px, 3.4vw, 42px);
   font-weight: 800;
-  line-height: 1.2;
-  color: #111827;
+  line-height: 1.15;
+  color: #00580C;
   letter-spacing: -0.02em;
   margin: 0 0 20px;
 }
 
 .lp-help__img {
-  width: 310px;
+  width: 280px;
   max-width: 100%;
   height: auto;
   object-fit: contain;
-  margin-top: 15px;
-  opacity: 0.35;
+  margin-top: 10px;
+  opacity: 0.55;
   pointer-events: none;
-  filter: saturate(1.1);
 }
 
 .lp-help__grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 22px;
+  gap: 20px;
 }
 
 .lp-help-card {
   background: #ffffff;
-  border-radius: 14px;
-  border: 1px solid #e1ebe3;
-  padding: 26px 24px;
+  border-radius: 12px;
+  border: 1px solid #cce2d3;
+  padding: 24px 22px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
   transition: all 0.25s ease;
   cursor: pointer;
   text-align: left;
@@ -1943,46 +2296,48 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 }
 
 .lp-help-card__icon-wrap {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: #e8f5e9;
-  color: #15803d;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1.5px solid #00580C;
+  color: #00580C;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .lp-help-card__title {
   font-family: 'Outfit', 'Inter', sans-serif;
   font-size: 16px;
   font-weight: 700;
-  color: #111827;
+  color: #00580C;
   margin: 0 0 6px;
+  line-height: 1.3;
 }
 
 .lp-help-card__desc {
-  font-size: 13.5px;
+  font-size: 13px;
   color: #6b7280;
   line-height: 1.5;
   flex-grow: 1;
-  margin: 0 0 20px;
+  margin: 0 0 18px;
 }
 
 .lp-help-card__action {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13.5px;
-  font-weight: 700;
-  color: #15803d;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #00580C;
   transition: gap 0.2s ease, color 0.2s ease;
 }
 
 .lp-help-card:hover .lp-help-card__action {
-  gap: 9px;
-  color: #0f622d;
+  gap: 8px;
+  color: #014209;
 }
 
 @media (max-width: 960px) {
@@ -2011,7 +2366,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 }
 
 .lp-footer__inner {
-  max-width: 1240px;
+  max-width: min(1560px, 94vw);
   margin: 0 auto;
   display: flex;
   justify-content: space-between;
@@ -2093,7 +2448,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 }
 
 .lp-footer__bottom {
-  max-width: 1240px;
+  max-width: min(1560px, 94vw);
   margin: 0 auto;
   border-top: 1px solid rgba(255, 255, 255, 0.15);
   padding-top: 24px;

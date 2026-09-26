@@ -26,18 +26,22 @@ import {
   ShoppingCart,
   CloudSun,
   KeyRound,
+  Unlock,
   HelpCircle,
   Headphones,
-  User
+  User,
+  Users,
+  Smartphone
 } from 'lucide-react';
 
 // Images
 import mockup10 from './assets/10.png';
-import phoneMockup from './assets/phone3.png';
+import phoneMockup from './assets/phone4.png';
 import riceBgImg from './assets/ricee.jpg';
 import heroBgImg from './assets/greenery.jpg';
 import glassImg from './assets/glass.png';
 import headsetImg from './assets/headset.png';
+import shakehandsImg from './assets/shakehands2.png';
 
 // ─── Intersection Observer Hook ───────────────────────────────────────────────
 function useInView(threshold = 0.12, rootMargin = '0px 0px -40px 0px') {
@@ -103,7 +107,7 @@ export default function LandingPage() {
   }, [hash]);
 
   const ECOSYSTEM_STEPS = [
-    { icon: <Tractor size={22} strokeWidth={1.8} />,        label: 'Farmers'    },
+    { icon: <Tractor size={22} strokeWidth={1.8} />,        label: 'Farm'       },
     { icon: <Truck size={22} strokeWidth={1.8} />,          label: 'Millers'    },
     { icon: <Warehouse size={22} strokeWidth={1.8} />,      label: 'Warehouse'  },
     { icon: <ClipboardCheck size={22} strokeWidth={1.8} />, label: 'Inventory'  },
@@ -112,95 +116,84 @@ export default function LandingPage() {
     { icon: <Store size={22} strokeWidth={1.8} />,          label: 'Retailers'  },
   ];
 
-  // Restored: All 4 Role Portals & Routes
-  const ROLE_PORTALS = [
-    {
-      icon: <Tractor size={24} strokeWidth={1.8} />,
-      title: 'Farmer Portal',
-      desc: 'Log harvests, monitor field agro-climatic advisories, verify moisture grades, and access forward pricing contracts.',
-      linkText: 'Continue as Farmer',
-      path: '/register/farmer',
-    },
-    {
-      icon: <Building2 size={24} strokeWidth={1.8} />,
-      title: 'Miller Portal',
-      desc: 'Oversee paddy intake lots, run continuous milling schedules, bid on co-op tenders, and generate milled output manifests.',
-      linkText: 'Continue as Miller',
-      path: '/register/supplier',
-    },
-    {
-      icon: <ShoppingCart size={24} strokeWidth={1.8} />,
-      title: 'Retailer Portal',
-      desc: 'Source authenticated milled sacks, coordinate freight drop-offs, track inbound delivery shipments, and update inventory.',
-      linkText: 'Continue as Retailer',
-      path: '/register/retailer',
-    },
-    {
-      icon: <Warehouse size={24} strokeWidth={1.8} />,
-      title: 'Warehouse Portal',
-      desc: 'Audit buffer stock silos, orchestrate pallet movements, manage bay storage thermography, and validate dispatch waybills.',
-      linkText: 'Continue as Warehouse',
-      path: '/register/warehouse-manager',
-    },
-  ];
-
   const EXPLORE_FEATURES = [
     {
-      icon: <ShoppingBag size={20} strokeWidth={1.8} />,
+      icon: <ShoppingBag size={22} strokeWidth={1.8} />,
       title: 'Procurement & Sourcing',
       desc: 'Opportunities, bidding, product sourcing, and procurement.',
     },
     {
-      icon: <Package size={20} strokeWidth={1.8} />,
+      icon: <Package size={22} strokeWidth={1.8} />,
       title: 'Inventory',
       desc: 'Stock availability, monitoring, and warehouse inventory.',
     },
     {
-      icon: <CloudSun size={20} strokeWidth={1.8} />,
+      icon: <CloudSun size={22} strokeWidth={1.8} />,
       title: 'Climate & Forecasting',
       desc: 'Climate-informed farming and demand forecasting.',
     },
     {
-      icon: <FileText size={20} strokeWidth={1.8} />,
+      icon: <FileText size={22} strokeWidth={1.8} />,
       title: 'Contracts',
       desc: 'Applications, offers, agreements, and active contracts.',
     },
     {
-      icon: <ClipboardList size={20} strokeWidth={1.8} />,
+      icon: <ClipboardList size={22} strokeWidth={1.8} />,
       title: 'Orders & Transactions',
       desc: 'Purchasing, order processing, and transaction records.',
     },
     {
-      icon: <Truck size={20} strokeWidth={1.8} />,
+      icon: <Truck size={22} strokeWidth={1.8} />,
       title: 'Delivery & Logistics',
       desc: 'Fulfillment, delivery coordination, and logistics tracking.',
     },
   ];
 
+  const STAKEHOLDER_CARDS = [
+    {
+      icon: <Building2 size={24} strokeWidth={1.8} />,
+      title: 'Miller',
+      desc: 'Manage rice procurement, milling operations, supply availability, contracts, orders, and distribution coordination.',
+      action: () => navigate('/login'),
+    },
+    {
+      icon: <Warehouse size={24} strokeWidth={1.8} />,
+      title: 'Warehouse Portal',
+      desc: 'Manage warehouse inventory, receiving, storage, fulfillment, distribution activities, and authorized warehouse operations.',
+      action: () => navigate('/login'),
+    },
+    {
+      icon: <ShoppingCart size={24} strokeWidth={1.8} />,
+      title: 'Retailer Portal',
+      desc: 'Manage rice sourcing, orders, inventory replenishment, deliveries, and transaction records.',
+      action: () => navigate('/login'),
+    },
+  ];
+
   const HELP_CARDS = [
     {
-      icon: <KeyRound size={18} strokeWidth={2} />,
+      icon: <Unlock size={16} strokeWidth={1.8} />,
       title: 'Login Assistance',
       desc: 'Recover account access or reset credentials.',
       linkText: 'Recover Access',
       action: () => navigate('/login-assistance'),
     },
     {
-      icon: <HelpCircle size={18} strokeWidth={2} />,
+      icon: <HelpCircle size={16} strokeWidth={1.8} />,
       title: 'Frequently Asked Questions',
       desc: 'Find answers about portal access and system use.',
       linkText: 'Read FAQs',
       action: () => navigate('/faqs'),
     },
     {
-      icon: <FileText size={18} strokeWidth={2} />,
+      icon: <FileText size={16} strokeWidth={1.8} />,
       title: 'Registration Guide',
       desc: 'Get guidance on registering for GrainRise.',
       linkText: 'View Guide',
       action: () => navigate('/registration-guide'),
     },
     {
-      icon: <Headphones size={18} strokeWidth={2} />,
+      icon: <Headphones size={16} strokeWidth={1.8} />,
       title: 'Contact Support',
       desc: 'Contact the GrainRise support team.',
       linkText: 'Contact Desk',
@@ -239,20 +232,20 @@ export default function LandingPage() {
 
             <div className="lp-hero__ctas">
               <button
+                className="lp-hero__btn-partner"
+                onClick={() => navigate('/partner-with-us')}
+                id="hero-partner-btn"
+              >
+                <Users size={16} strokeWidth={2} />
+                <span>Partner With Us</span>
+              </button>
+              <button
                 className="lp-hero__btn-login"
                 onClick={() => navigate('/login')}
                 id="hero-login-btn"
               >
-                <LogIn size={15} strokeWidth={2.2} />
+                <LogIn size={16} strokeWidth={2} />
                 <span>Log In</span>
-              </button>
-              <button
-                className="lp-hero__btn-register"
-                onClick={() => navigate('/register')}
-                id="hero-register-btn"
-              >
-                <UserPlus size={15} strokeWidth={2} />
-                <span>Register / Join GrainRise</span>
               </button>
             </div>
           </div>
@@ -291,49 +284,12 @@ export default function LandingPage() {
           </div>
         </AnimatedSection>
 
-        {/* ── ROLE PORTALS (Staggered Cards with Scale & Fade-Up Effect) ─── */}
-        <AnimatedSection className="lp-portals" id="portal-access" animation="scale">
-          <div className="lp-portals__inner">
-            <div className="lp-portals__header">
-              <h2 className="lp-section-headline lp-section-headline--center">
-                Access the GrainRise Portal
-              </h2>
-              <p className="lp-portals__sub">
-                Select your role to continue to the GrainRise tools and services designed for your part of the rice supply chain.
-              </p>
-            </div>
-
-            <div className="lp-portals__grid">
-              {ROLE_PORTALS.map((portal, index) => (
-                <AnimatedSection
-                  key={portal.title}
-                  tag="div"
-                  animation="fade-up"
-                  delay={index * 100}
-                  className="lp-portal-card"
-                  onClick={() => navigate(portal.path)}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="lp-portal-card__icon">{portal.icon}</div>
-                  <h3 className="lp-portal-card__title">{portal.title}</h3>
-                  <p className="lp-portal-card__desc">{portal.desc}</p>
-                  <div className="lp-portal-card__action">
-                    <span>{portal.linkText}</span>
-                    <ArrowRight size={15} strokeWidth={2} />
-                  </div>
-                </AnimatedSection>
-              ))}
-            </div>
-          </div>
-        </AnimatedSection>
-
         {/* ── EXPLORE GRAINRISE (Zoom & Blur Effect) ─── */}
         <AnimatedSection className="lp-explore" id="explore-grainrise" animation="zoom">
           <div className="lp-explore__bg" style={{ backgroundImage: `url(${glassImg})` }} />
           <div className="lp-explore__inner">
             <div className="lp-explore__header">
-              <h2 className="lp-section-headline lp-section-headline--center">
+              <h2 className="lp-section-headline lp-section-headline--center lp-explore__title">
                 Explore GrainRise
               </h2>
               <p className="lp-explore__sub">
@@ -359,6 +315,89 @@ export default function LandingPage() {
                   </div>
                 </AnimatedSection>
               ))}
+            </div>
+          </div>
+        </AnimatedSection>
+
+        {/* ── PARTNER WITH GRAINRISE (New Figma Section) ─── */}
+        <AnimatedSection className="lp-partner-cta" id="partner-cta" animation="fade-up">
+          <div className="lp-partner-cta__card">
+            <div className="lp-partner-cta__content">
+              <div className="lp-partner-cta__badge">
+                Centralized System Portal
+              </div>
+              <h2 className="lp-partner-cta__headline">
+                Partner With GrainRise
+              </h2>
+              <p className="lp-partner-cta__sub">
+                Interested in connecting your organization with the GrainRise supply chain network?<br />
+                Send us your partnership details and our team will review your inquiry.
+              </p>
+              <button
+                className="lp-partner-cta__btn"
+                onClick={() => navigate('/partner-with-us')}
+                id="partner-section-cta-btn"
+              >
+                <Users size={16} strokeWidth={2} />
+                <span>Partner With Us</span>
+              </button>
+            </div>
+
+            <div className="lp-partner-cta__img-wrap">
+              <img
+                src={shakehandsImg}
+                alt="Partner With GrainRise"
+                className="lp-partner-cta__img"
+              />
+            </div>
+          </div>
+        </AnimatedSection>
+
+        {/* ── GRAINRISE STAKEHOLDERS (New Figma Section) ─── */}
+        <AnimatedSection className="lp-stakeholders" id="stakeholders" animation="fade-up">
+          <div className="lp-stakeholders__inner">
+            <div className="lp-stakeholders__header">
+              <h2 className="lp-stakeholders__title">
+                GrainRise Stakeholders
+              </h2>
+              <p className="lp-stakeholders__sub">
+                GrainRise connects authorized millers, warehouse owners, and retailers through a coordinated rice supply chain management system.
+              </p>
+            </div>
+
+            <div className="lp-stakeholders__grid">
+              {STAKEHOLDER_CARDS.map((card, idx) => (
+                <AnimatedSection
+                  key={card.title}
+                  tag="div"
+                  animation="fade-up"
+                  delay={idx * 100}
+                  className="lp-stakeholder-card"
+                  onClick={card.action}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="lp-stakeholder-card__icon">
+                    {card.icon}
+                  </div>
+                  <h3 className="lp-stakeholder-card__title">{card.title}</h3>
+                  <p className="lp-stakeholder-card__desc">{card.desc}</p>
+                </AnimatedSection>
+              ))}
+            </div>
+
+            <div className="lp-stakeholders__footer">
+              <span className="lp-stakeholders__footer-text">
+                Already have an authorized GrainRise account?
+              </span>
+              <button
+                className="lp-stakeholders__login-btn"
+                onClick={() => navigate('/login')}
+                id="stakeholders-login-btn"
+              >
+                <LogIn size={15} strokeWidth={2} />
+                <span>Log In to GrainRise</span>
+              </button>
             </div>
           </div>
         </AnimatedSection>
@@ -394,7 +433,7 @@ export default function LandingPage() {
               className="lp-btn lp-mobile-app__btn"
               onClick={() => alert("Downloading GrainRise APK...")}
             >
-              <Download size={16} strokeWidth={2} />
+              <Smartphone size={16} strokeWidth={2} />
               <span>Install on Mobile</span>
             </button>
           </AnimatedSection>

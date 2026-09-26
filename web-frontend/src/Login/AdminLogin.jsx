@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 
@@ -124,13 +124,12 @@ const AdminLogin = () => {
                   Password
                 </label>
 
-                <a
-                  href="#"
-                  onClick={(e) => e.preventDefault()}
+                <Link
+                  to="/forgot-password"
                   className="text-sm text-green-700 font-semibold hover:underline"
                 >
                   Forgot Password?
-                </a>
+                </Link>
               </div>
 
               <div className="relative">

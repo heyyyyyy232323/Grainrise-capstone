@@ -4,6 +4,7 @@ import React from "react";
 import LandingPage from "./LandingPage";
 import Login from "./Login/UserLogin";
 import AdminLogin from "./Login/AdminLogin";
+import ForgotPassword from "./Login/ForgotPassword";
 import Register from "./Register/Register";
 import RetailerRegister from "./Register/RetailerRegister";
 import WarehouseManagerRegister from "./Register/WarehouseManagerRegister";
@@ -18,6 +19,7 @@ import FloatingChatbot from "./Components/Minor-Components/FloatingChatbot";
 import GlobalLoadingScreen from "./Components/Minor-Components/GlobalLoadingScreen.jsx";
 import ScrollToTop from "./Components/Minor-Components/ScrollToTop";
 import ContactUs from "./Support/ContactUs";
+import PartnerWithUs from "./Support/PartnerWithUs";
 import ContactSupport from "./Support/ContactSupport";
 import LoginAssistance from "./Support/LoginAssistance";
 import FrequentlyAskedQuestions from "./Support/FrequentlyAskedQuestions";
@@ -237,6 +239,7 @@ import WarehouseInfo from "./Users/AdminAccounts/AccountAdmin/WarehouseInfo";
 
 import RetailerManagement from "./Users/AdminAccounts/AccountAdmin/RetailerManagement";
 import EmailUsers from "./Users/AdminAccounts/AccountAdmin/EmailUsers";
+import AdminPartnerWithUs from "./Users/AdminAccounts/AccountAdmin/AdminPartnerWithUs";
 import AdminNewsUpdates from "./Users/AdminAccounts/AccountAdmin/AdminNewsUpdates";
 
 
@@ -278,6 +281,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/register" element={<Register />} />
 
           <Route
@@ -320,6 +324,7 @@ function App() {
           ================================================== */}
 
           <Route path="/contact-us" element={<ContactUs />} />
+          <Route path="/partner-with-us" element={<PartnerWithUs />} />
           <Route path="/contact" element={<ContactUs />} />
           <Route path="/contact-support" element={<ContactSupport />} />
           <Route path="/support" element={<ContactSupport />} />
@@ -1152,6 +1157,11 @@ function App() {
               <Route
                 path="/admin/email-users"
                 element={<EmailUsers />}
+              />
+
+              <Route
+                path="/admin/partner-with-us"
+                element={<AdminPartnerWithUs />}
               />
 
               <Route

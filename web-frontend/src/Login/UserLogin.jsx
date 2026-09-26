@@ -1,6 +1,8 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import TermsModal from "../Components/Modals/TermsModal";
+import PrivacyModal from "../Components/Modals/PrivacyModal";
 
 import CustomTextbox from "../Components/Minor-Components/CustomTextbox";
 import CustomGreenButton from "../Components/Minor-Components/CustomGreenButton";
@@ -27,6 +29,8 @@ const UserLogin = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
 
   const navigate = useNavigate();
   const { request } = useApi();
@@ -292,13 +296,12 @@ const UserLogin = () => {
                   Remember Me
                 </label>
 
-                <a
-                  href="#"
-                  onClick={(e) => e.preventDefault()}
+                <Link
+                  to="/forgot-password"
                   className="text-green-700 font-medium hover:underline"
                 >
                   Forgot Password?
-                </a>
+                </Link>
               </div>
 
               {loginError && (
@@ -321,9 +324,9 @@ const UserLogin = () => {
 
             <p className="text-center text-xs text-gray-500 mt-4">
               By signing in, you agree to our{" "}
-              <a
+                <a
                 href="#"
-                onClick={(e) => e.preventDefault()}
+                onClick={(e) => { e.preventDefault(); setIsTermsModalOpen(true); }}
                 className="text-green-700 font-semibold hover:underline"
               >
                 Terms
@@ -331,7 +334,7 @@ const UserLogin = () => {
               and acknowledge our{" "}
               <a
                 href="#"
-                onClick={(e) => e.preventDefault()}
+                onClick={(e) => { e.preventDefault(); setIsPrivacyModalOpen(true); }}
                 className="text-green-700 font-semibold hover:underline"
               >
                 Privacy Policy.
@@ -342,6 +345,15 @@ const UserLogin = () => {
       </div>
 
       <Footer />
+
+      <TermsModal
+        isOpen={isTermsModalOpen}
+        onClose={() => setIsTermsModalOpen(false)}
+      />
+      <PrivacyModal
+        isOpen={isPrivacyModalOpen}
+        onClose={() => setIsPrivacyModalOpen(false)}
+      />
     </div>
   );
 };

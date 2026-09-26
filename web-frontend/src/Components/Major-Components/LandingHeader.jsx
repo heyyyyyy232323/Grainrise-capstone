@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShieldCheck, HelpCircle, LogIn, Moon, Sun } from 'lucide-react';
+import { ShieldCheck, HelpCircle, LogIn, Users, Moon, Sun } from 'lucide-react';
 import logoImg from '../../assets/Logo.png';
 import '../../LandingPage.css';
 
@@ -82,7 +82,7 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
             onClick={() => setMenuOpen(false)}
           />
 
-          {/* Exact 4 Navigation Items from Figma */}
+          {/* Exact Navigation Items from Figma */}
           <ul className={`lp-nav__links ${menuOpen ? 'lp-nav__links--open' : ''}`}>
             {menuOpen && (
               <li className="lp-nav__mobile-close">
@@ -99,7 +99,7 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
               </li>
             )}
             <li><button onClick={() => scrollTo('hero')}>Home</button></li>
-            <li><button onClick={() => scrollTo('portal-access')}>Portal Access</button></li>
+            <li><button onClick={() => scrollTo('stakeholders')}>Stakeholders</button></li>
             <li><button onClick={() => scrollTo('explore-grainrise')}>Explore Grainrise</button></li>
             <li><button onClick={() => scrollTo('help')}>Help &amp; Support</button></li>
 
@@ -116,10 +116,14 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
                   <span>Log In</span>
                 </button>
                 <button
-                  className="lp-btn lp-btn--primary lp-nav__download-btn"
-                  onClick={() => scrollTo('mobile-promo')}
+                  className="lp-nav__partner-btn"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    navigate('/partner-with-us');
+                  }}
                 >
-                  Download Free
+                  <Users size={15} />
+                  <span>Partner With Us</span>
                 </button>
               </li>
             )}
@@ -144,10 +148,11 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
               <span>Log In</span>
             </button>
             <button
-              className="lp-btn lp-btn--primary lp-nav__download-btn"
-              onClick={() => scrollTo('mobile-promo')}
+              className="lp-nav__partner-btn"
+              onClick={() => navigate('/partner-with-us')}
             >
-              Download Free
+              <Users size={15} />
+              <span>Partner With Us</span>
             </button>
             <button
               className={`lp-hamburger ${menuOpen ? 'lp-hamburger--open' : ''}`}

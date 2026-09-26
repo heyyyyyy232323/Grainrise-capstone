@@ -1482,3 +1482,150 @@ def require_admin(request):
             "auth_source"
         ) == "django_admin"
     )
+
+
+# ============================================================
+# FORGOT PASSWORD — OTP UTILITIES
+# ============================================================
+# Uses a separate cache namespace to avoid collisions with
+# the registration OTP flow.
+# ============================================================
+
+def issue_forgot_password_otp(email):
+    """
+    Generate and send a 6-digit OTP for password reset.
+
+    OTP lifetime:    10 minutes
+    Resend cooldown: 60 seconds
+    """
+
+    normalized_email = email.strip().lower()
+
+    cooldown_key = f"forgot_pw_otp_cooldown:{normalized_email}"
+
+    if cache.get(cooldown_key):
+        return 0
+
+    otp = f"{secrets.randbelow(1000000):06d}"
+
+    subject = "GrainRise Password Reset"
+
+    text_message = (
+        f"Your GrainRise password reset code is:\n\n"
+        f"{otp}\n\n"
+        "This code expires in 10 minutes.\n"
+        "Do not share this code with anyone."
+    )
+
+    html_message = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937; padding: 24px;">
+        <h2 style="color: #08511f; margin-bottom: 8px;">GrainRise</h2>
+        <h3>Password Reset</h3>
+        <p>Use the verification code below to reset your GrainRise password.</p>
+        <div style="margin: 24px 0; padding: 18px; background: #f0f8f2; border: 1px solid #cce5d1; border-radius: 12px; text-align: center; font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #08511f;">
+            {otp}
+        </div>
+        <p>This code will expire in <strong>10 minutes</strong>.</p>
+        <p>If you did not request a password reset, you may safely ignore this email.</p>
+    </div>
+    """
+
+    message = EmailMultiAlternatives(
+        subject,
+        text_message,
+        settings.DEFAULT_FROM_EMAIL,
+        [normalized_email],
+    )
+
+    message.attach_alternative(html_message, "text/html")
+    message.send(fail_silently=False)
+
+    cache.set(
+        f"forgot_pw_otp:{normalized_email}",
+        _otp_hash(normalized_email, otp),
+        timeout=10 * 60,
+    )
+
+    cache.set(
+        f"forgot_pw_otp_attempts:{normalized_email}",
+        0,
+        timeout=10 * 60,
+    )
+
+    cache.set(cooldown_key, True, timeout=60)
+
+    return 60
+
+
+def verify_forgot_password_otp(email, otp):
+    """
+    Verify the 6-digit OTP for password reset.
+    Returns True on success, False on failure.
+    """
+
+    normalized_email = email.strip().lower()
+    otp_key = f"forgot_pw_otp:{normalized_email}"
+    attempts_key = f"forgot_pw_otp_attempts:{normalized_email}"
+
+    stored_hash = cache.get(otp_key)
+
+    if not stored_hash:
+        return False
+
+    attempts = int(cache.get(attempts_key, 0))
+
+    if attempts >= 5:
+        cache.delete(otp_key)
+        cache.delete(attempts_key)
+        return False
+
+    entered_hash = _otp_hash(normalized_email, otp)
+    is_valid = hmac.compare_digest(stored_hash, entered_hash)
+
+    if is_valid:
+        cache.delete(otp_key)
+        cache.delete(attempts_key)
+        return True
+
+    cache.set(attempts_key, attempts + 1, timeout=10 * 60)
+    return False
+
+
+def create_forgot_password_reset_token(email):
+    """
+    Create a short-lived token (15 min) that authorises the
+    password reset step after OTP verification.
+    """
+
+    normalized_email = email.strip().lower()
+    token = secrets.token_urlsafe(32)
+
+    cache.set(
+        f"forgot_pw_token:{normalized_email}",
+        token,
+        timeout=15 * 60,
+    )
+
+    return token
+
+
+def verify_forgot_password_reset_token(email, token):
+    """
+    Verify the reset token and delete it (single-use).
+    Returns True if valid, False otherwise.
+    """
+
+    normalized_email = email.strip().lower()
+    key = f"forgot_pw_token:{normalized_email}"
+
+    stored_token = cache.get(key)
+
+    if not stored_token:
+        return False
+
+    is_valid = hmac.compare_digest(stored_token, token)
+
+    if is_valid:
+        cache.delete(key)
+
+    return is_valid

@@ -286,4 +286,27 @@ urlpatterns = [
         views.resolve_alert,
         name="alert-resolve",
     ),
-]
+
+
+    # ========================================================
+    # FORGOT PASSWORD
+    # ========================================================
+
+    path(
+        "auth/forgot-password/send-otp",
+        views.forgot_password_send_otp,
+        name="forgot-password-send-otp",
+    ),
+
+    path(
+        "auth/forgot-password/verify-otp",
+        views.forgot_password_verify_otp,
+        name="forgot-password-verify-otp",
+    ),
+
+    path(
+        "auth/forgot-password/reset",
+        views.forgot_password_reset,
+        name="forgot-password-reset",
+    ),
+]

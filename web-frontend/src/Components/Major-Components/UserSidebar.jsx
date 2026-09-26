@@ -49,6 +49,11 @@ export const getUserSidebarConfig = (role = "admin") => {
           title: "MANAGEMENT",
           items: [
             {
+              label: "Farmer Management",
+              icon: Tractor,
+              path: "/admin/farmers",
+            },
+            {
               label: "Miller Management",
               icon: Truck,
               path: "/admin/suppliers",
@@ -69,9 +74,14 @@ export const getUserSidebarConfig = (role = "admin") => {
           title: "COMMUNICATION",
           items: [
             {
-              label: "Email Users",
+              label: "Email",
               icon: Mail,
               path: "/admin/email-users",
+            },
+            {
+              label: "Partner With Us",
+              icon: Users,
+              path: "/admin/partner-with-us",
             },
             {
               label: "News & Updates",

@@ -27,6 +27,8 @@ import useEmailOTP from "../Components/hooks/useEmailOTP";
 import useDocumentUpload from "../Components/hooks/useDocumentUpload";
 import useRegistration from "../Components/hooks/useRegistration";
 import GoogleVerificationModal, { GoogleIcon } from "../Components/Modals/GoogleVerificationModal";
+import TermsModal from "../Components/Modals/TermsModal";
+import PrivacyModal from "../Components/Modals/PrivacyModal";
 
 import logo from "../assets/Logo.png";
 import backgroundImage from "../assets/smudge.jpg";
@@ -109,6 +111,8 @@ const RetailerRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [agreeCertify, setAgreeCertify] = useState(false);
 
 
@@ -1741,11 +1745,17 @@ const RetailerRegister = () => {
                   className="text-sm font-medium text-gray-700"
                 >
                   I agree to the{" "}
-                  <span className="text-[#08511f] font-semibold underline">
+                  <span
+                    className="text-[#08511f] font-semibold underline cursor-pointer"
+                    onClick={(e) => { e.preventDefault(); setIsPrivacyModalOpen(true); }}
+                  >
                     Privacy Policy
                   </span>{" "}
                   and{" "}
-                  <span className="text-[#08511f] font-semibold underline">
+                  <span
+                    className="text-[#08511f] font-semibold underline cursor-pointer"
+                    onClick={(e) => { e.preventDefault(); setIsTermsModalOpen(true); }}
+                  >
                     Terms of Service
                   </span>.
                 </label>
@@ -2711,6 +2721,15 @@ const RetailerRegister = () => {
       <div className="relative z-10">
         <Footer />
       </div>
+
+      <TermsModal
+        isOpen={isTermsModalOpen}
+        onClose={() => setIsTermsModalOpen(false)}
+      />
+      <PrivacyModal
+        isOpen={isPrivacyModalOpen}
+        onClose={() => setIsPrivacyModalOpen(false)}
+      />
     </div>
   );
 };

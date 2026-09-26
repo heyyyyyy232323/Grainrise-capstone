@@ -2506,3 +2506,229 @@ def resolve_alert(
             alert
         ).data
     )
+
+
+# ============================================================
+# FORGOT PASSWORD — SEND OTP
+# ============================================================
+#
+# Accepts:  { "email": "..." }
+# Checks:   email must belong to a registered main user
+# Sends:    6-digit OTP via email
+# ============================================================
+
+@api_view(["POST"])
+def forgot_password_send_otp(request):
+
+    email = str(
+        request.data.get("email") or ""
+    ).strip().lower()
+
+    if not email or "@" not in email:
+        return Response(
+            {
+                "detail":
+                    "A valid email address is required."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Verify the email is actually registered
+    from .utils import issue_forgot_password_otp
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT user_id
+                FROM users
+                WHERE LOWER(email) = %s
+                LIMIT 1
+                """,
+                [email],
+            )
+            row = cursor.fetchone()
+
+    except Exception as exc:
+        return Response(
+            {"detail": f"Database error: {exc}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    if not row:
+        # Return a generic message to prevent email enumeration
+        return Response(
+            {
+                "message":
+                    "If that email is registered, a verification code has been sent.",
+                "retry_after": 60,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    try:
+        retry_after = issue_forgot_password_otp(email)
+
+        if retry_after == 0:
+            return Response(
+                {
+                    "detail":
+                        "A code was recently sent. Please wait before requesting another.",
+                    "retry_after": 60,
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        return Response(
+            {
+                "message":
+                    "If that email is registered, a verification code has been sent.",
+                "retry_after": retry_after,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    except Exception as exc:
+        return Response(
+            {
+                "detail":
+                    f"Unable to send verification email. {exc}"
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+# ============================================================
+# FORGOT PASSWORD — VERIFY OTP
+# ============================================================
+#
+# Accepts:  { "email": "...", "otp": "123456" }
+# Returns:  { "verification_token": "..." }
+# ============================================================
+
+@api_view(["POST"])
+def forgot_password_verify_otp(request):
+
+    from .utils import (
+        verify_forgot_password_otp,
+        create_forgot_password_reset_token,
+    )
+
+    email = str(
+        request.data.get("email") or ""
+    ).strip().lower()
+
+    otp = str(
+        request.data.get("otp") or ""
+    ).strip()
+
+    if not email or "@" not in email:
+        return Response(
+            {"detail": "A valid email address is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not otp or len(otp) != 6 or not otp.isdigit():
+        return Response(
+            {"detail": "Please enter the complete 6-digit verification code."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not verify_forgot_password_otp(email, otp):
+        return Response(
+            {
+                "detail":
+                    "Invalid or expired verification code. Please request a new one."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    reset_token = create_forgot_password_reset_token(email)
+
+    return Response(
+        {
+            "message": "Email verified successfully.",
+            "verification_token": reset_token,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+# ============================================================
+# FORGOT PASSWORD — RESET PASSWORD
+# ============================================================
+#
+# Accepts:  { "email": "...", "verification_token": "...", "new_password": "..." }
+# Updates:  users.password_hash
+# ============================================================
+
+@api_view(["POST"])
+def forgot_password_reset(request):
+
+    from .utils import (
+        verify_forgot_password_reset_token,
+        hash_password,
+    )
+
+    email = str(
+        request.data.get("email") or ""
+    ).strip().lower()
+
+    verification_token = str(
+        request.data.get("verification_token") or ""
+    ).strip()
+
+    new_password = str(
+        request.data.get("new_password") or ""
+    )
+
+    if not email or "@" not in email:
+        return Response(
+            {"detail": "A valid email address is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not verification_token:
+        return Response(
+            {"detail": "A valid verification token is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if len(new_password) < 8:
+        return Response(
+            {"detail": "Password must be at least 8 characters."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not verify_forgot_password_reset_token(email, verification_token):
+        return Response(
+            {
+                "detail":
+                    "Invalid or expired session. Please restart the password reset process."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        hashed = hash_password(new_password)
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE users
+                SET password_hash = %s
+                WHERE LOWER(email) = %s
+                """,
+                [hashed, email],
+            )
+
+        return Response(
+            {"message": "Password reset successfully. You can now log in with your new password."},
+            status=status.HTTP_200_OK,
+        )
+
+    except Exception as exc:
+        return Response(
+            {"detail": f"Unable to reset password. {exc}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )

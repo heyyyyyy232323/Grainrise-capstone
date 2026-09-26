@@ -1,0 +1,484 @@
+/* ─── Partner With Us Page Styles (Exact Figma Match) ──────────────────── */
+
+.pwu-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f0f7f2;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #1f2937;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ─── Top Sub-Navigation Bar ───────────────────────────────────────────── */
+.pwu-topbar {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+}
+
+.pwu-topbar__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.pwu-topbar__back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  border: none;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.pwu-topbar__back-btn:hover {
+  color: #00580C;
+}
+
+.pwu-topbar__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #e8f5e9;
+  color: #00580C;
+  border: 1px solid #c8e6c9;
+  border-radius: 9999px;
+  padding: 3px 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.pwu-topbar__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #16a34a;
+  display: inline-block;
+}
+
+/* ─── Main Content Container ───────────────────────────────────────────── */
+.pwu-main {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  padding: 28px 24px 60px;
+  box-sizing: border-box;
+}
+
+.pwu-content-wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ─── Banner Card ──────────────────────────────────────────────────────── */
+.pwu-banner-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2ece5;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+  padding: 26px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  box-sizing: border-box;
+}
+
+.pwu-banner__text {
+  flex: 1;
+}
+
+.pwu-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #e8f5e9;
+  color: #00580C;
+  border: 1px solid #bbf7d0;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  margin-bottom: 10px;
+}
+
+.pwu-banner__headline {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 25px;
+  font-weight: 800;
+  color: #00580C;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+  line-height: 1.2;
+}
+
+.pwu-banner__sub {
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 620px;
+}
+
+.pwu-banner__icon-box {
+  width: 44px;
+  height: 44px;
+  background: #e8f5e9;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00580C;
+  flex-shrink: 0;
+}
+
+/* ─── Form Card ────────────────────────────────────────────────────────── */
+.pwu-form-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2ece5;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+  padding: 32px 36px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 36px;
+  box-sizing: border-box;
+}
+
+.pwu-form__header {
+  margin-bottom: 20px;
+}
+
+.pwu-form__title {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px;
+  line-height: 1.3;
+}
+
+.pwu-form__subtitle {
+  font-size: 12.5px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ── Form Fields Grid ── */
+.pwu-form__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+}
+
+.pwu-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.pwu-field--full {
+  grid-column: 1 / -1;
+}
+
+.pwu-field__label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #4b5563;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pwu-field__required {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.pwu-field__input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  padding: 8.5px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1f2937;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pwu-field__input::placeholder {
+  color: #9ca3af;
+  font-size: 12.5px;
+}
+
+.pwu-field__input:focus {
+  border-color: #00580C;
+  box-shadow: 0 0 0 2.5px rgba(0, 88, 12, 0.12);
+}
+
+.pwu-field__textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1f2937;
+  outline: none;
+  resize: vertical;
+  min-height: 95px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pwu-field__textarea::placeholder {
+  color: #9ca3af;
+  font-size: 12.5px;
+}
+
+.pwu-field__textarea:focus {
+  border-color: #00580C;
+  box-shadow: 0 0 0 2.5px rgba(0, 88, 12, 0.12);
+}
+
+/* ── Submit Button ── */
+.pwu-form__action {
+  margin-top: 18px;
+}
+
+.pwu-submit-btn {
+  background: #00580C;
+  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 20px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 88, 12, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.pwu-submit-btn:hover:not(:disabled) {
+  background: #014209;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 88, 12, 0.25);
+}
+
+.pwu-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ── Illustration Side ── */
+.pwu-illustration-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+}
+
+.pwu-illustration {
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+/* ── Success Feedback Screen ── */
+.pwu-success {
+  text-align: center;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pwu-success__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #e8f5e9;
+  color: #00580C;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.pwu-success__title {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #00580C;
+  margin: 0 0 8px;
+}
+
+.pwu-success__desc {
+  font-size: 13.5px;
+  color: #4b5563;
+  max-width: 440px;
+  line-height: 1.55;
+  margin: 0 0 24px;
+}
+
+.pwu-success__btn {
+  background: #00580C;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.pwu-success__btn:hover {
+  background: #014209;
+}
+
+/* ─── Responsive Media Queries ─────────────────────────────────────────── */
+@media (max-width: 960px) {
+  .pwu-form-card {
+    grid-template-columns: 1fr;
+    padding: 28px 20px;
+  }
+
+  .pwu-illustration-wrap {
+    order: -1;
+    margin-bottom: 8px;
+    padding: 0;
+  }
+
+  .pwu-illustration {
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 600px) {
+  .pwu-banner-card {
+    padding: 20px 18px;
+  }
+
+  .pwu-banner__icon-box {
+    display: none;
+  }
+
+  .pwu-form__grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .pwu-topbar__inner {
+    padding: 10px 16px;
+  }
+}
+
+/* ─── Dark Mode Overrides ──────────────────────────────────────────────── */
+html:not(.light) .pwu-page {
+  background: #07150d;
+  color: #e5e7eb;
+}
+
+html:not(.light) .pwu-topbar {
+  background: #0d1f14;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+html:not(.light) .pwu-topbar__back-btn {
+  color: #cbd5e1;
+}
+
+html:not(.light) .pwu-topbar__back-btn:hover {
+  color: #4ade80;
+}
+
+html:not(.light) .pwu-topbar__status {
+  background: #143020;
+  color: #a7f3d0;
+  border-color: #2d6a35;
+}
+
+html:not(.light) .pwu-banner-card,
+html:not(.light) .pwu-form-card {
+  background: #0f2417;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.25);
+}
+
+html:not(.light) .pwu-badge {
+  background: #1d3a29;
+  color: #a7f3d0;
+  border-color: #2d6a35;
+}
+
+html:not(.light) .pwu-banner__headline,
+html:not(.light) .pwu-form__title,
+html:not(.light) .pwu-success__title {
+  color: #f0fdf4;
+}
+
+html:not(.light) .pwu-banner__sub,
+html:not(.light) .pwu-form__subtitle,
+html:not(.light) .pwu-success__desc {
+  color: #cbd5e1;
+}
+
+html:not(.light) .pwu-banner__icon-box {
+  background: #1d3a29;
+  color: #a7f3d0;
+}
+
+html:not(.light) .pwu-field__label {
+  color: #cbd5e1;
+}
+
+html:not(.light) .pwu-field__input,
+html:not(.light) .pwu-field__textarea {
+  background: #163321;
+  border-color: #2d5c3c;
+  color: #f0fdf4;
+}
+
+html:not(.light) .pwu-field__input:focus,
+html:not(.light) .pwu-field__textarea:focus {
+  border-color: #4ade80;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.15);
+}
+
