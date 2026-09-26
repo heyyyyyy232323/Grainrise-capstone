@@ -6,9 +6,11 @@ import App from './App.jsx'
 try {
   const savedTheme = localStorage.getItem('theme')
   if (savedTheme === 'dark') {
+    document.documentElement.classList.add('dark')
     document.documentElement.classList.remove('light')
   } else {
     document.documentElement.classList.add('light')
+    document.documentElement.classList.remove('dark')
     if (!savedTheme) {
       localStorage.setItem('theme', 'light')
     }
@@ -16,6 +18,7 @@ try {
 } catch (e) {
   // Fallback to light if storage is unavailable.
   document.documentElement.classList.add('light')
+  document.documentElement.classList.remove('dark')
 }
 
 createRoot(document.getElementById('root')).render(

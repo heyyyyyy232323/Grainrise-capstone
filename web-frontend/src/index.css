@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --bg-primary: #080f0b;
   --bg-secondary: #0f1c14;
@@ -22,9 +24,6 @@
   line-height: 1.5;
   font-weight: 400;
   
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -35,11 +34,18 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  background-color: #ffffff;
+  color: #1f2937;
+  overflow-x: hidden;
+  font-family: 'Montserrat', sans-serif;
+}
+
+html.dark body,
+html:not(.light) body {
   background: radial-gradient(circle at 50% 0%, #1e3f2d 0%, var(--bg-primary) 70%);
   background-attachment: fixed;
-  overflow-x: hidden;
-   font-family: 'Montserrat', sans-serif;
-
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 #root {
@@ -51,16 +57,19 @@ body {
   background: #ffffff;
 }
 
+html.dark .global-loading-screen,
 html:not(.light) .global-loading-screen {
   background: var(--bg-primary);
 }
 
 html.light body {
   background: #ffffff;
+  color: #1f2937;
 }
 
 html.light #root {
   background: #ffffff;
+  color: #1f2937;
 }
 
 h1, h2, h3, h4, h5, h6 {

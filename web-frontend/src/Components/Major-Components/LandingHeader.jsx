@@ -17,16 +17,34 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
     if (savedTheme) {
       return savedTheme === 'dark';
     }
-    return !document.documentElement.classList.contains('light');
+    return document.documentElement.classList.contains('dark');
   });
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    document.documentElement.classList.toggle('light', !isDarkMode);
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    }
+
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
+
+    const onStorage = (e) => {
+      if (e.key === 'theme') {
+        setIsDarkMode(e.newValue === 'dark');
+      }
+    };
+    window.addEventListener('storage', onStorage);
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('storage', onStorage);
+    };
   }, [isDarkMode]);
 
   const scrollTo = (id) => {
@@ -47,8 +65,15 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
 
   const toggleTheme = () => {
     const nextIsDark = !isDarkMode;
-    document.documentElement.classList.toggle('light', !nextIsDark);
-    localStorage.setItem('theme', nextIsDark ? 'dark' : 'light');
+    if (nextIsDark) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
     setIsDarkMode(nextIsDark);
   };
 

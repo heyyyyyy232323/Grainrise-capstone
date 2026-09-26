@@ -536,6 +536,10 @@ const UserNavbar = ({
             .documentElement
             .classList
             .add("light");
+          document
+            .documentElement
+            .classList
+            .remove("dark");
 
           setDarkModeEnabled(
             false
@@ -544,6 +548,10 @@ const UserNavbar = ({
         } else if (
           saved === "dark"
         ) {
+          document
+            .documentElement
+            .classList
+            .add("dark");
           document
             .documentElement
             .classList
@@ -558,6 +566,10 @@ const UserNavbar = ({
             .documentElement
             .classList
             .add("light");
+          document
+            .documentElement
+            .classList
+            .remove("dark");
 
           localStorage.setItem(
             "theme",
@@ -595,6 +607,10 @@ const UserNavbar = ({
             document
               .documentElement
               .classList
+              .add("dark");
+            document
+              .documentElement
+              .classList
               .remove("light");
 
             localStorage.setItem(
@@ -607,6 +623,10 @@ const UserNavbar = ({
               .documentElement
               .classList
               .add("light");
+            document
+              .documentElement
+              .classList
+              .remove("dark");
 
             localStorage.setItem(
               "theme",

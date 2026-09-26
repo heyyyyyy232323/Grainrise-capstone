@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, CheckCircle2 } from 'lucide-react';
+import LandingHeader from '../Components/Major-Components/LandingHeader';
 import LandingFooter from '../Components/Major-Components/LandingFooter';
 import shakehandsImg from '../assets/shakehands2.png';
 
@@ -40,9 +41,12 @@ export default function PartnerWithUs() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f0f7f2] dark:bg-[#07150d] text-gray-800 dark:text-gray-200 relative overflow-x-hidden font-sans">
+    <div className="min-h-screen flex flex-col bg-[#f0f7f2] dark:bg-[#07150d] text-gray-800 dark:text-gray-200 relative overflow-x-hidden font-sans transition-colors">
+      {/* ── Main GrainRise Navigation Bar with Theme Toggle ── */}
+      <LandingHeader />
+
       {/* ── Top Sub-Navigation Bar ── */}
-      <header className="bg-white dark:bg-[#0d1f14] border-b border-gray-200 dark:border-white/10 sticky top-0 z-50 w-full">
+      <div className="bg-white/95 dark:bg-[#0d1f14]/95 backdrop-blur-sm border-b border-gray-200 dark:border-white/10 w-full transition-colors">
         <div className="max-w-[1200px] mx-auto px-6 py-3 flex items-center justify-between">
           <button
             type="button"
@@ -59,7 +63,7 @@ export default function PartnerWithUs() {
             <span>Partnership Inquiry</span>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* ── Main Content Area ── */}
       <main className="flex-1 relative w-full px-4 sm:px-6 py-7 pb-16">
