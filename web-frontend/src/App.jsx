@@ -1112,6 +1112,11 @@ function App() {
             />
 
             <Route
+              path="/admin/farmers"
+              element={<Navigate to="/admin/dashboard" replace />}
+            />
+
+            <Route
               path="/admin/suppliers"
               element={<SupplierManagement />}
             />

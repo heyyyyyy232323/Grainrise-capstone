@@ -49,11 +49,6 @@ export const getUserSidebarConfig = (role = "admin") => {
           title: "MANAGEMENT",
           items: [
             {
-              label: "Farmer Management",
-              icon: Tractor,
-              path: "/admin/farmers",
-            },
-            {
               label: "Miller Management",
               icon: Truck,
               path: "/admin/suppliers",

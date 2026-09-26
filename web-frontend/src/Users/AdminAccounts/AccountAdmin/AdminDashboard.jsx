@@ -410,37 +410,6 @@ export default function AdminDashboard() {
           path:
             "/admin/retailers",
         },
-
-
-        {
-          title:
-            "Farmers",
-
-          value:
-            isLoading
-              ? "—"
-              : String(
-                  kpis
-                    ?.farmers ||
-                  0
-                ),
-
-          footer:
-            "Registered Farmer Accounts",
-
-          icon: (
-            <Wheat
-              size={18}
-              strokeWidth={2.2}
-            />
-          ),
-
-          tone:
-            "success",
-
-          path:
-            "/admin/farmers",
-        },
       ],
       [
         isLoading,
@@ -845,8 +814,8 @@ export default function AdminDashboard() {
         className="
           grid
           gap-4
-          md:grid-cols-2
-          xl:grid-cols-4
+          md:grid-cols-3
+          xl:grid-cols-3
         "
       >
         {
