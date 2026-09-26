@@ -1,4 +1,4 @@
-﻿import React, { useEffect } from "react";
+import React, { useEffect } from "react";
 import { X, FileText } from "lucide-react";
 import "./TermsModal.css";
 

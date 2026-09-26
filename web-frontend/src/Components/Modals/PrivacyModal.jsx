@@ -1,4 +1,4 @@
-﻿import React, { useEffect } from "react";
+import React, { useEffect } from "react";
 import { X, ShieldCheck } from "lucide-react";
 import "./PrivacyModal.css";
 
