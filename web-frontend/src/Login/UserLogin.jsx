@@ -1,4 +1,4 @@
-import { useNavigate, Link } from "react-router-dom";
+﻿import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import TermsModal from "../Components/Modals/TermsModal";
@@ -316,9 +316,9 @@ const UserLogin = () => {
             </form>
 
             <p className="text-center text-sm text-gray-700 mt-6">
-              Don't have an account?{" "}
-              <Link to="/register" className="text-green-700 font-semibold hover:underline">
-                Register
+              Interested in partnering with GrainRise?{" "}
+              <Link to="/partner-with-us" className="text-green-700 font-semibold hover:underline">
+                Partner with Us
               </Link>
             </p>
 

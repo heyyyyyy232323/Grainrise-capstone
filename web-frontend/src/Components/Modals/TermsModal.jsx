@@ -1,37 +1,76 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, FileText } from "lucide-react";
 
 export default function TermsModal({ isOpen, onClose }) {
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
     }
+
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  const modalJSX = (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/45 p-4 sm:p-6 backdrop-blur-[2px]"
+      className="fixed inset-0 flex items-center justify-center p-3 sm:p-6"
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: "100vw",
+        height: "100vh",
+        zIndex: 999999,
+      }}
       onClick={onClose}
     >
+      {/* Backdrop */}
       <div
-        className="w-full max-w-[640px] max-h-[90vh] bg-white rounded-2xl flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+        className="fixed inset-0 bg-black/55 backdrop-blur-xs transition-opacity"
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+        }}
+      />
+
+      <div
+        className="relative w-full max-w-[640px] bg-white rounded-2xl flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+        style={{
+          maxHeight: "calc(100vh - 3rem)",
+          height: "88vh",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 sm:p-6 pb-4 border-b border-emerald-100 shrink-0">
+        <div className="p-5 sm:p-6 pb-4 border-b border-emerald-100 shrink-0 bg-white">
           <div className="flex items-center gap-2.5 mb-2.5">
             <div className="w-9 h-9 bg-emerald-50 text-emerald-800 rounded-xl flex items-center justify-center shrink-0">
               <FileText size={20} />
             </div>
             <div className="flex items-center gap-2 flex-1">
-              <span className="text-[10px] font-bold tracking-wider text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5 uppercase">
+              <span className="text-[10.5px] font-bold tracking-wider text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5 uppercase">
                 LEGAL
               </span>
               <span className="text-xs text-gray-500">
@@ -39,7 +78,7 @@ export default function TermsModal({ isOpen, onClose }) {
               </span>
             </div>
             <button
-              className="ml-auto w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+              className="ml-auto w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
               onClick={onClose}
               aria-label="Close"
             >
@@ -53,7 +92,10 @@ export default function TermsModal({ isOpen, onClose }) {
         </div>
 
         {/* Scrollable Body */}
-        <div className="overflow-y-auto p-5 sm:p-6 flex-1 flex flex-col gap-3.5 text-xs sm:text-sm text-gray-700">
+        <div
+          className="overflow-y-auto min-h-0 p-5 sm:p-6 flex-1 flex flex-col gap-3.5 text-xs sm:text-sm text-gray-700"
+          style={{ minHeight: 0, overflowY: "auto" }}
+        >
 
           {/* Section 1 */}
           <div className="border border-dashed border-emerald-200 rounded-lg p-3.5 sm:p-4">
@@ -246,4 +288,6 @@ export default function TermsModal({ isOpen, onClose }) {
       </div>
     </div>
   );
+
+  return createPortal(modalJSX, document.body);
 }

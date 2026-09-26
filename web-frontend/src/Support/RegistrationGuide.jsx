@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -237,9 +237,9 @@ export default function RegistrationGuide() {
             </p>
             <button
               className="rg-hero-btn"
-              onClick={() => navigate('/register')}
+              onClick={() => navigate('/partner-with-us')}
             >
-              <span>Go to Registration</span>
+              <span>Partner With Us</span>
               <ArrowRight size={15} />
             </button>
           </div>
@@ -261,7 +261,7 @@ export default function RegistrationGuide() {
           </div>
         </div>
 
-        {/* Getting Started with GrainRise is Simple — 6 steps */}
+        {/* Getting Started with GrainRise is Simple â€” 6 steps */}
         <section className="support-section">
           <div className="support-section-header">
             <h2 className="support-section-title">Getting Started with GrainRise is Simple</h2>
@@ -453,7 +453,7 @@ export default function RegistrationGuide() {
             Make sure you have the information required for your role, then begin your GrainRise registration.
           </p>
           <div className="rg-cta-box__actions">
-            <button className="support-submit-btn" style={{ margin: 0 }} onClick={() => navigate('/register')}>
+            <button className="support-submit-btn" style={{ margin: 0 }} onClick={() => navigate('/partner-with-us')}>
               Go to Registration
             </button>
             <button className="support-back-link" style={{ fontSize: '13.5px' }} onClick={() => navigate('/')}>

@@ -1,4 +1,4 @@
-from django.urls import include, path
+﻿from django.urls import include, path
 
 from . import views
 from . import auth_views
@@ -57,13 +57,6 @@ urlpatterns = [
         name="user-login",
     ),
 
-    path(
-        "auth/register",
-        views.register,
-        name="generic-register",
-    ),
-
-
     # ========================================================
     # ADMIN AUTHENTICATION
     # ========================================================
@@ -76,103 +69,12 @@ urlpatterns = [
 
 
     # ========================================================
-    # RETAILER REGISTRATION
+    # REGISTRATION FUNCTIONALITY DISABLED
+    # Public self-registration for Millers/Suppliers, Retailers,
+    # and Warehouses has been removed in favor of the Partner With Us flow.
+    # The registration handlers in views.py, supplier_registration.py,
+    # and warehouse_registration.py are preserved for future use.
     # ========================================================
-
-    path(
-        "auth/retailer/send-otp",
-        views.send_retailer_otp,
-        name="retailer-send-otp",
-    ),
-
-    path(
-        "auth/retailer/verify-otp",
-        views.verify_retailer_otp,
-        name="retailer-verify-otp",
-    ),
-
-    path(
-        "auth/retailer/google-verify",
-        views.verify_retailer_google,
-        name="retailer-google-verify",
-    ),
-
-    path(
-        "auth/retailer/register",
-        views.register_retailer,
-        name="retailer-register",
-    ),
-
-
-
-    # ========================================================
-    # WAREHOUSE MANAGER REGISTRATION
-    # ========================================================
-
-    path(
-        "auth/warehouse-manager/send-otp",
-        views.send_warehouse_otp,
-        name="warehouse-manager-send-otp",
-    ),
-
-    path(
-        "auth/warehouse-manager/verify-otp",
-        views.verify_warehouse_otp,
-        name="warehouse-manager-verify-otp",
-    ),
-
-    path(
-        "auth/warehouse-manager/google-verify",
-        views.verify_warehouse_google,
-        name="warehouse-manager-google-verify",
-    ),
-
-    path(
-        "auth/warehouse-manager/extract-documents",
-        views.extract_warehouse_documents,
-        name="warehouse-manager-extract-documents",
-    ),
-
-    path(
-        "auth/warehouse-manager/register",
-        views.register_warehouse,
-        name="warehouse-manager-register",
-    ),
-
-
-    # ========================================================
-    # SUPPLIER / MILLER REGISTRATION
-    # ========================================================
-
-    path(
-        "auth/supplier/send-otp",
-        views.send_supplier_otp,
-        name="supplier-send-otp",
-    ),
-
-    path(
-        "auth/supplier/verify-otp",
-        views.verify_supplier_otp,
-        name="supplier-verify-otp",
-    ),
-
-    path(
-        "auth/supplier/google-verify",
-        views.verify_supplier_google,
-        name="supplier-google-verify",
-    ),
-
-    path(
-        "auth/supplier/extract-documents",
-        views.extract_supplier_documents,
-        name="supplier-extract-documents",
-    ),
-
-    path(
-        "auth/supplier/register",
-        views.register_supplier,
-        name="supplier-register",
-    ),
 
 
     # ========================================================
@@ -232,7 +134,7 @@ urlpatterns = [
 
 
     # ========================================================
-    # ADMIN — RETAILER MANAGEMENT
+    # ADMIN â€” RETAILER MANAGEMENT
     # ========================================================
 
     path(

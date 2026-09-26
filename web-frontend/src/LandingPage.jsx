@@ -319,7 +319,42 @@ export default function LandingPage() {
           </div>
         </AnimatedSection>
 
-        {/* ── PARTNER WITH GRAINRISE (New Figma Section) ─── */}
+        {/* ── GRAINRISE STAKEHOLDERS ─── */}
+        <AnimatedSection className="lp-stakeholders" id="stakeholders" animation="fade-up">
+          <div className="lp-stakeholders__inner">
+            <div className="lp-stakeholders__header">
+              <h2 className="lp-stakeholders__title">
+                GrainRise Stakeholders
+              </h2>
+              <p className="lp-stakeholders__sub">
+                GrainRise connects authorized millers, warehouse owners, and retailers through a coordinated rice supply chain management system.
+              </p>
+            </div>
+
+            <div className="lp-stakeholders__grid">
+              {STAKEHOLDER_CARDS.map((card, idx) => (
+                <AnimatedSection
+                  key={card.title}
+                  tag="div"
+                  animation="fade-up"
+                  delay={idx * 100}
+                  className="lp-stakeholder-card"
+                  onClick={card.action}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="lp-stakeholder-card__icon">
+                    {card.icon}
+                  </div>
+                  <h3 className="lp-stakeholder-card__title">{card.title}</h3>
+                  <p className="lp-stakeholder-card__desc">{card.desc}</p>
+                </AnimatedSection>
+              ))}
+            </div>
+          </div>
+        </AnimatedSection>
+
+        {/* ── PARTNER WITH GRAINRISE ─── */}
         <AnimatedSection className="lp-partner-cta" id="partner-cta" animation="fade-up">
           <div className="lp-partner-cta__card">
             <div className="lp-partner-cta__content">
@@ -353,54 +388,6 @@ export default function LandingPage() {
           </div>
         </AnimatedSection>
 
-        {/* ── GRAINRISE STAKEHOLDERS (New Figma Section) ─── */}
-        <AnimatedSection className="lp-stakeholders" id="stakeholders" animation="fade-up">
-          <div className="lp-stakeholders__inner">
-            <div className="lp-stakeholders__header">
-              <h2 className="lp-stakeholders__title">
-                GrainRise Stakeholders
-              </h2>
-              <p className="lp-stakeholders__sub">
-                GrainRise connects authorized millers, warehouse owners, and retailers through a coordinated rice supply chain management system.
-              </p>
-            </div>
-
-            <div className="lp-stakeholders__grid">
-              {STAKEHOLDER_CARDS.map((card, idx) => (
-                <AnimatedSection
-                  key={card.title}
-                  tag="div"
-                  animation="fade-up"
-                  delay={idx * 100}
-                  className="lp-stakeholder-card"
-                  onClick={card.action}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="lp-stakeholder-card__icon">
-                    {card.icon}
-                  </div>
-                  <h3 className="lp-stakeholder-card__title">{card.title}</h3>
-                  <p className="lp-stakeholder-card__desc">{card.desc}</p>
-                </AnimatedSection>
-              ))}
-            </div>
-
-            <div className="lp-stakeholders__footer">
-              <span className="lp-stakeholders__footer-text">
-                Already have an authorized GrainRise account?
-              </span>
-              <button
-                className="lp-stakeholders__login-btn"
-                onClick={() => navigate('/login')}
-                id="stakeholders-login-btn"
-              >
-                <LogIn size={15} strokeWidth={2} />
-                <span>Log In to GrainRise</span>
-              </button>
-            </div>
-          </div>
-        </AnimatedSection>
       </div>
 
       {/* ── TAKE GRAINRISE ANYWHERE (Slide Left & Right Parallel Split) ─── */}
