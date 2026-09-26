@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShieldCheck, HelpCircle, LogIn, Users, Moon, Sun } from 'lucide-react';
+import { ShieldCheck, HelpCircle, LogIn, Users, Moon, Sun, Menu, X } from 'lucide-react';
 import logoImg from '../../assets/Logo.png';
-import '../../LandingPage.css';
 
 const GrainRiseLogo = () => (
-  <div className="lp-nav__brand-content">
-    <img src={logoImg} alt="GrainRise Logo" className="lp-logo-img" />
+  <div className="flex items-center">
+    <img src={logoImg} alt="GrainRise Logo" className="h-8 sm:h-9 w-auto object-contain" />
   </div>
 );
 
@@ -56,83 +55,78 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
   return (
     <>
       {/* Top Green Notification Bar */}
-      <div className="lp-topbar">
-        <div className="lp-topbar__inner">
-          <div className="lp-topbar__left">
-            <ShieldCheck size={15} className="lp-topbar__icon" />
+      <div className="bg-[#00580c] dark:bg-[#0d1a11] text-white dark:text-emerald-300 text-[11px] sm:text-xs py-1 px-4 sm:px-8 border-b border-emerald-900/30">
+        <div className="max-w-[1240px] mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-1.5 font-medium">
+            <ShieldCheck size={14} className="text-emerald-200 dark:text-emerald-400" />
             <span>Official GrainRise Portal</span>
           </div>
-          <div className="lp-topbar__right" onClick={() => navigate('/contact-support')} role="button" tabIndex={0}>
-            <HelpCircle size={15} className="lp-topbar__icon" />
+          <div
+            className="flex items-center gap-1.5 font-medium cursor-pointer hover:underline text-emerald-100 dark:text-emerald-300"
+            onClick={() => navigate('/contact-support')}
+            role="button"
+            tabIndex={0}
+          >
+            <HelpCircle size={14} />
             <span>Help &amp; Support</span>
           </div>
         </div>
       </div>
 
       {/* Main Navigation Bar */}
-      <nav className={`lp-nav ${scrolled ? 'lp-nav--scrolled' : ''}`}>
-        <div className="lp-nav__inner">
-          <div className="lp-nav__brand" onClick={() => scrollTo('hero')}>
+      <nav
+        className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+          scrolled
+            ? 'bg-white/95 dark:bg-[#101d16]/95 backdrop-blur-md shadow-md border-b border-gray-200/80 dark:border-white/10 py-2.5'
+            : 'bg-white dark:bg-[#101d16] border-b border-gray-100 dark:border-white/10 py-3.5'
+        }`}
+      >
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-8 flex items-center justify-between">
+          <div className="cursor-pointer" onClick={() => scrollTo('hero')}>
             <GrainRiseLogo />
           </div>
 
-          {/* Backdrop for mobile drawer */}
-          <div
-            className={`lp-nav__backdrop ${menuOpen ? 'lp-nav__backdrop--open' : ''}`}
-            onClick={() => setMenuOpen(false)}
-          />
-
-          {/* Exact Navigation Items from Figma */}
-          <ul className={`lp-nav__links ${menuOpen ? 'lp-nav__links--open' : ''}`}>
-            {menuOpen && (
-              <li className="lp-nav__mobile-close">
-                <div className="lp-nav__brand" onClick={() => scrollTo('hero')}>
-                  <GrainRiseLogo />
-                </div>
-                <button
-                  className="lp-hamburger lp-hamburger--open"
-                  onClick={() => setMenuOpen(false)}
-                  aria-label="Close menu"
-                >
-                  <span /><span /><span />
-                </button>
-              </li>
-            )}
-            <li><button onClick={() => scrollTo('hero')}>Home</button></li>
-            <li><button onClick={() => scrollTo('stakeholders')}>Stakeholders</button></li>
-            <li><button onClick={() => scrollTo('explore-grainrise')}>Explore Grainrise</button></li>
-            <li><button onClick={() => scrollTo('help')}>Help &amp; Support</button></li>
-
-            {menuOpen && (
-              <li className="lp-nav__mobile-actions">
-                <button
-                  className="lp-nav__login-btn"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    navigate("/login");
-                  }}
-                >
-                  <LogIn size={16} />
-                  <span>Log In</span>
-                </button>
-                <button
-                  className="lp-nav__partner-btn"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    navigate('/partner-with-us');
-                  }}
-                >
-                  <Users size={15} />
-                  <span>Partner With Us</span>
-                </button>
-              </li>
-            )}
+          {/* Desktop Navigation Links */}
+          <ul className="hidden md:flex items-center gap-6 lg:gap-8">
+            <li>
+              <button
+                onClick={() => scrollTo('hero')}
+                className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+              >
+                Home
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => scrollTo('stakeholders')}
+                className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+              >
+                Stakeholders
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => scrollTo('explore-grainrise')}
+                className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+              >
+                Explore Grainrise
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => scrollTo('help')}
+                className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+              >
+                Help &amp; Support
+              </button>
+            </li>
           </ul>
 
-          <div className="lp-nav__actions">
+          {/* Desktop Actions */}
+          <div className="hidden md:flex items-center gap-3">
             <button
               type="button"
-              className="lp-nav__theme-toggle"
+              className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 dark:border-emerald-500/30 text-gray-600 dark:text-emerald-300 hover:bg-gray-100 dark:hover:bg-emerald-950/40 transition-colors cursor-pointer"
               onClick={toggleTheme}
               aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
               title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -140,7 +134,7 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
               {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
             </button>
             <button
-              className="lp-nav__login-btn"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 dark:border-white/20 text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
               id="nav-login-btn"
               onClick={() => navigate("/login")}
             >
@@ -148,21 +142,86 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
               <span>Log In</span>
             </button>
             <button
-              className="lp-nav__partner-btn"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#00580c] hover:bg-[#004509] text-white text-xs sm:text-sm font-semibold shadow-sm transition-all cursor-pointer"
               onClick={() => navigate('/partner-with-us')}
             >
               <Users size={15} />
               <span>Partner With Us</span>
             </button>
+          </div>
+
+          {/* Mobile Actions (Theme toggle + Hamburger) */}
+          <div className="flex md:hidden items-center gap-2">
             <button
-              className={`lp-hamburger ${menuOpen ? 'lp-hamburger--open' : ''}`}
-              onClick={() => setMenuOpen(o => !o)}
+              type="button"
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-emerald-500/30 text-gray-600 dark:text-emerald-300"
+              onClick={toggleTheme}
+              aria-label="Toggle theme"
+            >
+              {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+            <button
+              className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 dark:border-white/20 text-gray-700 dark:text-white"
+              onClick={() => setMenuOpen(!menuOpen)}
               aria-label="Toggle menu"
             >
-              <span /><span /><span />
+              {menuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
         </div>
+
+        {/* Mobile Dropdown / Drawer */}
+        {menuOpen && (
+          <div className="md:hidden border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#101d16] px-5 py-4 flex flex-col gap-3 shadow-xl">
+            <button
+              onClick={() => scrollTo('hero')}
+              className="text-left text-sm font-medium py-2 text-gray-800 dark:text-gray-200 hover:text-emerald-700"
+            >
+              Home
+            </button>
+            <button
+              onClick={() => scrollTo('stakeholders')}
+              className="text-left text-sm font-medium py-2 text-gray-800 dark:text-gray-200 hover:text-emerald-700"
+            >
+              Stakeholders
+            </button>
+            <button
+              onClick={() => scrollTo('explore-grainrise')}
+              className="text-left text-sm font-medium py-2 text-gray-800 dark:text-gray-200 hover:text-emerald-700"
+            >
+              Explore Grainrise
+            </button>
+            <button
+              onClick={() => scrollTo('help')}
+              className="text-left text-sm font-medium py-2 text-gray-800 dark:text-gray-200 hover:text-emerald-700"
+            >
+              Help &amp; Support
+            </button>
+
+            <div className="flex flex-col gap-2 pt-2 border-t border-gray-100 dark:border-white/10">
+              <button
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-lg border border-gray-300 dark:border-white/20 text-sm font-semibold text-gray-800 dark:text-white"
+                onClick={() => {
+                  setMenuOpen(false);
+                  navigate("/login");
+                }}
+              >
+                <LogIn size={16} />
+                <span>Log In</span>
+              </button>
+              <button
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#00580c] text-white text-sm font-semibold"
+                onClick={() => {
+                  setMenuOpen(false);
+                  navigate('/partner-with-us');
+                }}
+              >
+                <Users size={15} />
+                <span>Partner With Us</span>
+              </button>
+            </div>
+          </div>
+        )}
       </nav>
     </>
   );

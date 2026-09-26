@@ -9,8 +9,6 @@ import useFormValidation from "../Components/hooks/useFormValidation";
 import TermsModal from "../Components/Modals/TermsModal";
 import PrivacyModal from "../Components/Modals/PrivacyModal";
 
-import "./ForgotPassword.css";
-
 // ============================================================
 // CONSTANTS
 // ============================================================
@@ -42,9 +40,9 @@ const getStrengthLevel = (pw) => {
 };
 
 const getStrengthLabel = (score) => {
-  if (score <= 2) return { label: "Weak", cls: "fp-strength-weak" };
-  if (score <= 4) return { label: "Medium", cls: "fp-strength-medium" };
-  return { label: "Strong", cls: "fp-strength-strong" };
+  if (score <= 2) return { label: "Weak", barCls: "bg-red-500", textCls: "text-red-500" };
+  if (score <= 4) return { label: "Medium", barCls: "bg-amber-500", textCls: "text-amber-600" };
+  return { label: "Strong", barCls: "bg-emerald-600", textCls: "text-emerald-600" };
 };
 
 // ============================================================
@@ -113,7 +111,7 @@ const ForgotPassword = () => {
 
   // ── Strength ─────────────────────────────────────────────
   const strengthScore = getStrengthLevel(newPassword);
-  const { label: strengthLabel, cls: strengthCls } =
+  const { label: strengthLabel, barCls: strengthBarCls, textCls: strengthTextCls } =
     getStrengthLabel(strengthScore);
   const criteria = getStrengthCriteria(newPassword);
 
@@ -300,43 +298,47 @@ const ForgotPassword = () => {
   // ────────────────────────────────────────────────────────────
 
   return (
-    <div className="fp-root">
+    <div className="relative min-h-screen w-full flex flex-col justify-between overflow-x-hidden bg-gradient-to-br from-[#e8f5e9] via-[#f5faf5] to-[#bcead1] dark:from-[#07150d] dark:via-[#0c2416] dark:to-[#0f2d1c]">
       {/* Background */}
       <div
-        className="fp-bg"
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat opacity-40 mix-blend-multiply dark:opacity-20 pointer-events-none z-0"
         style={{ backgroundImage: `url(${backgroundImage})` }}
       />
 
       {/* Main card area */}
-      <div className="fp-content">
-        <div className="fp-card">
+      <div className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-10">
+        <div className="w-full max-w-[440px] bg-white dark:bg-[#111c18] rounded-2xl shadow-xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-9 flex flex-col items-center">
 
           {/* Logo */}
-          <div className="fp-logo-wrap">
-            <img src={Logo} alt="GrainRise" className="fp-logo" />
+          <div className="flex items-center justify-center mb-5">
+            <img src={Logo} alt="GrainRise" className="h-12 w-auto object-contain" />
           </div>
 
           {/* ── STEP 1: ENTER EMAIL ────────────────────────── */}
           {step === 1 && (
             <>
-              <h1 className="fp-title">
-                <span className="fp-title-highlight">Forgot Password</span>
+              <h1 className="text-[22px] font-bold text-gray-900 dark:text-white text-center mb-2 leading-tight font-['Outfit']">
+                Forgot Password
               </h1>
 
-              <p className="fp-subtitle">
+              <p className="text-xs sm:text-[13px] text-gray-500 dark:text-gray-400 text-center mb-6 leading-relaxed max-w-[360px]">
                 Enter your registered email address and we&apos;ll send you a
                 verification code to reset your password.
               </p>
 
-              <form onSubmit={handleSendOtp} className="fp-form">
-                <div className="fp-field">
-                  <label className="fp-label" htmlFor="fp-email">
-                    Email Address <span className="fp-required">*</span>
+              <form onSubmit={handleSendOtp} className="w-full flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5 w-full">
+                  <label className="text-[13px] font-medium text-gray-700 dark:text-gray-300" htmlFor="fp-email">
+                    Email Address <span className="text-red-500">*</span>
                   </label>
                   <input
                     id="fp-email"
                     type="email"
-                    className={`fp-input ${emailError ? "fp-input-error" : ""}`}
+                    className={`w-full px-3.5 py-2.5 text-sm border rounded-lg bg-white dark:bg-[#182820] text-gray-900 dark:text-white outline-none transition-all ${
+                      emailError
+                        ? "border-red-500 focus:ring-2 focus:ring-red-500/20"
+                        : "border-gray-300 dark:border-white/20 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                    }`}
                     placeholder="youremail@example.com"
                     value={email}
                     onChange={(e) => {
@@ -347,23 +349,23 @@ const ForgotPassword = () => {
                     autoComplete="email"
                   />
                   {emailError && (
-                    <p className="fp-error-msg">{emailError}</p>
+                    <p className="text-xs text-red-500 mt-0.5">{emailError}</p>
                   )}
                 </div>
 
                 <button
                   id="fp-send-otp-btn"
                   type="submit"
-                  className="fp-btn-green"
+                  className="w-full bg-[#0d6e38] hover:bg-[#0b592d] text-white text-sm font-semibold rounded-full py-3 px-5 transition-colors shadow-sm disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
                   disabled={isSending}
                 >
                   {isSending ? "Sending..." : "Send Verification Code"}
                 </button>
               </form>
 
-              <p className="fp-back-link">
+              <p className="text-[13px] text-gray-500 dark:text-gray-400 text-center mt-5 mb-0">
                 Remember your password?{" "}
-                <Link to="/login" className="fp-link">
+                <Link to="/login" className="text-emerald-700 dark:text-emerald-400 font-semibold underline hover:text-emerald-800">
                   Back to Login
                 </Link>
               </p>
@@ -373,21 +375,23 @@ const ForgotPassword = () => {
           {/* ── STEP 2: VERIFY OTP ─────────────────────────── */}
           {step === 2 && (
             <>
-              <h1 className="fp-title fp-title-plain">Verify Your Email</h1>
+              <h1 className="text-[22px] font-bold text-gray-900 dark:text-white text-center mb-2 leading-tight font-['Outfit']">
+                Verify Your Email
+              </h1>
 
-              <p className="fp-subtitle">
+              <p className="text-xs sm:text-[13px] text-gray-500 dark:text-gray-400 text-center mb-4 leading-relaxed max-w-[360px]">
                 Enter the 6-digit verification code sent to your registered email address.
               </p>
 
               {/* Email pill */}
-              <div className="fp-email-pill">
+              <div className="w-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 rounded-lg py-2.5 px-3.5 text-xs sm:text-[13px] text-center mb-4">
                 Code sent to{" "}
                 <strong>{maskEmail(email.trim().toLowerCase())}</strong>
               </div>
 
-              <form onSubmit={handleVerifyOtp} className="fp-form">
+              <form onSubmit={handleVerifyOtp} className="w-full flex flex-col gap-4">
                 {/* OTP boxes */}
-                <div className="fp-otp-row" onPaste={handleOtpPaste}>
+                <div className="flex justify-between gap-2 w-full my-2" onPaste={handleOtpPaste}>
                   {otp.map((digit, index) => (
                     <input
                       key={index}
@@ -396,7 +400,11 @@ const ForgotPassword = () => {
                       type="text"
                       inputMode="numeric"
                       maxLength={1}
-                      className={`fp-otp-box ${otpError ? "fp-otp-box-error" : ""}`}
+                      className={`w-10 sm:w-12 h-12 sm:h-14 text-center text-lg sm:text-xl font-bold rounded-xl border-2 outline-none transition-all bg-white dark:bg-[#182820] text-gray-900 dark:text-white ${
+                        otpError
+                          ? "border-red-500 focus:ring-2 focus:ring-red-500/20"
+                          : "border-gray-300 dark:border-white/20 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                      }`}
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(index, e)}
@@ -405,23 +413,25 @@ const ForgotPassword = () => {
                 </div>
 
                 {otpError && (
-                  <p className="fp-error-msg fp-error-center">{otpError}</p>
+                  <p className="text-xs text-red-500 text-center">{otpError}</p>
                 )}
 
                 {/* Timer / resend */}
-                <div className="fp-resend-row">
+                <div className="flex flex-col items-center gap-1 my-1">
                   {timer > 0 ? (
-                    <p className="fp-timer-text">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       Resend available in{" "}
-                      <span className="fp-timer-value">{formattedTimer}</span>
+                      <span className="font-semibold text-emerald-700 dark:text-emerald-400">{formattedTimer}</span>
                     </p>
                   ) : null}
 
-                  <p className="fp-resend-text">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     Don&apos;t have the code?{" "}
                     <button
                       type="button"
-                      className={`fp-resend-btn ${timer > 0 ? "fp-resend-disabled" : ""}`}
+                      className={`font-semibold ml-1 underline cursor-pointer ${
+                        timer > 0 ? "text-gray-400 cursor-not-allowed no-underline" : "text-emerald-700 dark:text-emerald-400 hover:text-emerald-800"
+                      }`}
                       onClick={handleResendOtp}
                       disabled={timer > 0 || isResending}
                     >
@@ -433,7 +443,7 @@ const ForgotPassword = () => {
                 <button
                   id="fp-verify-otp-btn"
                   type="submit"
-                  className="fp-btn-green"
+                  className="w-full bg-[#0d6e38] hover:bg-[#0b592d] text-white text-sm font-semibold rounded-full py-3 px-5 transition-colors shadow-sm disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
                   disabled={isVerifying}
                 >
                   {isVerifying ? "Verifying..." : "Send Verification Code"}
@@ -441,7 +451,7 @@ const ForgotPassword = () => {
 
                 <button
                   type="button"
-                  className="fp-back-btn"
+                  className="w-full bg-white dark:bg-[#182820] hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium border border-gray-300 dark:border-white/20 rounded-full py-2.5 px-5 transition-colors cursor-pointer"
                   onClick={() => setStep(1)}
                 >
                   ← Back
@@ -453,23 +463,25 @@ const ForgotPassword = () => {
           {/* ── STEP 3: CREATE NEW PASSWORD ─────────────────── */}
           {step === 3 && !resetSuccess && (
             <>
-              <h1 className="fp-title fp-title-plain">Create New Password</h1>
+              <h1 className="text-[22px] font-bold text-gray-900 dark:text-white text-center mb-2 leading-tight font-['Outfit']">
+                Create New Password
+              </h1>
 
-              <p className="fp-subtitle">
+              <p className="text-xs sm:text-[13px] text-gray-500 dark:text-gray-400 text-center mb-5 leading-relaxed max-w-[360px]">
                 Create a strong new password for your GrainRise account.
               </p>
 
-              <form onSubmit={handleResetPassword} className="fp-form">
+              <form onSubmit={handleResetPassword} className="w-full flex flex-col gap-4">
                 {/* New Password */}
-                <div className="fp-field">
-                  <label className="fp-label" htmlFor="fp-new-pw">
-                    New Password <span className="fp-required">*</span>
+                <div className="flex flex-col gap-1.5 w-full">
+                  <label className="text-[13px] font-medium text-gray-700 dark:text-gray-300" htmlFor="fp-new-pw">
+                    New Password <span className="text-red-500">*</span>
                   </label>
-                  <div className="fp-input-wrap">
+                  <div className="relative w-full">
                     <input
                       id="fp-new-pw"
                       type={showNewPassword ? "text" : "password"}
-                      className="fp-input"
+                      className="w-full px-3.5 py-2.5 pr-10 text-sm border border-gray-300 dark:border-white/20 rounded-lg bg-white dark:bg-[#182820] text-gray-900 dark:text-white outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20 transition-all"
                       placeholder="Enter new password"
                       value={newPassword}
                       onChange={(e) => {
@@ -480,7 +492,7 @@ const ForgotPassword = () => {
                     />
                     <button
                       type="button"
-                      className="fp-eye-btn"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
                       onClick={() => setShowNewPassword((p) => !p)}
                       tabIndex={-1}
                     >
@@ -491,34 +503,34 @@ const ForgotPassword = () => {
                   {/* Strength bar */}
                   {newPassword && (
                     <>
-                      <div className="fp-strength-bar-wrap">
+                      <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-1.5">
                         <div
-                          className={`fp-strength-bar ${strengthCls}`}
+                          className={`h-full rounded-full transition-all duration-300 ${strengthBarCls}`}
                           style={{ width: `${(strengthScore / 5) * 100}%` }}
                         />
                       </div>
-                      <p className={`fp-strength-label ${strengthCls}-text`}>
+                      <p className={`text-[11px] font-semibold text-right mt-0.5 ${strengthTextCls}`}>
                         {strengthLabel}
                       </p>
                     </>
                   )}
 
                   {/* Criteria checklist */}
-                  <ul className="fp-criteria-list">
+                  <ul className="flex flex-col gap-1 my-1">
                     {criteria.map((c) => (
-                      <li key={c.label} className="fp-criteria-item">
+                      <li key={c.label} className="flex items-center gap-1.5 text-xs">
                         {c.met ? (
                           <CheckCircle2
                             size={14}
-                            className="fp-criteria-icon fp-criteria-met"
+                            className="text-emerald-600 shrink-0"
                           />
                         ) : (
                           <Circle
                             size={14}
-                            className="fp-criteria-icon fp-criteria-unmet"
+                            className="text-gray-300 dark:text-gray-600 shrink-0"
                           />
                         )}
-                        <span className={c.met ? "fp-criteria-met-text" : "fp-criteria-unmet-text"}>
+                        <span className={c.met ? "text-gray-700 dark:text-gray-300" : "text-gray-400 dark:text-gray-500"}>
                           {c.label}
                         </span>
                       </li>
@@ -527,18 +539,18 @@ const ForgotPassword = () => {
                 </div>
 
                 {/* Confirm Password */}
-                <div className="fp-field">
-                  <label className="fp-label" htmlFor="fp-confirm-pw">
-                    Confirm New Password <span className="fp-required">*</span>
+                <div className="flex flex-col gap-1.5 w-full">
+                  <label className="text-[13px] font-medium text-gray-700 dark:text-gray-300" htmlFor="fp-confirm-pw">
+                    Confirm New Password <span className="text-red-500">*</span>
                   </label>
-                  <div className="fp-input-wrap">
+                  <div className="relative w-full">
                     <input
                       id="fp-confirm-pw"
                       type={showConfirmPassword ? "text" : "password"}
-                      className={`fp-input ${
+                      className={`w-full px-3.5 py-2.5 pr-10 text-sm border rounded-lg bg-white dark:bg-[#182820] text-gray-900 dark:text-white outline-none transition-all ${
                         confirmPassword && confirmPassword !== newPassword
-                          ? "fp-input-error"
-                          : ""
+                          ? "border-red-500 focus:ring-2 focus:ring-red-500/20"
+                          : "border-gray-300 dark:border-white/20 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
                       }`}
                       placeholder="Re-enter your password"
                       value={confirmPassword}
@@ -550,7 +562,7 @@ const ForgotPassword = () => {
                     />
                     <button
                       type="button"
-                      className="fp-eye-btn"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
                       onClick={() => setShowConfirmPassword((p) => !p)}
                       tabIndex={-1}
                     >
@@ -559,21 +571,21 @@ const ForgotPassword = () => {
                   </div>
 
                   {confirmPassword && confirmPassword !== newPassword && (
-                    <p className="fp-error-msg">Passwords do not match.</p>
+                    <p className="text-xs text-red-500">Passwords do not match.</p>
                   )}
                   {confirmPassword && confirmPassword === newPassword && (
-                    <p className="fp-match-text">Password Match</p>
+                    <p className="text-xs text-emerald-600 font-medium">Password Match</p>
                   )}
                 </div>
 
                 {passwordError && (
-                  <p className="fp-error-msg">{passwordError}</p>
+                  <p className="text-xs text-red-500">{passwordError}</p>
                 )}
 
                 <button
                   id="fp-reset-btn"
                   type="submit"
-                  className="fp-btn-green"
+                  className="w-full bg-[#0d6e38] hover:bg-[#0b592d] text-white text-sm font-semibold rounded-full py-3 px-5 transition-colors shadow-sm disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
                   disabled={isResetting}
                 >
                   {isResetting ? "Resetting..." : "Reset Password"}
@@ -584,10 +596,10 @@ const ForgotPassword = () => {
 
           {/* ── SUCCESS ─────────────────────────────────────── */}
           {resetSuccess && (
-            <div className="fp-success-wrap">
-              <CheckCircle2 size={52} className="fp-success-icon" />
-              <h2 className="fp-success-title">Password Reset!</h2>
-              <p className="fp-success-msg">
+            <div className="flex flex-col items-center text-center py-6">
+              <CheckCircle2 size={52} className="text-emerald-600 mb-4" />
+              <h2 className="text-[22px] font-bold text-gray-900 dark:text-white mb-2 font-['Outfit']">Password Reset!</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-[320px] leading-relaxed">
                 Your password has been reset successfully. Redirecting to login…
               </p>
             </div>
@@ -597,27 +609,27 @@ const ForgotPassword = () => {
       </div>
 
       {/* Footer */}
-      <footer className="fp-footer">
+      <footer className="relative z-10 w-full flex flex-col sm:flex-row items-center justify-between px-6 sm:px-8 py-4 text-xs text-gray-500 dark:text-gray-400 bg-white/70 dark:bg-[#0f1c14]/80 backdrop-blur-md border-t border-gray-200/80 dark:border-white/10 gap-3">
         <span>© 2026 GrainRise. All rights reserved.</span>
 
-        <div className="fp-footer-links">
+        <div className="flex items-center gap-2">
           <button
-            className="fp-footer-link"
+            className="hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors cursor-pointer"
             onClick={() => setIsPrivacyOpen(true)}
           >
             Privacy Policy
           </button>
-          <span className="fp-footer-sep">|</span>
+          <span className="text-gray-300 dark:text-gray-600">|</span>
           <button
-            className="fp-footer-link"
+            className="hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors cursor-pointer"
             onClick={() => setIsTermsOpen(true)}
           >
             Terms of Service
           </button>
-          <span className="fp-footer-sep">|</span>
-          <a href="/contact-support" className="fp-footer-link">
+          <span className="text-gray-300 dark:text-gray-600">|</span>
+          <Link to="/contact-support" className="hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors">
             Contact Support
-          </a>
+          </Link>
         </div>
       </footer>
 
