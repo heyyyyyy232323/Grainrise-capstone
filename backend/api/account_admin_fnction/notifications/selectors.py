@@ -45,6 +45,15 @@ def _row_to_dict(cursor):
 
 
 # ============================================================
+def _table_exists(table_name):
+    normalized_name = str(table_name or "").strip()
+    if not normalized_name:
+        return False
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT to_regclass(%s)", [f"public.{normalized_name}"])
+        row = cursor.fetchone()
+    return bool(row and row[0])
+
 # LIST ADMIN NOTIFICATIONS
 # ============================================================
 
@@ -52,6 +61,8 @@ def list_admin_notifications(
     admin_id,
     limit=30,
 ):
+    if not _table_exists("admin_notifications"):
+        return []
     """
     Return Account Admin notifications.
 
@@ -147,6 +158,8 @@ def get_admin_notification(
     admin_id,
     notification_id,
 ):
+    if not _table_exists("admin_notifications"):
+        return None
     """
     Return one notification with the authenticated
     admin's own read state.
@@ -218,6 +231,8 @@ def get_admin_notification(
 def get_admin_unread_notification_count(
     admin_id,
 ):
+    if not _table_exists("admin_notifications"):
+        return 0
     """
     Count notifications not yet read by this admin.
     """

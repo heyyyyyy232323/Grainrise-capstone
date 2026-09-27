@@ -73,11 +73,7 @@ export const getUserSidebarConfig = (role = "admin") => {
               icon: Mail,
               path: "/admin/email-users",
             },
-            {
-              label: "Partner With Us",
-              icon: Users,
-              path: "/admin/partner-with-us",
-            },
+
             {
               label: "News & Updates",
               icon: Newspaper,

@@ -64,3 +64,97 @@ class Alert(models.Model):
 
     def __str__(self):
         return f"{self.alert_type} for Silo {self.silo_id}"
+
+import uuid
+
+
+class PartnershipInquiry(models.Model):
+    """
+    Dedicated model for public Partnership Inquiries submitted via the Partner With Us form.
+
+    Inquiries are routed to the appropriate Management module based on partner_role:
+      - miller   -> Miller Management (To Review tab)
+      - warehouse -> Warehouse Management (To Review tab)
+      - retailer  -> Retailer Management (To Review tab)
+
+    Statuses mirror the Management module workflow:
+      - to_review : newly submitted, awaiting admin review
+      - active    : inquiry acknowledged / applicant being onboarded
+      - inactive  : archived / closed
+    """
+
+    class PartnerRole(models.TextChoices):
+        MILLER = "miller", "Miller / Supplier"
+        WAREHOUSE = "warehouse", "Warehouse Manager"
+        RETAILER = "retailer", "Retailer"
+
+    class Status(models.TextChoices):
+        TO_REVIEW = "to_review", "To Review"
+        ACTIVE = "active", "Active"
+        INACTIVE = "inactive", "Inactive"
+
+    partnership_inquiry_id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+
+    name = models.CharField(max_length=255)
+    email = models.EmailField(max_length=255)
+    organization_company = models.CharField(max_length=255)
+    partner_role = models.CharField(
+        max_length=50,
+        choices=PartnerRole.choices,
+        default=PartnerRole.RETAILER,
+    )
+    contact_number = models.CharField(max_length=20)
+    message = models.TextField(max_length=2000)
+
+    # Relative path in MEDIA_ROOT: partnership_documents/<uuid>/<safe_filename>
+    business_verification_document = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+    )
+
+    status = models.CharField(
+        max_length=50,
+        choices=Status.choices,
+        default=Status.TO_REVIEW,
+    )
+
+    email_verified = models.BooleanField(default=False)
+
+    # SHA-256 hash of raw verification token
+    verification_token_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        db_index=True,
+    )
+
+    verification_expires_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
+    verified_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
+    resend_count = models.PositiveSmallIntegerField(default=0)
+    last_resend_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "partnership_inquiries"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.name} ({self.organization_company}) - {self.partner_role} - {self.status}"

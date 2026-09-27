@@ -80,7 +80,7 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
   return (
     <>
       {/* Top Green Notification Bar */}
-      <div className="bg-[#00580c] dark:bg-[#0d1a11] text-white dark:text-emerald-300 text-[11px] sm:text-xs py-1 px-4 sm:px-8 border-b border-emerald-900/30">
+      <div className="bg-[#00580c] dark:bg-[#0d1a11] text-white dark:text-emerald-300 text-[11px] sm:text-xs py-1 px-6 sm:px-12 border-b border-emerald-900/30">
         <div className="max-w-[1240px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-1.5 font-medium">
             <ShieldCheck size={14} className="text-emerald-200 dark:text-emerald-400" />
@@ -100,13 +100,13 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
 
       {/* Main Navigation Bar */}
       <nav
-        className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+        className={`sticky top-0 z-50 w-full transition-all duration-300 px-6 sm:px-12 ${
           scrolled
             ? 'bg-white/95 dark:bg-[#101d16]/95 backdrop-blur-md shadow-md border-b border-gray-200/80 dark:border-white/10 py-2.5'
             : 'bg-white dark:bg-[#101d16] border-b border-gray-100 dark:border-white/10 py-3.5'
         }`}
       >
-        <div className="max-w-[1240px] mx-auto px-4 sm:px-8 flex items-center justify-between">
+        <div className="max-w-[1240px] mx-auto flex items-center justify-between">
           <div className="cursor-pointer" onClick={() => scrollTo('hero')}>
             <GrainRiseLogo />
           </div>
@@ -197,7 +197,7 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
 
         {/* Mobile Dropdown / Drawer */}
         {menuOpen && (
-          <div className="md:hidden border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#101d16] px-5 py-4 flex flex-col gap-3 shadow-xl">
+          <div className="md:hidden border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#101d16] -mx-6 sm:-mx-12 px-6 sm:px-12 py-4 flex flex-col gap-3 shadow-xl">
             <button
               onClick={() => scrollTo('hero')}
               className="text-left text-sm font-medium py-2 text-gray-800 dark:text-gray-200 hover:text-emerald-700"

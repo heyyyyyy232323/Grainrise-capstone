@@ -178,6 +178,28 @@ def list_retailers(
         )
     )
 
+    inquiry_rows = []
+    if tab == TAB_TO_REVIEW:
+        from ...models import PartnershipInquiry
+        inquiries = PartnershipInquiry.objects.filter(
+            partner_role="retailer",
+            status=PartnershipInquiry.Status.TO_REVIEW,
+        ).order_by("-created_at")
+
+        for inq in inquiries:
+            inquiry_rows.append({
+                "id": str(inq.partnership_inquiry_id),
+                "retailer_name": inq.name,
+                "email": inq.email,
+                "contact_number": inq.contact_number,
+                "username": None,
+                "status": "to_review",
+                "created_at": inq.created_at,
+                "updated_at": inq.updated_at,
+                "archive_reason": None,
+                "archived_at": None,
+            })
+
     has_archive_reasons = (
         _table_exists(
             "retailer_archive_reasons"
@@ -311,9 +333,7 @@ def list_retailers(
             ],
         )
 
-        return _rows_to_dicts(
-            cursor
-        )
+        return inquiry_rows + _rows_to_dicts(cursor)
 
 
 # ============================================================
@@ -321,6 +341,11 @@ def list_retailers(
 # ============================================================
 
 def get_retailer_status_counts():
+    from ...models import PartnershipInquiry
+    inquiry_to_review_count = PartnershipInquiry.objects.filter(
+        partner_role="retailer",
+        status=PartnershipInquiry.Status.TO_REVIEW,
+    ).count()
     """
     Return Retailer Management tab counts.
     """
@@ -373,11 +398,13 @@ def get_retailer_status_counts():
             cursor
         )
 
-    return row or {
+    counts = row or {
         "to_review": 0,
         "active": 0,
         "inactive": 0,
     }
+    counts["to_review"] = int(counts.get("to_review") or 0) + inquiry_to_review_count
+    return counts
 
 
 # ============================================================
@@ -387,6 +414,42 @@ def get_retailer_status_counts():
 def get_retailer_details(
     user_id,
 ):
+    from ...models import PartnershipInquiry
+    inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    if inquiry:
+        name_parts = str(inquiry.name or "").strip().split()
+        first_name = name_parts[0] if name_parts else "Applicant"
+        last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
+        return {
+            "user_id": str(inquiry.partnership_inquiry_id),
+            "first_name": first_name,
+            "middle_initial": None,
+            "last_name": last_name,
+            "suffix": None,
+            "gender": None,
+            "province": None,
+            "municipality": None,
+            "postal_code": None,
+            "barangay": None,
+            "street_address": None,
+            "email": inquiry.email,
+            "contact_number": inquiry.contact_number,
+            "username": None,
+            "user_role": "retailer",
+            "status": inquiry.status,
+            "created_at": inquiry.created_at,
+            "updated_at": inquiry.updated_at,
+            "retailer_document_id": None,
+            "barangay_permit": None,
+            "valid_id": inquiry.business_verification_document,
+            "documents_created_at": inquiry.created_at,
+            "documents_updated_at": inquiry.updated_at,
+        }
+
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return None
     """
     Complete Retailer details used by:
 
@@ -497,7 +560,7 @@ def get_retailer_details(
             LIMIT 1
             """,
             [
-                user_id,
+                numeric_user_id,
                 RETAILER_ROLE,
             ],
         )
@@ -563,7 +626,7 @@ def get_retailer_account_summary(
             LIMIT 1
             """,
             [
-                user_id,
+                numeric_user_id,
                 RETAILER_ROLE,
             ],
         )
@@ -604,7 +667,7 @@ def retailer_exists(
             )
             """,
             [
-                user_id,
+                numeric_user_id,
                 RETAILER_ROLE,
             ],
         )

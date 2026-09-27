@@ -5,6 +5,8 @@ import LandingPage from "./LandingPage";
 import Login from "./Login/UserLogin";
 import AdminLogin from "./Login/AdminLogin";
 import ForgotPassword from "./Login/ForgotPassword";
+import ChangePassword from "./Login/ChangePassword";
+import CompleteProfile from "./Login/CompleteProfile";
 import DashboardPreview from "./DashboardPreview";
 
 import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout";
@@ -235,7 +237,6 @@ import WarehouseInfo from "./Users/AdminAccounts/AccountAdmin/WarehouseInfo";
 
 import RetailerManagement from "./Users/AdminAccounts/AccountAdmin/RetailerManagement";
 import EmailUsers from "./Users/AdminAccounts/AccountAdmin/EmailUsers";
-import AdminPartnerWithUs from "./Users/AdminAccounts/AccountAdmin/AdminPartnerWithUs";
 import AdminNewsUpdates from "./Users/AdminAccounts/AccountAdmin/AdminNewsUpdates";
 
 
@@ -278,6 +279,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/change-password" element={<ChangePassword />} />
+        <Route path="/complete-profile" element={<CompleteProfile />} />
 
 
 
@@ -1146,10 +1149,7 @@ function App() {
               element={<EmailUsers />}
             />
 
-            <Route
-              path="/admin/partner-with-us"
-              element={<AdminPartnerWithUs />}
-            />
+
 
             <Route
               path="/admin/news-updates"

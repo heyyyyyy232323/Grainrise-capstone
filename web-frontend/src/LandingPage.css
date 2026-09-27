@@ -1552,20 +1552,23 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   background: transparent;
   padding: 20px clamp(16px, 3vw, 40px) 90px;
   z-index: 1;
+  display: flex;
+  justify-content: center;
 }
 
 .lp-partner-cta__card {
-  max-width: min(1560px, 94vw);
+  max-width: min(1220px, 94vw);
+  width: 100%;
   margin: 0 auto;
   background: #ffffff;
   border-radius: 20px;
   border: 1px solid rgba(0, 88, 12, 0.12);
   box-shadow: 0 4px 20px rgba(0, 88, 12, 0.04);
-  padding: clamp(36px, 3.5vw, 56px) clamp(32px, 4vw, 68px);
+  padding: clamp(36px, 3.5vw, 52px) clamp(32px, 4vw, 64px);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 36px;
+  gap: clamp(36px, 4vw, 64px);
   overflow: hidden;
   transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
@@ -1576,7 +1579,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 
 .lp-partner-cta__content {
   flex: 1;
-  max-width: 720px;
+  max-width: 620px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -1641,7 +1644,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 
 .lp-partner-cta__img-wrap {
   flex-shrink: 0;
-  max-width: 460px;
+  max-width: 440px;
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -1650,7 +1653,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 .lp-partner-cta__img {
   width: 100%;
   height: auto;
-  max-height: 280px;
+  max-height: 270px;
   object-fit: contain;
   display: block;
 }

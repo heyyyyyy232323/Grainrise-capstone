@@ -1,8 +1,9 @@
-﻿from django.urls import include, path
+from django.urls import include, path
 
 from . import views
 from . import auth_views
 from .admin_auth import admin_views
+from . import partnership_inquiry
 
 
 urlpatterns = [
@@ -57,6 +58,24 @@ urlpatterns = [
         name="user-login",
     ),
 
+    path(
+        "auth/change-temporary-password",
+        auth_views.change_temporary_password,
+        name="change-temporary-password",
+    ),
+
+    path(
+        "auth/profile-status",
+        auth_views.get_profile_status,
+        name="auth-profile-status",
+    ),
+
+    path(
+        "auth/complete-profile",
+        auth_views.complete_profile,
+        name="auth-complete-profile",
+    ),
+
     # ========================================================
     # ADMIN AUTHENTICATION
     # ========================================================
@@ -91,18 +110,6 @@ urlpatterns = [
     # ========================================================
     # MILLER MANAGER FUNCTIONS
     # ========================================================
-    #
-    # Current Miller modules:
-    #
-    # /api/miller/contracts/
-    #
-    # All Miller Contracts endpoints are protected by the
-    # Miller JWT guard and resolve the supplier_profile_id
-    # from the authenticated Miller Manager account.
-    #
-    # Never use a supplier_profile_id sent by the frontend as
-    # ownership authority.
-    # ========================================================
 
     path(
         "miller/",
@@ -113,19 +120,6 @@ urlpatterns = [
     # ========================================================
     # CENTRALIZED NEWS & UPDATES
     # ========================================================
-    #
-    # Shared by:
-    #
-    # miller_manager
-    # warehouse_manager
-    # retailer
-    #
-    # Employees are rejected by the News authentication guard.
-    #
-    # Final prefix:
-    #
-    # /api/news/
-    # ========================================================
 
     path(
         "news/",
@@ -134,7 +128,7 @@ urlpatterns = [
 
 
     # ========================================================
-    # ADMIN â€” RETAILER MANAGEMENT
+    # ADMIN – RETAILER MANAGEMENT
     # ========================================================
 
     path(
@@ -211,4 +205,55 @@ urlpatterns = [
         views.forgot_password_reset,
         name="forgot-password-reset",
     ),
-]
+
+    # ========================================================
+    # PARTNERSHIP INQUIRIES (PUBLIC)
+    # ========================================================
+    path(
+        "partnership-inquiries/",
+        partnership_inquiry.submit_partnership_inquiry,
+        name="partnership-inquiry-submit",
+    ),
+    path(
+        "partnership-inquiries/verify-email/<str:token>/",
+        partnership_inquiry.verify_partnership_email,
+        name="partnership-inquiry-verify-email",
+    ),
+    path(
+        "partnership-inquiries/resend-verification/",
+        partnership_inquiry.resend_partnership_verification,
+        name="partnership-inquiry-resend-verification",
+    ),
+
+    # ========================================================
+    # PARTNERSHIP INQUIRIES (ADMIN — by role)
+    # GET /api/admin/partnership-inquiries/?role=miller&tab=to-review
+    # GET /api/admin/partnership-inquiries/?role=warehouse&tab=active
+    # GET /api/admin/partnership-inquiries/?role=retailer&tab=inactive
+    # PATCH/DELETE /api/admin/partnership-inquiries/<id>/
+    # POST /api/admin/partnership-inquiries/<id>/status/
+    # ========================================================
+    path(
+        "admin/partnership-inquiries/",
+        partnership_inquiry.admin_list_partnership_inquiries,
+        name="admin-partnership-inquiries-list",
+    ),
+    path(
+        "admin/partnership-inquiries/<str:inquiry_id>/",
+        partnership_inquiry.admin_get_or_update_partnership_inquiry,
+        name="admin-partnership-inquiry-detail",
+    ),
+    path(
+        "admin/partnership-inquiries/<str:inquiry_id>/status/",
+        partnership_inquiry.admin_update_partnership_inquiry_status,
+        name="admin-partnership-inquiry-status",
+    ),
+
+    # ========================================================
+    # EMAIL USERS (general admin email)
+    # ========================================================
+    path(
+        "admin/email-users/send/",
+        include("api.account_admin_fnction.email_users.urls"),
+    ),
+]

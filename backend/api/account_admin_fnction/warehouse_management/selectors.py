@@ -157,6 +157,29 @@ def list_warehouses(
         )
     )
 
+    inquiry_rows = []
+    if tab == TAB_TO_REVIEW:
+        from ...models import PartnershipInquiry
+        inquiries = PartnershipInquiry.objects.filter(
+            partner_role="warehouse",
+            status=PartnershipInquiry.Status.TO_REVIEW,
+        ).order_by("-created_at")
+
+        for inq in inquiries:
+            inquiry_rows.append({
+                "id": str(inq.partnership_inquiry_id),
+                "warehouse_manager_name": inq.name,
+                "business_name": inq.organization_company,
+                "organization_name": inq.organization_company,
+                "email": inq.email,
+                "contact_number": inq.contact_number,
+                "status": "to_review",
+                "created_at": inq.created_at,
+                "updated_at": inq.updated_at,
+                "archive_reason": None,
+                "archived_at": None,
+            })
+
 
     with connection.cursor() as cursor:
 
@@ -307,9 +330,7 @@ def list_warehouses(
         )
 
 
-        return _rows_to_dicts(
-            cursor
-        )
+        return inquiry_rows + _rows_to_dicts(cursor)
 
 
 # ============================================================
@@ -317,6 +338,11 @@ def list_warehouses(
 # ============================================================
 
 def get_warehouse_status_counts():
+    from ...models import PartnershipInquiry
+    inquiry_to_review_count = PartnershipInquiry.objects.filter(
+        partner_role="warehouse",
+        status=PartnershipInquiry.Status.TO_REVIEW,
+    ).count()
     """
     Return badge counts for:
 
@@ -381,11 +407,13 @@ def get_warehouse_status_counts():
         )
 
 
-    return row or {
+    counts = row or {
         "to_review": 0,
         "active": 0,
         "inactive": 0,
     }
+    counts["to_review"] = int(counts.get("to_review") or 0) + inquiry_to_review_count
+    return counts
 
 
 # ============================================================
@@ -395,6 +423,56 @@ def get_warehouse_status_counts():
 def get_warehouse_details(
     user_id,
 ):
+    from ...models import PartnershipInquiry
+    inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    if inquiry:
+        name_parts = str(inquiry.name or "").strip().split()
+        first_name = name_parts[0] if name_parts else "Applicant"
+        last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
+        return {
+            "user_id": str(inquiry.partnership_inquiry_id),
+            "first_name": first_name,
+            "middle_initial": None,
+            "last_name": last_name,
+            "suffix": None,
+            "gender": None,
+            "province": None,
+            "municipality": None,
+            "postal_code": None,
+            "barangay": None,
+            "street_address": None,
+            "email": inquiry.email,
+            "contact_number": inquiry.contact_number,
+            "username": None,
+            "user_role": "warehouse_manager",
+            "status": inquiry.status,
+            "created_at": inquiry.created_at,
+            "updated_at": inquiry.updated_at,
+            "warehouse_profile_id": None,
+            "business_name": inquiry.organization_company,
+            "organization_name": inquiry.organization_company,
+            "business_province": None,
+            "business_municipality": None,
+            "business_postal_code": None,
+            "business_barangay": None,
+            "business_street_address": None,
+            "official_email": inquiry.email,
+            "official_contact_number": inquiry.contact_number,
+            "business_created_at": inquiry.created_at,
+            "business_updated_at": inquiry.updated_at,
+            "warehouse_document_id": None,
+            "government_issued_id": None,
+            "business_permit": None,
+            "business_registration": inquiry.business_verification_document,
+            "warehouse_license": None,
+            "documents_created_at": inquiry.created_at,
+            "documents_updated_at": inquiry.updated_at,
+        }
+
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return None
     """
     Return complete Warehouse Manager
     registration information.
@@ -549,7 +627,7 @@ def get_warehouse_details(
             LIMIT 1
             """,
             [
-                user_id,
+                numeric_user_id,
                 WAREHOUSE_ROLE,
             ],
         )
@@ -627,7 +705,7 @@ def get_warehouse_account_summary(
             LIMIT 1
             """,
             [
-                user_id,
+                numeric_user_id,
                 WAREHOUSE_ROLE,
             ],
         )
@@ -669,7 +747,7 @@ def warehouse_exists(
             )
             """,
             [
-                user_id,
+                numeric_user_id,
                 WAREHOUSE_ROLE,
             ],
         )
@@ -852,7 +930,7 @@ def get_warehouse_view_overview(
             LIMIT 1
             """,
             [
-                user_id,
+                numeric_user_id,
                 WAREHOUSE_ROLE,
             ],
         )
@@ -1097,15 +1175,13 @@ def get_warehouse_employees(
                 we.warehouse_employee_id DESC
             """,
             [
-                user_id,
+                numeric_user_id,
                 WAREHOUSE_ROLE,
             ],
         )
 
 
-        return _rows_to_dicts(
-            cursor
-        )
+        return inquiry_rows + _rows_to_dicts(cursor)
 
 
 # ============================================================
@@ -1203,9 +1279,7 @@ def get_warehouse_ratings(
         )
 
 
-        return _rows_to_dicts(
-            cursor
-        )
+        return inquiry_rows + _rows_to_dicts(cursor)
 
 
 # ============================================================
@@ -1308,9 +1382,7 @@ def get_warehouse_reports(
         )
 
 
-        return _rows_to_dicts(
-            cursor
-        )
+        return inquiry_rows + _rows_to_dicts(cursor)
 
 
 # ============================================================

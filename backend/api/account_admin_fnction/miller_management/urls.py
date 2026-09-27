@@ -24,7 +24,7 @@ urlpatterns = [
     # ========================================================
 
     path(
-        "<int:user_id>/view-details/",
+        "<str:user_id>/view-details/",
         views.miller_management_view_details,
         name="view-details",
     ),
@@ -35,7 +35,7 @@ urlpatterns = [
     # ========================================================
 
     path(
-        "<int:user_id>/confirm/",
+        "<str:user_id>/confirm/",
         views.confirm_miller_management_application,
         name="confirm",
     ),
@@ -46,7 +46,7 @@ urlpatterns = [
     # ========================================================
 
     path(
-        "<int:user_id>/archive/",
+        "<str:user_id>/archive/",
         views.archive_miller_management_account,
         name="archive",
     ),
@@ -57,7 +57,7 @@ urlpatterns = [
     # ========================================================
 
     path(
-        "<int:user_id>/restore/",
+        "<str:user_id>/restore/",
         views.restore_miller_management_account,
         name="restore",
     ),
@@ -68,7 +68,7 @@ urlpatterns = [
     # ========================================================
 
     path(
-        "<int:user_id>/delete/",
+        "<str:user_id>/delete/",
         views.delete_miller_management_account,
         name="delete",
     ),
@@ -79,7 +79,7 @@ urlpatterns = [
     # ========================================================
 
     path(
-        "<int:user_id>/employees/<int:employee_id>/archive/",
+        "<str:user_id>/employees/<int:employee_id>/archive/",
         views.archive_miller_management_employee,
         name="archive-employee",
     ),
@@ -90,7 +90,7 @@ urlpatterns = [
     # ========================================================
 
     path(
-        "<int:user_id>/employees/<int:employee_id>/restore/",
+        "<str:user_id>/employees/<int:employee_id>/restore/",
         views.restore_miller_management_employee,
         name="restore-employee",
     ),
@@ -101,7 +101,7 @@ urlpatterns = [
     # ========================================================
 
     path(
-        "<int:user_id>/employees/<int:employee_id>/delete/",
+        "<str:user_id>/employees/<int:employee_id>/delete/",
         views.delete_miller_management_employee,
         name="delete-employee",
     ),
@@ -115,7 +115,7 @@ urlpatterns = [
     # ========================================================
 
     path(
-        "<int:user_id>/",
+        "<str:user_id>/",
         views.miller_management_detail,
         name="detail",
     ),

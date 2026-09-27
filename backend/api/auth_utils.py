@@ -37,7 +37,10 @@ def get_business_user(identifier):
                 username,
                 password_hash,
                 user_role,
-                status
+                status,
+                must_change_password,
+                province,
+                gender
             FROM users
             WHERE
                 LOWER(email) = %s
@@ -53,6 +56,10 @@ def get_business_user(identifier):
         row = cursor.fetchone()
 
     if row:
+        must_change_pw = bool(row[11])
+        province = row[12]
+        gender = row[13]
+        profile_incomplete = (not province or not str(province).strip() or not gender or not str(gender).strip())
         return {
             "id": row[0],
             "first_name": row[1],
@@ -72,6 +79,8 @@ def get_business_user(identifier):
             "organization_type": None,
             "profile_id": None,
             "owner_user_id": row[0],
+            "must_change_password": must_change_pw,
+            "profile_incomplete": profile_incomplete,
         }
 
 

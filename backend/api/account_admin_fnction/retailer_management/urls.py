@@ -28,7 +28,7 @@ urlpatterns = [
     # ========================================================
 
     path(
-        "<int:user_id>/",
+        "<str:user_id>/",
         views.retailer_management_detail,
         name="detail",
     ),
@@ -40,7 +40,7 @@ urlpatterns = [
     # ========================================================
 
     path(
-        "<int:user_id>/confirm/",
+        "<str:user_id>/confirm/",
         views.confirm_retailer_management_application,
         name="confirm",
     ),
@@ -52,7 +52,7 @@ urlpatterns = [
     # ========================================================
 
     path(
-        "<int:user_id>/archive/",
+        "<str:user_id>/archive/",
         views.archive_retailer_management_account,
         name="archive",
     ),
@@ -64,7 +64,7 @@ urlpatterns = [
     # ========================================================
 
     path(
-        "<int:user_id>/restore/",
+        "<str:user_id>/restore/",
         views.restore_retailer_management_account,
         name="restore",
     ),
@@ -76,7 +76,7 @@ urlpatterns = [
     # ========================================================
 
     path(
-        "<int:user_id>/delete/",
+        "<str:user_id>/delete/",
         views.delete_retailer_management_account,
         name="delete",
     ),

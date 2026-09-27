@@ -479,6 +479,11 @@ def _send_miller_confirmation_email(
 def confirm_miller_application(
     user_id,
 ):
+    from ...models import PartnershipInquiry
+    inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    if inquiry:
+        from ..partner_account_service import create_partner_user_from_inquiry
+        return create_partner_user_from_inquiry(inquiry_id=user_id, expected_role="miller")
     """
     Confirm a pending Miller application.
 
@@ -632,6 +637,22 @@ def archive_miller_account(
     user_id,
     reason,
 ):
+    from ...models import PartnershipInquiry
+    inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    if inquiry:
+        cleaned_reason = _clean_archive_reason(reason)
+        inquiry.status = PartnershipInquiry.Status.INACTIVE
+        inquiry.archive_reason = cleaned_reason
+        inquiry.save(update_fields=["status", "archive_reason", "updated_at"])
+        return {
+            "user_id": str(inquiry.partnership_inquiry_id),
+            "status": "inactive",
+            "updated_at": inquiry.updated_at,
+            "archive_reason_id": None,
+            "archive_reason": cleaned_reason,
+            "archived_at": inquiry.updated_at,
+            "message": "Miller application archived successfully.",
+        }
     """
     Archive an active Miller account.
 
@@ -955,6 +976,16 @@ def restore_miller_account(
 def delete_miller_account(
     user_id,
 ):
+    from ...models import PartnershipInquiry
+    inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    if inquiry:
+        b_name = inquiry.organization_company
+        inquiry.delete()
+        return {
+            "user_id": str(user_id),
+            "business_name": b_name,
+            "message": "Miller inquiry deleted permanently.",
+        }
     """
     Permanently delete a Miller account.
 

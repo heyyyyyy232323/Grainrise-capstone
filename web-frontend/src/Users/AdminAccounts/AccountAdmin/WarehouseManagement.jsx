@@ -1859,7 +1859,6 @@ const WarehouseManagement = () => {
           confirmDelete
         }
       />
-
     </>
   );
 };

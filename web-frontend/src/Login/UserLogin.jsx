@@ -73,6 +73,16 @@ const UserLogin = () => {
         response.user
       );
 
+      if (response.user?.must_change_password) {
+        navigate("/change-password");
+        return;
+      }
+
+      if (response.user?.profile_incomplete) {
+        navigate("/complete-profile");
+        return;
+      }
+
       const role = response.user?.role;
 
       const roleRoutes = {

@@ -1,3 +1,12 @@
+def _table_exists(table_name):
+    normalized_name = str(table_name or "").strip()
+    if not normalized_name:
+        return False
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT to_regclass(%s)", [f"public.{normalized_name}"])
+        row = cursor.fetchone()
+    return bool(row and row[0])
+
 from django.db import connection, transaction
 
 from .selectors import (
@@ -16,6 +25,8 @@ def mark_admin_notification_as_read(
     admin_id,
     notification_id,
 ):
+    if not _table_exists("admin_notifications"):
+        return None
     """
     Mark one notification as read for one Account Admin.
 
@@ -111,6 +122,8 @@ def mark_admin_notification_as_read(
 def mark_all_admin_notifications_as_read(
     admin_id,
 ):
+    if not _table_exists("admin_notifications"):
+        return 0
     """
     Mark every currently available admin notification
     as read for the authenticated Account Admin only.
@@ -196,6 +209,8 @@ def open_admin_notification(
     admin_id,
     notification_id,
 ):
+    if not _table_exists("admin_notifications"):
+        return None
     """
     Used when Account Admin clicks a notification.
 

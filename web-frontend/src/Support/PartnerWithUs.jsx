@@ -1,8 +1,10 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, Users, CheckCircle2, Loader2, UploadCloud, X,
-  ImageIcon, FileCheck, Mail, Clock, RefreshCw, AlertTriangle, ExternalLink
+  ImageIcon, FileCheck, Mail, Clock, RefreshCw, AlertTriangle, ExternalLink,
+  Camera
 } from 'lucide-react';
 import LandingHeader from '../Components/Major-Components/LandingHeader';
 import LandingFooter from '../Components/Major-Components/LandingFooter';
@@ -13,16 +15,15 @@ import AnimatedSection from './AnimatedSection';
 import './SupportPages.css';
 
 /* ─── Validation helpers ─── */
-const NAME_RE          = /^[a-zA-Z\s\-']+$/;
-const EMAIL_RE         = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_RE = /^[a-zA-Z\s\-']+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMAIL_PARTIAL_RE = /^[^\s@]+@[^\s@]*$/;
-const ORG_RE           = /^[a-zA-Z0-9\s&.,'\-]+$/;
-const ALLOWED_MIME     = ['image/jpeg', 'image/png', 'image/webp'];
-const ALLOWED_EXT      = ['.jpg', '.jpeg', '.png', '.webp'];
-const MAX_FILE_BYTES   = 5 * 1024 * 1024;
-const POLICY_VERSION   = '1.0';
-const STORAGE_KEY      = 'grainrise_partner_inquiry_verification';
-const TOKEN_TTL_MS     = 15 * 60 * 1000; // 15 minutes
+const ORG_RE = /^[a-zA-Z0-9\s&.,'\-]+$/;
+const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const POLICY_VERSION = '1.0';
+const API_BASE = 'http://localhost:8000/api';
 
 function validateName(v) {
   if (!v.trim()) return 'Name is required.';
@@ -41,6 +42,10 @@ function validateEmail(v, isTouched) {
 function validateOrg(v) {
   if (!v.trim()) return 'Organization / Company is required.';
   if (!ORG_RE.test(v)) return 'Invalid character detected.';
+  return '';
+}
+function validateRole(v) {
+  if (!v) return 'Please select your intended partner role.';
   return '';
 }
 function validatePhone(v) {
@@ -68,13 +73,6 @@ function formatBytes(bytes) {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
 }
-function generateSecureToken() {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return 'tkn_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
-}
-
 const FieldError = ({ msg }) =>
   msg ? <p className="mt-1 text-[11px] text-red-500 leading-tight">{msg}</p> : null;
 
@@ -86,79 +84,69 @@ function inputCls(hasError) {
 }
 
 export default function PartnerWithUs() {
-  const navigate     = useNavigate();
-  const location     = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const fileInputRef = useRef(null);
 
   /* ── View Modes: 'form' | 'awaiting_verification' | 'verified_success' | 'token_invalid' ── */
   const [viewState, setViewState] = useState('form');
 
   /* ── Form state ── */
-  const [formData, setFormData] = useState({ name: '', email: '', organization: '', contactNumber: '', message: '' });
-  const [errors,   setErrors]   = useState({ name: '', email: '', organization: '', contactNumber: '', message: '' });
-  const [touched,  setTouched]  = useState({ name: false, email: false, organization: false, contactNumber: false, message: false });
+  const [formData, setFormData] = useState({ name: '', email: '', organization: '', partnerRole: '', contactNumber: '', message: '' });
+  const [errors, setErrors] = useState({ name: '', email: '', organization: '', partnerRole: '', contactNumber: '', message: '' });
+  const [touched, setTouched] = useState({ name: false, email: false, organization: false, partnerRole: false, contactNumber: false, message: false });
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const [isSubmitting,    setIsSubmitting]    = useState(false);
-  const [agreedToTerms,   setAgreedToTerms]   = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   /* ── Verification state ── */
-  const [activeToken,     setActiveToken]     = useState('');
-  const [resendCooldown,  setResendCooldown]  = useState(0);
-  const [isResending,     setIsResending]     = useState(false);
-  const [resendMessage,   setResendMessage]   = useState('');
+  const [inquiryId, setInquiryId] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [isResending, setIsResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
 
   /* ── Policy Modal state ── */
   const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
+  const verifyingRef = useRef(false);
 
   /* ── Image / Document state ── */
-  const [imageFile,    setImageFile]    = useState(null);
+  const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
-  const [imageError,   setImageError]   = useState('');
+  const [imageError, setImageError] = useState('');
   const [imageLoading, setImageLoading] = useState(false);
-  const [isDragging,   setIsDragging]   = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const cameraInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState('');
 
-  /* ── Check for token in URL query parameter on mount/change ── */
+  /* ── Check for token in URL query parameter on mount/change — calls real API ── */
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tokenParam = params.get('token');
     if (!tokenParam) return;
+    if (verifyingRef.current) return;
+    verifyingRef.current = true;
 
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
+    fetch(`${API_BASE}/partnership-inquiries/verify-email/${tokenParam}/`)
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+          setViewState('verified_success');
+          // Clean token from address bar so refresh stays on page cleanly
+          try {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } catch { }
+        } else {
+          setViewState('token_invalid');
+        }
+      })
+      .catch(() => {
         setViewState('token_invalid');
-        return;
-      }
-      const record = JSON.parse(raw);
-      if (record.token === tokenParam && !record.used && Date.now() < record.expiresAt) {
-        // Mark token as used (single-use)
-        record.used = true;
-        record.verifiedAt = new Date().toISOString();
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(record));
-        setViewState('verified_success');
-      } else {
-        setViewState('token_invalid');
-      }
-    } catch {
-      setViewState('token_invalid');
-    }
+      });
   }, [location.search]);
-
-  /* ── Multi-tab sync: if verified in another tab, auto-update ── */
-  useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        try {
-          const record = JSON.parse(e.newValue);
-          if (record.used && viewState === 'awaiting_verification') {
-            setViewState('verified_success');
-          }
-        } catch {}
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [viewState]);
 
   /* ── Cooldown timer for resend button ── */
   useEffect(() => {
@@ -178,22 +166,24 @@ export default function PartnerWithUs() {
   /* ── Validation dispatch ── */
   const validate = useCallback((name, value) => {
     switch (name) {
-      case 'name':          return validateName(value);
-      case 'email':         return validateEmail(value, touched.email);
-      case 'organization':  return validateOrg(value);
+      case 'name': return validateName(value);
+      case 'email': return validateEmail(value, touched.email);
+      case 'organization': return validateOrg(value);
+      case 'partnerRole': return validateRole(value);
       case 'contactNumber': return validatePhone(value);
-      case 'message':       return validateMessage(value);
+      case 'message': return validateMessage(value);
       default: return '';
     }
   }, [touched.email]);
 
   const isFormValid =
-    formData.name.trim()         && !validateName(formData.name) &&
-    formData.email.trim()        && !validateEmail(formData.email, true) &&
+    formData.name.trim() && !validateName(formData.name) &&
+    formData.email.trim() && !validateEmail(formData.email, true) &&
     formData.organization.trim() && !validateOrg(formData.organization) &&
-    formData.contactNumber       && !validatePhone(formData.contactNumber) &&
-    formData.message.trim()      && !validateMessage(formData.message) &&
-    Boolean(imageFile)           && !imageError &&
+    Boolean(formData.partnerRole) && !validateRole(formData.partnerRole) &&
+    formData.contactNumber && !validatePhone(formData.contactNumber) &&
+    formData.message.trim() && !validateMessage(formData.message) &&
+    Boolean(imageFile) && !imageError &&
     agreedToTerms;
 
   /* ── Image processing ── */
@@ -208,6 +198,7 @@ export default function PartnerWithUs() {
       setImagePreview('');
       setImageLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
       return;
     }
     const reader = new FileReader();
@@ -236,6 +227,7 @@ export default function PartnerWithUs() {
     setImagePreview('');
     setImageLoading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
     if (submitAttempted) {
       setImageError('Please upload a valid business verification document.');
     } else {
@@ -243,7 +235,106 @@ export default function PartnerWithUs() {
     }
   };
 
-  const handleDragOver  = (e) => { e.preventDefault(); setIsDragging(true); };
+  /* ── Open Document Source Modal ── */
+  const handleOpenSourceModal = () => {
+    setIsSourceModalOpen(true);
+  };
+
+  /* ── Choose Upload File from Device ── */
+  const handleChooseUpload = () => {
+    setIsSourceModalOpen(false);
+    fileInputRef.current?.click();
+  };
+
+  /* ── Choose Take a Photo (Camera) ── */
+  const handleChooseCamera = () => {
+    setIsSourceModalOpen(false);
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
+    if (isMobile || !navigator.mediaDevices?.getUserMedia) {
+      cameraInputRef.current?.click();
+    } else {
+      setIsCameraModalOpen(true);
+      setCameraError('');
+      setCameraActive(false);
+    }
+  };
+
+  /* ── Stop Webcam Stream Helper ── */
+  const stopWebcamStream = () => {
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject;
+      stream.getTracks().forEach(t => t.stop());
+      videoRef.current.srcObject = null;
+    }
+    setCameraActive(false);
+  };
+
+  /* ── Start Webcam when Camera Modal Opens ── */
+  useEffect(() => {
+    if (!isCameraModalOpen) {
+      stopWebcamStream();
+      return;
+    }
+
+    let isMounted = true;
+    navigator.mediaDevices?.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false,
+    })
+      .then((stream) => {
+        if (!isMounted) {
+          stream.getTracks().forEach(t => t.stop());
+          return;
+        }
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => { });
+        }
+        setCameraActive(true);
+        setCameraError('');
+      })
+      .catch((err) => {
+        console.warn('Webcam stream error:', err);
+        setCameraError('Unable to access webcam. Switching to file camera...');
+        setTimeout(() => {
+          setIsCameraModalOpen(false);
+          cameraInputRef.current?.click();
+        }, 1200);
+      });
+
+    return () => {
+      isMounted = false;
+      stopWebcamStream();
+    };
+  }, [isCameraModalOpen]);
+
+  /* ── Capture Frame from Live Webcam ── */
+  const handleCaptureWebcam = () => {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], `document_capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        processImageFile(file);
+      }
+      setIsCameraModalOpen(false);
+      stopWebcamStream();
+    }, 'image/jpeg', 0.92);
+  };
+
+  const handleCloseCameraModal = () => {
+    setIsCameraModalOpen(false);
+    stopWebcamStream();
+  };
+
+  const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
   const handleDrop = (e) => {
     e.preventDefault();
@@ -295,7 +386,7 @@ export default function PartnerWithUs() {
     e.preventDefault();
     let pasted = e.clipboardData.getData('text/plain').replace(/\D/g, '');
     if (pasted.startsWith('63')) pasted = pasted.slice(2);
-    if (pasted.startsWith('0'))  pasted = pasted.slice(1);
+    if (pasted.startsWith('0')) pasted = pasted.slice(1);
     if (pasted.length > 0 && pasted[0] !== '9') return;
     pasted = pasted.slice(0, 10);
     setFormData(p => ({ ...p, contactNumber: pasted }));
@@ -321,16 +412,17 @@ export default function PartnerWithUs() {
     }
   };
 
-  /* ── Submit (Initiates Email Verification) ── */
-  const handleSubmit = (e) => {
+  /* ── Submit (Initiates Email Verification) — calls real backend API ── */
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitAttempted(true);
     const newErrors = {
-      name:          validateName(formData.name),
-      email:         validateEmail(formData.email, true),
-      organization:  validateOrg(formData.organization),
+      name: validateName(formData.name),
+      email: validateEmail(formData.email, true),
+      organization: validateOrg(formData.organization),
+      partnerRole: validateRole(formData.partnerRole),
       contactNumber: validatePhone(formData.contactNumber),
-      message:       validateMessage(formData.message),
+      message: validateMessage(formData.message),
     };
     if (!imageFile) {
       setImageError('Please upload a valid business verification document.');
@@ -342,71 +434,97 @@ export default function PartnerWithUs() {
 
     setIsSubmitting(true);
 
-    // Simulate sending email and generating token
-    setTimeout(() => {
+    try {
+      const fd = new FormData();
+      fd.append('name', formData.name.trim());
+      fd.append('email', formData.email.trim().toLowerCase());
+      fd.append('organization_company', formData.organization.trim());
+      fd.append('partner_role', formData.partnerRole);
+      const phoneToSend = formData.contactNumber.startsWith('0')
+        ? formData.contactNumber
+        : `+63${formData.contactNumber}`;
+      fd.append('contact_number', phoneToSend);
+      fd.append('message', formData.message);
+      fd.append('business_verification_document', imageFile);
+
+      const res = await fetch(`${API_BASE}/partnership-inquiries/`, {
+        method: 'POST',
+        body: fd,
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 201 && data.success) {
+        // Happy path: inquiry saved & verification email sent
+        setInquiryId(data.inquiry_id || '');
+        setViewState('awaiting_verification');
+        setResendCooldown(60);
+        setResendMessage('');
+      } else if (res.status === 503 && data.inquiry_id) {
+        // Inquiry saved but email send failed — still show awaiting screen
+        setInquiryId(data.inquiry_id);
+        setViewState('awaiting_verification');
+        setResendCooldown(0);
+        setResendMessage(data.detail || 'Verification email could not be sent. Please use Resend below.');
+      } else if (res.status === 400 && typeof data === 'object') {
+        // Field validation errors from backend — map to form errors
+        const backendErrors = {};
+        if (data.name) backendErrors.name = data.name;
+        if (data.email) backendErrors.email = data.email;
+        if (data.organization_company) backendErrors.organization = data.organization_company;
+        if (data.partner_role) backendErrors.partnerRole = data.partner_role;
+        if (data.contact_number) backendErrors.contactNumber = data.contact_number;
+        if (data.message) backendErrors.message = data.message;
+        if (data.business_verification_document) setImageError(data.business_verification_document);
+        setErrors(prev => ({ ...prev, ...backendErrors }));
+      } else {
+        // Generic server error
+        setErrors(prev => ({ ...prev, name: data.detail || 'Server error. Please try again.' }));
+      }
+    } catch {
+      setErrors(prev => ({ ...prev, name: 'Network error. Please check your connection.' }));
+    } finally {
       setIsSubmitting(false);
-
-      const token = generateSecureToken();
-      const expiresAt = Date.now() + TOKEN_TTL_MS;
-      const record = {
-        token,
-        email: formData.email,
-        name: formData.name,
-        organization: formData.organization,
-        contactNumber: formData.contactNumber,
-        message: formData.message,
-        documentName: imageFile?.name,
-        agreedAt: new Date().toISOString(),
-        policyVersion: POLICY_VERSION,
-        createdAt: Date.now(),
-        expiresAt,
-        used: false,
-      };
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(record));
-      setActiveToken(token);
-      setViewState('awaiting_verification');
-      setResendCooldown(60);
-      setResendMessage('');
-    }, 1000);
+    }
   };
 
-  /* ── Resend Verification Email ── */
-  const handleResendVerification = () => {
-    if (resendCooldown > 0 || isResending) return;
+  /* ── Resend Verification Email — calls real backend API ── */
+  const handleResendVerification = async () => {
+    if (resendCooldown > 0 || isResending || !inquiryId) return;
     setIsResending(true);
+    setResendMessage('');
 
-    setTimeout(() => {
+    try {
+      const res = await fetch(`${API_BASE}/partnership-inquiries/resend-verification/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inquiry_id: inquiryId }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
+        setResendCooldown(60);
+        setResendMessage(data.message || `A new verification email has been sent to ${formData.email}.`);
+      } else if (res.status === 429) {
+        // Rate limit — apply cooldown from server if available
+        const retryAfter = data.retry_after || 60;
+        setResendCooldown(retryAfter);
+        setResendMessage(data.detail || 'Please wait before requesting another email.');
+      } else {
+        setResendMessage(data.detail || 'Could not send verification email. Please try again.');
+      }
+    } catch {
+      setResendMessage('Network error. Please check your connection and try again.');
+    } finally {
       setIsResending(false);
-      const token = generateSecureToken();
-      const expiresAt = Date.now() + TOKEN_TTL_MS;
-      const record = {
-        token,
-        email: formData.email,
-        name: formData.name,
-        organization: formData.organization,
-        contactNumber: formData.contactNumber,
-        message: formData.message,
-        documentName: imageFile?.name,
-        agreedAt: new Date().toISOString(),
-        policyVersion: POLICY_VERSION,
-        createdAt: Date.now(),
-        expiresAt,
-        used: false,
-      };
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(record));
-      setActiveToken(token);
-      setResendCooldown(60);
-      setResendMessage(`A new verification email has been sent to ${formData.email}.`);
-    }, 800);
+    }
   };
 
   /* ── Start a completely new inquiry (Reset) ── */
   const handleStartNewInquiry = () => {
-    setFormData({ name: '', email: '', organization: '', contactNumber: '', message: '' });
-    setErrors({ name: '', email: '', organization: '', contactNumber: '', message: '' });
-    setTouched({ name: false, email: false, organization: false, contactNumber: false, message: false });
+    setFormData({ name: '', email: '', organization: '', partnerRole: '', contactNumber: '', message: '' });
+    setErrors({ name: '', email: '', organization: '', partnerRole: '', contactNumber: '', message: '' });
+    setTouched({ name: false, email: false, organization: false, partnerRole: false, contactNumber: false, message: false });
     setSubmitAttempted(false);
     setAgreedToTerms(false);
     setImageFile(null);
@@ -417,8 +535,8 @@ export default function PartnerWithUs() {
     navigate('/partner-with-us', { replace: true });
   };
 
-  const phoneError       = (touched.contactNumber || submitAttempted) && errors.contactNumber;
-  const msgCharCount     = formData.message.replace(/\u00A0/g, ' ').trim().length;
+  const phoneError = (touched.contactNumber || submitAttempted) && errors.contactNumber;
+  const msgCharCount = formData.message.replace(/\u00A0/g, ' ').trim().length;
   const documentHasError = (submitAttempted && !imageFile) || Boolean(imageError);
 
   return (
@@ -548,7 +666,7 @@ export default function PartnerWithUs() {
                   <span>Verification link expires in 15 minutes · One-time use only</span>
                 </div>
 
-                {/* ── Simulated Verification Email Preview Card ── */}
+                {/* ── Verification Email Sent Notice ── */}
                 <div className="w-full max-w-[540px] bg-gray-50/70 dark:bg-white/[0.03] border border-emerald-200 dark:border-emerald-800 rounded-xl p-5 shadow-xs mb-6 text-left">
                   <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-200/80 dark:border-white/10">
                     <div className="flex items-center gap-2.5">
@@ -561,30 +679,21 @@ export default function PartnerWithUs() {
                       </div>
                     </div>
                     <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/80 text-[#00580C] dark:text-emerald-400 font-bold px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                      Verification Email Delivered
+                      Verification Email Sent
                     </span>
                   </div>
 
                   <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
                     Hello <strong>{formData.name || 'Partner'}</strong>,<br />
-                    Thank you for reaching out to partner with GrainRise. To verify your email and complete your inquiry submission, please click the button below:
+                    A verification link has been sent to your inbox at <strong>{formData.email}</strong>.
+                    Please open the email from GrainRise and click the <em>Verify Email Address</em> button to complete your submission.
                   </p>
 
-                  <div className="text-center my-4">
-                    <a
-                      href={`/partner-with-us?token=${activeToken}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 bg-[#00580C] hover:bg-[#014209] text-white text-xs font-semibold px-5 py-2.5 rounded-lg shadow-sm transition-all"
-                    >
-                      <span>Verify Email Address</span>
-                      <ExternalLink size={13} />
-                    </a>
+                  <div className="text-center my-2">
+                    <p className="text-[10.5px] text-gray-400 dark:text-gray-500">
+                      Can&apos;t find the email? Check your spam or junk folder, or use the Resend button below.
+                    </p>
                   </div>
-
-                  <p className="text-[10.5px] text-gray-400 dark:text-gray-500 text-center">
-                    Clicking the button above simulates clicking the link received in your inbox.
-                  </p>
                 </div>
 
                 {/* ── Resend & Edit Actions ── */}
@@ -682,21 +791,37 @@ export default function PartnerWithUs() {
                         <FieldError msg={(touched.email || submitAttempted) ? errors.email : ''} />
                       </div>
 
-                      {/* Organization */}
+
+                      {/* Intended Partner Role Dropdown */}
                       <div className="flex flex-col">
-                        <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5" htmlFor="organization">
-                          ORGANIZATION / COMPANY <span className="text-red-500">*</span>
+                        <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5" htmlFor="partnerRole">
+                          INTENDED PARTNER ROLE <span className="text-red-500">*</span>
                         </label>
-                        <input
-                          id="organization" name="organization" type="text"
-                          className={inputCls((touched.organization || submitAttempted) && errors.organization)}
-                          placeholder="Enter your organization or company name"
-                          value={formData.organization}
-                          onChange={handleOrgChange}
-                          onPaste={handleOrgPaste}
-                          onBlur={() => handleBlur('organization', formData.organization)}
-                        />
-                        <FieldError msg={(touched.organization || submitAttempted) ? errors.organization : ''} />
+                        <div className="relative">
+                          <select
+                            id="partnerRole"
+                            name="partnerRole"
+                            value={formData.partnerRole}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setFormData(p => ({ ...p, partnerRole: v }));
+                              setErrors(p => ({ ...p, partnerRole: validateRole(v) }));
+                            }}
+                            onBlur={() => handleBlur('partnerRole', formData.partnerRole)}
+                            className={`${inputCls((touched.partnerRole || submitAttempted) && errors.partnerRole)} cursor-pointer appearance-none pr-9`}
+                          >
+                            <option value="" disabled>Select your partner role...</option>
+                            <option value="miller">Miller</option>
+                            <option value="warehouse">Warehouse Owner </option>
+                            <option value="retailer">Retailer </option>
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 dark:text-gray-500">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </div>
+                        <FieldError msg={(touched.partnerRole || submitAttempted) ? errors.partnerRole : ''} />
                       </div>
 
                       {/* Contact Number */}
@@ -723,7 +848,22 @@ export default function PartnerWithUs() {
                         </div>
                         <FieldError msg={phoneError || ''} />
                       </div>
-
+                      {/* Organization */}
+                      <div className="flex flex-col sm:col-span-full">
+                        <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5" htmlFor="organization">
+                          ORGANIZATION / COMPANY <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          id="organization" name="organization" type="text"
+                          className={inputCls((touched.organization || submitAttempted) && errors.organization)}
+                          placeholder="Enter your organization or company name"
+                          value={formData.organization}
+                          onChange={handleOrgChange}
+                          onPaste={handleOrgPaste}
+                          onBlur={() => handleBlur('organization', formData.organization)}
+                        />
+                        <FieldError msg={(touched.organization || submitAttempted) ? errors.organization : ''} />
+                      </div>
                       {/* Message */}
                       <div className="flex flex-col col-span-full">
                         <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5" htmlFor="message">
@@ -755,7 +895,11 @@ export default function PartnerWithUs() {
                             BUSINESS VERIFICATION DOCUMENT <span className="text-red-500">*</span>
                           </label>
                           <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed mt-0.5">
-                            Required for partnership qualification. Please upload a clear photo or scanned copy of your business credential (e.g., BIR Form 2303, Mayor's / Business Permit, DTI / SEC Registration, or RSBSA Certificate).
+                            Required for partnership qualification. Please upload a clear photo or scanned copy of your business credential
+                            {formData.partnerRole === 'miller' && " (e.g., Milling License, BIR Form 2303, Mayor's / Business Permit, or DTI / SEC Registration)."}
+                            {formData.partnerRole === 'warehouse' && " (e.g., Warehouse Operating License, Mayor's Permit, DTI / SEC, or Fire Safety Certificate)."}
+                            {formData.partnerRole === 'retailer' && " (e.g., Barangay / Mayor's Business Permit, DTI / SEC Registration, or Valid ID)."}
+                            {!formData.partnerRole && " (e.g., BIR Form 2303, Mayor's / Business Permit, DTI / SEC Registration, or RSBSA Certificate)."}
                           </p>
                         </div>
 
@@ -763,6 +907,14 @@ export default function PartnerWithUs() {
                           ref={fileInputRef}
                           type="file"
                           accept="image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          onChange={handleFileInputChange}
+                        />
+                        <input
+                          ref={cameraInputRef}
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
                           className="hidden"
                           onChange={handleFileInputChange}
                         />
@@ -783,7 +935,7 @@ export default function PartnerWithUs() {
                               </p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              <button type="button" onClick={() => fileInputRef.current?.click()} className="text-[11px] font-semibold text-[#00580C] dark:text-emerald-400 hover:underline cursor-pointer">
+                              <button type="button" onClick={handleOpenSourceModal} className="text-[11px] font-semibold text-[#00580C] dark:text-emerald-400 hover:underline cursor-pointer">
                                 Change
                               </button>
                               <button type="button" onClick={handleRemoveImage} className="w-6 h-6 flex items-center justify-center rounded-full bg-white dark:bg-[#163321] border border-gray-200 dark:border-[#2d5c3c] text-gray-400 hover:text-red-500 hover:border-red-300 transition-colors cursor-pointer" aria-label="Remove document">
@@ -798,26 +950,44 @@ export default function PartnerWithUs() {
                           </div>
                         ) : (
                           <div
-                            onClick={() => fileInputRef.current?.click()}
+                            onClick={handleOpenSourceModal}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
                             onDrop={handleDrop}
-                            className={`flex flex-col items-center justify-center gap-2 p-6 rounded-lg border-2 border-dashed cursor-pointer transition-all
+                            className={`flex flex-col items-center justify-center gap-2.5 p-6 rounded-lg border-2 border-dashed cursor-pointer transition-all
                               ${documentHasError
                                 ? 'border-red-400 dark:border-red-500 bg-red-50/40 dark:bg-red-950/20 ring-2 ring-red-200/40'
                                 : isDragging
                                   ? 'border-[#00580C] dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 scale-[1.01]'
                                   : 'border-gray-300 dark:border-[#2d5c3c] hover:border-[#00580C] dark:hover:border-emerald-600 bg-white dark:bg-[#163321] hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20'}`}
                           >
-                            <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isDragging ? 'bg-emerald-100 dark:bg-emerald-900 text-[#00580C] dark:text-emerald-400' : 'bg-gray-100 dark:bg-[#1e3d2a] text-gray-400 dark:text-gray-500'}`}>
-                              <UploadCloud size={18} />
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isDragging ? 'bg-emerald-100 dark:bg-emerald-900 text-[#00580C] dark:text-emerald-400' : 'bg-emerald-50 dark:bg-[#1e3d2a] text-[#00580C] dark:text-emerald-400'}`}>
+                              <UploadCloud size={20} />
                             </div>
                             <div className="text-center">
-                              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                                {isDragging ? 'Drop business credential here' : 'Click to upload business credential or drag & drop'}
+                              <p className="text-xs sm:text-[13px] font-semibold text-gray-800 dark:text-gray-200">
+                                {isDragging ? 'Drop document here' : 'Click to attach document or drag & drop'}
                               </p>
-                              <p className="text-[10.5px] text-gray-400 dark:text-gray-500 mt-0.5">
-                                BIR 2303, Business / Mayor's Permit, DTI/SEC, or RSBSA · JPG, PNG, WEBP · Max 5 MB
+                              <div className="flex items-center justify-center gap-2.5 mt-2.5">
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleChooseUpload(); }}
+                                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-gray-200 dark:border-[#244f35] bg-white dark:bg-[#163321] text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-[#00580C] dark:hover:border-emerald-500 hover:text-[#00580C] dark:hover:text-emerald-400 shadow-sm transition-all cursor-pointer"
+                                >
+                                  <UploadCloud size={14} className="text-[#00580C] dark:text-emerald-400" />
+                                  <span>Upload File</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleChooseCamera(); }}
+                                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-gray-200 dark:border-[#244f35] bg-white dark:bg-[#163321] text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-[#00580C] dark:hover:border-emerald-500 hover:text-[#00580C] dark:hover:text-emerald-400 shadow-sm transition-all cursor-pointer"
+                                >
+                                  <Camera size={14} className="text-[#00580C] dark:text-emerald-400" />
+                                  <span>Take a Photo</span>
+                                </button>
+                              </div>
+                              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+                                Supported formats: JPG, PNG, WEBP · Maximum 5 MB
                               </p>
                             </div>
                           </div>
@@ -898,6 +1068,173 @@ export default function PartnerWithUs() {
       </main>
 
       <LandingFooter />
+
+      {/* ── Document Source Chooser Modal ── */}
+      {isSourceModalOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setIsSourceModalOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-[#0e2417] border border-gray-200 dark:border-[#204830] rounded-2xl shadow-2xl max-w-md w-full overflow-hidden p-6 animate-in zoom-in-95"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-[#1d3d29] mb-4">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                  Attach Business Document
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Choose how you would like to provide your credential
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSourceModalOpen(false)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1a3a26] transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 my-3">
+              {/* Option 1: Upload File */}
+              <button
+                type="button"
+                onClick={handleChooseUpload}
+                className="flex flex-col items-center justify-center text-center p-5 rounded-xl border-2 border-gray-200 dark:border-[#244f35] bg-gray-50/70 dark:bg-[#153422] hover:border-[#00580C] dark:hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-[#184029] transition-all group cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-full bg-white dark:bg-[#0e2417] shadow-sm flex items-center justify-center text-[#00580C] dark:text-emerald-400 mb-2.5 group-hover:scale-110 transition-transform">
+                  <UploadCloud size={24} />
+                </div>
+                <span className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-100">
+                  Upload File
+                </span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-snug">
+                  Choose an image from files or gallery
+                </span>
+              </button>
+
+              {/* Option 2: Take Photo */}
+              <button
+                type="button"
+                onClick={handleChooseCamera}
+                className="flex flex-col items-center justify-center text-center p-5 rounded-xl border-2 border-gray-200 dark:border-[#244f35] bg-gray-50/70 dark:bg-[#153422] hover:border-[#00580C] dark:hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-[#184029] transition-all group cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-full bg-white dark:bg-[#0e2417] shadow-sm flex items-center justify-center text-[#00580C] dark:text-emerald-400 mb-2.5 group-hover:scale-110 transition-transform">
+                  <Camera size={24} />
+                </div>
+                <span className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-100">
+                  Take a Photo
+                </span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-snug">
+                  Use camera to capture physical document
+                </span>
+              </button>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-gray-100 dark:border-[#1d3d29] flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsSourceModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1a3a26] rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Live Webcam Capture Modal (Desktop) ── */}
+      {isCameraModalOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={handleCloseCameraModal}
+        >
+          <div
+            className="bg-white dark:bg-[#0e2417] border border-gray-200 dark:border-[#204830] rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden p-4 sm:p-5 animate-in zoom-in-95 duration-200"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-[#1d3d29] mb-3">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Camera size={18} className="text-[#00580C] dark:text-emerald-400" />
+                  Capture Document Photo
+                </h3>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  Position your document clearly within the camera frame
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseCameraModal}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1a3a26] transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Video Viewfinder */}
+            <div className="relative rounded-lg overflow-hidden bg-black aspect-[4/3] flex items-center justify-center border border-gray-200 dark:border-[#244f35]">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
+              />
+              {!cameraActive && !cameraError && (
+                <div className="flex flex-col items-center gap-2 text-white text-xs">
+                  <Loader2 size={24} className="animate-spin text-emerald-400" />
+                  <span>Starting camera...</span>
+                </div>
+              )}
+              {cameraError && (
+                <div className="text-center p-4 text-xs text-red-300">
+                  <p>{cameraError}</p>
+                </div>
+              )}
+              {/* Viewfinder overlay guide box */}
+              {cameraActive && (
+                <div className="pointer-events-none absolute inset-4 border-2 border-dashed border-white/60 rounded-md flex items-end justify-center pb-2">
+                  <span className="bg-black/60 backdrop-blur-sm text-[10px] text-white/90 px-2 py-0.5 rounded">
+                    Align document inside the frame
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Camera Controls */}
+            <div className="mt-4 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={handleCloseCameraModal}
+                className="px-3.5 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1a3a26] rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!cameraActive}
+                onClick={handleCaptureWebcam}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00580C] hover:bg-[#00470a] disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-semibold rounded-lg shadow-sm transition-all cursor-pointer"
+              >
+                <Camera size={16} />
+                <span>Snap Photo</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* ── Policy Modal ── */}
       <PolicyModal

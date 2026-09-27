@@ -233,6 +233,10 @@ const normalizePassedRecipient = (
       recipient?.userId ||
       null,
 
+    inquiry_id:
+      recipient?.inquiryId ||
+      null,
+
     full_name:
       fullName ||
       recipient?.email ||
@@ -560,8 +564,6 @@ export default function EmailUsers() {
     recipientType !==
       "specific_user" ||
     Boolean(
-      selectedRecipient
-        ?.user_id &&
       selectedRecipient
         ?.email
     );
