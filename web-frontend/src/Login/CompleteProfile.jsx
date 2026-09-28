@@ -48,6 +48,9 @@ const CompleteProfile = () => {
   const [mustChangePassword, setMustChangePassword] = useState(
     Boolean(user?.must_change_password)
   );
+  const [hasSecurityStep, setHasSecurityStep] = useState(
+    Boolean(user?.must_change_password)
+  );
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -114,7 +117,7 @@ const CompleteProfile = () => {
   // Build steps list conditionally
   const steps = useMemo(() => {
     const list = [];
-    if (mustChangePassword && !passwordSaved) {
+    if (hasSecurityStep) {
       list.push({
         key: "security",
         title: "Account Security",
@@ -153,7 +156,7 @@ const CompleteProfile = () => {
       }
     );
     return list;
-  }, [mustChangePassword, passwordSaved, isWarehouse, isMiller]);
+  }, [hasSecurityStep, isWarehouse, isMiller]);
 
   const currentStep = steps[currentStepIndex] || steps[0];
   const totalSteps = steps.length;
@@ -179,17 +182,21 @@ const CompleteProfile = () => {
 
     // Password step errors
     if (currentStep?.key === "security") {
-      if (!newPassword) {
-        errors.newPassword = "New password is required.";
-      } else if (!pwCriteria.hasMinLength) {
-        errors.newPassword = "Password must be at least 8 characters.";
-      } else if (!pwCriteria.hasUpper || !pwCriteria.hasLower || !pwCriteria.hasNumber) {
-        errors.newPassword = "Password must include uppercase, lowercase, and a number.";
-      }
-      if (!confirmPassword) {
-        errors.confirmPassword = "Confirm password is required.";
-      } else if (!pwCriteria.matches) {
-        errors.confirmPassword = "Passwords do not match.";
+      if (passwordSaved && !newPassword && !confirmPassword) {
+        // Password already established; fields left empty
+      } else {
+        if (!newPassword) {
+          errors.newPassword = "New password is required.";
+        } else if (!pwCriteria.hasMinLength) {
+          errors.newPassword = "Password must be at least 8 characters.";
+        } else if (!pwCriteria.hasUpper || !pwCriteria.hasLower || !pwCriteria.hasNumber) {
+          errors.newPassword = "Password must include uppercase, lowercase, and a number.";
+        }
+        if (!confirmPassword) {
+          errors.confirmPassword = "Confirm password is required.";
+        } else if (!pwCriteria.matches) {
+          errors.confirmPassword = "Passwords do not match.";
+        }
       }
     }
 
@@ -276,6 +283,9 @@ const CompleteProfile = () => {
   const isCurrentStepValid = useMemo(() => {
     if (!currentStep) return false;
     if (currentStep.key === "security") {
+      if (passwordSaved && !newPassword && !confirmPassword) {
+        return true;
+      }
       return pwCriteria.allPassed;
     }
     if (currentStep.key === "personal") {
@@ -306,7 +316,7 @@ const CompleteProfile = () => {
       return true;
     }
     return true;
-  }, [currentStep, pwCriteria, validationErrors]);
+  }, [currentStep, pwCriteria, validationErrors, passwordSaved, newPassword, confirmPassword]);
 
   // Load initial profile data from backend
   useEffect(() => {
@@ -325,7 +335,11 @@ const CompleteProfile = () => {
         const d = response.documents || {};
 
         if (u.must_change_password !== undefined) {
-          setMustChangePassword(Boolean(u.must_change_password));
+          const mustChange = Boolean(u.must_change_password);
+          setMustChangePassword(mustChange);
+          if (mustChange) {
+            setHasSecurityStep(true);
+          }
         }
 
         setFirstName(u.first_name || "");
@@ -449,6 +463,12 @@ const CompleteProfile = () => {
 
     // Step: Security
     if (currentStep.key === "security") {
+      if (passwordSaved && !newPassword && !confirmPassword) {
+        setCurrentStepIndex(1);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
       setTouched((prev) => ({ ...prev, newPassword: true, confirmPassword: true }));
       if (!pwCriteria.allPassed) {
         setErrorMessage("Please ensure your password meets all requirements and matches.");
@@ -480,18 +500,17 @@ const CompleteProfile = () => {
             must_change_password: false,
           });
         }
+
+        // Advance to Personal step (Step 2)
+        setCurrentStepIndex(1);
+        window.scrollTo({ top: 0, behavior: "smooth" });
       } catch (err) {
         setErrorMessage(
           err?.message || "Failed to update temporary password. Please try again."
         );
-        setIsSavingStep(false);
-        return;
       } finally {
         setIsSavingStep(false);
       }
-
-      // Advance directly to Personal
-      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
@@ -843,12 +862,21 @@ const CompleteProfile = () => {
               </div>
 
               <div className="space-y-4 max-w-lg">
-                <div className="bg-amber-50/80 border border-amber-200 text-amber-800 rounded-xl p-3.5 text-xs flex items-start gap-2.5">
-                  <Lock size={15} className="text-amber-700 shrink-0 mt-0.5" />
-                  <span>
-                    You are logging in with a temporary password. Please establish a strong permanent password before continuing.
-                  </span>
-                </div>
+                {passwordSaved ? (
+                  <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3.5 text-xs flex items-start gap-2.5">
+                    <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                    <span>
+                      Your new permanent password has already been saved. You may click &quot;Next Step&quot; to proceed, or enter a new password below if you wish to change it again.
+                    </span>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50/80 border border-amber-200 text-amber-800 rounded-xl p-3.5 text-xs flex items-start gap-2.5">
+                    <Lock size={15} className="text-amber-700 shrink-0 mt-0.5" />
+                    <span>
+                      You are logging in with a temporary password. Please establish a strong permanent password before continuing.
+                    </span>
+                  </div>
+                )}
 
                 {/* New Password Field */}
                 <div>
