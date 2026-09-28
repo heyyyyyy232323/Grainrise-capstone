@@ -274,7 +274,16 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
             status_text = row[1]
             updated_at = row[2]
 
-            doc_path = inquiry.business_verification_document or None
+            doc_raw = inquiry.business_verification_document or None
+            doc_path = doc_raw
+            if doc_raw and doc_raw.strip().startswith('['):
+                try:
+                    import json
+                    parsed_docs = json.loads(doc_raw)
+                    if isinstance(parsed_docs, list) and parsed_docs:
+                        doc_path = parsed_docs[0]
+                except Exception:
+                    pass
             org_name = inquiry.organization_company or None
 
             if partner_role == 'miller':

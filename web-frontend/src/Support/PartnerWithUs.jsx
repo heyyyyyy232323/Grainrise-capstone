@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Users, CheckCircle2, Loader2, UploadCloud, X,
   ImageIcon, FileCheck, Mail, Clock, RefreshCw, AlertTriangle, ExternalLink,
-  Camera
+  Camera, Plus
 } from 'lucide-react';
 import LandingHeader from '../Components/Major-Components/LandingHeader';
 import LandingFooter from '../Components/Major-Components/LandingFooter';
@@ -86,10 +86,12 @@ function inputCls(hasError) {
 export default function PartnerWithUs() {
   const navigate = useNavigate();
   const location = useLocation();
+  const routeParams = useParams();
   const fileInputRef = useRef(null);
 
   /* ── View Modes: 'form' | 'awaiting_verification' | 'verified_success' | 'token_invalid' ── */
-  const [viewState, setViewState] = useState('form');
+  const isDirectVerify = typeof window !== 'undefined' && Boolean(window.location.pathname.includes('/verify-email') || new URLSearchParams(window.location.search).get('token'));
+  const [viewState, setViewState] = useState(isDirectVerify ? 'verifying' : 'form');
 
   /* ── Form state ── */
   const [formData, setFormData] = useState({ name: '', email: '', organization: '', partnerRole: '', contactNumber: '', message: '' });
@@ -110,8 +112,8 @@ export default function PartnerWithUs() {
   const verifyingRef = useRef(false);
 
   /* ── Image / Document state ── */
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
+  const [imageFiles, setImageFiles] = useState([]);
+  const [availabilityChecking, setAvailabilityChecking] = useState({ name: false, email: false, organization: false });
   const [imageError, setImageError] = useState('');
   const [imageLoading, setImageLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -122,22 +124,28 @@ export default function PartnerWithUs() {
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState('');
 
-  /* ── Check for token in URL query parameter on mount/change — calls real API ── */
+  /* -- Check for token in URL path or query parameter on mount/change -- calls real API -- */
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const tokenParam = params.get('token');
-    if (!tokenParam) return;
+    const queryToken = params.get('token');
+    const pathToken = routeParams?.token || (location.pathname.match(/\/verify-email\/([^/?#]+)/)?.[1]);
+    const tokenParam = queryToken || pathToken;
+
+    if (!tokenParam) {
+      if (viewState === 'verifying') setViewState('form');
+      return;
+    }
     if (verifyingRef.current) return;
     verifyingRef.current = true;
+    setViewState('verifying');
 
     fetch(`${API_BASE}/partnership-inquiries/verify-email/${tokenParam}/`)
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (res.ok && data.success) {
           setViewState('verified_success');
-          // Clean token from address bar so refresh stays on page cleanly
           try {
-            window.history.replaceState({}, document.title, window.location.pathname);
+            window.history.replaceState({}, document.title, '/partner-with-us');
           } catch { }
         } else {
           setViewState('token_invalid');
@@ -146,7 +154,7 @@ export default function PartnerWithUs() {
       .catch(() => {
         setViewState('token_invalid');
       });
-  }, [location.search]);
+  }, [location.search, location.pathname, routeParams?.token]);
 
   /* ── Cooldown timer for resend button ── */
   useEffect(() => {
@@ -176,6 +184,35 @@ export default function PartnerWithUs() {
     }
   }, [touched.email]);
 
+
+  /* ── Live Availability Check (Name, Email, Organization) ── */
+  const checkAvailability = async (field, value) => {
+    if (!value || !value.trim()) return;
+    if (field === 'name' && validateName(value)) return;
+    if (field === 'email' && validateEmail(value, true)) return;
+    if (field === 'organization' && validateOrg(value)) return;
+
+    setAvailabilityChecking(p => ({ ...p, [field]: true }));
+    try {
+      const qp = field === 'organization' ? 'organization' : field;
+      const res = await fetch(`${API_BASE}/partnership-inquiries/check-availability/?${qp}=${encodeURIComponent(value.trim())}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (field === 'name' && data.name_used) {
+          setErrors(p => ({ ...p, name: data.name_error || 'This name has already been registered.' }));
+        } else if (field === 'email' && data.email_used) {
+          setErrors(p => ({ ...p, email: data.email_error || 'This email address is already registered.' }));
+        } else if (field === 'organization' && data.organization_used) {
+          setErrors(p => ({ ...p, organization: data.organization_error || 'This company or organization name is already registered.' }));
+        }
+      }
+    } catch (err) {
+      console.warn('Availability check failed:', err);
+    } finally {
+      setAvailabilityChecking(p => ({ ...p, [field]: false }));
+    }
+  };
+
   const isFormValid =
     formData.name.trim() && !validateName(formData.name) &&
     formData.email.trim() && !validateEmail(formData.email, true) &&
@@ -183,56 +220,76 @@ export default function PartnerWithUs() {
     Boolean(formData.partnerRole) && !validateRole(formData.partnerRole) &&
     formData.contactNumber && !validatePhone(formData.contactNumber) &&
     formData.message.trim() && !validateMessage(formData.message) &&
-    Boolean(imageFile) && !imageError &&
+    imageFiles.length > 0 && !imageError &&
     agreedToTerms;
 
-  /* ── Image processing ── */
-  const processImageFile = (file) => {
-    if (!file) return;
+    /* ── Multi-image Document processing ── */
+  const processImageFiles = (files) => {
+    if (!files || files.length === 0) return;
     setImageLoading(true);
     setImageError('');
-    const err = validateImageFile(file);
-    if (err) {
-      setImageError(err);
-      setImageFile(null);
-      setImagePreview('');
-      setImageLoading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      if (cameraInputRef.current) cameraInputRef.current.value = '';
-      return;
+
+    const fileList = Array.from(files);
+    for (const f of fileList) {
+      const err = validateImageFile(f);
+      if (err) {
+        setImageError(err);
+        setImageLoading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        if (cameraInputRef.current) cameraInputRef.current.value = '';
+        return;
+      }
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setImagePreview(e.target.result);
-      setImageFile(file);
-      setImageError('');
-      setImageLoading(false);
-    };
-    reader.onerror = () => {
-      setImageError('Failed to read the document image. Please try again.');
-      setImageFile(null);
-      setImagePreview('');
-      setImageLoading(false);
-    };
-    reader.readAsDataURL(file);
+
+    let loaded = 0;
+    const newDocs = [];
+    fileList.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        newDocs.push({
+          id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+          file,
+          preview: e.target.result,
+          name: file.name,
+          size: file.size,
+        });
+        loaded++;
+        if (loaded === fileList.length) {
+          setImageFiles(prev => [...prev, ...newDocs]);
+          setImageLoading(false);
+          setImageError('');
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          if (cameraInputRef.current) cameraInputRef.current.value = '';
+        }
+      };
+      reader.onerror = () => {
+        loaded++;
+        if (loaded === fileList.length) {
+          setImageLoading(false);
+          setImageError('Failed to read some document images.');
+        }
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleFileInputChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) processImageFile(file);
+    const files = e.target.files;
+    if (files && files.length > 0) processImageFiles(files);
   };
 
-  const handleRemoveImage = () => {
-    setImageFile(null);
-    setImagePreview('');
-    setImageLoading(false);
+  const handleRemoveImage = (idToRemove) => {
+    setImageFiles(prev => {
+      const next = prev.filter(item => item.id !== idToRemove);
+      if (submitAttempted && next.length === 0) {
+        setImageError('Please upload at least one business verification document.');
+      } else {
+        setImageError('');
+      }
+      return next;
+    });
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (cameraInputRef.current) cameraInputRef.current.value = '';
-    if (submitAttempted) {
-      setImageError('Please upload a valid business verification document.');
-    } else {
-      setImageError('');
-    }
   };
 
   /* ── Open Document Source Modal ── */
@@ -322,7 +379,7 @@ export default function PartnerWithUs() {
     canvas.toBlob((blob) => {
       if (blob) {
         const file = new File([blob], `document_capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
-        processImageFile(file);
+        processImageFiles([file]);
       }
       setIsCameraModalOpen(false);
       stopWebcamStream();
@@ -340,7 +397,7 @@ export default function PartnerWithUs() {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) processImageFile(file);
+    if (file) processImageFiles([file]);
   };
 
   /* ── Field handlers ── */
@@ -399,7 +456,11 @@ export default function PartnerWithUs() {
   };
   const handleBlur = (field, value) => {
     setTouched(p => ({ ...p, [field]: true }));
-    setErrors(p => ({ ...p, [field]: validate(field, value) }));
+    const err = validate(field, value);
+    setErrors(p => ({ ...p, [field]: err }));
+    if (!err && (field === 'name' || field === 'email' || field === 'organization')) {
+      checkAvailability(field, value);
+    }
   };
 
   /* ── Checkbox / Agreement interaction ── */
@@ -424,13 +485,13 @@ export default function PartnerWithUs() {
       contactNumber: validatePhone(formData.contactNumber),
       message: validateMessage(formData.message),
     };
-    if (!imageFile) {
-      setImageError('Please upload a valid business verification document.');
+    if (imageFiles.length === 0) {
+      setImageError('Please upload at least one business verification document.');
     }
     setErrors(newErrors);
     setTouched({ name: true, email: true, organization: true, contactNumber: true, message: true });
 
-    if (Object.values(newErrors).some(v => v) || !imageFile || imageError || !agreedToTerms) return;
+    if (Object.values(newErrors).some(v => v) || imageFiles.length === 0 || imageError || !agreedToTerms) return;
 
     setIsSubmitting(true);
 
@@ -445,7 +506,10 @@ export default function PartnerWithUs() {
         : `+63${formData.contactNumber}`;
       fd.append('contact_number', phoneToSend);
       fd.append('message', formData.message);
-      fd.append('business_verification_document', imageFile);
+      imageFiles.forEach((docItem) => {
+        fd.append('business_verification_documents', docItem.file);
+        fd.append('business_verification_document', docItem.file);
+      });
 
       const res = await fetch(`${API_BASE}/partnership-inquiries/`, {
         method: 'POST',
@@ -471,6 +535,7 @@ export default function PartnerWithUs() {
         const backendErrors = {};
         if (data.name) backendErrors.name = data.name;
         if (data.email) backendErrors.email = data.email;
+        if (data.organization) backendErrors.organization = data.organization;
         if (data.organization_company) backendErrors.organization = data.organization_company;
         if (data.partner_role) backendErrors.partnerRole = data.partner_role;
         if (data.contact_number) backendErrors.contactNumber = data.contact_number;
@@ -527,8 +592,7 @@ export default function PartnerWithUs() {
     setTouched({ name: false, email: false, organization: false, partnerRole: false, contactNumber: false, message: false });
     setSubmitAttempted(false);
     setAgreedToTerms(false);
-    setImageFile(null);
-    setImagePreview('');
+    setImageFiles([]);
     setImageError('');
     if (fileInputRef.current) fileInputRef.current.value = '';
     setViewState('form');
@@ -537,7 +601,7 @@ export default function PartnerWithUs() {
 
   const phoneError = (touched.contactNumber || submitAttempted) && errors.contactNumber;
   const msgCharCount = formData.message.replace(/\u00A0/g, ' ').trim().length;
-  const documentHasError = (submitAttempted && !imageFile) || Boolean(imageError);
+  const documentHasError = (submitAttempted && imageFiles.length === 0) || Boolean(imageError);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f7f2] dark:bg-[#07150d] text-gray-800 dark:text-gray-200 font-sans transition-colors">
@@ -565,6 +629,24 @@ export default function PartnerWithUs() {
             delay={80}
             className="bg-white dark:bg-[#0f2417] rounded-xl border border-[#e2ece5] dark:border-white/10 shadow-sm p-6 sm:p-9"
           >
+
+            {/* -- STATE 0: VERIFYING IN PROGRESS -- */}
+            {viewState === 'verifying' && (
+              <div className="w-full text-center py-14 px-4 sm:px-6 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
+                <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-[#00580C] dark:text-emerald-400 flex items-center justify-center mb-4 ring-8 ring-emerald-50/70 dark:ring-emerald-950/30">
+                  <Loader2 size={36} className="animate-spin text-[#00580C] dark:text-emerald-400" />
+                </div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#00580C] dark:text-emerald-400 mb-1">
+                  Verifying Email
+                </span>
+                <h2 className="font-['Outfit'] text-2xl sm:text-[26px] font-extrabold text-[#00580C] dark:text-emerald-400 mb-2">
+                  Confirming Your Partnership Inquiry...
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-[480px] leading-relaxed">
+                  Please wait a moment while we verify your email address.
+                </p>
+              </div>
+            )}
 
             {/* ────── STATE 1: VERIFIED SUCCESS ────── */}
             {viewState === 'verified_success' && (
@@ -785,7 +867,9 @@ export default function PartnerWithUs() {
                           onChange={handleEmailChange}
                           onBlur={() => {
                             setTouched(p => ({ ...p, email: true }));
-                            setErrors(p => ({ ...p, email: validateEmail(formData.email, true) }));
+                            const err = validateEmail(formData.email, true);
+                            setErrors(p => ({ ...p, email: err }));
+                            if (!err) checkAvailability('email', formData.email);
                           }}
                         />
                         <FieldError msg={(touched.email || submitAttempted) ? errors.email : ''} />
@@ -906,6 +990,7 @@ export default function PartnerWithUs() {
                         <input
                           ref={fileInputRef}
                           type="file"
+                          multiple
                           accept="image/jpeg,image/png,image/webp"
                           className="hidden"
                           onChange={handleFileInputChange}
@@ -919,34 +1004,85 @@ export default function PartnerWithUs() {
                           onChange={handleFileInputChange}
                         />
 
-                        {imageFile ? (
-                          <div className="flex items-center gap-3 p-3 rounded-lg border border-emerald-300 dark:border-emerald-700 bg-emerald-50/70 dark:bg-emerald-950/40">
-                            <div className="relative w-14 h-14 rounded-md overflow-hidden border border-emerald-200 dark:border-emerald-700 shrink-0">
-                              <img src={imagePreview} alt="Document Preview" className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <FileCheck size={13} className="text-[#00580C] dark:text-emerald-400 shrink-0" />
-                                <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">{imageFile.name}</p>
+                        {imageFiles.length > 0 ? (
+                          <div className="flex flex-col gap-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
+                                <FileCheck size={14} className="text-[#00580C] dark:text-emerald-400" />
+                                Attached Documents ({imageFiles.length})
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={handleChooseUpload}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-[#00580C] dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-md border border-emerald-200 dark:border-emerald-800 transition-colors cursor-pointer"
+                                >
+                                  <Plus size={13} />
+                                  <span>Add More Files</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleChooseCamera}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-md border border-gray-200 dark:border-gray-700 transition-colors cursor-pointer"
+                                >
+                                  <Camera size={13} />
+                                  <span>Take Photo</span>
+                                </button>
                               </div>
-                              <p className="text-[10.5px] text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
-                                <CheckCircle2 size={11} />
-                                {formatBytes(imageFile.size)} · Business document attached
-                              </p>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <button type="button" onClick={handleOpenSourceModal} className="text-[11px] font-semibold text-[#00580C] dark:text-emerald-400 hover:underline cursor-pointer">
-                                Change
-                              </button>
-                              <button type="button" onClick={handleRemoveImage} className="w-6 h-6 flex items-center justify-center rounded-full bg-white dark:bg-[#163321] border border-gray-200 dark:border-[#2d5c3c] text-gray-400 hover:text-red-500 hover:border-red-300 transition-colors cursor-pointer" aria-label="Remove document">
-                                <X size={12} />
-                              </button>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              {imageFiles.map((docItem) => (
+                                <div
+                                  key={docItem.id}
+                                  className="flex items-center gap-3 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800/80 bg-emerald-50/60 dark:bg-emerald-950/30 transition-all hover:shadow-xs"
+                                >
+                                  <div className="relative w-12 h-12 rounded-md overflow-hidden border border-emerald-200 dark:border-emerald-800 shrink-0 bg-black/5">
+                                    <img src={docItem.preview} alt={docItem.name} className="w-full h-full object-cover" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate" title={docItem.name}>
+                                      {docItem.name}
+                                    </p>
+                                    <p className="text-[10px] text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
+                                      <CheckCircle2 size={10} />
+                                      {formatBytes(docItem.size)} • Attached
+                                    </p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveImage(docItem.id)}
+                                    className="w-6 h-6 flex items-center justify-center rounded-full bg-white dark:bg-[#163321] border border-gray-200 dark:border-[#2d5c3c] text-gray-400 hover:text-red-500 hover:border-red-300 transition-colors shrink-0 cursor-pointer"
+                                    aria-label="Remove document"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Drop zone to add more */}
+                            <div
+                              onClick={handleOpenSourceModal}
+                              onDragOver={handleDragOver}
+                              onDragLeave={handleDragLeave}
+                              onDrop={handleDrop}
+                              className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed cursor-pointer transition-all ${
+                                isDragging
+                                  ? 'border-[#00580C] dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30'
+                                  : 'border-gray-200 dark:border-[#244f35] hover:border-[#00580C] dark:hover:border-emerald-600 bg-white/50 dark:bg-[#163321]/50'
+                              }`}
+                            >
+                              <Plus size={14} className="text-[#00580C] dark:text-emerald-400" />
+                              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                                Click or drag more documents here
+                              </span>
                             </div>
                           </div>
                         ) : imageLoading ? (
                           <div className="flex items-center justify-center gap-2 p-5 rounded-lg border border-gray-200 dark:border-[#2d5c3c] bg-white dark:bg-[#163321]">
                             <Loader2 size={16} className="animate-spin text-[#00580C] dark:text-emerald-400" />
-                            <span className="text-xs text-gray-500 dark:text-gray-400">Validating document...</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">Validating documents...</span>
                           </div>
                         ) : (
                           <div
@@ -966,7 +1102,7 @@ export default function PartnerWithUs() {
                             </div>
                             <div className="text-center">
                               <p className="text-xs sm:text-[13px] font-semibold text-gray-800 dark:text-gray-200">
-                                {isDragging ? 'Drop document here' : 'Click to attach document or drag & drop'}
+                                {isDragging ? 'Drop documents here' : 'Click to attach documents or drag & drop'}
                               </p>
                               <div className="flex items-center justify-center gap-2.5 mt-2.5">
                                 <button
@@ -975,7 +1111,7 @@ export default function PartnerWithUs() {
                                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-gray-200 dark:border-[#244f35] bg-white dark:bg-[#163321] text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-[#00580C] dark:hover:border-emerald-500 hover:text-[#00580C] dark:hover:text-emerald-400 shadow-sm transition-all cursor-pointer"
                                 >
                                   <UploadCloud size={14} className="text-[#00580C] dark:text-emerald-400" />
-                                  <span>Upload File</span>
+                                  <span>Upload Files</span>
                                 </button>
                                 <button
                                   type="button"
@@ -987,7 +1123,7 @@ export default function PartnerWithUs() {
                                 </button>
                               </div>
                               <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-                                Supported formats: JPG, PNG, WEBP · Maximum 5 MB
+                                Supported formats: JPG, PNG, WEBP • Maximum 5 MB per file • Multiple files supported
                               </p>
                             </div>
                           </div>

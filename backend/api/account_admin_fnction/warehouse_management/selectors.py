@@ -1,3 +1,4 @@
+import json
 from django.db import connection
 
 
@@ -463,7 +464,11 @@ def get_warehouse_details(
             "warehouse_document_id": None,
             "government_issued_id": None,
             "business_permit": None,
-            "business_registration": inquiry.business_verification_document,
+            "business_registration": (
+                json.loads(inquiry.business_verification_document)[0]
+                if (inquiry.business_verification_document and inquiry.business_verification_document.strip().startswith('['))
+                else inquiry.business_verification_document
+            ),
             "warehouse_license": None,
             "documents_created_at": inquiry.created_at,
             "documents_updated_at": inquiry.updated_at,

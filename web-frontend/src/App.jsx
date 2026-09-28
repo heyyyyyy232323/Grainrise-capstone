@@ -310,6 +310,8 @@ function App() {
 
         <Route path="/contact-us" element={<ContactUs />} />
         <Route path="/partner-with-us" element={<PartnerWithUs />} />
+        <Route path="/partner-with-us/verify-email/:token" element={<PartnerWithUs />} />
+        <Route path="/partner-with-us/verify-email" element={<PartnerWithUs />} />
         <Route path="/contact" element={<ContactUs />} />
         <Route path="/contact-support" element={<ContactSupport />} />
         <Route path="/support" element={<ContactSupport />} />

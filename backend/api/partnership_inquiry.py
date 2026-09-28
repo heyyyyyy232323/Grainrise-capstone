@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import json
 import logging
 import os
 import re
@@ -180,13 +181,117 @@ GrainRise Team"""
     msg.attach_alternative(html_content, "text/html")
     msg.send(fail_silently=False)
 
+
+def _check_email_used(email):
+    norm_email = (email or "").strip().lower()
+    if not norm_email:
+        return False, None
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT user_id FROM users WHERE LOWER(email) = %s LIMIT 1", [norm_email])
+        if cursor.fetchone():
+            return True, "This email address is already registered to an existing account."
+        cursor.execute(
+            "SELECT partnership_inquiry_id FROM partnership_inquiries WHERE LOWER(email) = %s AND status IN ('to_review', 'active') LIMIT 1",
+            [norm_email]
+        )
+        if cursor.fetchone():
+            return True, "This email address has already been used in an existing partnership application."
+    return False, None
+
+
+def _check_organization_used(organization):
+    norm_org = (organization or "").strip().lower()
+    if not norm_org:
+        return False, None
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT supplier_profile_id FROM supplier_profiles WHERE LOWER(business_name) = %s OR LOWER(organization_name) = %s LIMIT 1",
+            [norm_org, norm_org]
+        )
+        if cursor.fetchone():
+            return True, "This company or organization name is already registered."
+        cursor.execute(
+            "SELECT warehouse_profile_id FROM warehouse_profiles WHERE LOWER(business_name) = %s OR LOWER(organization_name) = %s LIMIT 1",
+            [norm_org, norm_org]
+        )
+        if cursor.fetchone():
+            return True, "This company or organization name is already registered."
+        cursor.execute(
+            "SELECT partnership_inquiry_id FROM partnership_inquiries WHERE LOWER(organization_company) = %s AND status IN ('to_review', 'active') LIMIT 1",
+            [norm_org]
+        )
+        if cursor.fetchone():
+            return True, "This company or organization name is already used in an active partnership application."
+    return False, None
+
+
+def _check_name_used(name):
+    norm_name = " ".join((name or "").strip().lower().split())
+    if not norm_name:
+        return False, None
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT user_id FROM users 
+            WHERE LOWER(TRIM(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')))) = %s
+               OR LOWER(TRIM(first_name)) = %s
+            LIMIT 1
+        """, [norm_name, norm_name])
+        if cursor.fetchone():
+            return True, "This full name has already been registered to an existing account."
+        cursor.execute(
+            "SELECT partnership_inquiry_id FROM partnership_inquiries WHERE LOWER(TRIM(name)) = %s AND status IN ('to_review', 'active') LIMIT 1",
+            [norm_name]
+        )
+        if cursor.fetchone():
+            return True, "This name is already used in an existing partnership application."
+    return False, None
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def check_partnership_availability(request):
+    """
+    GET /api/partnership-inquiries/check-availability/
+    Query params: ?email=...&name=...&organization=...
+    """
+    email = request.query_params.get("email")
+    name = request.query_params.get("name")
+    organization = request.query_params.get("organization") or request.query_params.get("organization_company")
+
+    res = {
+        "email_used": False,
+        "email_error": None,
+        "organization_used": False,
+        "organization_error": None,
+        "name_used": False,
+        "name_error": None,
+    }
+
+    if email:
+        used, err = _check_email_used(email)
+        res["email_used"] = used
+        res["email_error"] = err
+
+    if organization:
+        used, err = _check_organization_used(organization)
+        res["organization_used"] = used
+        res["organization_error"] = err
+
+    if name:
+        used, err = _check_name_used(name)
+        res["name_used"] = used
+        res["name_error"] = err
+
+    return Response(res, status=http_status.HTTP_200_OK)
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @parser_classes([MultiPartParser, FormParser])
 def submit_partnership_inquiry(request):
     """
     POST /api/partnership-inquiries/
-    Submits application and directly registers applicant into users table (inactive / To Review).
+    Submits application with duplicate validation and multi-file document upload support.
     """
     data = request.data
     name = (data.get("name") or "").strip()
@@ -195,17 +300,38 @@ def submit_partnership_inquiry(request):
     partner_role = (data.get("partner_role") or data.get("role") or "").strip().lower()
     raw_phone = data.get("contact_number") or data.get("contact")
     raw_message = data.get("message")
-    uploaded_doc = request.FILES.get("business_verification_document")
+
+    # Support multiple document uploads
+    uploaded_docs = request.FILES.getlist("business_verification_documents")
+    if not uploaded_docs:
+        uploaded_docs = request.FILES.getlist("business_verification_document")
+    if not uploaded_docs and request.FILES.get("business_verification_document"):
+        uploaded_docs = [request.FILES.get("business_verification_document")]
 
     errors = {}
     if not name:
         errors["name"] = "Name is required."
+    else:
+        name_used, name_err = _check_name_used(name)
+        if name_used:
+            errors["name"] = name_err
+
     if not email:
         errors["email"] = "Email is required."
     elif not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
         errors["email"] = "Please enter a valid email address."
+    else:
+        email_used, email_err = _check_email_used(email)
+        if email_used:
+            errors["email"] = email_err
+
     if not organization_company:
         errors["organization"] = "Organization or company name is required."
+    else:
+        org_used, org_err = _check_organization_used(organization_company)
+        if org_used:
+            errors["organization"] = org_err
+
     if not partner_role:
         errors["partner_role"] = "Partner role is required."
     elif partner_role not in ALLOWED_PARTNER_ROLES:
@@ -219,27 +345,35 @@ def submit_partnership_inquiry(request):
     if not clean_msg:
         errors["message"] = "Partnership message is required."
 
-    if not uploaded_doc:
-        errors["business_verification_document"] = "Business verification document is required."
+    if not uploaded_docs:
+        errors["business_verification_document"] = "Please upload at least one business verification document."
     else:
-        if uploaded_doc.size > MAX_FILE_BYTES:
-            errors["business_verification_document"] = "Document must not exceed 5MB."
-        else:
-            _, ext = os.path.splitext((uploaded_doc.name or "").lower())
+        for doc in uploaded_docs:
+            if doc.size > MAX_FILE_BYTES:
+                errors["business_verification_document"] = f"File '{doc.name}' exceeds the 5MB size limit."
+                break
+            _, ext = os.path.splitext((doc.name or "").lower())
             if ext not in ALLOWED_EXTENSIONS:
-                errors["business_verification_document"] = f"Unsupported file type '{ext}'."
+                errors["business_verification_document"] = f"File '{doc.name}' has an unsupported file type '{ext}'. Allowed: JPG, PNG, WEBP, PDF."
+                break
 
     if errors:
         return Response(errors, status=http_status.HTTP_400_BAD_REQUEST)
 
-    # Save document
+    # Save documents
     import uuid
     app_uuid = uuid.uuid4()
+    saved_doc_paths = []
     try:
-        doc_rel_path = _validate_and_save_document(uploaded_doc, app_uuid)
+        for doc in uploaded_docs:
+            rel_path = _validate_and_save_document(doc, app_uuid)
+            if rel_path:
+                saved_doc_paths.append(rel_path)
     except Exception as exc:
-        logger.exception("Failed to save document: %s", exc)
+        logger.exception("Failed to save documents: %s", exc)
         return Response({"detail": "Failed to store uploaded document."}, status=http_status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    doc_storage_val = json.dumps(saved_doc_paths) if len(saved_doc_paths) > 1 else (saved_doc_paths[0] if saved_doc_paths else None)
 
     # Save temporary inquiry for email verification
     raw_token, token_hash = _generate_verification_token()
@@ -254,7 +388,7 @@ def submit_partnership_inquiry(request):
             partner_role=partner_role,
             contact_number=normalized_phone,
             message=clean_msg,
-            business_verification_document=doc_rel_path,
+            business_verification_document=doc_storage_val,
             status=PartnershipInquiry.Status.TO_REVIEW,
             email_verified=False,
             verification_token_hash=token_hash,
@@ -262,8 +396,6 @@ def submit_partnership_inquiry(request):
         )
     except Exception as exc:
         logger.exception("Error creating inquiry: %s", exc)
-
-    # Account creation occurs when Admin clicks Confirm in the management module.
 
     # Send verification email
     try:
@@ -277,7 +409,9 @@ def submit_partnership_inquiry(request):
         "requires_email_verification": True,
         "inquiry_id": str(app_uuid),
         "email": email,
+        "uploaded_files_count": len(saved_doc_paths),
     }, status=http_status.HTTP_201_CREATED)
+
 
 @api_view(["GET"])
 @permission_classes([AllowAny])

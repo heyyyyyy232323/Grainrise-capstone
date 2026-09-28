@@ -111,10 +111,10 @@ class PartnershipInquiry(models.Model):
     message = models.TextField(max_length=2000)
 
     # Relative path in MEDIA_ROOT: partnership_documents/<uuid>/<safe_filename>
-    business_verification_document = models.CharField(
-        max_length=500,
+    business_verification_document = models.TextField(
         blank=True,
         null=True,
+        help_text='Stored path or JSON array of uploaded document paths',
     )
 
     status = models.CharField(

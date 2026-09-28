@@ -210,9 +210,19 @@ urlpatterns = [
     # PARTNERSHIP INQUIRIES (PUBLIC)
     # ========================================================
     path(
+        "partnership-inquiries/check-availability/",
+        partnership_inquiry.check_partnership_availability,
+        name="partnership-inquiry-check-availability",
+    ),
+    path(
         "partnership-inquiries/",
         partnership_inquiry.submit_partnership_inquiry,
         name="partnership-inquiry-submit",
+    ),
+    path(
+        "partnership-inquiries/verify-email/<str:token>",
+        partnership_inquiry.verify_partnership_email,
+        name="partnership-inquiry-verify-email-no-slash",
     ),
     path(
         "partnership-inquiries/verify-email/<str:token>/",

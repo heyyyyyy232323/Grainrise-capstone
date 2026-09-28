@@ -1,3 +1,4 @@
+import json
 from django.db import connection
 
 
@@ -441,7 +442,11 @@ def get_retailer_details(
             "updated_at": inquiry.updated_at,
             "retailer_document_id": None,
             "barangay_permit": None,
-            "valid_id": inquiry.business_verification_document,
+            "valid_id": (
+                json.loads(inquiry.business_verification_document)[0]
+                if (inquiry.business_verification_document and inquiry.business_verification_document.strip().startswith('['))
+                else inquiry.business_verification_document
+            ),
             "documents_created_at": inquiry.created_at,
             "documents_updated_at": inquiry.updated_at,
         }

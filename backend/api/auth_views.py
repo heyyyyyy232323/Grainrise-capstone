@@ -352,8 +352,11 @@ def change_temporary_password(request):
 
     uid, stored_hash, role, must_change_pw, province, gender, fname, lname, uemail = row
 
-    if not verify_password(current_password, stored_hash):
-        return Response({"detail": "Current temporary password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+    if current_password:
+        if not verify_password(current_password, stored_hash):
+            return Response({"detail": "Current temporary password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+    elif not (user_id and must_change_pw):
+        return Response({"detail": "Current temporary password is required."}, status=status.HTTP_400_BAD_REQUEST)
 
     if not new_password or len(new_password) < 8:
         return Response({"detail": "New password must be at least 8 characters long."}, status=status.HTTP_400_BAD_REQUEST)
@@ -364,7 +367,7 @@ def change_temporary_password(request):
     if new_password != confirm_password:
         return Response({"detail": "New password and confirmation do not match."}, status=status.HTTP_400_BAD_REQUEST)
 
-    if current_password == new_password:
+    if (current_password and current_password == new_password) or verify_password(new_password, stored_hash):
         return Response({"detail": "New password must be different from your temporary password."}, status=status.HTTP_400_BAD_REQUEST)
 
     new_hash = make_password(new_password)
@@ -507,6 +510,7 @@ def complete_profile(request):
     """
     POST /api/auth/complete-profile/
     Saves missing personal, address, business, and document details.
+    Supports is_partial=true for saving progress between multi-step wizard steps.
     """
     import os, secrets
     from django.conf import settings
@@ -518,6 +522,7 @@ def complete_profile(request):
     
     user_id = auth[0]
     data = request.data
+    is_partial = str(data.get("is_partial", "")).lower() in ("true", "1")
 
     with connection.cursor() as cursor:
         cursor.execute("SELECT user_id, user_role::text FROM users WHERE user_id = %s", [user_id])
@@ -540,10 +545,11 @@ def complete_profile(request):
     postal_code = str(data.get("postal_code") or "").strip()
     contact_number = str(data.get("contact_number") or "").strip()
 
-    if not gender:
-        return Response({"detail": "Gender is required."}, status=status.HTTP_400_BAD_REQUEST)
-    if not province or not municipality or not barangay or not street_address:
-        return Response({"detail": "Complete address (Province, Municipality, Barangay, Street Address) is required."}, status=status.HTTP_400_BAD_REQUEST)
+    if not is_partial:
+        if not gender:
+            return Response({"detail": "Gender is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not province or not municipality or not barangay or not street_address:
+            return Response({"detail": "Complete company address (Province, Municipality, Barangay, Street Address) is required."}, status=status.HTTP_400_BAD_REQUEST)
 
     def save_uploaded_file(file_obj, subfolder):
         if not file_obj:
@@ -563,12 +569,12 @@ def complete_profile(request):
         with connection.cursor() as cursor:
             cursor.execute("""
                 UPDATE users
-                SET gender = %s,
-                    province = %s,
-                    municipality = %s,
-                    barangay = %s,
-                    street_address = %s,
-                    postal_code = %s,
+                SET gender = COALESCE(NULLIF(%s, ''), gender),
+                    province = COALESCE(NULLIF(%s, ''), province),
+                    municipality = COALESCE(NULLIF(%s, ''), municipality),
+                    barangay = COALESCE(NULLIF(%s, ''), barangay),
+                    street_address = COALESCE(NULLIF(%s, ''), street_address),
+                    postal_code = COALESCE(NULLIF(%s, ''), postal_code),
                     first_name = COALESCE(NULLIF(%s, ''), first_name),
                     middle_initial = NULLIF(%s, ''),
                     last_name = COALESCE(NULLIF(%s, ''), last_name),
@@ -597,11 +603,11 @@ def complete_profile(request):
                     UPDATE supplier_profiles
                     SET business_name = COALESCE(NULLIF(%s, ''), business_name),
                         organization_name = NULLIF(%s, ''),
-                        province = %s,
-                        municipality = %s,
-                        barangay = %s,
-                        street_address = %s,
-                        postal_code = %s,
+                        province = COALESCE(NULLIF(%s, ''), province),
+                        municipality = COALESCE(NULLIF(%s, ''), municipality),
+                        barangay = COALESCE(NULLIF(%s, ''), barangay),
+                        street_address = COALESCE(NULLIF(%s, ''), street_address),
+                        postal_code = COALESCE(NULLIF(%s, ''), postal_code),
                         official_email = COALESCE(NULLIF(%s, ''), official_email),
                         official_contact_number = COALESCE(NULLIF(%s, ''), official_contact_number),
                         updated_at = CURRENT_TIMESTAMP
@@ -643,11 +649,11 @@ def complete_profile(request):
                     UPDATE warehouse_profiles
                     SET business_name = COALESCE(NULLIF(%s, ''), business_name),
                         organization_name = NULLIF(%s, ''),
-                        province = %s,
-                        municipality = %s,
-                        barangay = %s,
-                        street_address = %s,
-                        postal_code = %s,
+                        province = COALESCE(NULLIF(%s, ''), province),
+                        municipality = COALESCE(NULLIF(%s, ''), municipality),
+                        barangay = COALESCE(NULLIF(%s, ''), barangay),
+                        street_address = COALESCE(NULLIF(%s, ''), street_address),
+                        postal_code = COALESCE(NULLIF(%s, ''), postal_code),
                         official_email = COALESCE(NULLIF(%s, ''), official_email),
                         official_contact_number = COALESCE(NULLIF(%s, ''), official_contact_number),
                         updated_at = CURRENT_TIMESTAMP
@@ -688,8 +694,17 @@ def complete_profile(request):
                     params.append(user_id)
                     cursor.execute(f"UPDATE retailer_documents SET {', '.join(updates)} WHERE user_id = %s", params)
 
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT province, gender FROM users WHERE user_id = %s", [user_id])
+        u_row = cursor.fetchone()
+    
+    u_prov = u_row[0] if u_row else None
+    u_gen = u_row[1] if u_row else None
+    profile_incomplete = (not u_prov or not str(u_prov).strip() or not u_gen or not str(u_gen).strip())
+
     return Response({
         "success": True,
-        "message": "Profile completed successfully! You can now access your dashboard.",
-        "profile_incomplete": False,
+        "message": "Profile completed successfully! You can now access your dashboard." if not profile_incomplete else "Progress saved.",
+        "profile_incomplete": profile_incomplete,
+        "is_partial": is_partial,
     }, status=status.HTTP_200_OK)

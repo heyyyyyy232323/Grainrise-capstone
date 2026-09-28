@@ -73,12 +73,7 @@ const UserLogin = () => {
         response.user
       );
 
-      if (response.user?.must_change_password) {
-        navigate("/change-password");
-        return;
-      }
-
-      if (response.user?.profile_incomplete) {
+      if (response.user?.must_change_password || response.user?.profile_incomplete) {
         navigate("/complete-profile");
         return;
       }
@@ -160,11 +155,11 @@ const UserLogin = () => {
                   "
                 >
                   <ArrowLeft size={18} />
-                  Back
+                  Back to Home
                 </span>
               }
               className="self-start !rounded-full w-auto"
-              onClick={() => navigate(-1)}
+              onClick={() => navigate("/")}
             />
 
             <div className="my-10">
