@@ -22,7 +22,7 @@ import {
 
 import useAuth from "../hooks/useAuth";
 import useAdminNotifications from "../hooks/AccountAdmin/useAdminNotifications";
-import useFarmerNotifications from "../hooks/Farmer/useFarmerNotifications";
+import useFarmerNotifications from "../hooks/Farmer/UseFarmerNotifications";
 
 
 // ============================================================
