@@ -2,8 +2,8 @@ import { useCallback } from "react";
 
 
 const API_BASE_URL = (
-  import.meta.env.VITE_API_URL ||
-  "http://127.0.0.1:8000/api"
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://127.0.0.1:8000"
 ).replace(/\/$/, "");
 
 
@@ -250,9 +250,8 @@ const useApi = () => {
 
         const finalError = isNetworkError
           ? new Error(
-              "Cannot connect to the GrainRise server. " +
-              "Make sure the Django backend is running at " +
-              "http://127.0.0.1:8000."
+                    "Cannot connect to the GrainRise server. Please try again."
+
             )
           : error;
 
