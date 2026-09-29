@@ -23,7 +23,7 @@ const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
 const ALLOWED_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const POLICY_VERSION = '1.0';
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = `${import.meta.env.VITE_API_BASE_URL}/api`;
 
 function validateName(v) {
   if (!v.trim()) return 'Name is required.';
