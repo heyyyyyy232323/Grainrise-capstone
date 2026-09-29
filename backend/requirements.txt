@@ -1,13 +1,39 @@
-django>=4.2.0
+# ============================================
+# GrainRise Backend - Core
+# ============================================
+
+Django>=4.2.0
 djangorestframework>=3.14.0
 django-cors-headers>=4.0.0
+
+# ============================================
+# Database
+# ============================================
+
 psycopg2-binary>=2.9.6
-pyjwt>=2.8.0
-passlib[bcrypt]>=1.7.4
-bcrypt>=4.0.1
 dj-database-url>=2.0.0
 
-# GrainRise Farmer Forecasting
+# ============================================
+# Authentication & Security
+# ============================================
+
+PyJWT>=2.8.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.1
+
+# ============================================
+# Document / Image Processing & OCR
+# Used by Supplier and Warehouse Registration
+# ============================================
+
+Pillow
+PyMuPDF
+pytesseract
+
+# ============================================
+# GrainRise Climate & Demand Forecasting
+# ============================================
+
 cdsapi==0.7.7
 xarray==2026.7.0
 netCDF4==1.7.4
