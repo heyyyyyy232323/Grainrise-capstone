@@ -8,8 +8,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Remove old statuses columns that no longer exist in choices
-        # and update the status field with new choices + default
         migrations.AlterField(
             model_name='partnershipinquiry',
             name='status',
@@ -22,10 +20,5 @@ class Migration(migrations.Migration):
                 default='to_review',
                 max_length=50,
             ),
-        ),
-        # Remove archive_reason field (replaced by inactive status)
-        migrations.RemoveField(
-            model_name='partnershipinquiry',
-            name='archive_reason',
         ),
     ]
