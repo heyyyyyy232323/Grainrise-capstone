@@ -591,7 +591,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 /* ─── Hero ───────────────────────────────────────────────────── */
 /* ─── Hero Section ───────────────────────────────────────────── */
 .lp-hero {
-  min-height: 80vh;
+  min-height: clamp(620px, 80vh, 900px);
   display: flex;
   align-items: center;
   background: linear-gradient(180deg, #ffffff 0%, #e7f6ed 100%);
@@ -636,7 +636,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   width: 100%;
   max-width: min(1720px, 94vw);
   margin: 0 auto;
-  padding: 20px clamp(24px, 3.5vw, 56px) 40px;
+  padding: clamp(28px, 4vw, 56px) clamp(20px, 3.5vw, 56px) clamp(40px, 5vw, 72px);
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
   align-items: center;
@@ -678,6 +678,14 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   margin: 0 0 18px;
   color: #00580C;
   animation: heroFadeUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both;
+}
+
+.lp-hero__headline span {
+  display: inline;
+}
+
+.lp-hero__line-break {
+  display: block;
 }
 
 /* Subtitle */
@@ -818,13 +826,14 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   }
 }
 
-/* Responsive: Medium and Small Screens (Zoom In) */
-@media (max-width: 1080px) {
+/* Responsive: Portrait screens up to 1080px (e.g. tablet portrait, narrow phones) */
+@media (max-width: 1080px) and (orientation: portrait),
+       (max-width: 767px) and (orientation: portrait) {
   .lp-hero__inner {
     grid-template-columns: 1fr;
     text-align: center;
-    gap: 36px;
-    padding: 24px 24px 60px;
+    gap: 28px;
+    padding: 48px 24px 64px;
   }
   .lp-hero__content {
     text-align: center;
@@ -833,6 +842,18 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   }
   .lp-hero__ctas {
     justify-content: center;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 10px;
+    width: auto;
+    margin: 0 auto;
+  }
+  .lp-hero__btn-partner,
+  .lp-hero__btn-login {
+    flex: 0 0 auto;
+    width: auto;
+    white-space: nowrap;
   }
   .lp-hero__mockup-wrap {
     justify-content: center;
@@ -840,6 +861,192 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   .lp-hero__mockup {
     max-width: min(100%, 720px);
     min-width: 0;
+  }
+}
+
+/* ── Tablet & Medium Landscape Screens (768px - 1280px) ── */
+@media (min-width: 768px) and (max-width: 1280px) and (orientation: landscape) {
+  .lp-hero {
+    min-height: calc(100svh - 60px);
+    max-height: none;
+    padding: 16px 0 20px;
+    display: flex;
+    align-items: center;
+  }
+
+  .lp-hero__bg {
+    height: 52%;
+    min-height: 240px;
+    opacity: 0.45;
+  }
+
+  .lp-hero__inner {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    text-align: left;
+    align-items: center;
+    gap: clamp(20px, 3vw, 40px);
+    padding: 16px clamp(20px, 3.5vw, 44px) 24px;
+    max-width: min(1560px, 94vw);
+  }
+
+  .lp-hero__content {
+    text-align: left;
+    max-width: 520px;
+    margin: 0;
+  }
+
+  .lp-hero__badge {
+    margin-bottom: 12px;
+    padding: 4px 12px;
+    font-size: 11.5px;
+  }
+
+  .lp-hero__headline {
+    font-size: clamp(26px, 3.2vw, 38px);
+    line-height: 1.18;
+    margin-bottom: 12px;
+    text-align: left;
+  }
+
+  .lp-hero__headline span {
+    display: inline;
+  }
+
+  .lp-hero__line-break {
+    display: inline;
+  }
+
+  .lp-hero__sub {
+    max-width: 480px;
+    margin-bottom: 18px;
+    font-size: clamp(12.5px, 1.3vw, 14px);
+    line-height: 1.55;
+    text-align: left;
+    display: block;
+    overflow: visible;
+  }
+
+  .lp-hero__ctas {
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .lp-hero__btn-partner,
+  .lp-hero__btn-login {
+    padding: 9px 18px;
+    font-size: 13px;
+    flex: 0 0 auto;
+    min-height: 40px;
+  }
+
+  .lp-hero__mockup-wrap {
+    width: 100%;
+    max-width: 640px;
+    max-height: none;
+    overflow: visible;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .lp-hero__mockup {
+    max-height: clamp(280px, 56vh, 480px);
+    max-width: 100%;
+    width: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 14px 32px rgba(0, 0, 0, 0.14));
+  }
+}
+
+@media (max-width: 640px) {
+  .lp-hero {
+    min-height: auto;
+    padding: 24px 0 0;
+  }
+
+  .lp-hero__bg {
+    height: 42%;
+    min-height: 220px;
+    background-position: 58% bottom;
+  }
+
+  .lp-hero__inner {
+    gap: 32px;
+    padding: 36px 16px 48px;
+  }
+
+  .lp-hero__badge {
+    max-width: 100%;
+    margin-bottom: 16px;
+    padding: 5px 11px;
+    font-size: 11px;
+  }
+
+  .lp-hero__headline {
+    font-size: clamp(30px, 9vw, 40px);
+    line-height: 1.12;
+    margin-bottom: 16px;
+  }
+
+  .lp-hero__line-break {
+    display: none;
+  }
+
+  .lp-hero__sub {
+    max-width: 38rem;
+    margin: 0 auto 24px;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .lp-hero__ctas {
+    width: auto;
+    max-width: 100%;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin: 0 auto;
+  }
+
+  .lp-hero__ctas button,
+  .lp-hero__btn-partner,
+  .lp-hero__btn-login {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 38px;
+    padding: 9px 16px;
+    font-size: 13px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @media (max-width: 360px) {
+    .lp-hero__ctas {
+      gap: 6px;
+    }
+
+    .lp-hero__ctas button,
+    .lp-hero__btn-partner,
+    .lp-hero__btn-login {
+      padding: 8px 12px;
+      font-size: 12px;
+      gap: 6px;
+      min-height: 36px;
+    }
+  }
+
+  .lp-hero__mockup-wrap {
+    width: min(100%, 520px);
+    margin: 0 auto;
+  }
+
+  .lp-hero__mockup {
+    width: 100%;
   }
 }
 
@@ -1658,7 +1865,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   display: block;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 700px) {
   .lp-partner-cta__card {
     flex-direction: column-reverse;
     text-align: center;
@@ -1683,6 +1890,14 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 
   .lp-partner-cta__btn {
     margin: 0 auto;
+    width: auto;
+    max-width: 100%;
+    white-space: nowrap;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    padding: 9px 20px;
+    font-size: 13px;
   }
 
   .lp-partner-cta__img-wrap {
@@ -1821,7 +2036,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   box-shadow: 0 5px 14px rgba(0, 88, 12, 0.28);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 700px) {
   .lp-stakeholders__grid {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -1988,7 +2203,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 700px) {
   .lp-mobile-app__inner {
     grid-template-columns: 1fr;
     text-align: center;
@@ -2343,7 +2558,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   color: #014209;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 700px) {
   .lp-help__inner {
     grid-template-columns: 1fr;
     gap: 40px;
@@ -3175,5 +3390,648 @@ html {
     transition: opacity 0.4s ease-in-out !important;
     transform: none !important;
     filter: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TABLET VIEW OPTIMIZATIONS (701px - 1024px)
+   Covers iPad Mini, iPad Air, iPad Pro, Android tablets, etc.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (min-width: 701px) and (max-width: 1024px) {
+  .lp-root {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Stakeholders: 3 clean columns on tablet */
+  .lp-stakeholders__grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 16px !important;
+  }
+
+  .lp-stakeholder-card {
+    padding: 24px 18px !important;
+  }
+
+  .lp-stakeholder-card__title {
+    font-size: 16px !important;
+  }
+
+  .lp-stakeholder-card__desc {
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Partner CTA: 2-column flex row on tablet */
+  .lp-partner-cta__card {
+    flex-direction: row !important;
+    text-align: left !important;
+    padding: 32px 36px !important;
+    gap: 28px !important;
+  }
+
+  .lp-partner-cta__content {
+    align-items: flex-start !important;
+    max-width: 60% !important;
+  }
+
+  .lp-partner-cta__badge {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .lp-partner-cta__sub {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .lp-partner-cta__btn {
+    margin: 0 !important;
+  }
+
+  .lp-partner-cta__img-wrap {
+    max-width: 260px !important;
+    justify-content: flex-end !important;
+  }
+
+  /* Take GrainRise Anywhere: 2 columns on tablet */
+  .lp-mobile-app__inner {
+    grid-template-columns: 1fr 1.25fr !important;
+    text-align: left !important;
+    gap: 36px !important;
+    align-items: center !important;
+  }
+
+  .lp-mobile-app__content-col {
+    text-align: left !important;
+  }
+
+  .lp-mobile-app__headline {
+    font-size: clamp(30px, 3.6vw, 42px) !important;
+  }
+
+  .lp-mobile-app__sub {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .lp-mobile-app__phone-img {
+    max-width: 250px !important;
+  }
+
+  /* Operational Support / Help: 2 columns on tablet */
+  .lp-help__inner {
+    grid-template-columns: 1fr 1.35fr !important;
+    gap: 28px !important;
+    align-items: center !important;
+  }
+
+  .lp-help__left {
+    text-align: left !important;
+    align-items: flex-start !important;
+  }
+
+  .lp-help__img {
+    max-height: 140px !important;
+  }
+
+  .lp-help__grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 14px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE LANDSCAPE VIEW OPTIMIZATIONS (orientation: landscape and max-height: 520px)
+   Covers iPhones (375x667, 390x844, 414x896, 430x932), Samsung, Pixel, etc.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 960px) and (orientation: landscape) and (max-height: 520px),
+       (max-height: 460px) and (orientation: landscape) {
+
+  /* Hide top notification bar in mobile landscape to save precious vertical space */
+  .lp-top-bar {
+    display: none !important;
+  }
+
+  /* Safe area insets for notches in landscape */
+  .lp-root {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Hero Section: 2-column side-by-side layout, no awkward cutoff! */
+  .lp-hero {
+    min-height: auto !important;
+    padding: 16px 0 16px !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  .lp-hero__bg {
+    height: 60% !important;
+    min-height: 160px !important;
+    opacity: 0.3 !important;
+  }
+
+  .lp-hero__inner {
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr) !important;
+    text-align: left !important;
+    align-items: center !important;
+    gap: 16px !important;
+    padding: 8px 24px 16px !important;
+  }
+
+  .lp-hero__content {
+    text-align: left !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .lp-hero__badge {
+    margin-bottom: 8px !important;
+    padding: 3px 10px !important;
+    font-size: 11px !important;
+  }
+
+  .lp-hero__headline {
+    font-size: clamp(20px, 3.6vw, 28px) !important;
+    line-height: 1.15 !important;
+    margin-bottom: 8px !important;
+  }
+
+  .lp-hero__line-break {
+    display: none !important;
+  }
+
+  .lp-hero__sub {
+    font-size: 12px !important;
+    line-height: 1.45 !important;
+    margin-bottom: 12px !important;
+    max-width: 100% !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+  }
+
+  .lp-hero__ctas {
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    width: auto !important;
+  }
+
+  .lp-hero__btn-partner,
+  .lp-hero__btn-login {
+    padding: 7px 14px !important;
+    font-size: 12px !important;
+    flex: 0 0 auto !important;
+    min-height: 36px !important;
+  }
+
+  .lp-hero__mockup-wrap {
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
+  .lp-hero__mockup {
+    max-height: 64vh !important;
+    width: auto !important;
+    max-width: 100% !important;
+    object-fit: contain !important;
+  }
+
+  /* Ecosystem Flow: sleek compact horizontal scroll */
+  .lp-ecosystem {
+    padding: 24px 16px 28px !important;
+  }
+
+  .lp-ecosystem .lp-section-headline {
+    font-size: 22px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .lp-ecosystem__flow {
+    gap: 12px !important;
+    padding: 8px 12px 14px !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .lp-flow-step {
+    min-width: 60px !important;
+    gap: 8px !important;
+  }
+
+  .lp-flow-icon {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  .lp-flow-label {
+    font-size: 11px !important;
+  }
+
+  .lp-flow-arrow {
+    margin-bottom: 22px !important;
+  }
+
+  /* Explore GrainRise in landscape: 2 clean columns */
+  .lp-explore {
+    padding: 28px 16px !important;
+  }
+
+  .lp-explore__title {
+    font-size: 22px !important;
+  }
+
+  .lp-explore__sub {
+    font-size: 12.5px !important;
+    margin-bottom: 18px !important;
+  }
+
+  .lp-explore__grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .lp-explore-card {
+    padding: 8px 10px !important;
+    gap: 10px !important;
+  }
+
+  .lp-explore-card__title {
+    font-size: 14px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .lp-explore-card__desc {
+    font-size: 11.5px !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Stakeholders in landscape: 3 clean columns */
+  .lp-stakeholders {
+    padding: 24px 16px 36px !important;
+  }
+
+  .lp-stakeholders__title {
+    font-size: 22px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .lp-stakeholders__sub {
+    font-size: 12.5px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .lp-stakeholders__grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .lp-stakeholder-card {
+    padding: 16px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  .lp-stakeholder-card__icon {
+    width: 26px !important;
+    height: 26px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .lp-stakeholder-card__title {
+    font-size: 14.5px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .lp-stakeholder-card__desc {
+    font-size: 11.5px !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Partner CTA in landscape: side-by-side row */
+  .lp-partner-cta {
+    padding: 16px 16px 36px !important;
+  }
+
+  .lp-partner-cta__card {
+    flex-direction: row !important;
+    text-align: left !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 20px 24px !important;
+    gap: 20px !important;
+  }
+
+  .lp-partner-cta__content {
+    align-items: flex-start !important;
+    max-width: 64% !important;
+  }
+
+  .lp-partner-cta__badge {
+    margin: 0 0 8px 0 !important;
+    padding: 3px 10px !important;
+    font-size: 11px !important;
+  }
+
+  .lp-partner-cta__headline {
+    font-size: 20px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .lp-partner-cta__sub {
+    font-size: 11.5px !important;
+    line-height: 1.45 !important;
+    margin: 0 0 12px 0 !important;
+  }
+
+  .lp-partner-cta__btn {
+    padding: 8px 16px !important;
+    font-size: 12px !important;
+    margin: 0 !important;
+  }
+
+  .lp-partner-cta__img-wrap {
+    max-width: 170px !important;
+    justify-content: flex-end !important;
+  }
+
+  .lp-partner-cta__img {
+    max-height: 130px !important;
+  }
+
+  /* Mobile App in landscape: 2 columns */
+  .lp-mobile-app {
+    padding: 32px 16px !important;
+  }
+
+  .lp-mobile-app__inner {
+    grid-template-columns: 0.8fr 1.2fr !important;
+    text-align: left !important;
+    align-items: center !important;
+    gap: 24px !important;
+  }
+
+  .lp-mobile-app__content-col {
+    text-align: left !important;
+  }
+
+  .lp-mobile-app__headline {
+    font-size: 24px !important;
+    line-height: 1.15 !important;
+    margin-bottom: 8px !important;
+  }
+
+  .lp-mobile-app__sub {
+    font-size: 12px !important;
+    line-height: 1.45 !important;
+    margin: 0 0 14px !important;
+  }
+
+  .lp-mobile-app__phone-img {
+    max-width: 160px !important;
+  }
+
+  .lp-phone-orb--top,
+  .lp-phone-orb--bottom {
+    width: 80px !important;
+    height: 80px !important;
+  }
+
+  .lp-mobile-app__btn {
+    padding: 8px 16px !important;
+    font-size: 12px !important;
+  }
+
+  /* Help in landscape: 2 columns */
+  .lp-help {
+    padding: 28px 16px 36px !important;
+  }
+
+  .lp-help__inner {
+    grid-template-columns: 0.85fr 1.15fr !important;
+    gap: 20px !important;
+    align-items: center !important;
+  }
+
+  .lp-help__left {
+    text-align: left !important;
+    align-items: flex-start !important;
+  }
+
+  .lp-help__headline {
+    font-size: 22px !important;
+    line-height: 1.2 !important;
+    margin-bottom: 8px !important;
+  }
+
+  .lp-help__img {
+    max-height: 90px !important;
+  }
+
+  .lp-help__grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .lp-help-card {
+    padding: 12px 10px !important;
+  }
+
+  .lp-help-card__icon-wrap {
+    width: 24px !important;
+    height: 24px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .lp-help-card__title {
+    font-size: 13px !important;
+    margin-bottom: 3px !important;
+  }
+
+  .lp-help-card__desc {
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    margin-bottom: 6px !important;
+  }
+
+  .lp-help-card__action {
+    font-size: 11px !important;
+  }
+
+  /* Footer in landscape */
+  .lp-footer {
+    padding: 32px 16px 16px !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   TABLET LANDSCAPE VIEW (768px - 1280px and orientation: landscape)
+   Ensures side-by-side 2-column Hero layout with full mockup visibility
+   ═══════════════════════════════════════════════════════════════════ */
+@media (min-width: 768px) and (max-width: 1280px) and (orientation: landscape) {
+  /* Hero section: 2 columns side-by-side */
+  .lp-hero {
+    min-height: calc(100svh - 60px) !important;
+    max-height: none !important;
+    padding: 16px 0 20px !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  .lp-hero__inner {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) !important;
+    text-align: left !important;
+    align-items: center !important;
+    gap: clamp(20px, 3vw, 40px) !important;
+    padding: 16px clamp(20px, 3.5vw, 44px) 24px !important;
+    max-width: min(1560px, 94vw) !important;
+  }
+
+  .lp-hero__content {
+    text-align: left !important;
+    max-width: 520px !important;
+    margin: 0 !important;
+  }
+
+  .lp-hero__badge {
+    margin: 0 0 12px 0 !important;
+    padding: 4px 12px !important;
+    font-size: 11.5px !important;
+  }
+
+  .lp-hero__headline {
+    text-align: left !important;
+    font-size: clamp(26px, 3.2vw, 38px) !important;
+    margin-bottom: 12px !important;
+    line-height: 1.18 !important;
+  }
+
+  .lp-hero__sub {
+    text-align: left !important;
+    margin: 0 0 20px 0 !important;
+    font-size: clamp(12.5px, 1.3vw, 14px) !important;
+    line-height: 1.55 !important;
+    max-width: 480px !important;
+    display: block !important;
+    overflow: visible !important;
+    -webkit-line-clamp: unset !important;
+  }
+
+  .lp-hero__ctas {
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    width: auto !important;
+  }
+
+  .lp-hero__btn-partner,
+  .lp-hero__btn-login {
+    flex: 0 0 auto !important;
+    min-height: 40px !important;
+    padding: 9px 18px !important;
+    font-size: 13px !important;
+  }
+
+  .lp-hero__mockup-wrap {
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
+  .lp-hero__mockup {
+    max-height: clamp(280px, 56vh, 480px) !important;
+    width: auto !important;
+    max-width: 100% !important;
+    object-fit: contain !important;
+    filter: drop-shadow(0 14px 32px rgba(0, 0, 0, 0.14)) !important;
+  }
+
+  /* Explore: 3 columns in landscape */
+  .lp-explore__grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 16px !important;
+  }
+
+  /* Stakeholders: 3 columns */
+  .lp-stakeholders__grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 18px !important;
+  }
+
+  /* Partner CTA: flex row */
+  .lp-partner-cta__card {
+    flex-direction: row !important;
+    text-align: left !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 32px 40px !important;
+    gap: 32px !important;
+  }
+
+  .lp-partner-cta__content {
+    align-items: flex-start !important;
+    max-width: 58% !important;
+  }
+
+  .lp-partner-cta__badge,
+  .lp-partner-cta__sub,
+  .lp-partner-cta__btn {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .lp-partner-cta__img-wrap {
+    max-width: 280px !important;
+    justify-content: flex-end !important;
+  }
+
+  .lp-partner-cta__img {
+    max-height: 200px !important;
+  }
+
+  /* Mobile App: 2 columns */
+  .lp-mobile-app__inner {
+    grid-template-columns: 1fr 1.25fr !important;
+    text-align: left !important;
+    align-items: center !important;
+    gap: 40px !important;
+  }
+
+  .lp-mobile-app__content-col {
+    text-align: left !important;
+  }
+
+  .lp-mobile-app__sub {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .lp-mobile-app__phone-img {
+    max-width: 240px !important;
+  }
+
+  /* Help: 2 columns */
+  .lp-help__inner {
+    grid-template-columns: 1fr 1.35fr !important;
+    gap: 32px !important;
+    align-items: center !important;
+  }
+
+  .lp-help__left {
+    text-align: left !important;
+    align-items: flex-start !important;
+  }
+
+  .lp-help__grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 14px !important;
   }
 }

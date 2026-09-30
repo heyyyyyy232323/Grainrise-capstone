@@ -238,6 +238,40 @@ html:not(.light) .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
   border-color: rgba(255,255,255,0.12) !important;
 }
 
+/*
+ * Tablet landscape layout
+ *
+ * Dashboard tables keep their natural column width and scroll inside their
+ * existing overflow containers instead of shrinking text until it becomes
+ * unreadable. The rule is scoped to authenticated app pages so landing,
+ * support, and printable layouts are unaffected.
+ */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .app-content {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .app-content > * {
+    min-width: 0;
+  }
+
+  .app-content table {
+    min-width: 680px;
+  }
+
+  .app-content .overflow-x-auto {
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .app-content .overflow-x-auto > table {
+    width: max-content;
+    min-width: 100%;
+  }
+}
+
 html:not(.light) .bg-slate-50\/70 .text-gray-500,
 html:not(.light) .bg-slate-50\/70 > span {
   color: #cbd5e1 !important;
@@ -806,5 +840,4 @@ html:not(.light) .dark-readable-graph .hover\:text-slate-700:hover {
 .animate-page-fade {
   animation: pageFade 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
-
 

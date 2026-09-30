@@ -220,13 +220,15 @@ export default function LandingPage() {
             </div>
 
             <h1 className="lp-hero__headline">
-              <span className="inline-block whitespace-nowrap">GrainRise Supply Chain</span><br />
+              <span>GrainRise Supply Chain</span><br className="lp-hero__line-break" />
               <span>Portal</span>
             </h1>
 
             <p className="lp-hero__sub">
-              A centralized, mission-critical platform synchronizing farmers, cooperative<br />
-              millers, institutional buyers, regional silos, and retailers across the national<br />
+              A centralized, mission-critical platform synchronizing farmers, cooperative
+              <br className="lp-hero__line-break" />
+              millers, institutional buyers, regional silos, and retailers across the national
+              <br className="lp-hero__line-break" />
               rice reserve and distribution grid.
             </p>
 

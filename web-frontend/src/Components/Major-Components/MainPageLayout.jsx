@@ -55,7 +55,7 @@ const MainPageLayout = ({ role = "warehouse_encoder" }) => {
 
         {/* Scrollable Content Area - each page renders inside here */}
         <div className="flex-1 overflow-y-auto">
-          <div className="px-4 py-6 md:px-8 md:py-8 space-y-6 w-full">
+          <div className="app-content min-w-0 px-4 py-6 md:px-8 md:py-8 space-y-6 w-full">
             <div key={location.pathname} className="animate-page-fade">
               <Outlet />
             </div>
