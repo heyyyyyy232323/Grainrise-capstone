@@ -188,13 +188,13 @@ def _get_user_role(user_id):
         cursor.execute(
             """
             SELECT
-                user_role::TEXT
+                user_role
 
             FROM users
 
             WHERE
                 user_id = %s
-                AND status::TEXT = 'active'
+                AND status = 'active'
 
             LIMIT 1
             """,
@@ -240,7 +240,7 @@ def _validate_article_access(
         cursor.execute(
             """
             SELECT
-                na.status::TEXT,
+                na.status,
 
                 EXISTS (
                     SELECT 1
@@ -249,7 +249,7 @@ def _validate_article_access(
 
                     WHERE
                         naa.news_id = na.news_id
-                        AND naa.user_role::TEXT = %s
+                        AND naa.user_role = %s
                 )
                     AS has_audience
 
@@ -309,29 +309,48 @@ def _get_role_comment_counts(
         return {}
 
     with connection.cursor() as cursor:
+        placeholders = ", ".join(["%s"] * len(news_ids))
         cursor.execute(
-            """
+            f"""
             SELECT
                 nc.news_id,
 
-                COUNT(*) FILTER (
-                    WHERE
-                        nc.comment_status::TEXT = 'active'
-                )::BIGINT
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN nc.comment_status = 'active'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                )
                     AS comment_count,
 
-                COUNT(*) FILTER (
-                    WHERE
-                        nc.comment_status::TEXT = 'active'
-                        AND nc.parent_comment_id IS NULL
-                )::BIGINT
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN nc.comment_status = 'active'
+                                AND nc.parent_comment_id IS NULL
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                )
                     AS root_comment_count,
 
-                COUNT(*) FILTER (
-                    WHERE
-                        nc.comment_status::TEXT = 'active'
-                        AND nc.parent_comment_id IS NOT NULL
-                )::BIGINT
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN nc.comment_status = 'active'
+                                AND nc.parent_comment_id IS NOT NULL
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                )
                     AS reply_count
 
             FROM news_comments nc
@@ -340,14 +359,14 @@ def _get_role_comment_counts(
                 ON u.user_id = nc.user_id
 
             WHERE
-                nc.news_id = ANY(%s::BIGINT[])
-                AND u.user_role::TEXT = %s
+                nc.news_id IN ({placeholders})
+                AND u.user_role = %s
 
             GROUP BY
                 nc.news_id
             """,
             [
-                news_ids,
+                *news_ids,
                 role,
             ],
         )
@@ -432,29 +451,84 @@ def list_news_feed(
         offset
     )
 
+    conditions = [
+        "na.status = 'active'",
+        "EXISTS (SELECT 1 FROM news_article_audiences naa WHERE naa.news_id = na.news_id AND naa.user_role = %s)",
+    ]
+    params = [role]
+
+    if search:
+        pattern = f"%{search}%"
+        conditions.append(
+            """
+            (
+                LOWER(COALESCE(na.title, '')) LIKE LOWER(%s)
+                OR LOWER(COALESCE(na.description, '')) LIKE LOWER(%s)
+                OR LOWER(COALESCE(na.source_name, '')) LIKE LOWER(%s)
+            )
+            """
+        )
+        params.extend([pattern, pattern, pattern])
+
+    if category:
+        conditions.append("na.category_code = %s")
+        params.append(category)
+
+    if year is not None:
+        conditions.append("YEAR(na.published_at) = %s")
+        params.append(year)
+
+    if month is not None:
+        conditions.append("MONTH(na.published_at) = %s")
+        params.append(month)
+
+    where_sql = "WHERE " + " AND ".join(conditions)
+
+    if sort_by == "popular":
+        order_sql = "ORDER BY reaction_count DESC, (na.published_at IS NULL) ASC, na.published_at DESC, na.news_id DESC"
+    else:
+        order_sql = "ORDER BY (na.published_at IS NULL) ASC, na.published_at DESC, na.news_id DESC"
+
     with connection.cursor() as cursor:
         cursor.execute(
-            """
-            SELECT *
-
-            FROM grainrise_get_news_feed(
-                %s,
-                %s,
-                %s,
-                %s,
-                %s,
-                %s,
-                %s,
-                %s
-            )
+            f"""
+            SELECT
+                na.news_id,
+                na.title,
+                na.description,
+                na.article_url,
+                na.image_url,
+                na.source_name,
+                na.source_domain,
+                na.author,
+                na.category_code,
+                na.published_at,
+                na.status,
+                (SELECT COUNT(*) FROM news_reactions nr WHERE nr.news_id = na.news_id) AS reaction_count,
+                0 AS comment_count,
+                0 AS root_comment_count,
+                0 AS reply_count,
+                EXISTS (
+                    SELECT 1 FROM news_reactions nr
+                    WHERE nr.news_id = na.news_id AND nr.user_id = %s
+                ) AS has_liked,
+                EXISTS (
+                    SELECT 1 FROM news_reactions nr
+                    WHERE nr.news_id = na.news_id AND nr.user_id = %s
+                ) AS is_liked,
+                na.first_fetched_at,
+                na.last_fetched_at
+            FROM
+                news_articles na
+            {where_sql}
+            {order_sql}
+            LIMIT %s
+            OFFSET %s
             """,
             [
                 user_id,
-                search,
-                category,
-                year,
-                month,
-                sort_by,
+                user_id,
+                *params,
                 limit,
                 offset,
             ],
@@ -534,25 +608,51 @@ def count_news_feed(
         "news month",
     )
 
+    role = _get_user_role(
+        user_id
+    )
+
+    conditions = [
+        "na.status = 'active'",
+        "EXISTS (SELECT 1 FROM news_article_audiences naa WHERE naa.news_id = na.news_id AND naa.user_role = %s)",
+    ]
+    params = [role]
+
+    if search:
+        pattern = f"%{search}%"
+        conditions.append(
+            """
+            (
+                LOWER(COALESCE(na.title, '')) LIKE LOWER(%s)
+                OR LOWER(COALESCE(na.description, '')) LIKE LOWER(%s)
+                OR LOWER(COALESCE(na.source_name, '')) LIKE LOWER(%s)
+            )
+            """
+        )
+        params.extend([pattern, pattern, pattern])
+
+    if category:
+        conditions.append("na.category_code = %s")
+        params.append(category)
+
+    if year is not None:
+        conditions.append("YEAR(na.published_at) = %s")
+        params.append(year)
+
+    if month is not None:
+        conditions.append("MONTH(na.published_at) = %s")
+        params.append(month)
+
+    where_sql = "WHERE " + " AND ".join(conditions)
+
     with connection.cursor() as cursor:
         cursor.execute(
-            """
-            SELECT
-                grainrise_get_news_feed_count(
-                    %s,
-                    %s,
-                    %s,
-                    %s,
-                    %s
-                )
+            f"""
+            SELECT COUNT(*)
+            FROM news_articles na
+            {where_sql}
             """,
-            [
-                user_id,
-                search,
-                category,
-                year,
-                month,
-            ],
+            params,
         )
 
         row = cursor.fetchone()
@@ -586,16 +686,42 @@ def get_news_article_detail(
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT *
-
-            FROM grainrise_get_news_article_detail(
-                %s,
-                %s
-            )
+            SELECT
+                na.news_id,
+                na.title,
+                na.description,
+                na.article_body,
+                na.article_url,
+                na.image_url,
+                na.source_name,
+                na.source_domain,
+                na.author,
+                na.category_code,
+                na.published_at,
+                na.first_fetched_at,
+                na.last_fetched_at,
+                na.status,
+                (SELECT COUNT(*) FROM news_reactions nr WHERE nr.news_id = na.news_id)
+                    AS reaction_count,
+                0 AS comment_count,
+                0 AS root_comment_count,
+                0 AS reply_count,
+                EXISTS (
+                    SELECT 1 FROM news_reactions nr
+                    WHERE nr.news_id = na.news_id AND nr.user_id = %s
+                ) AS has_liked,
+                EXISTS (
+                    SELECT 1 FROM news_reactions nr
+                    WHERE nr.news_id = na.news_id AND nr.user_id = %s
+                ) AS is_liked
+            FROM news_articles na
+            WHERE na.news_id = %s
+            LIMIT 1
             """,
             [
-                news_id,
                 user_id,
+                user_id,
+                news_id,
             ],
         )
 
@@ -684,7 +810,7 @@ def get_news_comments(
         cursor.execute(
             """
             SELECT
-                COUNT(*)::BIGINT
+                COUNT(*)
 
             FROM news_comments nc
 
@@ -694,8 +820,8 @@ def get_news_comments(
             WHERE
                 nc.news_id = %s
                 AND nc.parent_comment_id IS NULL
-                AND u.user_role::TEXT = %s
-                AND nc.comment_status::TEXT <> 'hidden'
+                AND u.user_role = %s
+                AND nc.comment_status <> 'hidden'
             """,
             [
                 news_id,
@@ -726,8 +852,8 @@ def get_news_comments(
             WHERE
                 nc.news_id = %s
                 AND nc.parent_comment_id IS NULL
-                AND u.user_role::TEXT = %s
-                AND nc.comment_status::TEXT <> 'hidden'
+                AND u.user_role = %s
+                AND nc.comment_status <> 'hidden'
 
             ORDER BY
                 nc.created_at DESC,
@@ -774,8 +900,9 @@ def get_news_comments(
     # ========================================================
 
     with connection.cursor() as cursor:
+        placeholders = ", ".join(["%s"] * len(root_ids))
         cursor.execute(
-            """
+            f"""
             SELECT
                 nc.comment_id,
                 nc.news_id,
@@ -790,30 +917,31 @@ def get_news_comments(
                     AS comment_type,
 
                 CASE
-                    WHEN nc.comment_status::TEXT = 'deleted'
+                    WHEN nc.comment_status = 'deleted'
                         THEN '[deleted]'
                     ELSE nc.comment_text
                 END
                     AS comment_text,
 
-                nc.comment_status::TEXT
+                nc.comment_status
                     AS comment_status,
 
                 nc.created_at,
                 nc.updated_at,
 
-                grainrise_build_person_name(
-                    u.first_name,
-                    u.middle_initial,
-                    u.last_name,
-                    u.suffix
+                CONCAT_WS(
+                    ' ',
+                    NULLIF(TRIM(u.first_name), ''),
+                    NULLIF(TRIM(u.middle_initial), ''),
+                    NULLIF(TRIM(u.last_name), ''),
+                    NULLIF(TRIM(u.suffix), '')
                 )
                     AS author_name,
 
-                u.user_role::TEXT
+                u.user_role
                     AS author_role,
 
-                u.status::TEXT
+                u.status
                     AS user_status,
 
                 (
@@ -830,17 +958,13 @@ def get_news_comments(
                 nc.news_id = %s
 
                 AND (
-                    nc.comment_id =
-                        ANY(%s::BIGINT[])
-
+                    nc.comment_id IN ({placeholders})
                     OR
-
-                    nc.parent_comment_id =
-                        ANY(%s::BIGINT[])
+                    nc.parent_comment_id IN ({placeholders})
                 )
 
-                AND u.user_role::TEXT = %s
-                AND nc.comment_status::TEXT <> 'hidden'
+                AND u.user_role = %s
+                AND nc.comment_status <> 'hidden'
 
             ORDER BY
                 nc.created_at ASC,
@@ -849,8 +973,8 @@ def get_news_comments(
             [
                 user_id,
                 news_id,
-                root_ids,
-                root_ids,
+                *root_ids,
+                *root_ids,
                 role,
             ],
         )
@@ -969,16 +1093,26 @@ def list_active_news_fetch_queries(
         api_provider
     )
 
+    conditions = ["is_active = 1"]
+    params = []
+
+    if provider:
+        conditions.append("api_provider = %s")
+        params.append(provider)
+
+    where_sql = "WHERE " + " AND ".join(conditions)
+
     with connection.cursor() as cursor:
         cursor.execute(
-            """
+            f"""
             SELECT *
-
-            FROM grainrise_get_active_news_fetch_queries(
-                %s
-            )
+            FROM news_fetch_queries
+            {where_sql}
+            ORDER BY
+                fetch_priority ASC,
+                query_id ASC
             """,
-            [provider],
+            params,
         )
 
         return _rows_to_dicts(

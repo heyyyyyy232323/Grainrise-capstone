@@ -32,7 +32,7 @@ def get_authenticated_miller_manager(request):
     - JWT must be valid and issued by GrainRise centralized login.
     - Account must be a main-user Miller Manager account.
     - Miller identity comes only from JWT `sub`.
-    - Account status is re-checked in PostgreSQL on every request.
+    - Account status is re-checked on every request.
     - One Miller user may own multiple supplier_profiles.
     - The earliest/original supplier_profile remains the
       default profile for backward compatibility.
@@ -130,8 +130,8 @@ def get_authenticated_miller_manager(request):
                 u.email,
                 u.contact_number,
                 u.username,
-                u.user_role::text,
-                u.status::text,
+                u.user_role,
+                u.status,
 
                 sp.supplier_profile_id,
                 sp.business_name,
@@ -160,9 +160,9 @@ def get_authenticated_miller_manager(request):
             WHERE
                 u.user_id = %s
 
-                AND u.user_role::text = 'miller_manager'
+                AND u.user_role = 'miller_manager'
 
-                AND u.status::text = 'active'
+                AND u.status = 'active'
 
             ORDER BY
                 sp.created_at ASC,

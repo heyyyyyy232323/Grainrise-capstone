@@ -23,7 +23,7 @@ MAX_ARCHIVE_REASON_LENGTH = 1000
 
 def _table_exists(table_name):
     """
-    Return True when a PostgreSQL table exists.
+    Return True when a MySQL table exists.
     """
 
     normalized_name = str(
@@ -36,10 +36,14 @@ def _table_exists(table_name):
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT to_regclass(%s)
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name = %s
+            LIMIT 1
             """,
             [
-                f"public.{normalized_name}",
+                normalized_name,
             ],
         )
 
@@ -236,8 +240,7 @@ def _get_miller_employee(
 
                 AND u.user_id = %s
 
-                AND u.user_role =
-                    %s::user_role_enum
+                AND u.user_role = %s
 
 
             LIMIT 1
@@ -540,7 +543,7 @@ def confirm_miller_application(
 
                 SET
                     status =
-                        'active'::user_status_enum,
+                        'active',
 
                     updated_at =
                         CURRENT_TIMESTAMP
@@ -549,19 +552,9 @@ def confirm_miller_application(
 
                     user_id = %s
 
-                    AND user_role =
-                        %s::user_role_enum
+                    AND user_role = %s
 
-                    AND status =
-                        'inactive'::user_status_enum
-
-                RETURNING
-
-                    user_id,
-
-                    status::text,
-
-                    updated_at
+                    AND status = 'inactive'
                 """,
                 [
                     user_id,
@@ -570,15 +563,26 @@ def confirm_miller_application(
             )
 
 
-            updated = cursor.fetchone()
+            if cursor.rowcount == 0:
+                raise RuntimeError(
+                    "The Miller application could not be confirmed "
+                    "because its account status changed before the "
+                    "update completed."
+                )
 
-
-        if not updated:
-            raise RuntimeError(
-                "The Miller application could not be confirmed "
-                "because its account status changed before the "
-                "update completed."
+            cursor.execute(
+                """
+                SELECT
+                    user_id,
+                    status,
+                    updated_at
+                FROM users
+                WHERE user_id = %s
+                """,
+                [user_id],
             )
+
+            updated = cursor.fetchone()
 
 
     email_sent = False
@@ -719,7 +723,7 @@ def archive_miller_account(
 
                 SET
                     status =
-                        'archived'::user_status_enum,
+                        'archived',
 
                     updated_at =
                         CURRENT_TIMESTAMP
@@ -728,19 +732,9 @@ def archive_miller_account(
 
                     user_id = %s
 
-                    AND user_role =
-                        %s::user_role_enum
+                    AND user_role = %s
 
-                    AND status =
-                        'active'::user_status_enum
-
-                RETURNING
-
-                    user_id,
-
-                    status::text,
-
-                    updated_at
+                    AND status = 'active'
                 """,
                 [
                     user_id,
@@ -749,15 +743,26 @@ def archive_miller_account(
             )
 
 
-            updated = cursor.fetchone()
-
-
-            if not updated:
+            if cursor.rowcount == 0:
                 raise RuntimeError(
                     "The Miller account could not be archived "
                     "because its status changed before the update "
                     "completed."
                 )
+
+            cursor.execute(
+                """
+                SELECT
+                    user_id,
+                    status,
+                    updated_at
+                FROM users
+                WHERE user_id = %s
+                """,
+                [user_id],
+            )
+
+            updated = cursor.fetchone()
 
 
             cursor.execute(
@@ -773,14 +778,6 @@ def archive_miller_account(
                     %s,
                     %s
                 )
-
-                RETURNING
-
-                    miller_archive_reason_id,
-
-                    reason,
-
-                    created_at
                 """,
                 [
                     user_id,
@@ -788,6 +785,19 @@ def archive_miller_account(
                 ],
             )
 
+            archive_id = cursor.lastrowid
+
+            cursor.execute(
+                """
+                SELECT
+                    miller_archive_reason_id,
+                    reason,
+                    created_at
+                FROM miller_archive_reasons
+                WHERE miller_archive_reason_id = %s
+                """,
+                [archive_id],
+            )
 
             archive_row = (
                 cursor.fetchone()
@@ -901,7 +911,7 @@ def restore_miller_account(
 
                 SET
                     status =
-                        'active'::user_status_enum,
+                        'active',
 
                     updated_at =
                         CURRENT_TIMESTAMP
@@ -910,21 +920,12 @@ def restore_miller_account(
 
                     user_id = %s
 
-                    AND user_role =
-                        %s::user_role_enum
+                    AND user_role = %s
 
                     AND status IN (
-                        'archived'::user_status_enum,
-                        'deactivated'::user_status_enum
+                        'archived',
+                        'deactivated'
                     )
-
-                RETURNING
-
-                    user_id,
-
-                    status::text,
-
-                    updated_at
                 """,
                 [
                     user_id,
@@ -933,15 +934,26 @@ def restore_miller_account(
             )
 
 
-            updated = cursor.fetchone()
-
-
-            if not updated:
+            if cursor.rowcount == 0:
                 raise RuntimeError(
                     "The Miller account could not be restored "
                     "because its status changed before the update "
                     "completed."
                 )
+
+            cursor.execute(
+                """
+                SELECT
+                    user_id,
+                    status,
+                    updated_at
+                FROM users
+                WHERE user_id = %s
+                """,
+                [user_id],
+            )
+
+            updated = cursor.fetchone()
 
 
     return {
@@ -1068,16 +1080,12 @@ def delete_miller_account(
 
                     user_id = %s
 
-                    AND user_role =
-                        %s::user_role_enum
+                    AND user_role = %s
 
                     AND status IN (
-                        'archived'::user_status_enum,
-                        'deactivated'::user_status_enum
+                        'archived',
+                        'deactivated'
                     )
-
-                RETURNING
-                    user_id
                 """,
                 [
                     user_id,
@@ -1086,14 +1094,13 @@ def delete_miller_account(
             )
 
 
-            deleted = cursor.fetchone()
-
-
-            if not deleted:
+            if cursor.rowcount == 0:
                 raise RuntimeError(
                     "The Miller account could not be permanently deleted "
                     "because its status changed before the deletion completed."
                 )
+
+            deleted = (user_id,)
 
 
     return {
@@ -1204,14 +1211,6 @@ def archive_miller_employee(
                     AND supplier_profile_id = %s
 
                     AND status = 'active'
-
-                RETURNING
-
-                    supplier_employee_id,
-
-                    status,
-
-                    updated_at
                 """,
                 [
                     employee_id,
@@ -1221,16 +1220,26 @@ def archive_miller_employee(
                 ],
             )
 
-
-            updated = cursor.fetchone()
-
-
-            if not updated:
+            if cursor.rowcount == 0:
                 raise RuntimeError(
                     "The Miller employee could not be archived "
                     "because the account status changed before "
                     "the update completed."
                 )
+
+            cursor.execute(
+                """
+                SELECT
+                    supplier_employee_id,
+                    status,
+                    updated_at
+                FROM supplier_employees
+                WHERE supplier_employee_id = %s
+                """,
+                [employee_id],
+            )
+
+            updated = cursor.fetchone()
 
 
             cursor.execute(
@@ -1247,13 +1256,7 @@ def archive_miller_employee(
                     %s
                 )
 
-                RETURNING
-
-                    supplier_employee_archive_reason_id,
-
-                    reason,
-
-                    created_at
+                )
                 """,
                 [
                     employee_id,
@@ -1261,6 +1264,19 @@ def archive_miller_employee(
                 ],
             )
 
+            archive_id = cursor.lastrowid
+
+            cursor.execute(
+                """
+                SELECT
+                    supplier_employee_archive_reason_id,
+                    reason,
+                    created_at
+                FROM supplier_employee_archive_reasons
+                WHERE supplier_employee_archive_reason_id = %s
+                """,
+                [archive_id],
+            )
 
             archive_row = (
                 cursor.fetchone()
@@ -1391,14 +1407,6 @@ def restore_miller_employee(
                         'deactivated',
                         'archived'
                     )
-
-                RETURNING
-
-                    supplier_employee_id,
-
-                    status,
-
-                    updated_at
                 """,
                 [
                     employee_id,
@@ -1408,15 +1416,25 @@ def restore_miller_employee(
                 ],
             )
 
-
-            updated = cursor.fetchone()
-
-
-            if not updated:
+            if cursor.rowcount == 0:
                 raise RuntimeError(
                     "The Miller employee account could not be retrieved "
                     "because its status changed before the update completed."
                 )
+
+            cursor.execute(
+                """
+                SELECT
+                    supplier_employee_id,
+                    status,
+                    updated_at
+                FROM supplier_employees
+                WHERE supplier_employee_id = %s
+                """,
+                [employee_id],
+            )
+
+            updated = cursor.fetchone()
 
 
     return {
@@ -1522,9 +1540,6 @@ def delete_miller_employee(
                         'deactivated',
                         'archived'
                     )
-
-                RETURNING
-                    supplier_employee_id
                 """,
                 [
                     employee_id,
@@ -1534,16 +1549,14 @@ def delete_miller_employee(
                 ],
             )
 
-
-            deleted = cursor.fetchone()
-
-
-            if not deleted:
+            if cursor.rowcount == 0:
                 raise RuntimeError(
                     "The Miller employee account could not be permanently "
                     "deleted because its status changed before the deletion "
                     "completed."
                 )
+
+            deleted = (employee_id,)
 
 
     return {

@@ -246,6 +246,18 @@ def news_auto_sync_startup_delay_seconds():
 
 
 # ============================================================
+# TIMEZONE HELPER
+# ============================================================
+
+def _ensure_aware(value):
+    if value is None:
+        return None
+    if timezone.is_naive(value):
+        return timezone.make_aware(value, timezone.get_current_timezone())
+    return value
+
+
+# ============================================================
 # LAST SUCCESSFUL SYNC
 # ============================================================
 
@@ -294,7 +306,7 @@ def get_last_completed_news_sync():
     if not row:
         return None
 
-    return row[0]
+    return _ensure_aware(row[0])
 
 
 # ============================================================
@@ -312,7 +324,7 @@ def is_news_sync_due():
         TRUE only after the configured interval has elapsed.
     """
 
-    last_completed_at = (
+    last_completed_at = _ensure_aware(
         get_last_completed_news_sync()
     )
 
@@ -361,11 +373,10 @@ def _try_acquire_sync_lock():
 
         cursor.execute(
             """
-            SELECT
-                pg_try_advisory_lock(%s)
+            SELECT GET_LOCK(%s, 0)
             """,
             [
-                NEWS_SYNC_ADVISORY_LOCK_ID
+                str(NEWS_SYNC_ADVISORY_LOCK_ID)
             ],
         )
 
@@ -375,13 +386,13 @@ def _try_acquire_sync_lock():
 
     return bool(
         row
-        and row[0]
+        and row[0] == 1
     )
 
 
 def _release_sync_lock():
     """
-    Release the PostgreSQL advisory lock.
+    Release the MySQL lock.
     """
 
     try:
@@ -390,11 +401,10 @@ def _release_sync_lock():
 
             cursor.execute(
                 """
-                SELECT
-                    pg_advisory_unlock(%s)
+                SELECT RELEASE_LOCK(%s)
                 """,
                 [
-                    NEWS_SYNC_ADVISORY_LOCK_ID
+                    str(NEWS_SYNC_ADVISORY_LOCK_ID)
                 ],
             )
 

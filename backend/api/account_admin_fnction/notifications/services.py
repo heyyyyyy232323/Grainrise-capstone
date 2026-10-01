@@ -1,13 +1,23 @@
+from django.db import connection, transaction
+
+
 def _table_exists(table_name):
     normalized_name = str(table_name or "").strip()
     if not normalized_name:
         return False
     with connection.cursor() as cursor:
-        cursor.execute("SELECT to_regclass(%s)", [f"public.{normalized_name}"])
+        cursor.execute(
+            """
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name = %s
+            LIMIT 1
+            """,
+            [normalized_name],
+        )
         row = cursor.fetchone()
     return bool(row and row[0])
-
-from django.db import connection, transaction
 
 from .selectors import (
     admin_notification_exists,
@@ -73,11 +83,8 @@ def mark_admin_notification_as_read(
                 %s
             )
 
-            ON CONFLICT (
-                notification_id,
-                admin_id
-            )
-            DO NOTHING
+            ON DUPLICATE KEY UPDATE
+                notification_id = notification_id
             """,
             [
                 notification_id,
@@ -166,11 +173,8 @@ def mark_all_admin_notifications_as_read(
                         %s
             )
 
-            ON CONFLICT (
-                notification_id,
-                admin_id
-            )
-            DO NOTHING
+            ON DUPLICATE KEY UPDATE
+                notification_id = notification_id
             """,
             [
                 admin_id,

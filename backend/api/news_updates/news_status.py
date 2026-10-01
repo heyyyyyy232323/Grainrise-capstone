@@ -44,6 +44,14 @@ from .news_scheduler import (
 # ROW HELPER
 # ============================================================
 
+def _ensure_aware(value):
+    if value is None:
+        return None
+    if timezone.is_naive(value):
+        return timezone.make_aware(value, timezone.get_current_timezone())
+    return value
+
+
 def _row_to_dict(
     cursor,
     row,
@@ -97,10 +105,14 @@ def get_latest_news_sync():
                 started_at,
                 completed_at
 
-            FROM grainrise_latest_news_sync_view
+            FROM news_sync_runs
 
             WHERE
                 api_provider = %s
+
+            ORDER BY
+                started_at DESC,
+                sync_id DESC
 
             LIMIT 1
             """,
@@ -111,10 +123,18 @@ def get_latest_news_sync():
 
         row = cursor.fetchone()
 
-        return _row_to_dict(
+        data = _row_to_dict(
             cursor,
             row,
         )
+
+        if data:
+            if "started_at" in data:
+                data["started_at"] = _ensure_aware(data["started_at"])
+            if "completed_at" in data:
+                data["completed_at"] = _ensure_aware(data["completed_at"])
+
+        return data
 
 
 # ============================================================
@@ -168,10 +188,18 @@ def get_last_successful_news_sync():
 
         row = cursor.fetchone()
 
-        return _row_to_dict(
+        data = _row_to_dict(
             cursor,
             row,
         )
+
+        if data:
+            if "started_at" in data:
+                data["started_at"] = _ensure_aware(data["started_at"])
+            if "completed_at" in data:
+                data["completed_at"] = _ensure_aware(data["completed_at"])
+
+        return data
 
 
 # ============================================================
@@ -194,7 +222,7 @@ def get_active_news_query_count():
         cursor.execute(
             """
             SELECT
-                COUNT(*)::INTEGER
+                COUNT(*)
 
             FROM news_fetch_queries
 
@@ -237,17 +265,31 @@ def get_news_article_counts():
             """
             SELECT
 
-                COUNT(*)::INTEGER
+                COUNT(*)
                     AS total_articles,
 
-                COUNT(*) FILTER (
-                    WHERE status = 'active'
-                )::INTEGER
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN status = 'active'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                )
                     AS active_articles,
 
-                COUNT(*) FILTER (
-                    WHERE status = 'archived'
-                )::INTEGER
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN status = 'archived'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                )
                     AS archived_articles
 
             FROM news_articles
@@ -330,7 +372,7 @@ def get_news_sync_status():
 
     if last_successful_sync:
 
-        last_completed_at = (
+        last_completed_at = _ensure_aware(
             last_successful_sync.get(
                 "completed_at"
             )
@@ -341,7 +383,7 @@ def get_news_sync_status():
         and last_completed_at
     ):
 
-        next_sync_at = (
+        next_sync_at = _ensure_aware(
             last_completed_at
             +
             timedelta(

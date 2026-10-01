@@ -136,11 +136,10 @@ def _try_acquire_news_sync_lock():
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT
-                pg_try_advisory_lock(%s)
+            SELECT GET_LOCK(%s, 0)
             """,
             [
-                NEWS_SYNC_ADVISORY_LOCK_ID,
+                str(NEWS_SYNC_ADVISORY_LOCK_ID),
             ],
         )
 
@@ -148,7 +147,7 @@ def _try_acquire_news_sync_lock():
 
     return bool(
         row
-        and row[0]
+        and row[0] == 1
     )
 
 
@@ -157,11 +156,10 @@ def _release_news_sync_lock():
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT
-                    pg_advisory_unlock(%s)
+                SELECT RELEASE_LOCK(%s)
                 """,
                 [
-                    NEWS_SYNC_ADVISORY_LOCK_ID,
+                    str(NEWS_SYNC_ADVISORY_LOCK_ID),
                 ],
             )
 

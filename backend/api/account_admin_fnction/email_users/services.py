@@ -651,18 +651,6 @@ def _save_sent_email_history(
                     %s,
                     %s
                 )
-
-                RETURNING
-                    email_history_id,
-                    recipient_type,
-                    recipient_label,
-                    recipient_user_id,
-                    recipient_email,
-                    recipient_count,
-                    subject,
-                    message_plain,
-                    sent_by_admin_id,
-                    sent_at
                 """,
                 [
                     recipient_type,
@@ -675,6 +663,27 @@ def _save_sent_email_history(
                     message_plain,
                     sent_by_admin_id,
                 ],
+            )
+
+            email_history_id = cursor.lastrowid
+
+            cursor.execute(
+                """
+                SELECT
+                    email_history_id,
+                    recipient_type,
+                    recipient_label,
+                    recipient_user_id,
+                    recipient_email,
+                    recipient_count,
+                    subject,
+                    message_plain,
+                    sent_by_admin_id,
+                    sent_at
+                FROM email_sent_history
+                WHERE email_history_id = %s
+                """,
+                [email_history_id],
             )
 
             row = cursor.fetchone()

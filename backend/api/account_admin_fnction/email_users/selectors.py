@@ -258,10 +258,10 @@ def get_sent_email_history_detail(
                 u.email
                     AS current_recipient_email,
 
-                u.user_role::text
+                u.user_role
                     AS current_recipient_role,
 
-                u.status::text
+                u.status
                     AS current_recipient_status
 
             FROM email_sent_history h
@@ -385,10 +385,10 @@ def search_email_recipients(
 
                 u.contact_number,
 
-                u.user_role::text
+                u.user_role
                     AS user_role,
 
-                u.status::text
+                u.status
                     AS status,
 
                 u.created_at
@@ -405,32 +405,34 @@ def search_email_recipients(
                 AND (
                     %s = ''
 
-                    OR u.first_name
-                        ILIKE %s
+                    OR LOWER(u.first_name)
+                        LIKE LOWER(%s)
 
-                    OR u.middle_initial
-                        ILIKE %s
+                    OR LOWER(u.middle_initial)
+                        LIKE LOWER(%s)
 
-                    OR u.last_name
-                        ILIKE %s
+                    OR LOWER(u.last_name)
+                        LIKE LOWER(%s)
 
-                    OR u.suffix
-                        ILIKE %s
+                    OR LOWER(u.suffix)
+                        LIKE LOWER(%s)
 
-                    OR u.email
-                        ILIKE %s
+                    OR LOWER(u.email)
+                        LIKE LOWER(%s)
 
-                    OR u.username
-                        ILIKE %s
+                    OR LOWER(u.username)
+                        LIKE LOWER(%s)
 
-                    OR CONCAT_WS(
-                        ' ',
-                        u.first_name,
-                        u.middle_initial,
-                        u.last_name,
-                        u.suffix
+                    OR LOWER(
+                        CONCAT_WS(
+                            ' ',
+                            u.first_name,
+                            u.middle_initial,
+                            u.last_name,
+                            u.suffix
+                        )
                     )
-                    ILIKE %s
+                    LIKE LOWER(%s)
                 )
 
             ORDER BY
@@ -513,10 +515,10 @@ def get_specific_email_recipient(
 
                 u.username,
 
-                u.user_role::text
+                u.user_role
                     AS user_role,
 
-                u.status::text
+                u.status
                     AS status
 
             FROM users u
@@ -596,10 +598,10 @@ def get_user_by_email(
 
                 u.username,
 
-                u.user_role::text
+                u.user_role
                     AS user_role,
 
-                u.status::text
+                u.status
                     AS status
 
             FROM users u
@@ -665,8 +667,7 @@ def get_broadcast_email_recipients(
 
     else:
         role_condition = """
-            AND u.user_role =
-                %s::user_role_enum
+            AND u.user_role = %s
         """
 
         parameters = [
@@ -707,17 +708,16 @@ def get_broadcast_email_recipients(
 
                 u.email,
 
-                u.user_role::text
+                u.user_role
                     AS user_role,
 
-                u.status::text
+                u.status
                     AS status
 
             FROM users u
 
             WHERE
-                u.status =
-                    'active'::user_status_enum
+                u.status = 'active'
 
                 AND u.email IS NOT NULL
 

@@ -482,8 +482,8 @@ def _resolve_user_actor(
             u.last_name,
             u.suffix,
 
-            u.user_role::text,
-            u.status::text,
+            u.user_role,
+            u.status,
 
             u.email,
             u.username
@@ -583,7 +583,7 @@ def _resolve_supplier_employee_actor(
 
             sp.user_id,
 
-            u.user_role::text
+            u.user_role
 
         FROM supplier_employees se
 
@@ -690,7 +690,7 @@ def _resolve_warehouse_employee_actor(
 
             wp.user_id,
 
-            u.user_role::text
+            u.user_role
 
         FROM warehouse_employees we
 
@@ -1401,7 +1401,6 @@ def create_profanity_report(
                     %s,
                     'pending'
                 )
-                RETURNING farmer_report_id
                 """,
                 [
                     owner_user_id,
@@ -1432,7 +1431,6 @@ def create_profanity_report(
                     %s,
                     'pending'
                 )
-                RETURNING miller_report_id
                 """,
                 [
                     owner_user_id,
@@ -1463,7 +1461,6 @@ def create_profanity_report(
                     %s,
                     'pending'
                 )
-                RETURNING warehouse_report_id
                 """,
                 [
                     owner_user_id,
@@ -1494,7 +1491,6 @@ def create_profanity_report(
                     %s,
                     'pending'
                 )
-                RETURNING retailer_report_id
                 """,
                 [
                     owner_user_id,
@@ -1515,7 +1511,7 @@ def create_profanity_report(
 
 
         report_id = (
-            db_cursor.fetchone()[0]
+            db_cursor.lastrowid
         )
 
 

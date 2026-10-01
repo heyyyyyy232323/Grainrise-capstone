@@ -16,7 +16,7 @@ from ..utils import create_access_token
 # ============================================================
 # GRAINRISE ADMIN LOGIN
 # ============================================================
-# Uses the custom PostgreSQL "admins" table.
+# Uses the custom "admins" table.
 #
 # Allowed admin roles:
 # - system_admin
@@ -35,7 +35,7 @@ from ..utils import create_access_token
 # Account Admin APIs.
 #
 # The actual administrator record still comes from the
-# custom PostgreSQL "admins" table.
+# custom "admins" table.
 # ============================================================
 
 
@@ -151,7 +151,7 @@ def verify_admin_password(
     admin password to a Django password hash.
 
     This preserves compatibility with existing records
-    in the custom PostgreSQL admins table.
+    in the custom admins table.
     """
 
     stored_password = str(
@@ -230,7 +230,7 @@ def verify_admin_password(
 def admin_login(request):
     """
     Authenticate a GrainRise administrator using
-    the custom PostgreSQL admins table.
+    the custom admins table.
 
     Successful login returns:
         access_token

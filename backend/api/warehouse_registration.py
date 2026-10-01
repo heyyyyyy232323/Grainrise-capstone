@@ -322,10 +322,9 @@ def create_warehouse_user(data):
                 %s, %s, %s, %s, %s,
                 %s, %s, %s, %s, %s,
                 %s, %s, %s, %s,
-                'warehouse_manager'::user_role_enum,
-                'inactive'::user_status_enum
+                'warehouse_manager',
+                'inactive'
             )
-            RETURNING user_id
             """,
             [
                 _required_text(data.get("first_name"), "First name"),
@@ -344,11 +343,11 @@ def create_warehouse_user(data):
                 hash_warehouse_password(data["password"]),
             ],
         )
-        row = cursor.fetchone()
+        user_id = cursor.lastrowid
 
-    if not row:
-        raise RuntimeError("PostgreSQL did not return the new Warehouse Manager user_id.")
-    return int(row[0])
+    if not user_id:
+        raise RuntimeError("Failed to create Warehouse Manager user account.")
+    return int(user_id)
 
 
 # ============================================================
@@ -376,7 +375,6 @@ def create_warehouse_profile(user_id, data):
                 official_contact_number
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING warehouse_profile_id
             """,
             [
                 user_id,
@@ -400,11 +398,11 @@ def create_warehouse_profile(user_id, data):
                 ),
             ],
         )
-        row = cursor.fetchone()
+        profile_id = cursor.lastrowid
 
-    if not row:
-        raise RuntimeError("PostgreSQL did not save the Warehouse business information.")
-    return int(row[0])
+    if not profile_id:
+        raise RuntimeError("Failed to save the Warehouse business information.")
+    return int(profile_id)
 
 
 # ============================================================
@@ -502,7 +500,6 @@ def create_warehouse_document_record(user_id, document_paths):
                 warehouse_license
             )
             VALUES (%s, %s, %s, %s, %s)
-            RETURNING warehouse_document_id
             """,
             [
                 user_id,
@@ -512,11 +509,11 @@ def create_warehouse_document_record(user_id, document_paths):
                 document_paths["warehouse_license"],
             ],
         )
-        row = cursor.fetchone()
+        doc_id = cursor.lastrowid
 
-    if not row:
-        raise RuntimeError("PostgreSQL did not save the Warehouse verification documents.")
-    return int(row[0])
+    if not doc_id:
+        raise RuntimeError("Failed to save the Warehouse verification documents.")
+    return int(doc_id)
 
 
 # ============================================================

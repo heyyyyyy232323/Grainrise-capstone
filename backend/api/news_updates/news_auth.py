@@ -106,17 +106,17 @@ def get_authenticated_news_user(
                 email,
                 contact_number,
                 username,
-                user_role::TEXT,
-                status::TEXT
+                user_role,
+                status
 
             FROM users
 
             WHERE
                 user_id = %s
 
-                AND user_role::TEXT = %s
+                AND user_role = %s
 
-                AND status::TEXT =
+                AND status =
                     'active'
 
             LIMIT 1

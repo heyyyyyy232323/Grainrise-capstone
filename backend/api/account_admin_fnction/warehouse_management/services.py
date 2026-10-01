@@ -131,8 +131,7 @@ def _get_warehouse_employee(
 
                 AND u.user_id = %s
 
-                AND u.user_role =
-                    'warehouse_manager'::user_role_enum
+                AND u.user_role = 'warehouse_manager'
 
 
             LIMIT 1
@@ -513,50 +512,44 @@ def confirm_warehouse_application(
 
                 SET
 
-                    status =
-                        'active'::user_status_enum,
+                    status = 'active',
 
-                    updated_at =
-                        CURRENT_TIMESTAMP
+                    updated_at = CURRENT_TIMESTAMP
 
 
                 WHERE
 
                     user_id = %s
 
-                    AND user_role =
-                        'warehouse_manager'::user_role_enum
+                    AND user_role = 'warehouse_manager'
 
-                    AND status =
-                        'inactive'::user_status_enum
-
-
-                RETURNING
-
-                    user_id,
-
-                    status::text,
-
-                    updated_at
+                    AND status = 'inactive'
                 """,
                 [
                     user_id,
                 ],
             )
 
+            if cursor.rowcount == 0:
+                raise RuntimeError(
+                    "The Warehouse Manager application could not be confirmed "
+                    "because its account status changed before "
+                    "the update completed."
+                )
 
-            updated = (
-                cursor.fetchone()
+            cursor.execute(
+                """
+                SELECT
+                    user_id,
+                    status,
+                    updated_at
+                FROM users
+                WHERE user_id = %s
+                """,
+                [user_id],
             )
 
-
-        if not updated:
-
-            raise RuntimeError(
-                "The Warehouse Manager application could not be confirmed "
-                "because its account status changed before "
-                "the update completed."
-            )
+            updated = cursor.fetchone()
 
 
     email_sent = False
@@ -700,51 +693,44 @@ def archive_warehouse_account(
 
                 SET
 
-                    status =
-                        'archived'::user_status_enum,
+                    status = 'archived',
 
-                    updated_at =
-                        CURRENT_TIMESTAMP
+                    updated_at = CURRENT_TIMESTAMP
 
 
                 WHERE
 
                     user_id = %s
 
-                    AND user_role =
-                        'warehouse_manager'::user_role_enum
+                    AND user_role = 'warehouse_manager'
 
-                    AND status =
-                        'active'::user_status_enum
-
-
-                RETURNING
-
-                    user_id,
-
-                    status::text,
-
-                    updated_at
+                    AND status = 'active'
                 """,
                 [
                     user_id,
                 ],
             )
 
+            if cursor.rowcount == 0:
+                raise RuntimeError(
+                    "The Warehouse Manager account could not be archived "
+                    "because its status changed before the "
+                    "archive action completed."
+                )
 
-            updated = (
-                cursor.fetchone()
+            cursor.execute(
+                """
+                SELECT
+                    user_id,
+                    status,
+                    updated_at
+                FROM users
+                WHERE user_id = %s
+                """,
+                [user_id],
             )
 
-
-        if not updated:
-
-            raise RuntimeError(
-                "The Warehouse Manager account could not be archived "
-                "because its status changed before the "
-                "archive action completed."
-            )
-
+            updated = cursor.fetchone()
 
         # ====================================================
         # SAVE ARCHIVE REASON
@@ -765,12 +751,6 @@ def archive_warehouse_account(
                     %s,
                     %s
                 )
-
-                RETURNING
-
-                    warehouse_archive_reason_id,
-
-                    created_at
                 """,
                 [
                     user_id,
@@ -778,11 +758,20 @@ def archive_warehouse_account(
                 ],
             )
 
+            archive_reason_id = cursor.lastrowid
 
-            archive_record = (
-                cursor.fetchone()
+            cursor.execute(
+                """
+                SELECT
+                    warehouse_archive_reason_id,
+                    created_at
+                FROM warehouse_archive_reasons
+                WHERE warehouse_archive_reason_id = %s
+                """,
+                [archive_reason_id],
             )
 
+            archive_record = cursor.fetchone()
 
         if not archive_record:
 
@@ -896,52 +885,47 @@ def restore_warehouse_account(
 
                 SET
 
-                    status =
-                        'active'::user_status_enum,
+                    status = 'active',
 
-                    updated_at =
-                        CURRENT_TIMESTAMP
+                    updated_at = CURRENT_TIMESTAMP
 
 
                 WHERE
 
                     user_id = %s
 
-                    AND user_role =
-                        'warehouse_manager'::user_role_enum
+                    AND user_role = 'warehouse_manager'
 
                     AND status IN (
-                        'archived'::user_status_enum,
-                        'deactivated'::user_status_enum
+                        'archived',
+                        'deactivated'
                     )
-
-
-                RETURNING
-
-                    user_id,
-
-                    status::text,
-
-                    updated_at
                 """,
                 [
                     user_id,
                 ],
             )
 
+            if cursor.rowcount == 0:
+                raise RuntimeError(
+                    "The Warehouse Manager account could not be restored "
+                    "because its status changed before the "
+                    "restore action completed."
+                )
 
-            updated = (
-                cursor.fetchone()
+            cursor.execute(
+                """
+                SELECT
+                    user_id,
+                    status,
+                    updated_at
+                FROM users
+                WHERE user_id = %s
+                """,
+                [user_id],
             )
 
-
-        if not updated:
-
-            raise RuntimeError(
-                "The Warehouse Manager account could not be restored "
-                "because its status changed before the "
-                "restore action completed."
-            )
+            updated = cursor.fetchone()
 
 
     return {
@@ -1070,34 +1054,24 @@ def delete_warehouse_account(
 
                     user_id = %s
 
-                    AND user_role =
-                        'warehouse_manager'::user_role_enum
+                    AND user_role = 'warehouse_manager'
 
                     AND status IN (
-                        'archived'::user_status_enum,
-                        'deactivated'::user_status_enum
+                        'archived',
+                        'deactivated'
                     )
-
-
-                RETURNING
-                    user_id
                 """,
                 [
                     user_id,
                 ],
             )
 
+            if cursor.rowcount == 0:
+                raise RuntimeError(
+                    "The Warehouse Manager account could not be permanently deleted."
+                )
 
-            deleted = (
-                cursor.fetchone()
-            )
-
-
-        if not deleted:
-
-            raise RuntimeError(
-                "The Warehouse Manager account could not be permanently deleted."
-            )
+            deleted = (user_id,)
 
 
     return {
@@ -1202,48 +1176,42 @@ def archive_warehouse_employee(
 
                 SET
 
-                    status =
-                        'archived',
+                    status = 'archived',
 
-                    updated_at =
-                        CURRENT_TIMESTAMP
+                    updated_at = CURRENT_TIMESTAMP
 
 
                 WHERE
 
                     warehouse_employee_id = %s
 
-                    AND status =
-                        'active'
-
-
-                RETURNING
-
-                    warehouse_employee_id,
-
-                    status,
-
-                    updated_at
+                    AND status = 'active'
                 """,
                 [
                     employee_id,
                 ],
             )
 
+            if cursor.rowcount == 0:
+                raise RuntimeError(
+                    "The Warehouse employee could not be archived "
+                    "because the employee status changed before "
+                    "the archive action completed."
+                )
 
-            updated = (
-                cursor.fetchone()
+            cursor.execute(
+                """
+                SELECT
+                    warehouse_employee_id,
+                    status,
+                    updated_at
+                FROM warehouse_employees
+                WHERE warehouse_employee_id = %s
+                """,
+                [employee_id],
             )
 
-
-        if not updated:
-
-            raise RuntimeError(
-                "The Warehouse employee could not be archived "
-                "because the employee status changed before "
-                "the archive action completed."
-            )
-
+            updated = cursor.fetchone()
 
         # ====================================================
         # SAVE ARCHIVE REASON
@@ -1265,12 +1233,6 @@ def archive_warehouse_employee(
                     %s,
                     %s
                 )
-
-                RETURNING
-
-                    warehouse_employee_archive_reason_id,
-
-                    created_at
                 """,
                 [
                     employee_id,
@@ -1278,11 +1240,20 @@ def archive_warehouse_employee(
                 ],
             )
 
+            archive_reason_id = cursor.lastrowid
 
-            archive_record = (
-                cursor.fetchone()
+            cursor.execute(
+                """
+                SELECT
+                    warehouse_employee_archive_reason_id,
+                    created_at
+                FROM warehouse_employee_archive_reasons
+                WHERE warehouse_employee_archive_reason_id = %s
+                """,
+                [archive_reason_id],
             )
 
+            archive_record = cursor.fetchone()
 
         if not archive_record:
 
@@ -1402,11 +1373,9 @@ def restore_warehouse_employee(
 
                 SET
 
-                    status =
-                        'active',
+                    status = 'active',
 
-                    updated_at =
-                        CURRENT_TIMESTAMP
+                    updated_at = CURRENT_TIMESTAMP
 
 
                 WHERE
@@ -1418,34 +1387,32 @@ def restore_warehouse_employee(
                         'inactive',
                         'deactivated'
                     )
-
-
-                RETURNING
-
-                    warehouse_employee_id,
-
-                    status,
-
-                    updated_at
                 """,
                 [
                     employee_id,
                 ],
             )
 
+            if cursor.rowcount == 0:
+                raise RuntimeError(
+                    "The Warehouse employee could not be restored "
+                    "because the employee status changed before "
+                    "the restore action completed."
+                )
 
-            updated = (
-                cursor.fetchone()
+            cursor.execute(
+                """
+                SELECT
+                    warehouse_employee_id,
+                    status,
+                    updated_at
+                FROM warehouse_employees
+                WHERE warehouse_employee_id = %s
+                """,
+                [employee_id],
             )
 
-
-        if not updated:
-
-            raise RuntimeError(
-                "The Warehouse employee could not be restored "
-                "because the employee status changed before "
-                "the restore action completed."
-            )
+            updated = cursor.fetchone()
 
 
     return {
@@ -1544,27 +1511,18 @@ def delete_warehouse_employee(
 
                 WHERE
                     warehouse_employee_id = %s
-
-
-                RETURNING
-                    warehouse_employee_id
                 """,
                 [
                     employee_id,
                 ],
             )
 
+            if cursor.rowcount == 0:
+                raise RuntimeError(
+                    "The Warehouse employee could not be permanently deleted."
+                )
 
-            deleted = (
-                cursor.fetchone()
-            )
-
-
-        if not deleted:
-
-            raise RuntimeError(
-                "The Warehouse employee could not be permanently deleted."
-            )
+            deleted = (employee_id,)
 
 
     return {

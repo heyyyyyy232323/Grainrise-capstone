@@ -220,7 +220,7 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
 
     # Check if a user with this email already exists
     with connection.cursor() as cursor:
-        cursor.execute('SELECT user_id, user_role::text, status::text FROM users WHERE LOWER(email) = %s', [inquiry.email.lower()])
+        cursor.execute('SELECT user_id, user_role, status FROM users WHERE LOWER(email) = %s', [inquiry.email.lower()])
         existing_user = cursor.fetchone()
 
     if existing_user:
@@ -257,9 +257,9 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
                 ) VALUES (
                     %s, NULL, %s, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL,
-                    %s, %s, %s, %s, %s::user_role_enum,
-                    'active'::user_status_enum, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-                ) RETURNING user_id, status::text, updated_at
+                    %s, %s, %s, %s, %s,
+                    'active', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
             ''', [
                 first_name,
                 last_name,
@@ -269,10 +269,15 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
                 hashed_password,
                 user_role,
             ])
+            created_user_id = cursor.lastrowid
+            cursor.execute('''
+                SELECT status, updated_at
+                FROM users
+                WHERE user_id = %s
+            ''', [created_user_id])
             row = cursor.fetchone()
-            created_user_id = row[0]
-            status_text = row[1]
-            updated_at = row[2]
+            status_text = row[0]
+            updated_at = row[1]
 
             doc_raw = inquiry.business_verification_document or None
             doc_path = doc_raw

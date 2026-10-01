@@ -1,3 +1,5 @@
+from django.db import connection
+
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -334,12 +336,12 @@ def change_temporary_password(request):
     with connection.cursor() as cursor:
         if user_id:
             cursor.execute(
-                "SELECT user_id, password_hash, user_role::text, must_change_password, province, gender, first_name, last_name, email FROM users WHERE user_id = %s",
+                "SELECT user_id, password_hash, user_role, must_change_password, province, gender, first_name, last_name, email FROM users WHERE user_id = %s",
                 [user_id]
             )
         elif identifier:
             cursor.execute(
-                "SELECT user_id, password_hash, user_role::text, must_change_password, province, gender, first_name, last_name, email FROM users WHERE LOWER(email) = %s OR LOWER(COALESCE(username, '')) = %s",
+                "SELECT user_id, password_hash, user_role, must_change_password, province, gender, first_name, last_name, email FROM users WHERE LOWER(email) = %s OR LOWER(COALESCE(username, '')) = %s",
                 [identifier, identifier]
             )
         else:
@@ -435,7 +437,7 @@ def get_profile_status(request):
         cursor.execute("""
             SELECT user_id, first_name, middle_initial, last_name, suffix, gender,
                    province, municipality, postal_code, barangay, street_address,
-                   email, contact_number, username, user_role::text, must_change_password
+                   email, contact_number, username, user_role, must_change_password
             FROM users
             WHERE user_id = %s
         """, [user_id])
@@ -525,7 +527,7 @@ def complete_profile(request):
     is_partial = str(data.get("is_partial", "")).lower() in ("true", "1")
 
     with connection.cursor() as cursor:
-        cursor.execute("SELECT user_id, user_role::text FROM users WHERE user_id = %s", [user_id])
+        cursor.execute("SELECT user_id, user_role FROM users WHERE user_id = %s", [user_id])
         user_row = cursor.fetchone()
 
     if not user_row:

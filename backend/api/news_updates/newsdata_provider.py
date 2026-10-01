@@ -599,7 +599,7 @@ def _provider_parameters(value):
     """
     Normalize news_fetch_queries.provider_parameters.
 
-    PostgreSQL JSONB normally arrives as dict.
+    Database JSON normally arrives as dict.
     """
 
     if value is None:

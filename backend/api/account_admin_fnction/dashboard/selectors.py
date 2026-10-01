@@ -78,33 +78,49 @@ def get_dashboard_kpi_counts():
         cursor.execute(
             """
             SELECT
-                COUNT(*) FILTER (
-                    WHERE
-                        u.user_role =
-                            'miller_manager'::user_role_enum
-                )
-                AS miller_managers,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN u.user_role = 'miller_manager'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS miller_managers,
 
-                COUNT(*) FILTER (
-                    WHERE
-                        u.user_role =
-                            'warehouse_manager'::user_role_enum
-                )
-                AS warehouse_managers,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN u.user_role = 'warehouse_manager'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS warehouse_managers,
 
-                COUNT(*) FILTER (
-                    WHERE
-                        u.user_role =
-                            'retailer'::user_role_enum
-                )
-                AS retailers,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN u.user_role = 'retailer'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS retailers,
 
-                COUNT(*) FILTER (
-                    WHERE
-                        u.user_role =
-                            'farmer'::user_role_enum
-                )
-                AS farmers
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN u.user_role = 'farmer'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS farmers
 
             FROM users u
             """
@@ -215,33 +231,49 @@ def get_account_status_summary():
         cursor.execute(
             """
             SELECT
-                COUNT(*) FILTER (
-                    WHERE
-                        u.status =
-                            'active'::user_status_enum
-                )
-                AS active,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN u.status = 'active'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS active,
 
-                COUNT(*) FILTER (
-                    WHERE
-                        u.status =
-                            'inactive'::user_status_enum
-                )
-                AS to_review,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN u.status = 'inactive'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS to_review,
 
-                COUNT(*) FILTER (
-                    WHERE
-                        u.status =
-                            'archived'::user_status_enum
-                )
-                AS archived,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN u.status = 'archived'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS archived,
 
-                COUNT(*) FILTER (
-                    WHERE
-                        u.status =
-                            'deactivated'::user_status_enum
-                )
-                AS deactivated
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN u.status = 'deactivated'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS deactivated
 
             FROM users u
             """
@@ -377,48 +409,64 @@ def get_role_status_breakdown():
         cursor.execute(
             """
             SELECT
-                u.user_role::text
+                u.user_role
                     AS user_role,
 
                 COUNT(*)
                     AS total,
 
-                COUNT(*) FILTER (
-                    WHERE
-                        u.status =
-                            'active'::user_status_enum
-                )
-                AS active,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN u.status = 'active'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS active,
 
-                COUNT(*) FILTER (
-                    WHERE
-                        u.status =
-                            'inactive'::user_status_enum
-                )
-                AS to_review,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN u.status = 'inactive'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS to_review,
 
-                COUNT(*) FILTER (
-                    WHERE
-                        u.status =
-                            'archived'::user_status_enum
-                )
-                AS archived,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN u.status = 'archived'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS archived,
 
-                COUNT(*) FILTER (
-                    WHERE
-                        u.status =
-                            'deactivated'::user_status_enum
-                )
-                AS deactivated
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN u.status = 'deactivated'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS deactivated
 
             FROM users u
 
             WHERE
                 u.user_role IN (
-                    'miller_manager'::user_role_enum,
-                    'warehouse_manager'::user_role_enum,
-                    'retailer'::user_role_enum,
-                    'farmer'::user_role_enum
+                    'miller_manager',
+                    'warehouse_manager',
+                    'retailer',
+                    'farmer'
                 )
 
             GROUP BY
@@ -552,10 +600,10 @@ def get_recent_user_activity(
 
                 u.email,
 
-                u.user_role::text
+                u.user_role
                     AS user_role,
 
-                u.status::text
+                u.status
                     AS status,
 
                 u.created_at

@@ -696,11 +696,9 @@ def create_retailer_user(data):
                 %s,
                 %s,
 
-                'retailer'::user_role_enum,
-                'inactive'::user_status_enum
+                'retailer',
+                'inactive'
             )
-
-            RETURNING user_id
             """,
 
             [
@@ -757,22 +755,17 @@ def create_retailer_user(data):
         )
 
 
-        row = (
-            cursor.fetchone()
-        )
+        user_id = cursor.lastrowid
 
 
-    if not row:
+    if not user_id:
 
         raise RuntimeError(
-            "PostgreSQL did not return "
-            "the newly created retailer user_id."
+            "Failed to retrieve the newly created retailer user_id."
         )
 
 
-    return int(
-        row[0]
-    )
+    return int(user_id)
 
 
 # ============================================================
@@ -919,8 +912,6 @@ def create_retailer_documents(
                 %s,
                 %s
             )
-
-            RETURNING retailer_document_id
             """,
 
             [
@@ -931,22 +922,17 @@ def create_retailer_documents(
         )
 
 
-        row = (
-            cursor.fetchone()
-        )
+        doc_id = cursor.lastrowid
 
 
-    if not row:
+    if not doc_id:
 
         raise RuntimeError(
-            "PostgreSQL did not save "
-            "the retailer documents."
+            "Failed to save the retailer documents."
         )
 
 
-    return int(
-        row[0]
-    )
+    return int(doc_id)
 
 
 # ============================================================
@@ -1081,8 +1067,7 @@ def list_retailers():
             FROM users
 
             WHERE
-                user_role =
-                'retailer'::user_role_enum
+                user_role = 'retailer'
 
             ORDER BY
                 created_at DESC
@@ -1181,21 +1166,12 @@ def update_retailer_status(
             UPDATE users
 
             SET
-                status =
-                    %s::user_status_enum,
-
-                updated_at =
-                    CURRENT_TIMESTAMP
+                status = %s,
+                updated_at = CURRENT_TIMESTAMP
 
             WHERE
                 user_id = %s
-
-                AND user_role =
-                    'retailer'::user_role_enum
-
-            RETURNING
-                user_id,
-                status
+                AND user_role = 'retailer'
             """,
 
             [
@@ -1204,6 +1180,18 @@ def update_retailer_status(
             ],
         )
 
+        cursor.execute(
+            """
+            SELECT
+                user_id,
+                status
+            FROM users
+            WHERE
+                user_id = %s
+                AND user_role = 'retailer'
+            """,
+            [user_id],
+        )
 
         row = (
             cursor.fetchone()
@@ -1628,4 +1616,4 @@ def verify_forgot_password_reset_token(email, token):
     if is_valid:
         cache.delete(key)
 
-    return is_valid
+    return is_valid

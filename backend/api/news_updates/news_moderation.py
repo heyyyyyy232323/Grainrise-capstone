@@ -136,46 +136,48 @@ def _record_news_activity(
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT grainrise_record_system_activity(
+            INSERT INTO system_activity_logs (
+                source_table,
+                source_record_id,
+                related_user_id,
+                related_employee_type,
+                related_employee_id,
+                entity_type,
+                entity_role,
+                action,
+                title,
+                description,
+                target_path,
+                old_data,
+                new_data,
+                is_notification_worthy
+            )
+            VALUES (
                 %s,
                 %s,
-
                 %s,
-
                 NULL,
                 NULL,
-
                 %s,
                 %s,
-
-                %s,
-
                 %s,
                 %s,
-
+                %s,
                 '/admin/news-updates',
-
-                %s::jsonb,
-                %s::jsonb,
-
-                FALSE,
-                NULL
+                %s,
+                %s,
+                0
             )
             """,
             [
                 source_table,
                 source_record_id,
-
                 related_user_id,
-
                 entity_type,
                 entity_role,
-
                 action,
-
                 title,
                 description,
-
                 _json_data(old_data),
                 _json_data(new_data),
             ],
@@ -242,9 +244,9 @@ def list_admin_news_articles(
         conditions.append(
             """
             (
-                COALESCE(article.title, '') ILIKE %s
-                OR COALESCE(article.description, '') ILIKE %s
-                OR COALESCE(article.source_name, '') ILIKE %s
+                LOWER(COALESCE(article.title, '')) LIKE LOWER(%s)
+                OR LOWER(COALESCE(article.description, '')) LIKE LOWER(%s)
+                OR LOWER(COALESCE(article.source_name, '')) LIKE LOWER(%s)
             )
             """
         )
@@ -286,10 +288,10 @@ def list_admin_news_articles(
         cursor.execute(
             f"""
             SELECT
-                COUNT(*)::BIGINT
+                COUNT(*)
 
             FROM
-                grainrise_news_article_detail_view
+                news_articles
                     AS article
 
             {where_sql}
@@ -321,22 +323,27 @@ def list_admin_news_articles(
 
                 article.status,
 
-                article.reaction_count,
-                article.comment_count,
-                article.root_comment_count,
-                article.reply_count,
+                (SELECT COUNT(*) FROM news_reactions nr WHERE nr.news_id = article.news_id)
+                    AS reaction_count,
+                (SELECT COUNT(*) FROM news_comments nc WHERE nc.news_id = article.news_id)
+                    AS comment_count,
+                (SELECT COUNT(*) FROM news_comments nc WHERE nc.news_id = article.news_id AND nc.parent_comment_id IS NULL)
+                    AS root_comment_count,
+                (SELECT COUNT(*) FROM news_comments nc WHERE nc.news_id = article.news_id AND nc.parent_comment_id IS NOT NULL)
+                    AS reply_count,
 
                 article.first_fetched_at,
                 article.last_fetched_at
 
             FROM
-                grainrise_news_article_detail_view
+                news_articles
                     AS article
 
             {where_sql}
 
             ORDER BY
-                article.published_at DESC NULLS LAST,
+                (article.published_at IS NULL) ASC,
+                article.published_at DESC,
                 article.news_id DESC
 
             LIMIT %s
@@ -386,13 +393,23 @@ def get_admin_news_article_detail(
         # ARTICLE
         cursor.execute(
             """
-            SELECT *
+            SELECT
+                article.*,
+                (SELECT COUNT(*) FROM news_reactions nr WHERE nr.news_id = article.news_id)
+                    AS reaction_count,
+                (SELECT COUNT(*) FROM news_comments nc WHERE nc.news_id = article.news_id)
+                    AS comment_count,
+                (SELECT COUNT(*) FROM news_comments nc WHERE nc.news_id = article.news_id AND nc.parent_comment_id IS NULL)
+                    AS root_comment_count,
+                (SELECT COUNT(*) FROM news_comments nc WHERE nc.news_id = article.news_id AND nc.parent_comment_id IS NOT NULL)
+                    AS reply_count
 
             FROM
-                grainrise_news_article_detail_view
+                news_articles
+                    AS article
 
             WHERE
-                news_id = %s
+                article.news_id = %s
 
             LIMIT 1
             """,
@@ -412,7 +429,7 @@ def get_admin_news_article_detail(
         cursor.execute(
             """
             SELECT
-                user_role::TEXT
+                user_role
 
             FROM
                 news_article_audiences
@@ -421,7 +438,7 @@ def get_admin_news_article_detail(
                 news_id = %s
 
             ORDER BY
-                user_role::TEXT ASC
+                user_role ASC
             """,
             [news_id],
         )
@@ -441,18 +458,19 @@ def get_admin_news_article_detail(
                 nr.reaction_type,
                 nr.created_at,
 
-                grainrise_build_person_name(
-                    u.first_name,
-                    u.middle_initial,
-                    u.last_name,
-                    u.suffix
+                CONCAT_WS(
+                    ' ',
+                    NULLIF(TRIM(u.first_name), ''),
+                    NULLIF(TRIM(u.middle_initial), ''),
+                    NULLIF(TRIM(u.last_name), ''),
+                    NULLIF(TRIM(u.suffix), '')
                 )
                     AS user_name,
 
-                u.user_role::TEXT
+                u.user_role
                     AS user_role,
 
-                u.status::TEXT
+                u.status
                     AS user_status
 
             FROM
@@ -500,18 +518,19 @@ def get_admin_news_article_detail(
                 nc.created_at,
                 nc.updated_at,
 
-                grainrise_build_person_name(
-                    u.first_name,
-                    u.middle_initial,
-                    u.last_name,
-                    u.suffix
+                CONCAT_WS(
+                    ' ',
+                    NULLIF(TRIM(u.first_name), ''),
+                    NULLIF(TRIM(u.middle_initial), ''),
+                    NULLIF(TRIM(u.last_name), ''),
+                    NULLIF(TRIM(u.suffix), '')
                 )
                     AS author_name,
 
-                u.user_role::TEXT
+                u.user_role
                     AS author_role,
 
-                u.status::TEXT
+                u.status
                     AS user_status
 
             FROM
@@ -655,17 +674,24 @@ def update_admin_news_article_status(
 
             WHERE
                 news_id = %s
-
-            RETURNING
-                news_id,
-                title,
-                status,
-                updated_at
             """,
             [
                 status_value,
                 news_id,
             ],
+        )
+
+        cursor.execute(
+            """
+            SELECT
+                news_id,
+                title,
+                status,
+                updated_at
+            FROM news_articles
+            WHERE news_id = %s
+            """,
+            [news_id],
         )
 
         updated_article = _row_to_dict(
@@ -861,14 +887,15 @@ def moderate_admin_news_comment(
                 nc.comment_text,
                 nc.comment_status,
 
-                u.user_role::TEXT
+                u.user_role
                     AS author_role,
 
-                grainrise_build_person_name(
-                    u.first_name,
-                    u.middle_initial,
-                    u.last_name,
-                    u.suffix
+                CONCAT_WS(
+                    ' ',
+                    NULLIF(TRIM(u.first_name), ''),
+                    NULLIF(TRIM(u.middle_initial), ''),
+                    NULLIF(TRIM(u.last_name), ''),
+                    NULLIF(TRIM(u.suffix), '')
                 )
                     AS author_name
 
@@ -909,15 +936,6 @@ def moderate_admin_news_comment(
 
                 WHERE
                     comment_id = %s
-
-                RETURNING
-                    comment_id,
-                    news_id,
-                    user_id,
-                    parent_comment_id,
-                    comment_text,
-                    comment_status,
-                    updated_at
                 """,
                 [comment_id],
             )
@@ -943,15 +961,6 @@ def moderate_admin_news_comment(
 
                 WHERE
                     comment_id = %s
-
-                RETURNING
-                    comment_id,
-                    news_id,
-                    user_id,
-                    parent_comment_id,
-                    comment_text,
-                    comment_status,
-                    updated_at
                 """,
                 [comment_id],
             )
@@ -968,18 +977,25 @@ def moderate_admin_news_comment(
 
                 WHERE
                     comment_id = %s
-
-                RETURNING
-                    comment_id,
-                    news_id,
-                    user_id,
-                    parent_comment_id,
-                    comment_text,
-                    comment_status,
-                    updated_at
                 """,
                 [comment_id],
             )
+
+        cursor.execute(
+            """
+            SELECT
+                comment_id,
+                news_id,
+                user_id,
+                parent_comment_id,
+                comment_text,
+                comment_status,
+                updated_at
+            FROM news_comments
+            WHERE comment_id = %s
+            """,
+            [comment_id],
+        )
 
         updated_comment = _row_to_dict(
             cursor
@@ -1075,18 +1091,19 @@ def penalize_news_comment_author(
 
                 u.user_id,
 
-                grainrise_build_person_name(
-                    u.first_name,
-                    u.middle_initial,
-                    u.last_name,
-                    u.suffix
+                CONCAT_WS(
+                    ' ',
+                    NULLIF(TRIM(u.first_name), ''),
+                    NULLIF(TRIM(u.middle_initial), ''),
+                    NULLIF(TRIM(u.last_name), ''),
+                    NULLIF(TRIM(u.suffix), '')
                 )
                     AS user_name,
 
-                u.user_role::TEXT
+                u.user_role
                     AS user_role,
 
-                u.status::TEXT
+                u.status
                     AS user_status
 
             FROM
@@ -1138,25 +1155,30 @@ def penalize_news_comment_author(
                 users
 
             SET
-                status =
-                    'deactivated'::user_status_enum,
+                status = 'deactivated',
 
                 updated_at =
                     CURRENT_TIMESTAMP
 
             WHERE
                 user_id = %s
+            """,
+            [
+                target[
+                    "user_id"
+                ]
+            ],
+        )
 
-            RETURNING
+        cursor.execute(
+            """
+            SELECT
                 user_id,
-
-                user_role::TEXT
-                    AS user_role,
-
-                status::TEXT
-                    AS status,
-
+                user_role,
+                status,
                 updated_at
+            FROM users
+            WHERE user_id = %s
             """,
             [
                 target[

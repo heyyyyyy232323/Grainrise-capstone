@@ -73,7 +73,7 @@ def _provider_parameters(
     """
     Convert provider_parameters into a safe dictionary.
 
-    PostgreSQL JSONB normally arrives as dict, but defensive
+    Database JSON normally arrives as dict, but defensive
     handling for JSON strings is included.
     """
 

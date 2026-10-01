@@ -50,7 +50,16 @@ def _table_exists(table_name):
     if not normalized_name:
         return False
     with connection.cursor() as cursor:
-        cursor.execute("SELECT to_regclass(%s)", [f"public.{normalized_name}"])
+        cursor.execute(
+            """
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name = %s
+            LIMIT 1
+            """,
+            [normalized_name],
+        )
         row = cursor.fetchone()
     return bool(row and row[0])
 

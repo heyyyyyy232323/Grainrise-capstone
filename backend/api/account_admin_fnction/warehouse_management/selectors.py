@@ -99,16 +99,14 @@ def _status_condition_for_tab(tab):
     if tab == TAB_TO_REVIEW:
 
         return """
-            u.status =
-                'inactive'::user_status_enum
+            u.status = 'inactive'
         """
 
 
     if tab == TAB_ACTIVE:
 
         return """
-            u.status =
-                'active'::user_status_enum
+            u.status = 'active'
         """
 
 
@@ -116,8 +114,8 @@ def _status_condition_for_tab(tab):
 
         return """
             u.status IN (
-                'archived'::user_status_enum,
-                'deactivated'::user_status_enum
+                'archived',
+                'deactivated'
             )
         """
 
@@ -248,7 +246,7 @@ def list_warehouses(
                 -- ACCOUNT STATUS
                 -- ============================================
 
-                u.status::text
+                u.status
                     AS status,
 
 
@@ -313,8 +311,7 @@ def list_warehouses(
 
             WHERE
 
-                u.user_role =
-                    %s::user_role_enum
+                u.user_role = %s
 
                 AND {status_condition}
 
@@ -358,34 +355,41 @@ def get_warehouse_status_counts():
             """
             SELECT
 
-                COUNT(*) FILTER (
-
-                    WHERE
-                        status =
-                            'inactive'::user_status_enum
-
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN status = 'inactive'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
                 )
                 AS to_review,
 
 
-                COUNT(*) FILTER (
-
-                    WHERE
-                        status =
-                            'active'::user_status_enum
-
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN status = 'active'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
                 )
                 AS active,
 
 
-                COUNT(*) FILTER (
-
-                    WHERE
-                        status IN (
-                            'archived'::user_status_enum,
-                            'deactivated'::user_status_enum
-                        )
-
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN status IN ('archived', 'deactivated')
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
                 )
                 AS inactive
 
@@ -394,8 +398,7 @@ def get_warehouse_status_counts():
 
 
             WHERE
-                user_role =
-                    %s::user_role_enum
+                user_role = %s
             """,
             [
                 WAREHOUSE_ROLE,
@@ -538,10 +541,10 @@ def get_warehouse_details(
 
                 u.username,
 
-                u.user_role::text
+                u.user_role
                     AS user_role,
 
-                u.status::text
+                u.status
                     AS status,
 
                 u.created_at,
@@ -625,8 +628,7 @@ def get_warehouse_details(
 
                 u.user_id = %s
 
-                AND u.user_role =
-                    %s::user_role_enum
+                AND u.user_role = %s
 
 
             LIMIT 1
@@ -675,7 +677,7 @@ def get_warehouse_account_summary(
 
                 u.email,
 
-                u.status::text
+                u.status
                     AS status,
 
 
@@ -703,8 +705,7 @@ def get_warehouse_account_summary(
 
                 u.user_id = %s
 
-                AND u.user_role =
-                    %s::user_role_enum
+                AND u.user_role = %s
 
 
             LIMIT 1
@@ -747,8 +748,7 @@ def warehouse_exists(
 
                     user_id = %s
 
-                    AND user_role =
-                        %s::user_role_enum
+                    AND user_role = %s
             )
             """,
             [
@@ -797,7 +797,7 @@ def get_warehouse_view_overview(
 
                 u.user_id,
 
-                u.status::text
+                u.status
                     AS status,
 
 
@@ -928,8 +928,7 @@ def get_warehouse_view_overview(
 
                 u.user_id = %s
 
-                AND u.user_role =
-                    %s::user_role_enum
+                AND u.user_role = %s
 
 
             LIMIT 1
@@ -1167,8 +1166,7 @@ def get_warehouse_employees(
 
                 u.user_id = %s
 
-                AND u.user_role =
-                    %s::user_role_enum
+                AND u.user_role = %s
 
                 AND {status_condition}
 
@@ -1247,7 +1245,7 @@ def get_warehouse_ratings(
                 reviewer.email
                     AS reviewer_email,
 
-                reviewer.user_role::text
+                reviewer.user_role
                     AS reviewer_role,
 
 
@@ -1346,7 +1344,7 @@ def get_warehouse_reports(
                 reporter.email
                     AS reporter_email,
 
-                reporter.user_role::text
+                reporter.user_role
                     AS reporter_role,
 
 

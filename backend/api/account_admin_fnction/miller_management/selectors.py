@@ -103,10 +103,14 @@ def _table_exists(table_name):
 
         cursor.execute(
             """
-            SELECT to_regclass(%s)
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name = %s
+            LIMIT 1
             """,
             [
-                f"public.{normalized_name}",
+                normalized_name,
             ],
         )
 
@@ -143,7 +147,7 @@ def _status_condition_for_tab(tab):
 
         return """
             u.status =
-                'inactive'::user_status_enum
+                'inactive'
         """
 
 
@@ -151,7 +155,7 @@ def _status_condition_for_tab(tab):
 
         return """
             u.status =
-                'active'::user_status_enum
+                'active'
         """
 
 
@@ -159,8 +163,8 @@ def _status_condition_for_tab(tab):
 
         return """
             u.status IN (
-                'archived'::user_status_enum,
-                'deactivated'::user_status_enum
+                'archived',
+                'deactivated'
             )
         """
 
@@ -271,10 +275,10 @@ def list_millers(
     else:
 
         archive_columns = """
-            NULL::text
+            NULL
                 AS archive_reason,
 
-            NULL::timestamp
+            NULL
                 AS archived_at
         """
 
@@ -352,7 +356,7 @@ def list_millers(
                 -- STATUS
                 -- ============================================
 
-                u.status::text
+                u.status
                     AS status,
 
 
@@ -386,8 +390,7 @@ def list_millers(
 
             WHERE
 
-                u.user_role =
-                    %s::user_role_enum
+                u.user_role = %s
 
                 AND {status_condition}
 
@@ -431,38 +434,47 @@ def get_miller_status_counts():
             """
             SELECT
 
-                COUNT(*) FILTER (
-                    WHERE
-                        status =
-                            'inactive'::user_status_enum
-                )
-                AS to_review,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN status = 'inactive'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS to_review,
 
 
-                COUNT(*) FILTER (
-                    WHERE
-                        status =
-                            'active'::user_status_enum
-                )
-                AS active,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN status = 'active'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS active,
 
 
-                COUNT(*) FILTER (
-                    WHERE
-                        status IN (
-                            'archived'::user_status_enum,
-                            'deactivated'::user_status_enum
-                        )
-                )
-                AS inactive
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN status IN ('archived', 'deactivated')
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS inactive
 
 
             FROM users
 
 
             WHERE
-                user_role =
-                    %s::user_role_enum
+                user_role = %s
             """,
             [
                 MILLER_ROLE,
@@ -608,10 +620,10 @@ def get_miller_details(
 
                 u.username,
 
-                u.user_role::text
+                u.user_role
                     AS user_role,
 
-                u.status::text
+                u.status
                     AS status,
 
                 u.created_at,
@@ -695,8 +707,7 @@ def get_miller_details(
 
                 u.user_id = %s
 
-                AND u.user_role =
-                    %s::user_role_enum
+                AND u.user_role = %s
 
 
             LIMIT 1
@@ -739,7 +750,7 @@ def get_miller_account_summary(
 
                 u.email,
 
-                u.status::text
+                u.status
                     AS status,
 
                 p.supplier_profile_id,
@@ -766,8 +777,7 @@ def get_miller_account_summary(
 
                 u.user_id = %s
 
-                AND u.user_role =
-                    %s::user_role_enum
+                AND u.user_role = %s
 
 
             LIMIT 1
@@ -809,8 +819,7 @@ def miller_exists(
                 WHERE
                     user_id = %s
 
-                    AND user_role =
-                        %s::user_role_enum
+                    AND user_role = %s
             )
             """,
             [
@@ -894,10 +903,10 @@ def get_miller_view_overview(
     else:
 
         rating_columns = """
-            0::numeric
+            0
                 AS average_rating,
 
-            0::bigint
+            0
                 AS rating_count
         """
 
@@ -921,7 +930,7 @@ def get_miller_view_overview(
     else:
 
         report_columns = """
-            0::bigint
+            0
                 AS report_count
         """
 
@@ -938,7 +947,7 @@ def get_miller_view_overview(
 
                 u.user_id,
 
-                u.status::text
+                u.status
                     AS status,
 
 
@@ -1027,8 +1036,7 @@ def get_miller_view_overview(
 
                 u.user_id = %s
 
-                AND u.user_role =
-                    %s::user_role_enum
+                AND u.user_role = %s
 
 
             LIMIT 1
@@ -1142,10 +1150,10 @@ def get_miller_employees(
     else:
 
         archive_columns = """
-            NULL::text
+            NULL
                 AS archive_reason,
 
-            NULL::timestamp
+            NULL
                 AS archived_at
         """
 
@@ -1286,8 +1294,7 @@ def get_miller_employees(
 
                 u.user_id = %s
 
-                AND u.user_role =
-                    %s::user_role_enum
+                AND u.user_role = %s
 
                 AND {status_condition}
 
@@ -1376,7 +1383,7 @@ def get_miller_ratings(
                 reviewer.email
                     AS reviewer_email,
 
-                reviewer.user_role::text
+                reviewer.user_role
                     AS reviewer_role,
 
 
@@ -1481,7 +1488,7 @@ def get_miller_reports(
                 reporter.email
                     AS reporter_email,
 
-                reporter.user_role::text
+                reporter.user_role
                     AS reporter_role,
 
 

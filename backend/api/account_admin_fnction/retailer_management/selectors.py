@@ -76,7 +76,7 @@ def _row_to_dict(cursor):
 
 def _table_exists(table_name):
     """
-    Check whether a PostgreSQL table exists.
+    Check whether a table exists in the MySQL database.
     """
 
     normalized_name = str(
@@ -90,10 +90,14 @@ def _table_exists(table_name):
 
         cursor.execute(
             """
-            SELECT to_regclass(%s)
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name = %s
+            LIMIT 1
             """,
             [
-                f"public.{normalized_name}",
+                normalized_name,
             ],
         )
 
@@ -130,20 +134,20 @@ def _status_condition_for_tab(tab):
     if tab == TAB_TO_REVIEW:
         return """
             u.status =
-                'inactive'::user_status_enum
+                'inactive'
         """
 
     if tab == TAB_ACTIVE:
         return """
             u.status =
-                'active'::user_status_enum
+                'active'
         """
 
     if tab == TAB_INACTIVE:
         return """
             u.status IN (
-                'archived'::user_status_enum,
-                'deactivated'::user_status_enum
+                'archived',
+                'deactivated'
             )
         """
 
@@ -243,10 +247,10 @@ def list_retailers(
     else:
 
         archive_columns = """
-            NULL::text
+            NULL
                 AS archive_reason,
 
-            NULL::timestamp
+            NULL
                 AS archived_at
         """
 
@@ -298,7 +302,7 @@ def list_retailers(
 
                 u.username,
 
-                u.status::text
+                u.status
                     AS status,
 
                 u.created_at,
@@ -317,8 +321,7 @@ def list_retailers(
 
             WHERE
 
-                u.user_role =
-                    %s::user_role_enum
+                u.user_role = %s
 
                 AND {status_condition}
 
@@ -357,38 +360,47 @@ def get_retailer_status_counts():
             """
             SELECT
 
-                COUNT(*) FILTER (
-                    WHERE
-                        status =
-                            'inactive'::user_status_enum
-                )
-                AS to_review,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN status = 'inactive'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS to_review,
 
 
-                COUNT(*) FILTER (
-                    WHERE
-                        status =
-                            'active'::user_status_enum
-                )
-                AS active,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN status = 'active'
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS active,
 
 
-                COUNT(*) FILTER (
-                    WHERE
-                        status IN (
-                            'archived'::user_status_enum,
-                            'deactivated'::user_status_enum
-                        )
-                )
-                AS inactive
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN status IN ('archived', 'deactivated')
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS inactive
 
 
             FROM users
 
 
             WHERE
-                user_role =
-                    %s::user_role_enum
+                user_role = %s
             """,
             [
                 RETAILER_ROLE,
@@ -517,10 +529,10 @@ def get_retailer_details(
 
                 u.username,
 
-                u.user_role::text
+                u.user_role
                     AS user_role,
 
-                u.status::text
+                u.status
                     AS status,
 
                 u.created_at,
@@ -558,8 +570,7 @@ def get_retailer_details(
 
                 u.user_id = %s
 
-                AND u.user_role =
-                    %s::user_role_enum
+                AND u.user_role = %s
 
 
             LIMIT 1
@@ -609,7 +620,7 @@ def get_retailer_account_summary(
 
                 username,
 
-                status::text
+                status
                     AS status,
 
                 created_at,
@@ -624,8 +635,7 @@ def get_retailer_account_summary(
 
                 user_id = %s
 
-                AND user_role =
-                    %s::user_role_enum
+                AND user_role = %s
 
 
             LIMIT 1
@@ -667,8 +677,7 @@ def retailer_exists(
 
                     user_id = %s
 
-                    AND user_role =
-                        %s::user_role_enum
+                    AND user_role = %s
             )
             """,
             [

@@ -322,10 +322,9 @@ def create_supplier_user(data):
                 %s, %s, %s, %s, %s,
                 %s, %s, %s, %s, %s,
                 %s, %s, %s, %s,
-                'miller_manager'::user_role_enum,
-                'inactive'::user_status_enum
+                'miller_manager',
+                'inactive'
             )
-            RETURNING user_id
             """,
             [
                 _required_text(data.get("first_name"), "First name"),
@@ -344,11 +343,11 @@ def create_supplier_user(data):
                 hash_supplier_password(data["password"]),
             ],
         )
-        row = cursor.fetchone()
+        user_id = cursor.lastrowid
 
-    if not row:
-        raise RuntimeError("PostgreSQL did not return the new Supplier user_id.")
-    return int(row[0])
+    if not user_id:
+        raise RuntimeError("Failed to create Supplier user account.")
+    return int(user_id)
 
 
 # ============================================================
@@ -376,7 +375,6 @@ def create_supplier_profile(user_id, data):
                 official_contact_number
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING supplier_profile_id
             """,
             [
                 user_id,
@@ -400,11 +398,11 @@ def create_supplier_profile(user_id, data):
                 ),
             ],
         )
-        row = cursor.fetchone()
+        profile_id = cursor.lastrowid
 
-    if not row:
-        raise RuntimeError("PostgreSQL did not save the Supplier business information.")
-    return int(row[0])
+    if not profile_id:
+        raise RuntimeError("Failed to save the Supplier business information.")
+    return int(profile_id)
 
 
 # ============================================================
@@ -502,7 +500,6 @@ def create_supplier_document_record(user_id, document_paths):
                 milling_license
             )
             VALUES (%s, %s, %s, %s, %s)
-            RETURNING supplier_document_id
             """,
             [
                 user_id,
@@ -512,11 +509,11 @@ def create_supplier_document_record(user_id, document_paths):
                 document_paths["milling_license"],
             ],
         )
-        row = cursor.fetchone()
+        doc_id = cursor.lastrowid
 
-    if not row:
-        raise RuntimeError("PostgreSQL did not save the Supplier verification documents.")
-    return int(row[0])
+    if not doc_id:
+        raise RuntimeError("Failed to save the Supplier verification documents.")
+    return int(doc_id)
 
 
 # ============================================================

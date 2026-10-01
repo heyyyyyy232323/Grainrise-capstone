@@ -152,13 +152,13 @@ def _get_active_user_role(
         cursor.execute(
             """
             SELECT
-                user_role::TEXT
+                user_role
 
             FROM users
 
             WHERE
                 user_id = %s
-                AND status::TEXT = 'active'
+                AND status = 'active'
 
             LIMIT 1
             """,
@@ -210,36 +210,52 @@ def toggle_news_like(
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT
-                    is_liked,
-                    reaction_count
-
-                FROM grainrise_toggle_news_like(
-                    %s,
-                    %s
-                )
+                SELECT reaction_id
+                FROM news_reactions
+                WHERE news_id = %s AND user_id = %s
+                LIMIT 1
                 """,
-                [
-                    news_id,
-                    user_id,
-                ],
+                [news_id, user_id],
             )
+            existing = cursor.fetchone()
 
-            row = cursor.fetchone()
+            if existing:
+                cursor.execute(
+                    """
+                    DELETE FROM news_reactions
+                    WHERE news_id = %s AND user_id = %s
+                    """,
+                    [news_id, user_id],
+                )
+                is_liked = False
+            else:
+                cursor.execute(
+                    """
+                    INSERT INTO news_reactions (
+                        news_id,
+                        user_id,
+                        reaction_type
+                    )
+                    VALUES (%s, %s, 'like')
+                    """,
+                    [news_id, user_id],
+                )
+                is_liked = True
 
-    if not row:
-        raise RuntimeError(
-            "Unable to update news reaction."
-        )
+            cursor.execute(
+                """
+                SELECT COUNT(*)
+                FROM news_reactions
+                WHERE news_id = %s
+                """,
+                [news_id],
+            )
+            count_row = cursor.fetchone()
+            reaction_count = int(count_row[0] or 0) if count_row else 0
 
     return {
-        "is_liked":
-            bool(row[0]),
-
-        "reaction_count":
-            int(
-                row[1] or 0
-            ),
+        "is_liked": is_liked,
+        "reaction_count": reaction_count,
     }
 
 
@@ -298,8 +314,8 @@ def add_news_comment(
                 SELECT
                     nc.news_id,
                     nc.parent_comment_id,
-                    nc.comment_status::TEXT,
-                    u.user_role::TEXT
+                    nc.comment_status,
+                    u.user_role
 
                 FROM news_comments nc
 
@@ -382,13 +398,20 @@ def add_news_comment(
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT
-                    grainrise_add_news_comment(
-                        %s,
-                        %s,
-                        %s,
-                        %s
-                    )
+                INSERT INTO news_comments (
+                    news_id,
+                    user_id,
+                    comment_text,
+                    parent_comment_id,
+                    comment_status
+                )
+                VALUES (
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    'active'
+                )
                 """,
                 [
                     news_id,
@@ -397,17 +420,16 @@ def add_news_comment(
                     parent_id,
                 ],
             )
+            comment_id = cursor.lastrowid
 
-            row = cursor.fetchone()
-
-    if not row:
+    if not comment_id:
         raise RuntimeError(
             "Unable to save news comment."
         )
 
     return {
         "comment_id":
-            int(row[0])
+            int(comment_id)
     }
 
 
@@ -433,28 +455,30 @@ def delete_own_news_comment(
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT
-                    grainrise_delete_own_news_comment(
-                        %s,
-                        %s
-                    )
+                UPDATE news_comments
+                SET
+                    comment_status = 'deleted',
+                    updated_at = CURRENT_TIMESTAMP(6)
+                WHERE
+                    comment_id = %s
+                    AND user_id = %s
+                    AND comment_status != 'deleted'
                 """,
                 [
                     comment_id,
                     user_id,
                 ],
             )
+            deleted = bool(cursor.rowcount > 0)
 
-            row = cursor.fetchone()
-
-    if not row:
+    if not deleted:
         raise RuntimeError(
             "Unable to delete news comment."
         )
 
     return {
         "deleted":
-            bool(row[0])
+            deleted
     }
 
 
@@ -531,68 +555,121 @@ def upsert_news_article(
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT
-                    grainrise_upsert_news_article(
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s::TEXT[],
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s
-                    )
+                SELECT news_id
+                FROM news_articles
+                WHERE api_provider = %s AND external_article_id = %s
+                LIMIT 1
                 """,
-                [
-                    provider,
-                    external_id,
-                    title,
-                    article_url,
-                    source_name,
-                    published_at,
-                    category,
-                    roles,
-                    _optional_text(
-                        description
-                    ),
-                    _optional_text(
-                        article_body
-                    ),
-                    _optional_text(
-                        image_url
-                    ),
-                    _optional_text(
-                        source_domain
-                    ),
-                    _optional_text(
-                        author
-                    ),
-                    _optional_text(
-                        language_code
-                    ),
-                    _optional_text(
-                        country_code
-                    ),
-                ],
+                [provider, external_id],
             )
+            existing = cursor.fetchone()
 
-            row = cursor.fetchone()
+            if existing:
+                news_id = int(existing[0])
+                cursor.execute(
+                    """
+                    UPDATE news_articles
+                    SET
+                        title = %s,
+                        article_url = %s,
+                        source_name = %s,
+                        published_at = %s,
+                        category_code = %s,
+                        description = COALESCE(%s, description),
+                        article_body = COALESCE(%s, article_body),
+                        image_url = COALESCE(%s, image_url),
+                        source_domain = COALESCE(%s, source_domain),
+                        author = COALESCE(%s, author),
+                        language_code = COALESCE(%s, language_code),
+                        country_code = COALESCE(%s, country_code),
+                        last_fetched_at = CURRENT_TIMESTAMP(6),
+                        updated_at = CURRENT_TIMESTAMP(6)
+                    WHERE news_id = %s
+                    """,
+                    [
+                        title,
+                        article_url,
+                        source_name,
+                        published_at,
+                        category,
+                        _optional_text(description),
+                        _optional_text(article_body),
+                        _optional_text(image_url),
+                        _optional_text(source_domain),
+                        _optional_text(author),
+                        _optional_text(language_code),
+                        _optional_text(country_code),
+                        news_id,
+                    ],
+                )
+            else:
+                cursor.execute(
+                    """
+                    INSERT INTO news_articles (
+                        api_provider,
+                        external_article_id,
+                        title,
+                        article_url,
+                        source_name,
+                        published_at,
+                        category_code,
+                        description,
+                        article_body,
+                        image_url,
+                        source_domain,
+                        author,
+                        language_code,
+                        country_code,
+                        status,
+                        first_fetched_at,
+                        last_fetched_at
+                    )
+                    VALUES (
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'active',
+                        CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6)
+                    )
+                    """,
+                    [
+                        provider,
+                        external_id,
+                        title,
+                        article_url,
+                        source_name,
+                        published_at,
+                        category,
+                        _optional_text(description),
+                        _optional_text(article_body),
+                        _optional_text(image_url),
+                        _optional_text(source_domain),
+                        _optional_text(author),
+                        _optional_text(language_code),
+                        _optional_text(country_code),
+                    ],
+                )
+                news_id = cursor.lastrowid
 
-    if not row:
+            if roles:
+                for role in roles:
+                    cursor.execute(
+                        """
+                        INSERT IGNORE INTO news_article_audiences (
+                            news_id,
+                            user_role,
+                            created_at
+                        )
+                        VALUES (%s, %s, CURRENT_TIMESTAMP(6))
+                        """,
+                        [news_id, role],
+                    )
+
+    if not news_id:
         raise RuntimeError(
             "Unable to save external news article."
         )
 
     return {
         "news_id":
-            int(row[0])
+            int(news_id)
     }
 
 
@@ -612,23 +689,28 @@ def start_news_sync(
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT
-                    grainrise_start_news_sync(
-                        %s
-                    )
+                INSERT INTO news_sync_runs (
+                    api_provider,
+                    sync_status,
+                    started_at
+                )
+                VALUES (
+                    %s,
+                    'running',
+                    CURRENT_TIMESTAMP(6)
+                )
                 """,
                 [provider],
             )
+            sync_id = cursor.lastrowid
 
-            row = cursor.fetchone()
-
-    if not row:
+    if not sync_id:
         raise RuntimeError(
             "Unable to start news synchronization."
         )
 
     return int(
-        row[0]
+        sync_id
     )
 
 
@@ -669,21 +751,23 @@ def complete_news_sync(
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT
-                    grainrise_complete_news_sync(
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s
-                    )
+                UPDATE news_sync_runs
+                SET
+                    sync_status = 'completed',
+                    request_count = %s,
+                    articles_received = %s,
+                    articles_processed = %s,
+                    articles_failed = %s,
+                    completed_at = CURRENT_TIMESTAMP(6)
+                WHERE
+                    sync_id = %s
                 """,
                 [
-                    sync_id,
                     request_count,
                     articles_received,
                     articles_processed,
                     articles_failed,
+                    sync_id,
                 ],
             )
 
@@ -736,23 +820,25 @@ def fail_news_sync(
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT
-                    grainrise_fail_news_sync(
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s
-                    )
+                UPDATE news_sync_runs
+                SET
+                    sync_status = 'failed',
+                    error_message = %s,
+                    request_count = %s,
+                    articles_received = %s,
+                    articles_processed = %s,
+                    articles_failed = %s,
+                    completed_at = CURRENT_TIMESTAMP(6)
+                WHERE
+                    sync_id = %s
                 """,
                 [
-                    sync_id,
                     error_message,
                     request_count,
                     articles_received,
                     articles_processed,
                     articles_failed,
+                    sync_id,
                 ],
             )
 

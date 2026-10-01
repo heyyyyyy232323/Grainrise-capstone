@@ -23,7 +23,7 @@ MAX_ARCHIVE_REASON_LENGTH = 1000
 
 def _table_exists(table_name):
     """
-    Return True when the given PostgreSQL table exists.
+    Return True when the given table exists in the MySQL database.
     """
 
     normalized_name = str(
@@ -37,10 +37,14 @@ def _table_exists(table_name):
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT to_regclass(%s)
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name = %s
+            LIMIT 1
             """,
             [
-                f"public.{normalized_name}",
+                normalized_name,
             ],
         )
 
@@ -392,29 +396,17 @@ def confirm_retailer_application(
                 UPDATE users
 
                 SET
-                    status =
-                        'active'::user_status_enum,
+                    status = 'active',
 
-                    updated_at =
-                        CURRENT_TIMESTAMP
+                    updated_at = CURRENT_TIMESTAMP
 
                 WHERE
 
                     user_id = %s
 
-                    AND user_role =
-                        %s::user_role_enum
+                    AND user_role = %s
 
-                    AND status =
-                        'inactive'::user_status_enum
-
-                RETURNING
-
-                    user_id,
-
-                    status::text,
-
-                    updated_at
+                    AND status = 'inactive'
                 """,
                 [
                     user_id,
@@ -422,16 +414,26 @@ def confirm_retailer_application(
                 ],
             )
 
-
-            updated = cursor.fetchone()
-
-
-            if not updated:
+            if cursor.rowcount == 0:
                 raise RuntimeError(
                     "The Retailer application could not be confirmed "
                     "because its account status changed before the "
                     "update completed."
                 )
+
+            cursor.execute(
+                """
+                SELECT
+                    user_id,
+                    status,
+                    updated_at
+                FROM users
+                WHERE user_id = %s
+                """,
+                [user_id],
+            )
+
+            updated = cursor.fetchone()
 
 
     # ========================================================
@@ -573,29 +575,17 @@ def archive_retailer_account(
                 UPDATE users
 
                 SET
-                    status =
-                        'archived'::user_status_enum,
+                    status = 'archived',
 
-                    updated_at =
-                        CURRENT_TIMESTAMP
+                    updated_at = CURRENT_TIMESTAMP
 
                 WHERE
 
                     user_id = %s
 
-                    AND user_role =
-                        %s::user_role_enum
+                    AND user_role = %s
 
-                    AND status =
-                        'active'::user_status_enum
-
-                RETURNING
-
-                    user_id,
-
-                    status::text,
-
-                    updated_at
+                    AND status = 'active'
                 """,
                 [
                     user_id,
@@ -603,16 +593,25 @@ def archive_retailer_account(
                 ],
             )
 
-
-            updated = cursor.fetchone()
-
-
-            if not updated:
+            if cursor.rowcount == 0:
                 raise RuntimeError(
                     "The Retailer account could not be archived "
                     "because its status changed before the update completed."
                 )
 
+            cursor.execute(
+                """
+                SELECT
+                    user_id,
+                    status,
+                    updated_at
+                FROM users
+                WHERE user_id = %s
+                """,
+                [user_id],
+            )
+
+            updated = cursor.fetchone()
 
             cursor.execute(
                 """
@@ -627,14 +626,6 @@ def archive_retailer_account(
                     %s,
                     %s
                 )
-
-                RETURNING
-
-                    retailer_archive_reason_id,
-
-                    reason,
-
-                    created_at
                 """,
                 [
                     user_id,
@@ -642,11 +633,21 @@ def archive_retailer_account(
                 ],
             )
 
+            archive_reason_id = cursor.lastrowid
 
-            archive_row = (
-                cursor.fetchone()
+            cursor.execute(
+                """
+                SELECT
+                    retailer_archive_reason_id,
+                    reason,
+                    created_at
+                FROM retailer_archive_reasons
+                WHERE retailer_archive_reason_id = %s
+                """,
+                [archive_reason_id],
             )
 
+            archive_row = cursor.fetchone()
 
             if not archive_row:
                 raise RuntimeError(
@@ -760,31 +761,20 @@ def restore_retailer_account(
                 UPDATE users
 
                 SET
-                    status =
-                        'active'::user_status_enum,
+                    status = 'active',
 
-                    updated_at =
-                        CURRENT_TIMESTAMP
+                    updated_at = CURRENT_TIMESTAMP
 
                 WHERE
 
                     user_id = %s
 
-                    AND user_role =
-                        %s::user_role_enum
+                    AND user_role = %s
 
                     AND status IN (
-                        'archived'::user_status_enum,
-                        'deactivated'::user_status_enum
+                        'archived',
+                        'deactivated'
                     )
-
-                RETURNING
-
-                    user_id,
-
-                    status::text,
-
-                    updated_at
                 """,
                 [
                     user_id,
@@ -792,15 +782,25 @@ def restore_retailer_account(
                 ],
             )
 
-
-            updated = cursor.fetchone()
-
-
-            if not updated:
+            if cursor.rowcount == 0:
                 raise RuntimeError(
                     "The Retailer account could not be restored "
                     "because its status changed before the update completed."
                 )
+
+            cursor.execute(
+                """
+                SELECT
+                    user_id,
+                    status,
+                    updated_at
+                FROM users
+                WHERE user_id = %s
+                """,
+                [user_id],
+            )
+
+            updated = cursor.fetchone()
 
 
     return {
@@ -925,16 +925,12 @@ def delete_retailer_account(
 
                     user_id = %s
 
-                    AND user_role =
-                        %s::user_role_enum
+                    AND user_role = %s
 
                     AND status IN (
-                        'archived'::user_status_enum,
-                        'deactivated'::user_status_enum
+                        'archived',
+                        'deactivated'
                     )
-
-                RETURNING
-                    user_id
                 """,
                 [
                     user_id,
@@ -942,15 +938,13 @@ def delete_retailer_account(
                 ],
             )
 
-
-            deleted = cursor.fetchone()
-
-
-            if not deleted:
+            if cursor.rowcount == 0:
                 raise RuntimeError(
                     "The Retailer account could not be permanently deleted "
                     "because its status changed before the deletion completed."
                 )
+
+            deleted = (user_id,)
 
 
     return {
