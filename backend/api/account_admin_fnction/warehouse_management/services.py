@@ -610,22 +610,6 @@ def archive_warehouse_account(
     user_id,
     reason,
 ):
-    from ...models import PartnershipInquiry
-    inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
-    if inquiry:
-        cleaned_reason = _clean_archive_reason(reason)
-        inquiry.status = PartnershipInquiry.Status.INACTIVE
-        inquiry.archive_reason = cleaned_reason
-        inquiry.save(update_fields=["status", "archive_reason", "updated_at"])
-        return {
-            "user_id": str(inquiry.partnership_inquiry_id),
-            "status": "inactive",
-            "updated_at": inquiry.updated_at,
-            "archive_reason_id": None,
-            "archive_reason": cleaned_reason,
-            "archived_at": inquiry.updated_at,
-            "message": "Warehouse application archived successfully.",
-        }
     """
     Archive active Warehouse Manager account.
 
@@ -642,171 +626,191 @@ def archive_warehouse_account(
         )
     )
 
+    # 1. Check actual users record FIRST.
+    warehouse = None
+    numeric_user_id = None
+    try:
+        numeric_user_id = int(user_id)
+        warehouse = get_warehouse_account_summary(numeric_user_id)
+    except (ValueError, TypeError):
+        warehouse = None
 
-    warehouse = (
-        get_warehouse_account_summary(
-            user_id
-        )
-    )
+    # 2. If confirmed user exists:
+    if warehouse:
+        current_status = str(
+            warehouse.get(
+                "status"
+            )
+            or ""
+        ).strip().lower()
 
-
-    if not warehouse:
-
-        raise ValueError(
-            "Warehouse Manager account was not found."
-        )
-
-
-    current_status = str(
-        warehouse.get(
-            "status"
-        )
-        or ""
-    ).strip().lower()
-
-
-    if current_status == "archived":
-
-        raise ValueError(
-            "This Warehouse Manager account is already archived."
-        )
-
-
-    if current_status != "active":
-
-        raise ValueError(
-            "Only active Warehouse Manager accounts can be archived."
-        )
-
-
-    with transaction.atomic():
-
-        # ====================================================
-        # UPDATE ACCOUNT STATUS
-        # ====================================================
-
-        with connection.cursor() as cursor:
-
-            cursor.execute(
-                """
-                UPDATE users
-
-                SET
-
-                    status = 'archived',
-
-                    updated_at = CURRENT_TIMESTAMP
-
-
-                WHERE
-
-                    user_id = %s
-
-                    AND user_role = 'warehouse_manager'
-
-                    AND status = 'active'
-                """,
-                [
-                    user_id,
-                ],
+        if current_status == "archived":
+            raise ValueError(
+                "This Warehouse Manager account is already archived."
             )
 
-            if cursor.rowcount == 0:
+        if current_status != "active":
+            raise ValueError(
+                "Only active Warehouse Manager accounts can be archived."
+            )
+
+        with transaction.atomic():
+            # ====================================================
+            # UPDATE ACCOUNT STATUS
+            # ====================================================
+
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE users
+
+                    SET
+
+                        status = 'archived',
+
+                        updated_at = CURRENT_TIMESTAMP
+
+
+                    WHERE
+
+                        user_id = %s
+
+                        AND user_role = 'warehouse_manager'
+
+                        AND status = 'active'
+                    """,
+                    [
+                        numeric_user_id,
+                    ],
+                )
+
+                if cursor.rowcount == 0:
+                    raise RuntimeError(
+                        "The Warehouse Manager account could not be archived "
+                        "because its status changed before the "
+                        "archive action completed."
+                    )
+
+                cursor.execute(
+                    """
+                    SELECT
+                        user_id,
+                        status,
+                        updated_at
+                    FROM users
+                    WHERE user_id = %s
+                    """,
+                    [numeric_user_id],
+                )
+
+                updated = cursor.fetchone()
+
+            # ====================================================
+            # SAVE ARCHIVE REASON
+            # ====================================================
+
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO warehouse_archive_reasons
+                    (
+                        user_id,
+                        reason
+                    )
+
+                    VALUES
+                    (
+                        %s,
+                        %s
+                    )
+                    """,
+                    [
+                        numeric_user_id,
+                        cleaned_reason,
+                    ],
+                )
+
+                archive_reason_id = cursor.lastrowid
+
+                cursor.execute(
+                    """
+                    SELECT
+                        warehouse_archive_reason_id,
+                        created_at
+                    FROM warehouse_archive_reasons
+                    WHERE warehouse_archive_reason_id = %s
+                    """,
+                    [archive_reason_id],
+                )
+
+                archive_record = cursor.fetchone()
+
+            if not archive_record:
                 raise RuntimeError(
-                    "The Warehouse Manager account could not be archived "
-                    "because its status changed before the "
-                    "archive action completed."
+                    "The Warehouse archive reason could not be saved."
                 )
 
-            cursor.execute(
-                """
-                SELECT
-                    user_id,
-                    status,
-                    updated_at
-                FROM users
-                WHERE user_id = %s
-                """,
-                [user_id],
-            )
+        return {
+            "user_id":
+                int(
+                    updated[0]
+                ),
 
-            updated = cursor.fetchone()
+            "status":
+                updated[1],
 
-        # ====================================================
-        # SAVE ARCHIVE REASON
-        # ====================================================
+            "updated_at":
+                updated[2],
 
-        with connection.cursor() as cursor:
+            "archive_reason_id":
+                int(
+                    archive_record[0]
+                ),
 
-            cursor.execute(
-                """
-                INSERT INTO warehouse_archive_reasons
-                (
-                    user_id,
-                    reason
-                )
+            "archive_reason":
+                cleaned_reason,
 
-                VALUES
-                (
-                    %s,
-                    %s
-                )
-                """,
-                [
-                    user_id,
-                    cleaned_reason,
-                ],
-            )
+            "archived_at":
+                archive_record[1],
 
-            archive_reason_id = cursor.lastrowid
+            "message":
+                "Warehouse Manager account archived successfully.",
+        }
 
-            cursor.execute(
-                """
-                SELECT
-                    warehouse_archive_reason_id,
-                    created_at
-                FROM warehouse_archive_reasons
-                WHERE warehouse_archive_reason_id = %s
-                """,
-                [archive_reason_id],
-            )
+    # 3. Only if no user exists, archive pending inquiry:
+    #    - filter correct partner_role
+    #    - status='to_review'
+    #    - set inquiry.status = inactive
+    # IMPORTANT: partnership_inquiries has NO archive_reason field.
+    # Do not use inquiry.archive_reason.
+    # Do not delete inquiries or documents.
+    from django.core.exceptions import ValidationError
+    from ...models import PartnershipInquiry
+    try:
+        inquiry = PartnershipInquiry.objects.filter(
+            partnership_inquiry_id=user_id,
+            partner_role="warehouse",
+            status=PartnershipInquiry.Status.TO_REVIEW,
+        ).first()
+    except (ValueError, TypeError, ValidationError):
+        inquiry = None
 
-            archive_record = cursor.fetchone()
+    if inquiry:
+        inquiry.status = PartnershipInquiry.Status.INACTIVE
+        inquiry.save(update_fields=["status", "updated_at"])
+        return {
+            "user_id": str(inquiry.partnership_inquiry_id),
+            "status": "inactive",
+            "updated_at": inquiry.updated_at,
+            "archive_reason_id": None,
+            "archive_reason": None,
+            "archived_at": inquiry.updated_at,
+            "message": "Warehouse application archived successfully.",
+        }
 
-        if not archive_record:
-
-            raise RuntimeError(
-                "The Warehouse archive reason could not be saved."
-            )
-
-
-    return {
-
-        "user_id":
-            int(
-                updated[0]
-            ),
-
-        "status":
-            updated[1],
-
-        "updated_at":
-            updated[2],
-
-        "archive_reason_id":
-            int(
-                archive_record[0]
-            ),
-
-        "archive_reason":
-            cleaned_reason,
-
-        "archived_at":
-            archive_record[1],
-
-        "message":
-            "Warehouse Manager account archived successfully.",
-    }
+    raise ValueError(
+        "Warehouse Manager account was not found."
+    )
 
 
 # ============================================================

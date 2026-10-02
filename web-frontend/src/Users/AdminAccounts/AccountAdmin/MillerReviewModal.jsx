@@ -247,6 +247,10 @@ const MillerReviewModal = ({
   const documents =
     miller?.documents || {};
 
+  const isPartnership = Boolean(
+    miller?.is_partnership ||
+    (typeof miller?.user_id === "string" && miller?.user_id.includes("-"))
+  );
 
   const fullName =
     formatFullName(personal);
@@ -656,139 +660,21 @@ const MillerReviewModal = ({
               </div>
 
 
-              {/* =================================================
-                  PERSONAL ADDRESS
-              ================================================= */}
-
-              <Section
-                icon={MapPin}
-                title="Personal Address"
-              >
-
-                <div className="mb-4 rounded-xl bg-slate-50 px-4 py-3">
-
-                  <p className="text-[12px] font-medium leading-5 text-slate-600">
-                    {personalFullAddress}
-                  </p>
-
-                </div>
+             
 
 
-                <div className="grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
-
-                  <Field
-                    label="Province"
-                    value={personalAddress.province}
-                  />
-
-                  <Field
-                    label="Municipality / City"
-                    value={personalAddress.municipality}
-                  />
-
-                  <Field
-                    label="Postal Code"
-                    value={personalAddress.postal_code}
-                  />
-
-                  <Field
-                    label="Barangay"
-                    value={personalAddress.barangay}
-                  />
-
-                  <Field
-                    label="Street Address"
-                    value={personalAddress.street_address}
-                  />
-
-                </div>
-
-              </Section>
+               
+ 
 
 
               {/* =================================================
                   BUSINESS
               ================================================= */}
 
-              <Section
-                icon={Building2}
-                title="Miller / Business Information"
-              >
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-
-                  <Field
-                    label="Business Name"
-                    value={business.business_name}
-                  />
-
-                  <Field
-                    label="Organization Name"
-                    value={business.organization_name}
-                  />
-
-                </div>
+              
 
 
-                <div className="my-4 rounded-xl bg-slate-50 px-4 py-3">
-
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                    Complete Business Address
-                  </p>
-
-                  <p className="text-[12px] font-medium leading-5 text-slate-600">
-                    {businessFullAddress}
-                  </p>
-
-                </div>
-
-
-                <div className="grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
-
-                  <Field
-                    label="Province"
-                    value={business.province}
-                  />
-
-                  <Field
-                    label="Municipality / City"
-                    value={business.municipality}
-                  />
-
-                  <Field
-                    label="Postal Code"
-                    value={business.postal_code}
-                  />
-
-                  <Field
-                    label="Barangay"
-                    value={business.barangay}
-                  />
-
-                  <Field
-                    label="Street Address"
-                    value={business.street_address}
-                  />
-
-                </div>
-
-
-                <div className="mt-5 grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 sm:grid-cols-2">
-
-                  <Field
-                    label="Official Email Address"
-                    value={business.official_email}
-                  />
-
-                  <Field
-                    label="Official Contact Number"
-                    value={business.official_contact_number}
-                  />
-
-                </div>
-
-              </Section>
-
+               
 
               {/* =================================================
                   DOCUMENTS
@@ -800,41 +686,61 @@ const MillerReviewModal = ({
               >
 
                 <p className="-mt-1 mb-4 text-[11px] leading-5 text-slate-500">
-                  Review all four submitted documents before confirming this Miller application.
+                  {isPartnership
+                    ? "Review the submitted documents before confirming this Partner With Us application."
+                    : "Review all four submitted documents before confirming this Miller application."}
                 </p>
 
 
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {isPartnership ? (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <DocumentCard
+                      title="Valid Government-Issued ID"
+                      document={
+                        documents.government_issued_id
+                      }
+                    />
 
-                  <DocumentCard
-                    title="Valid Government-Issued ID"
-                    document={
-                      documents.government_issued_id
-                    }
-                  />
+                    <DocumentCard
+                      title="Valid Business Document"
+                      document={
+                        documents.business_registration ||
+                        documents.business_permit ||
+                        documents.business_verification_document
+                      }
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <DocumentCard
+                      title="Valid Government-Issued ID"
+                      document={
+                        documents.government_issued_id
+                      }
+                    />
 
-                  <DocumentCard
-                    title="Mayor's / Business Permit"
-                    document={
-                      documents.business_permit
-                    }
-                  />
+                    <DocumentCard
+                      title="Mayor's / Business Permit"
+                      document={
+                        documents.business_permit
+                      }
+                    />
 
-                  <DocumentCard
-                    title="DTI / SEC / CDA Registration"
-                    document={
-                      documents.business_registration
-                    }
-                  />
+                    <DocumentCard
+                      title="DTI / SEC / CDA Registration"
+                      document={
+                        documents.business_registration
+                      }
+                    />
 
-                  <DocumentCard
-                    title="BPI / NFA / Milling License"
-                    document={
-                      documents.milling_license
-                    }
-                  />
-
-                </div>
+                    <DocumentCard
+                      title="BPI / NFA / Milling License"
+                      document={
+                        documents.milling_license
+                      }
+                    />
+                  </div>
+                )}
 
               </Section>
 

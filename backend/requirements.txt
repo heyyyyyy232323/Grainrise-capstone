@@ -23,12 +23,17 @@ bcrypt>=4.0.1
 
 # ============================================
 # Document / Image Processing & OCR
-# Used by Supplier and Warehouse Registration
 # ============================================
 
 Pillow
 PyMuPDF
 pytesseract
+
+# ============================================
+# SSL / Certificates
+# ============================================
+
+certifi>=2024.0.0
 
 # ============================================
 # GrainRise Climate & Demand Forecasting

@@ -280,6 +280,9 @@ def _build_miller_detail_response(
         "user_id":
             row["user_id"],
 
+        "is_partnership":
+            bool(row.get("is_partnership", False)),
+
         "status":
             row["status"],
 

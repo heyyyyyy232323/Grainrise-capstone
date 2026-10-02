@@ -577,6 +577,12 @@ const WarehouseReviewModal = ({
     {};
 
 
+  const isPartnership = Boolean(
+    warehouse?.is_partnership ||
+    (typeof warehouse?.user_id === "string" && warehouse?.user_id.includes("-"))
+  );
+
+
   const fullName =
     buildFullName(
       personal
@@ -977,50 +983,7 @@ const WarehouseReviewModal = ({
               </section>
 
 
-              {/* =============================================
-                  PERSONAL ADDRESS
-              ============================================= */}
-
-              <section
-                className="
-                  rounded-2xl
-                  border
-                  border-slate-200
-                  bg-white
-                  p-5
-                "
-              >
-                <SectionHeader
-                  icon={MapPin}
-                  title="Personal Address"
-                  description="Residential address submitted during registration."
-                />
-
-
-                <div
-                  className="
-                    rounded-xl
-                    border
-                    border-slate-100
-                    bg-slate-50
-                    px-4
-                    py-4
-                  "
-                >
-                  <p
-                    className="
-                      text-[13px]
-                      font-semibold
-                      leading-6
-                      text-slate-700
-                    "
-                  >
-                    {formatAddress(
-                      personalAddress
-                    )}
-                  </p>
-                </div>
-              </section>
+              
 
 
               {/* =============================================
@@ -1325,49 +1288,80 @@ const WarehouseReviewModal = ({
                 <SectionHeader
                   icon={FileText}
                   title="Required Documents"
-                  description="Verify all submitted compliance documents before confirming the application."
+                  description={
+                    isPartnership
+                      ? "Verify the submitted documents before confirming the application."
+                      : "Verify all submitted compliance documents before confirming the application."
+                  }
                 />
 
 
-                <div
-                  className="
-                    grid
-                    grid-cols-1
-                    gap-3
-                    md:grid-cols-2
-                  "
-                >
-                  <DocumentItem
-                    label="Valid Government-Issued ID"
-                    document={
-                      documents.government_issued_id
-                    }
-                  />
+                {isPartnership ? (
+                  <div
+                    className="
+                      grid
+                      grid-cols-1
+                      gap-3
+                      md:grid-cols-2
+                    "
+                  >
+                    <DocumentItem
+                      label="Valid Government-Issued ID"
+                      document={
+                        documents.government_issued_id
+                      }
+                    />
+
+                    <DocumentItem
+                      label="Valid Business Document"
+                      document={
+                        documents.business_registration ||
+                        documents.business_permit ||
+                        documents.business_verification_document
+                      }
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className="
+                      grid
+                      grid-cols-1
+                      gap-3
+                      md:grid-cols-2
+                    "
+                  >
+                    <DocumentItem
+                      label="Valid Government-Issued ID"
+                      document={
+                        documents.government_issued_id
+                      }
+                    />
 
 
-                  <DocumentItem
-                    label="Mayor’s / Business Permit"
-                    document={
-                      documents.business_permit
-                    }
-                  />
+                    <DocumentItem
+                      label="Mayor’s / Business Permit"
+                      document={
+                        documents.business_permit
+                      }
+                    />
 
 
-                  <DocumentItem
-                    label="DTI / SEC / CDA Registration"
-                    document={
-                      documents.business_registration
-                    }
-                  />
+                    <DocumentItem
+                      label="DTI / SEC / CDA Registration"
+                      document={
+                        documents.business_registration
+                      }
+                    />
 
 
-                  <DocumentItem
-                    label="BPI License to Operate / Warehouse License"
-                    document={
-                      documents.warehouse_license
-                    }
-                  />
-                </div>
+                    <DocumentItem
+                      label="BPI License to Operate / Warehouse License"
+                      document={
+                        documents.warehouse_license
+                      }
+                    />
+                  </div>
+                )}
               </section>
 
             </div>

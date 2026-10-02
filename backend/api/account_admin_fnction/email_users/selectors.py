@@ -11,6 +11,7 @@ RECIPIENT_WAREHOUSE = "warehouse_manager"
 RECIPIENT_RETAILER = "retailer"
 RECIPIENT_FARMER = "farmer"
 RECIPIENT_SPECIFIC = "specific_user"
+RECIPIENT_PARTNERSHIP = "partnership_inquiry"
 
 
 VALID_RECIPIENT_TYPES = {
@@ -20,6 +21,8 @@ VALID_RECIPIENT_TYPES = {
     RECIPIENT_RETAILER,
     RECIPIENT_FARMER,
     RECIPIENT_SPECIFIC,
+    RECIPIENT_PARTNERSHIP,
+    "user",
 }
 
 
@@ -30,6 +33,8 @@ RECIPIENT_LABELS = {
     RECIPIENT_RETAILER: "Retailers",
     RECIPIENT_FARMER: "Farmers",
     RECIPIENT_SPECIFIC: "Specific User",
+    RECIPIENT_PARTNERSHIP: "Partner With Us Applicant",
+    "user": "Specific User",
 }
 
 

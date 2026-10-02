@@ -317,51 +317,69 @@ const SupplierManagement = () => {
   // MESSAGE MILLER
   // ============================================================
 
-  const handleMessage = () => {
+  const handleMessage = (target) => {
+    const details =
+      target ||
+      selectedMillerDetails ||
+      selectedMiller;
+
     const account =
-      selectedMillerDetails
-        ?.account_information;
+      details?.account_information;
 
     const personal =
-      selectedMillerDetails
-        ?.personal_information;
+      details?.personal_information;
 
     const business =
-      selectedMillerDetails
-        ?.business_information;
+      details?.business_information;
+
+    const recipientId =
+      details?.user_id ||
+      details?.id ||
+      selectedMillerDetails?.user_id ||
+      selectedMiller?.id;
+
+    const isPartnership = Boolean(
+      details?.is_partnership ||
+      selectedMillerDetails?.is_partnership ||
+      (typeof recipientId === "string" && recipientId.includes("-"))
+    );
 
     navigate(
       "/admin/email-users",
       {
         state: {
           recipient: {
+            recipientType:
+              isPartnership
+                ? "partnership_inquiry"
+                : "user",
+
+            recipientId:
+              recipientId,
+
             userId:
-              selectedMillerDetails
-                ?.user_id ||
-              selectedMiller
-                ?.id,
+              recipientId,
 
             email:
               account?.email ||
-              selectedMiller
-                ?.email ||
+              details?.email ||
+              selectedMiller?.email ||
               "",
 
             firstName:
-              personal
-                ?.first_name ||
+              personal?.first_name ||
+              details?.first_name ||
               "",
 
             lastName:
-              personal
-                ?.last_name ||
+              personal?.last_name ||
+              details?.last_name ||
               "",
 
             businessName:
-              business
-                ?.business_name ||
-              selectedMiller
-                ?.company ||
+              business?.business_name ||
+              details?.business_name ||
+              selectedMiller?.company ||
               "",
 
             source:

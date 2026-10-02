@@ -109,9 +109,12 @@ const normalizeWarehouseRow = (
     row?.id,
 
   manager:
-    row?.manager_name ||
-    row?.manager ||
-    "",
+  row?.manager_name ||
+  row?.manager ||
+  row?.name ||
+  row?.full_name ||
+  row?.applicant_name ||
+  "",
 
   company:
     row?.business_name ||
@@ -497,54 +500,69 @@ const WarehouseManagement = () => {
   // =========================================================
 
   const handleMessage =
-    () => {
-      const account =
-        selectedWarehouseDetails
-          ?.account_information;
+    (target) => {
+      const details =
+        target ||
+        selectedWarehouseDetails ||
+        selectedWarehouse;
 
+      const account =
+        details?.account_information;
 
       const personal =
-        selectedWarehouseDetails
-          ?.personal_information;
-
+        details?.personal_information;
 
       const business =
-        selectedWarehouseDetails
-          ?.business_information;
+        details?.business_information;
 
+      const recipientId =
+        details?.user_id ||
+        details?.id ||
+        selectedWarehouseDetails?.user_id ||
+        selectedWarehouse?.id;
+
+      const isPartnership = Boolean(
+        details?.is_partnership ||
+        selectedWarehouseDetails?.is_partnership ||
+        (typeof recipientId === "string" && recipientId.includes("-"))
+      );
 
       navigate(
         "/admin/email-users",
         {
           state: {
             recipient: {
+              recipientType:
+                isPartnership
+                  ? "partnership_inquiry"
+                  : "user",
+
+              recipientId:
+                recipientId,
+
               userId:
-                selectedWarehouseDetails
-                  ?.user_id ||
-                selectedWarehouse
-                  ?.id,
+                recipientId,
 
               email:
                 account?.email ||
-                selectedWarehouse
-                  ?.email ||
+                details?.email ||
+                selectedWarehouse?.email ||
                 "",
 
               firstName:
-                personal
-                  ?.first_name ||
+                personal?.first_name ||
+                details?.first_name ||
                 "",
 
               lastName:
-                personal
-                  ?.last_name ||
+                personal?.last_name ||
+                details?.last_name ||
                 "",
 
               businessName:
-                business
-                  ?.business_name ||
-                selectedWarehouse
-                  ?.company ||
+                business?.business_name ||
+                details?.business_name ||
+                selectedWarehouse?.company ||
                 "",
 
               source:

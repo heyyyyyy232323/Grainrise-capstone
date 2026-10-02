@@ -411,6 +411,12 @@ const RetailerReviewModal = ({
     {};
 
 
+  const isPartnership = Boolean(
+    retailer?.is_partnership ||
+    (typeof retailer?.user_id === "string" && retailer?.user_id.includes("-"))
+  );
+
+
   const status =
     retailer
       ?.status ||
@@ -729,38 +735,7 @@ const RetailerReviewModal = ({
                       ADDRESS INFORMATION
                   ========================================= */}
 
-                  <section>
-                    <h3
-                      className="
-                        mb-3
-                        text-sm
-                        font-bold
-                        text-gray-900
-                      "
-                    >
-                      Address Information
-                    </h3>
-
-
-                    <div
-                      className="
-                        rounded-xl
-                        border
-                        border-gray-200
-                        bg-gray-50
-                        p-4
-                      "
-                    >
-                      <InfoField
-                        label="Complete Address"
-                        value={
-                          buildAddress(
-                            address
-                          )
-                        }
-                      />
-                    </div>
-                  </section>
+                
 
 
                   {/* =========================================
@@ -856,35 +831,65 @@ const RetailerReviewModal = ({
                           text-gray-400
                         "
                       >
-                        Verify the submitted Retailer compliance documents.
+                        {isPartnership
+                          ? "Verify the submitted Partner With Us documents."
+                          : "Verify the submitted Retailer compliance documents."}
                       </p>
                     </div>
 
 
-                    <div
-                      className="
-                        grid
-                        grid-cols-1
-                        gap-3
-                        md:grid-cols-2
-                      "
-                    >
-                      <DocumentCard
-                        label="Barangay Permit"
-                        document={
-                          documents
-                            ?.barangay_permit
-                        }
-                      />
+                    {isPartnership ? (
+                      <div
+                        className="
+                          grid
+                          grid-cols-1
+                          gap-3
+                          md:grid-cols-2
+                        "
+                      >
+                        <DocumentCard
+                          label="Valid Government-Issued ID"
+                          document={
+                            documents?.valid_id ||
+                            documents?.government_issued_id
+                          }
+                        />
 
-                      <DocumentCard
-                        label="Valid ID"
-                        document={
-                          documents
-                            ?.valid_id
-                        }
-                      />
-                    </div>
+                        <DocumentCard
+                          label="Valid Business Document"
+                          document={
+                            documents?.barangay_permit ||
+                            documents?.business_verification_document ||
+                            documents?.business_registration
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className="
+                          grid
+                          grid-cols-1
+                          gap-3
+                          md:grid-cols-2
+                        "
+                      >
+                        <DocumentCard
+                          label="Barangay Permit"
+                          document={
+                            documents
+                              ?.barangay_permit
+                          }
+                        />
+
+                        <DocumentCard
+                          label="Valid ID"
+                          document={
+                            documents
+                              ?.valid_id
+                          }
+                        />
+                      </div>
+                    )}
                   </section>
                 </div>
               )

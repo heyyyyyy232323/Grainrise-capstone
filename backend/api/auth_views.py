@@ -27,6 +27,123 @@ from .utils import (
 # NOTE:
 # Admin authentication remains separate.
 # ============================================================
+# PROFILE COMPLETENESS CHECK HELPER
+# ============================================================
+
+def check_profile_incomplete(user_id, role=None):
+    """
+    Evaluates whether a Miller, Warehouse, or Retailer account has completed all required profile fields.
+    Required in users table:
+      first_name, last_name, gender, contact_number,
+      province, municipality, postal_code, barangay, street_address
+    Required for miller_manager in supplier_profiles:
+      business_name, province, municipality, postal_code,
+      barangay, street_address, official_email, official_contact_number
+    Required for warehouse_manager in warehouse_profiles:
+      business_name, province, municipality, postal_code,
+      barangay, street_address, official_email, official_contact_number
+    Retailer: users fields only.
+    Returns (is_incomplete: bool, missing_fields: list).
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT first_name, last_name, gender, contact_number,
+                   province, municipality, postal_code, barangay, street_address,
+                   user_role
+            FROM users
+            WHERE user_id = %s
+            """,
+            [user_id]
+        )
+        row = cursor.fetchone()
+
+    if not row:
+        return True, ["user_not_found"]
+
+    (fname, lname, gender, contact,
+     prov, muni, postal, brgy, street,
+     user_role) = row
+
+    active_role = role or user_role
+    if active_role not in ("miller_manager", "warehouse_manager", "retailer"):
+        return False, []
+
+    missing = []
+
+    def is_blank(val):
+        return val is None or not str(val).strip()
+
+    if is_blank(fname): missing.append("first_name")
+    if is_blank(lname): missing.append("last_name")
+    if is_blank(gender): missing.append("gender")
+    if is_blank(contact): missing.append("contact_number")
+    if is_blank(prov): missing.append("province")
+    if is_blank(muni): missing.append("municipality")
+    if is_blank(postal): missing.append("postal_code")
+    if is_blank(brgy): missing.append("barangay")
+    if is_blank(street): missing.append("street_address")
+
+    if active_role == "miller_manager":
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT business_name, province, municipality, postal_code,
+                       barangay, street_address, official_email, official_contact_number
+                FROM supplier_profiles
+                WHERE user_id = %s
+                """,
+                [user_id]
+            )
+            s_row = cursor.fetchone()
+
+        if not s_row:
+            missing.extend([
+                "business_name", "business_province", "business_municipality",
+                "business_postal_code", "business_barangay", "business_street_address",
+                "official_email", "official_contact_number"
+            ])
+        else:
+            if is_blank(s_row[0]): missing.append("business_name")
+            if is_blank(s_row[1]): missing.append("business_province")
+            if is_blank(s_row[2]): missing.append("business_municipality")
+            if is_blank(s_row[3]): missing.append("business_postal_code")
+            if is_blank(s_row[4]): missing.append("business_barangay")
+            if is_blank(s_row[5]): missing.append("business_street_address")
+            if is_blank(s_row[6]): missing.append("official_email")
+            if is_blank(s_row[7]): missing.append("official_contact_number")
+
+    elif active_role == "warehouse_manager":
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT business_name, province, municipality, postal_code,
+                       barangay, street_address, official_email, official_contact_number
+                FROM warehouse_profiles
+                WHERE user_id = %s
+                """,
+                [user_id]
+            )
+            w_row = cursor.fetchone()
+
+        if not w_row:
+            missing.extend([
+                "business_name", "business_province", "business_municipality",
+                "business_postal_code", "business_barangay", "business_street_address",
+                "official_email", "official_contact_number"
+            ])
+        else:
+            if is_blank(w_row[0]): missing.append("business_name")
+            if is_blank(w_row[1]): missing.append("business_province")
+            if is_blank(w_row[2]): missing.append("business_municipality")
+            if is_blank(w_row[3]): missing.append("business_postal_code")
+            if is_blank(w_row[4]): missing.append("business_barangay")
+            if is_blank(w_row[5]): missing.append("business_street_address")
+            if is_blank(w_row[6]): missing.append("official_email")
+            if is_blank(w_row[7]): missing.append("official_contact_number")
+
+    return len(missing) > 0, missing
+
 
 @api_view(["POST"])
 def login(request):
@@ -197,6 +314,10 @@ def login(request):
         }
     )
 
+    # Calculate profile completeness for main accounts
+    if user.get("role") in ("miller_manager", "warehouse_manager", "retailer") or user.get("account_type") == "main_user":
+        profile_incomplete, _ = check_profile_incomplete(user["id"], user.get("role"))
+        user["profile_incomplete"] = profile_incomplete
 
     # ========================================================
     # LOGIN RESPONSE
@@ -386,7 +507,7 @@ def change_temporary_password(request):
             [new_hash, uid]
         )
 
-    profile_incomplete = (not province or not str(province).strip() or not gender or not str(gender).strip())
+    profile_incomplete, _ = check_profile_incomplete(uid, role)
 
     new_token = create_access_token({
         "sub": str(uid),
@@ -487,9 +608,7 @@ def get_profile_status(request):
             if d_row:
                 docs_data = {"barangay_permit": d_row[0], "valid_id": d_row[1]}
 
-    province = user_row[6]
-    gender = user_row[5]
-    profile_incomplete = (not province or not str(province).strip() or not gender or not str(gender).strip())
+    profile_incomplete, missing_fields = check_profile_incomplete(user_id, role)
 
     return Response({
         "user": {
@@ -503,7 +622,9 @@ def get_profile_status(request):
         },
         "profile": profile_data,
         "documents": docs_data,
+        "must_change_password": user_row[15],
         "profile_incomplete": profile_incomplete,
+        "missing_fields": missing_fields,
     })
 
 
@@ -527,13 +648,14 @@ def complete_profile(request):
     is_partial = str(data.get("is_partial", "")).lower() in ("true", "1")
 
     with connection.cursor() as cursor:
-        cursor.execute("SELECT user_id, user_role FROM users WHERE user_id = %s", [user_id])
+        cursor.execute("SELECT user_id, user_role, email FROM users WHERE user_id = %s", [user_id])
         user_row = cursor.fetchone()
 
     if not user_row:
         return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
     role = user_row[1]
+    user_email = user_row[2] or ""
 
     first_name = str(data.get("first_name") or "").strip()
     middle_initial = str(data.get("middle_initial") or "").strip()
@@ -546,12 +668,6 @@ def complete_profile(request):
     street_address = str(data.get("street_address") or "").strip()
     postal_code = str(data.get("postal_code") or "").strip()
     contact_number = str(data.get("contact_number") or "").strip()
-
-    if not is_partial:
-        if not gender:
-            return Response({"detail": "Gender is required."}, status=status.HTTP_400_BAD_REQUEST)
-        if not province or not municipality or not barangay or not street_address:
-            return Response({"detail": "Complete company address (Province, Municipality, Barangay, Street Address) is required."}, status=status.HTTP_400_BAD_REQUEST)
 
     def save_uploaded_file(file_obj, subfolder):
         if not file_obj:
@@ -598,7 +714,7 @@ def complete_profile(request):
                 b_barangay = str(data.get("business_barangay") or barangay).strip()
                 b_street = str(data.get("business_street_address") or street_address).strip()
                 b_postal = str(data.get("business_postal_code") or postal_code).strip()
-                b_email = str(data.get("official_email") or "").strip()
+                b_email = str(data.get("official_email") or user_email).strip()
                 b_contact = str(data.get("official_contact_number") or contact_number).strip()
 
                 cursor.execute("""
@@ -618,6 +734,24 @@ def complete_profile(request):
                     b_name, org_name, b_province, b_municipality, b_barangay, b_street, b_postal,
                     b_email, b_contact, user_id
                 ])
+
+                if cursor.rowcount == 0:
+                    cursor.execute("""
+                        INSERT INTO supplier_profiles (
+                            user_id, business_name, organization_name,
+                            province, municipality, postal_code, barangay, street_address,
+                            official_email, official_contact_number, created_at, updated_at
+                        ) VALUES (
+                            %s, %s, %s,
+                            %s, %s, %s, %s, %s,
+                            %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                        )
+                    """, [
+                        user_id, b_name or "Milling Facility", org_name or None,
+                        b_province or None, b_municipality or None, b_postal or None,
+                        b_barangay or None, b_street or None,
+                        b_email or None, b_contact or None
+                    ])
 
                 gov_id = save_uploaded_file(request.FILES.get("government_issued_id"), "supplier_documents")
                 biz_permit = save_uploaded_file(request.FILES.get("business_permit"), "supplier_documents")
@@ -644,7 +778,7 @@ def complete_profile(request):
                 b_barangay = str(data.get("business_barangay") or barangay).strip()
                 b_street = str(data.get("business_street_address") or street_address).strip()
                 b_postal = str(data.get("business_postal_code") or postal_code).strip()
-                b_email = str(data.get("official_email") or "").strip()
+                b_email = str(data.get("official_email") or user_email).strip()
                 b_contact = str(data.get("official_contact_number") or contact_number).strip()
 
                 cursor.execute("""
@@ -664,6 +798,24 @@ def complete_profile(request):
                     b_name, org_name, b_province, b_municipality, b_barangay, b_street, b_postal,
                     b_email, b_contact, user_id
                 ])
+
+                if cursor.rowcount == 0:
+                    cursor.execute("""
+                        INSERT INTO warehouse_profiles (
+                            user_id, business_name, organization_name,
+                            province, municipality, postal_code, barangay, street_address,
+                            official_email, official_contact_number, created_at, updated_at
+                        ) VALUES (
+                            %s, %s, %s,
+                            %s, %s, %s, %s, %s,
+                            %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                        )
+                    """, [
+                        user_id, b_name or "Warehouse Facility", org_name or None,
+                        b_province or None, b_municipality or None, b_postal or None,
+                        b_barangay or None, b_street or None,
+                        b_email or None, b_contact or None
+                    ])
 
                 gov_id = save_uploaded_file(request.FILES.get("government_issued_id"), "warehouse_documents")
                 biz_permit = save_uploaded_file(request.FILES.get("business_permit"), "warehouse_documents")
@@ -696,17 +848,20 @@ def complete_profile(request):
                     params.append(user_id)
                     cursor.execute(f"UPDATE retailer_documents SET {', '.join(updates)} WHERE user_id = %s", params)
 
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT province, gender FROM users WHERE user_id = %s", [user_id])
-        u_row = cursor.fetchone()
-    
-    u_prov = u_row[0] if u_row else None
-    u_gen = u_row[1] if u_row else None
-    profile_incomplete = (not u_prov or not str(u_prov).strip() or not u_gen or not str(u_gen).strip())
+    profile_incomplete, missing_fields = check_profile_incomplete(user_id, role)
+
+    if not is_partial and profile_incomplete:
+        return Response({
+            "detail": f"Profile is incomplete. Missing required fields: {', '.join(missing_fields)}.",
+            "missing_fields": missing_fields,
+            "profile_incomplete": True,
+            "is_partial": False,
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     return Response({
         "success": True,
         "message": "Profile completed successfully! You can now access your dashboard." if not profile_incomplete else "Progress saved.",
         "profile_incomplete": profile_incomplete,
         "is_partial": is_partial,
+        "missing_fields": missing_fields if profile_incomplete else [],
     }, status=status.HTTP_200_OK)

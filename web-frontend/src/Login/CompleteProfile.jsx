@@ -23,6 +23,8 @@ import Footer from "../Components/Minor-Components/CustomFooter";
 import Logo from "../assets/Logo.png";
 import useApi from "../Components/hooks/useApi";
 import useAuth from "../Components/hooks/useAuth";
+import usePhilippineAddress from "../Components/hooks/usePhilippineAddress";
+import Dropdown from "../Components/Minor-Components/Dropdown";
 
 const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"];
 const ALLOWED_MIME_TYPES = [
@@ -71,12 +73,20 @@ const CompleteProfile = () => {
   const [gender, setGender] = useState("");
   const [contactNumber, setContactNumber] = useState("");
 
-  // Company Address State
-  const [province, setProvince] = useState("");
-  const [municipality, setMunicipality] = useState("");
-  const [barangay, setBarangay] = useState("");
+  // Company Address State (autofetched PSGC address with manual fallback)
+  const address = usePhilippineAddress();
+  const [manualAddress, setManualAddress] = useState(false);
+  const [manualProvince, setManualProvince] = useState("");
+  const [manualMunicipality, setManualMunicipality] = useState("");
+  const [manualBarangay, setManualBarangay] = useState("");
+  const [manualPostalCode, setManualPostalCode] = useState("");
   const [streetAddress, setStreetAddress] = useState("");
-  const [postalCode, setPostalCode] = useState("");
+  const [addressSeed, setAddressSeed] = useState(null);
+
+  const province = manualAddress ? manualProvince : address.province;
+  const municipality = manualAddress ? manualMunicipality : address.municipality;
+  const barangay = manualAddress ? manualBarangay : address.barangay;
+  const postalCode = manualAddress ? manualPostalCode : address.postalCode;
 
   // Business Details State
   const [businessName, setBusinessName] = useState("");
@@ -239,8 +249,11 @@ const CompleteProfile = () => {
     if (!municipality.trim()) errors.municipality = "Municipality or City is required.";
     if (!barangay.trim()) errors.barangay = "Barangay is required.";
     if (!streetAddress.trim()) errors.streetAddress = "Street address is required.";
-    if (postalCode.trim() && !/^\d{4}$/.test(postalCode.trim())) {
-      errors.postalCode = "Postal code should be 4 digits (e.g. 1000).";
+    const trimmedPostal = postalCode.trim();
+    if (!trimmedPostal) {
+      errors.postalCode = "Postal code is required.";
+    } else if (!/^\d{4}$/.test(trimmedPostal)) {
+      errors.postalCode = "Postal code must be exactly 4 digits.";
     }
 
     // Business Details
@@ -350,11 +363,21 @@ const CompleteProfile = () => {
         setContactNumber(u.contact_number || "");
 
         // Company Address fields
-        setProvince(p.province || u.province || "");
-        setMunicipality(p.municipality || u.municipality || "");
-        setBarangay(p.barangay || u.barangay || "");
-        setStreetAddress(p.street_address || u.street_address || "");
-        setPostalCode(p.postal_code || u.postal_code || "");
+        const addrProv = p.province || u.province || "";
+        const addrMuni = p.municipality || u.municipality || "";
+        const addrBrgy = p.barangay || u.barangay || "";
+        const addrStreet = p.street_address || u.street_address || "";
+        const addrPostal = p.postal_code || u.postal_code || "";
+
+        setStreetAddress(addrStreet);
+        if (addrProv) {
+          setAddressSeed({
+            province: addrProv,
+            municipality: addrMuni,
+            barangay: addrBrgy,
+            postalCode: addrPostal,
+          });
+        }
 
         if (p) {
           setBusinessName(p.business_name || "");
@@ -378,11 +401,15 @@ const CompleteProfile = () => {
             if (draft.suffix !== undefined) setSuffix(draft.suffix);
             if (draft.gender !== undefined) setGender(draft.gender);
             if (draft.contactNumber !== undefined) setContactNumber(draft.contactNumber);
-            if (draft.province !== undefined) setProvince(draft.province);
-            if (draft.municipality !== undefined) setMunicipality(draft.municipality);
-            if (draft.barangay !== undefined) setBarangay(draft.barangay);
             if (draft.streetAddress !== undefined) setStreetAddress(draft.streetAddress);
-            if (draft.postalCode !== undefined) setPostalCode(draft.postalCode);
+            if (draft.province) {
+              setAddressSeed((prev) => ({
+                province: draft.province,
+                municipality: draft.municipality || prev?.municipality || "",
+                barangay: draft.barangay || prev?.barangay || "",
+                postalCode: draft.postalCode || prev?.postalCode || "",
+              }));
+            }
             if (draft.businessName !== undefined) setBusinessName(draft.businessName);
             if (draft.organizationName !== undefined) setOrganizationName(draft.organizationName);
             if (draft.officialEmail !== undefined) setOfficialEmail(draft.officialEmail);
@@ -402,6 +429,83 @@ const CompleteProfile = () => {
       isMounted = false;
     };
   }, []);
+
+  // Address Seed Hydration: Province
+  useEffect(() => {
+    if (!addressSeed?.province || address.province) return;
+    if (address.provinceOptions.length === 0 && address.loading.provinces) return;
+
+    if (address.provinceOptions.includes(addressSeed.province)) {
+      address.selectProvince(addressSeed.province);
+    } else if (address.provinceOptions.length > 0 && !address.loading.provinces) {
+      setManualAddress(true);
+      setManualProvince(addressSeed.province);
+      setManualMunicipality(addressSeed.municipality || "");
+      setManualBarangay(addressSeed.barangay || "");
+      setManualPostalCode(addressSeed.postalCode || "");
+    }
+  }, [addressSeed, address.province, address.provinceOptions, address.loading.provinces]);
+
+  // Address Seed Hydration: Municipality
+  useEffect(() => {
+    if (manualAddress || !addressSeed?.municipality || !address.province || address.municipality) return;
+    if (address.municipalityOptions.length === 0 && address.loading.municipalities) return;
+
+    if (address.municipalityOptions.includes(addressSeed.municipality)) {
+      address.selectMunicipality(addressSeed.municipality);
+    }
+  }, [manualAddress, addressSeed, address.province, address.municipality, address.municipalityOptions, address.loading.municipalities]);
+
+  // Address Seed Hydration: Barangay & Postal Code
+  useEffect(() => {
+    if (manualAddress || !addressSeed?.barangay || !address.municipality || address.barangay) return;
+    if (address.barangayOptions.length === 0 && address.loading.barangays) return;
+
+    if (address.barangayOptions.includes(addressSeed.barangay)) {
+      address.selectBarangay(addressSeed.barangay);
+      if (addressSeed.postalCode) {
+        address.updatePostalCode(addressSeed.postalCode);
+      }
+    }
+  }, [manualAddress, addressSeed, address.municipality, address.barangay, address.barangayOptions, address.loading.barangays]);
+
+  // Handlers for Address Fields
+  const handleProvinceChange = async (val) => {
+    markTouched("province");
+    await address.selectProvince(val);
+  };
+
+  const handleMunicipalityChange = async (val) => {
+    markTouched("municipality");
+    await address.selectMunicipality(val);
+  };
+
+  const handleBarangayChange = (val) => {
+    markTouched("barangay");
+    address.selectBarangay(val);
+  };
+
+  const handlePostalCodeChange = (e) => {
+    markTouched("postalCode");
+    const val = String(e.target.value || "").replace(/\D/g, "").slice(0, 4);
+    if (manualAddress) {
+      setManualPostalCode(val);
+    } else {
+      address.updatePostalCode(val);
+    }
+  };
+
+  const toggleManualAddress = () => {
+    if (!manualAddress) {
+      setManualProvince(address.province);
+      setManualMunicipality(address.municipality);
+      setManualBarangay(address.barangay);
+      setManualPostalCode(address.postalCode);
+      setManualAddress(true);
+    } else {
+      setManualAddress(false);
+    }
+  };
 
   // Save current step data to localStorage draft and background partial save to backend
   const persistStepData = async () => {
@@ -542,12 +646,14 @@ const CompleteProfile = () => {
         municipality: true,
         barangay: true,
         streetAddress: true,
+        postalCode: true,
       }));
       if (
         validationErrors.province ||
         validationErrors.municipality ||
         validationErrors.barangay ||
-        validationErrors.streetAddress
+        validationErrors.streetAddress ||
+        validationErrors.postalCode
       ) {
         setErrorMessage("Please complete all required fields in Company Address.");
         return;
@@ -633,6 +739,7 @@ const CompleteProfile = () => {
       validationErrors.municipality ||
       validationErrors.barangay ||
       validationErrors.streetAddress ||
+      validationErrors.postalCode ||
       validationErrors.businessName
     ) {
       setErrorMessage("Some required profile fields are incomplete. Please review your previous steps.");
@@ -686,11 +793,20 @@ const CompleteProfile = () => {
         if (brgyPermitFile) formData.append("barangay_permit", brgyPermitFile);
       }
 
-      await request("/auth/complete-profile", {
+      const response = await request("/auth/complete-profile", {
         method: "POST",
         body: formData,
         throwOnError: true,
       });
+
+      if (response?.profile_incomplete !== false) {
+        setErrorMessage(
+          response?.detail ||
+          "Profile is still incomplete. Please review your provided details and try again."
+        );
+        setIsSubmitting(false);
+        return;
+      }
 
       setSuccessMessage("Profile setup completed successfully! Redirecting to your dashboard...");
       localStorage.removeItem("grainrise_profile_draft");
@@ -1118,128 +1234,321 @@ const CompleteProfile = () => {
           {/* ── STEP: COMPANY ADDRESS ── */}
           {currentStep?.key === "address" && (
             <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-xs space-y-6 animate-in fade-in duration-200">
-              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-[#08511f]">
-                  <MapPin size={20} />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-[#08511f]">
+                    <MapPin size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900">Company Address</h2>
+                    <p className="text-xs text-slate-500">Your registered company or business location.</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-slate-900">Company Address</h2>
-                  <p className="text-xs text-slate-500">Your registered company or business location.</p>
-                </div>
+                <button
+                  type="button"
+                  onClick={toggleManualAddress}
+                  className="text-xs font-semibold text-[#08511f] hover:underline cursor-pointer self-start sm:self-auto"
+                >
+                  {manualAddress ? "Use Address Dropdowns" : "Can't find location? Enter manually"}
+                </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Province */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    Province <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={province}
-                    onChange={(e) => setProvince(e.target.value)}
-                    onBlur={() => markTouched("province")}
-                    placeholder="e.g. Isabela, Bulacan"
-                    className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                      touched.province && validationErrors.province
-                        ? "border-red-400 bg-red-50/30 focus:border-red-500"
-                        : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                    }`}
-                  />
-                  {touched.province && validationErrors.province && (
-                    <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.province}</p>
-                  )}
-                </div>
+              {!manualAddress ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Province Dropdown */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                      Province <span className="text-red-500">*</span>
+                    </label>
+                    <Dropdown
+                      label=""
+                      placeholder={
+                        address.loading.provinces
+                          ? "Loading provinces..."
+                          : "Select Province"
+                      }
+                      options={address.provinceOptions}
+                      value={address.province}
+                      onChange={handleProvinceChange}
+                      disabled={address.loading.provinces}
+                      error={touched.province ? (validationErrors.province || address.errors.provinces) : ""}
+                    />
+                    {touched.province && validationErrors.province && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.province}</p>
+                    )}
+                    {address.errors.provinces && (
+                      <p className="mt-1 text-xs text-amber-600">
+                        {address.errors.provinces} (You can{" "}
+                        <button
+                          type="button"
+                          onClick={() => setManualAddress(true)}
+                          className="underline font-bold text-[#08511f]"
+                        >
+                          enter manually
+                        </button>
+                        )
+                      </p>
+                    )}
+                  </div>
 
-                {/* Municipality / City */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    Municipality / City <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={municipality}
-                    onChange={(e) => setMunicipality(e.target.value)}
-                    onBlur={() => markTouched("municipality")}
-                    placeholder="e.g. Santiago City"
-                    className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                      touched.municipality && validationErrors.municipality
-                        ? "border-red-400 bg-red-50/30 focus:border-red-500"
-                        : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                    }`}
-                  />
-                  {touched.municipality && validationErrors.municipality && (
-                    <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.municipality}</p>
-                  )}
-                </div>
+                  {/* Municipality / City Dropdown */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                      Municipality / City <span className="text-red-500">*</span>
+                    </label>
+                    <Dropdown
+                      label=""
+                      placeholder={
+                        address.loading.municipalities
+                          ? "Loading cities/municipalities..."
+                          : !address.province
+                          ? "Select Province First"
+                          : "Select Municipality/City"
+                      }
+                      options={address.municipalityOptions}
+                      value={address.municipality}
+                      onChange={handleMunicipalityChange}
+                      disabled={!address.province || address.loading.municipalities}
+                      error={touched.municipality ? (validationErrors.municipality || address.errors.municipalities) : ""}
+                    />
+                    {touched.municipality && validationErrors.municipality && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.municipality}</p>
+                    )}
+                    {address.errors.municipalities && (
+                      <p className="mt-1 text-xs text-amber-600">
+                        {address.errors.municipalities} (You can{" "}
+                        <button
+                          type="button"
+                          onClick={() => setManualAddress(true)}
+                          className="underline font-bold text-[#08511f]"
+                        >
+                          enter manually
+                        </button>
+                        )
+                      </p>
+                    )}
+                  </div>
 
-                {/* Barangay */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    Barangay <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={barangay}
-                    onChange={(e) => setBarangay(e.target.value)}
-                    onBlur={() => markTouched("barangay")}
-                    placeholder="e.g. San Roque"
-                    className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                      touched.barangay && validationErrors.barangay
-                        ? "border-red-400 bg-red-50/30 focus:border-red-500"
-                        : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                    }`}
-                  />
-                  {touched.barangay && validationErrors.barangay && (
-                    <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.barangay}</p>
-                  )}
-                </div>
+                  {/* Barangay Dropdown */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                      Barangay <span className="text-red-500">*</span>
+                    </label>
+                    <Dropdown
+                      label=""
+                      placeholder={
+                        address.loading.barangays
+                          ? "Loading barangays..."
+                          : !address.municipality
+                          ? "Select Municipality First"
+                          : "Select Barangay"
+                      }
+                      options={address.barangayOptions}
+                      value={address.barangay}
+                      onChange={handleBarangayChange}
+                      disabled={!address.municipality || address.loading.barangays}
+                      error={touched.barangay ? (validationErrors.barangay || address.errors.barangays) : ""}
+                    />
+                    {touched.barangay && validationErrors.barangay && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.barangay}</p>
+                    )}
+                    {address.errors.barangays && (
+                      <p className="mt-1 text-xs text-amber-600">
+                        {address.errors.barangays} (You can{" "}
+                        <button
+                          type="button"
+                          onClick={() => setManualAddress(true)}
+                          className="underline font-bold text-[#08511f]"
+                        >
+                          enter manually
+                        </button>
+                        )
+                      </p>
+                    )}
+                  </div>
 
-                {/* Postal Code */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    Postal Code
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={4}
-                    value={postalCode}
-                    onChange={(e) => setPostalCode(e.target.value)}
-                    onBlur={() => markTouched("postalCode")}
-                    placeholder="e.g. 3311 (optional)"
-                    className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                      touched.postalCode && validationErrors.postalCode
-                        ? "border-red-400 bg-red-50/30 focus:border-red-500"
-                        : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                    }`}
-                  />
-                  {touched.postalCode && validationErrors.postalCode && (
-                    <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.postalCode}</p>
-                  )}
-                </div>
+                  {/* Postal Code */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                      Postal Code <span className="text-red-500">*</span>{" "}
+                      <span className="text-slate-400 font-normal lowercase">(auto-filled, editable)</span>
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={postalCode}
+                      onChange={handlePostalCodeChange}
+                      onBlur={() => markTouched("postalCode")}
+                      placeholder={
+                        address.loading.postalCode
+                          ? "Loading..."
+                          : !address.municipality
+                          ? "Select Municipality First"
+                          : "4-digit postal code"
+                      }
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
+                        touched.postalCode && validationErrors.postalCode
+                          ? "border-red-400 bg-red-50/30 focus:border-red-500"
+                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                      }`}
+                    />
+                    {touched.postalCode && validationErrors.postalCode && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.postalCode}</p>
+                    )}
+                    {address.postalStatus === "unavailable" && !validationErrors.postalCode && (
+                      <p className="mt-1 text-xs text-amber-600 font-medium">
+                        Automatic postal lookup was unavailable. Please enter it manually.
+                      </p>
+                    )}
+                  </div>
 
-                {/* Street Address */}
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    Street Address <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={streetAddress}
-                    onChange={(e) => setStreetAddress(e.target.value)}
-                    onBlur={() => markTouched("streetAddress")}
-                    placeholder="Building #, Street name, Industrial park / Compound"
-                    className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                      touched.streetAddress && validationErrors.streetAddress
-                        ? "border-red-400 bg-red-50/30 focus:border-red-500"
-                        : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                    }`}
-                  />
-                  {touched.streetAddress && validationErrors.streetAddress && (
-                    <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.streetAddress}</p>
-                  )}
+                  {/* Street Address */}
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                      Street Address <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={streetAddress}
+                      onChange={(e) => setStreetAddress(e.target.value)}
+                      onBlur={() => markTouched("streetAddress")}
+                      placeholder="Building #, Street name, Industrial park / Compound"
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
+                        touched.streetAddress && validationErrors.streetAddress
+                          ? "border-red-400 bg-red-50/30 focus:border-red-500"
+                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                      }`}
+                    />
+                    {touched.streetAddress && validationErrors.streetAddress && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.streetAddress}</p>
+                    )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Manual Province */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                      Province <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={manualProvince}
+                      onChange={(e) => {
+                        setManualProvince(e.target.value);
+                        markTouched("province");
+                      }}
+                      onBlur={() => markTouched("province")}
+                      placeholder="e.g. Isabela, Bulacan"
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
+                        touched.province && validationErrors.province
+                          ? "border-red-400 bg-red-50/30 focus:border-red-500"
+                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                      }`}
+                    />
+                    {touched.province && validationErrors.province && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.province}</p>
+                    )}
+                  </div>
+
+                  {/* Manual Municipality */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                      Municipality / City <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={manualMunicipality}
+                      onChange={(e) => {
+                        setManualMunicipality(e.target.value);
+                        markTouched("municipality");
+                      }}
+                      onBlur={() => markTouched("municipality")}
+                      placeholder="e.g. Santiago City"
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
+                        touched.municipality && validationErrors.municipality
+                          ? "border-red-400 bg-red-50/30 focus:border-red-500"
+                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                      }`}
+                    />
+                    {touched.municipality && validationErrors.municipality && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.municipality}</p>
+                    )}
+                  </div>
+
+                  {/* Manual Barangay */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                      Barangay <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={manualBarangay}
+                      onChange={(e) => {
+                        setManualBarangay(e.target.value);
+                        markTouched("barangay");
+                      }}
+                      onBlur={() => markTouched("barangay")}
+                      placeholder="e.g. San Roque"
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
+                        touched.barangay && validationErrors.barangay
+                          ? "border-red-400 bg-red-50/30 focus:border-red-500"
+                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                      }`}
+                    />
+                    {touched.barangay && validationErrors.barangay && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.barangay}</p>
+                    )}
+                  </div>
+
+                  {/* Manual Postal Code */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                      Postal Code <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={manualPostalCode}
+                      onChange={handlePostalCodeChange}
+                      onBlur={() => markTouched("postalCode")}
+                      placeholder="e.g. 3311"
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
+                        touched.postalCode && validationErrors.postalCode
+                          ? "border-red-400 bg-red-50/30 focus:border-red-500"
+                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                      }`}
+                    />
+                    {touched.postalCode && validationErrors.postalCode && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.postalCode}</p>
+                    )}
+                  </div>
+
+                  {/* Street Address */}
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                      Street Address <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={streetAddress}
+                      onChange={(e) => setStreetAddress(e.target.value)}
+                      onBlur={() => markTouched("streetAddress")}
+                      placeholder="Building #, Street name, Industrial park / Compound"
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
+                        touched.streetAddress && validationErrors.streetAddress
+                          ? "border-red-400 bg-red-50/30 focus:border-red-500"
+                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                      }`}
+                    />
+                    {touched.streetAddress && validationErrors.streetAddress && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.streetAddress}</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

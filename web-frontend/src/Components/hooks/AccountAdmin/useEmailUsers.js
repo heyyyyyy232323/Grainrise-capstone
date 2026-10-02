@@ -396,6 +396,9 @@ const useEmailUsers = () => {
     useCallback(
       async ({
         recipientType,
+        recipient_type,
+        recipient_id,
+        recipientId,
 
         subject,
 
@@ -453,6 +456,17 @@ const useEmailUsers = () => {
             ""
           ).trim();
 
+        const finalRecipientId =
+          recipient_id ??
+          recipientId ??
+          recipientUserId ??
+          null;
+
+        const finalRecipientType =
+          cleanedRecipientType === "specific_user"
+            ? (String(recipient_type || "").trim().toLowerCase() || "user")
+            : cleanedRecipientType;
+
 
         // ====================================================
         // VALIDATION
@@ -509,9 +523,9 @@ const useEmailUsers = () => {
           cleanedRecipientType ===
           "specific_user"
         ) {
-          const hasUserId =
+          const hasRecipientId =
             Boolean(
-              recipientUserId
+              finalRecipientId
             );
 
 
@@ -522,11 +536,11 @@ const useEmailUsers = () => {
 
 
           if (
-            !hasUserId &&
+            !hasRecipientId &&
             !hasEmail
           ) {
             throw new Error(
-              "Select a specific user before sending."
+              "Select a specific recipient before sending."
             );
           }
         }
@@ -548,7 +562,10 @@ const useEmailUsers = () => {
         try {
           const payload = {
             recipient_type:
-              cleanedRecipientType,
+              finalRecipientType,
+
+            recipient_id:
+              finalRecipientId,
 
             subject:
               cleanedSubject,
@@ -570,8 +587,7 @@ const useEmailUsers = () => {
             "specific_user"
           ) {
             payload.recipient_user_id =
-              recipientUserId ||
-              null;
+              finalRecipientId;
 
             payload.recipient_email =
               cleanedRecipientEmail;

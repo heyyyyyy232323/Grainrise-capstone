@@ -13,6 +13,7 @@ from .selectors import (
     RECIPIENT_RETAILER,
     RECIPIENT_SPECIFIC,
     RECIPIENT_WAREHOUSE,
+    RECIPIENT_PARTNERSHIP,
     VALID_RECIPIENT_TYPES,
     get_admin_email_sender,
     get_broadcast_email_recipients,
@@ -97,6 +98,9 @@ def _validate_recipient_type(
     normalized = str(
         recipient_type or ""
     ).strip().lower()
+
+    if normalized == "user":
+        normalized = RECIPIENT_SPECIFIC
 
     if normalized not in VALID_RECIPIENT_TYPES:
         raise ValueError(
@@ -796,7 +800,38 @@ def send_account_admin_email(
     # SPECIFIC USER
     # ========================================================
 
-    if (
+    # ========================================================
+    # PARTNERSHIP INQUIRY RECIPIENT
+    # ========================================================
+
+    if normalized_type == RECIPIENT_PARTNERSHIP:
+        clean_email = _normalize_email(recipient_email)
+        if not clean_email:
+            raise ValueError(
+                "The partnership applicant does not have a valid email address."
+            )
+
+        clean_name = str(recipient_name or clean_email).strip()
+        recipients = [
+            {
+                "user_id": None,
+                "name": clean_name,
+                "email": clean_email,
+                "role": "partnership_inquiry",
+                "status": "to_review",
+            }
+        ]
+
+        recipient_label = clean_name
+        history_user_id = None
+        history_email = clean_email
+        history_recipient_type = RECIPIENT_SPECIFIC
+
+    # ========================================================
+    # SPECIFIC USER
+    # ========================================================
+
+    elif (
         normalized_type ==
         RECIPIENT_SPECIFIC
     ):
@@ -837,6 +872,7 @@ def send_account_admin_email(
             )
         )
 
+        history_recipient_type = RECIPIENT_SPECIFIC
 
     # ========================================================
     # BROADCAST GROUP
@@ -858,6 +894,7 @@ def send_account_admin_email(
 
         history_user_id = None
         history_email = None
+        history_recipient_type = normalized_type
 
 
     # ========================================================
@@ -888,7 +925,7 @@ def send_account_admin_email(
     history = (
         _save_sent_email_history(
             recipient_type=
-                normalized_type,
+                history_recipient_type,
 
             recipient_label=
                 recipient_label,
@@ -949,8 +986,10 @@ def send_account_admin_email(
         )
 
     elif (
-        normalized_type ==
-        RECIPIENT_SPECIFIC
+        normalized_type in (
+            RECIPIENT_SPECIFIC,
+            RECIPIENT_PARTNERSHIP,
+        )
     ):
         result_message = (
             "Email sent successfully."

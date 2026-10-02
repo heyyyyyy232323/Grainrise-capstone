@@ -427,8 +427,142 @@ def get_retailer_status_counts():
 def get_retailer_details(
     user_id,
 ):
+    """
+    Complete Retailer details used by:
+
+        Review Application Modal
+        View Details Modal
+
+    Includes:
+        personal information
+        address
+        account information
+        barangay permit
+        valid ID
+    """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        numeric_user_id = None
+
+    if numeric_user_id is not None:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+
+                    -- ============================================
+                    -- ACCOUNT
+                    -- ============================================
+
+                    u.user_id,
+
+                    u.first_name,
+
+                    u.middle_initial,
+
+                    u.last_name,
+
+                    u.suffix,
+
+                    u.gender,
+
+
+                    -- ============================================
+                    -- ADDRESS
+                    -- ============================================
+
+                    u.province,
+
+                    u.municipality,
+
+                    u.postal_code,
+
+                    u.barangay,
+
+                    u.street_address,
+
+
+                    -- ============================================
+                    -- CONTACT / LOGIN
+                    -- ============================================
+
+                    u.email,
+
+                    u.contact_number,
+
+                    u.username,
+
+                    u.user_role
+                        AS user_role,
+
+                    u.status
+                        AS status,
+
+                    u.created_at,
+
+                    u.updated_at,
+
+
+                    -- ============================================
+                    -- DOCUMENTS
+                    -- ============================================
+
+                    d.retailer_document_id,
+
+                    d.barangay_permit,
+
+                    d.valid_id,
+
+                    d.created_at
+                        AS documents_created_at,
+
+                    d.updated_at
+                        AS documents_updated_at
+
+
+                FROM users u
+
+
+                LEFT JOIN retailer_documents d
+
+                    ON d.user_id =
+                        u.user_id
+
+
+                WHERE
+
+                    u.user_id = %s
+
+                    AND u.user_role = %s
+
+
+                LIMIT 1
+                """,
+                [
+                    numeric_user_id,
+                    RETAILER_ROLE,
+                ],
+            )
+
+            user_details = _row_to_dict(
+                cursor
+            )
+
+            if user_details:
+                user_details["is_partnership"] = False
+                return user_details
+
+    from django.core.exceptions import ValidationError
     from ...models import PartnershipInquiry
-    inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    try:
+        inquiry = PartnershipInquiry.objects.filter(
+            partnership_inquiry_id=user_id,
+            partner_role="retailer",
+            status=PartnershipInquiry.Status.TO_REVIEW,
+        ).first()
+    except (ValueError, TypeError, ValidationError):
+        inquiry = None
     if inquiry:
         name_parts = str(inquiry.name or "").strip().split()
         first_name = name_parts[0] if name_parts else "Applicant"
@@ -453,137 +587,19 @@ def get_retailer_details(
             "created_at": inquiry.created_at,
             "updated_at": inquiry.updated_at,
             "retailer_document_id": None,
-            "barangay_permit": None,
-            "valid_id": (
+            "government_issued_id": inquiry.government_issued_id,
+            "barangay_permit": (
                 json.loads(inquiry.business_verification_document)[0]
                 if (inquiry.business_verification_document and inquiry.business_verification_document.strip().startswith('['))
                 else inquiry.business_verification_document
             ),
+            "valid_id": inquiry.government_issued_id,
+            "is_partnership": True,
             "documents_created_at": inquiry.created_at,
             "documents_updated_at": inquiry.updated_at,
         }
 
-    try:
-        numeric_user_id = int(user_id)
-    except (ValueError, TypeError):
-        return None
-    """
-    Complete Retailer details used by:
-
-        Review Application Modal
-        View Details Modal
-
-    Includes:
-        personal information
-        address
-        account information
-        barangay permit
-        valid ID
-    """
-
-    with connection.cursor() as cursor:
-
-        cursor.execute(
-            """
-            SELECT
-
-                -- ============================================
-                -- ACCOUNT
-                -- ============================================
-
-                u.user_id,
-
-                u.first_name,
-
-                u.middle_initial,
-
-                u.last_name,
-
-                u.suffix,
-
-                u.gender,
-
-
-                -- ============================================
-                -- ADDRESS
-                -- ============================================
-
-                u.province,
-
-                u.municipality,
-
-                u.postal_code,
-
-                u.barangay,
-
-                u.street_address,
-
-
-                -- ============================================
-                -- CONTACT / LOGIN
-                -- ============================================
-
-                u.email,
-
-                u.contact_number,
-
-                u.username,
-
-                u.user_role
-                    AS user_role,
-
-                u.status
-                    AS status,
-
-                u.created_at,
-
-                u.updated_at,
-
-
-                -- ============================================
-                -- DOCUMENTS
-                -- ============================================
-
-                d.retailer_document_id,
-
-                d.barangay_permit,
-
-                d.valid_id,
-
-                d.created_at
-                    AS documents_created_at,
-
-                d.updated_at
-                    AS documents_updated_at
-
-
-            FROM users u
-
-
-            LEFT JOIN retailer_documents d
-
-                ON d.user_id =
-                    u.user_id
-
-
-            WHERE
-
-                u.user_id = %s
-
-                AND u.user_role = %s
-
-
-            LIMIT 1
-            """,
-            [
-                numeric_user_id,
-                RETAILER_ROLE,
-            ],
-        )
-
-        return _row_to_dict(
-            cursor
-        )
+    return None
 
 
 # ============================================================
@@ -597,6 +613,10 @@ def get_retailer_account_summary(
     Lightweight Retailer record used by
     service actions such as confirm/archive/restore/delete.
     """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return None
 
     with connection.cursor() as cursor:
 
@@ -662,6 +682,10 @@ def retailer_exists(
     Return True only when the given user ID belongs
     to a Retailer account.
     """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return False
 
     with connection.cursor() as cursor:
 

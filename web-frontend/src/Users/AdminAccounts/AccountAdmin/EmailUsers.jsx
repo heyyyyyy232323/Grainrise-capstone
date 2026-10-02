@@ -228,19 +228,33 @@ const normalizePassedRecipient = (
     .join(" ")
     .trim();
 
+  const recipientType =
+    recipient?.recipientType ||
+    (recipient?.is_partnership || String(recipient?.recipientId || recipient?.userId || "").includes("-")
+      ? "partnership_inquiry"
+      : "user");
+
+  const recipientId =
+    recipient?.recipientId ||
+    recipient?.userId ||
+    recipient?.inquiryId ||
+    null;
+
   return {
+    recipient_type: recipientType,
+    recipient_id: recipientId,
+
     user_id:
-      recipient?.userId ||
-      null,
+      recipientType === "user" ? recipientId : null,
 
     inquiry_id:
-      recipient?.inquiryId ||
-      null,
+      recipientType === "partnership_inquiry" ? recipientId : null,
 
     full_name:
       fullName ||
+      recipient?.businessName ||
       recipient?.email ||
-      "Selected User",
+      (recipientType === "partnership_inquiry" ? "Partnership Applicant" : "Selected User"),
 
     first_name:
       recipient?.firstName ||
@@ -248,6 +262,10 @@ const normalizePassedRecipient = (
 
     last_name:
       recipient?.lastName ||
+      "",
+
+    business_name:
+      recipient?.businessName ||
       "",
 
     email:
@@ -259,11 +277,11 @@ const normalizePassedRecipient = (
 
     user_role:
       recipient?.userRole ||
-      "",
+      (recipientType === "partnership_inquiry" ? "partnership_inquiry" : ""),
 
     status:
       recipient?.status ||
-      "",
+      (recipientType === "partnership_inquiry" ? "to_review" : ""),
   };
 };
 
@@ -642,9 +660,11 @@ export default function EmailUsers() {
     (
       recipient
     ) => {
-      setSelectedRecipient(
-        recipient
-      );
+      setSelectedRecipient({
+        ...recipient,
+        recipient_type: "user",
+        recipient_id: recipient?.user_id,
+      });
 
       setRecipientSearch(
         ""
@@ -694,9 +714,28 @@ export default function EmailUsers() {
 
 
       try {
+        const isSpecific =
+          recipientType ===
+          "specific_user";
+
+        const subRecipientType =
+          isSpecific
+            ? (selectedRecipient?.recipient_type || "user")
+            : recipientType;
+
+        const subRecipientId =
+          isSpecific
+            ? (selectedRecipient?.recipient_id ||
+               selectedRecipient?.user_id ||
+               selectedRecipient?.inquiry_id ||
+               null)
+            : null;
+
         const response =
           await sendEmail({
             recipientType,
+            recipient_type: subRecipientType,
+            recipient_id: subRecipientId,
 
             subject:
               subject.trim(),
@@ -707,22 +746,18 @@ export default function EmailUsers() {
               messagePlain.trim(),
 
             recipientUserId:
-              recipientType ===
-              "specific_user"
-                ? selectedRecipient
-                    ?.user_id
+              subRecipientType === "user"
+                ? subRecipientId
                 : null,
 
             recipientEmail:
-              recipientType ===
-              "specific_user"
+              isSpecific
                 ? selectedRecipient
                     ?.email
                 : "",
 
             recipientName:
-              recipientType ===
-              "specific_user"
+              isSpecific
                 ? selectedRecipient
                     ?.full_name
                 : "",

@@ -111,6 +111,11 @@ class PartnershipInquiry(models.Model):
     message = models.TextField(max_length=2000)
 
     # Relative path in MEDIA_ROOT: partnership_documents/<uuid>/<safe_filename>
+    government_issued_id = models.TextField(
+        blank=True,
+        null=True,
+        help_text='Stored path of uploaded government-issued ID',
+    )
     business_verification_document = models.TextField(
         blank=True,
         null=True,

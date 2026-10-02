@@ -503,8 +503,189 @@ def get_miller_status_counts():
 def get_miller_details(
     user_id,
 ):
+    """
+    Full Miller registration details.
+
+    Used by:
+        Review Application
+        View Owner
+        MillerInfo
+
+    Password hashes are deliberately excluded.
+
+    supplier_documents is LEFT JOINED so a legacy
+    account with missing documents does not make the
+    entire owner record disappear.
+    """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        numeric_user_id = None
+
+    if numeric_user_id is not None:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+
+                    -- ============================================
+                    -- ACCOUNT / PERSONAL
+                    -- ============================================
+
+                    u.user_id,
+
+                    u.first_name,
+
+                    u.middle_initial,
+
+                    u.last_name,
+
+                    u.suffix,
+
+                    u.gender,
+
+
+                    -- ============================================
+                    -- PERSONAL ADDRESS
+                    -- ============================================
+
+                    u.province,
+
+                    u.municipality,
+
+                    u.postal_code,
+
+                    u.barangay,
+
+                    u.street_address,
+
+
+                    -- ============================================
+                    -- ACCOUNT CONTACT
+                    -- ============================================
+
+                    u.email,
+
+                    u.contact_number,
+
+                    u.username,
+
+                    u.user_role
+                        AS user_role,
+
+                    u.status
+                        AS status,
+
+                    u.created_at,
+
+                    u.updated_at,
+
+
+                    -- ============================================
+                    -- BUSINESS
+                    -- ============================================
+
+                    p.supplier_profile_id,
+
+                    p.business_name,
+
+                    p.organization_name,
+
+                    p.province
+                        AS business_province,
+
+                    p.municipality
+                        AS business_municipality,
+
+                    p.postal_code
+                        AS business_postal_code,
+
+                    p.barangay
+                        AS business_barangay,
+
+                    p.street_address
+                        AS business_street_address,
+
+                    p.official_email,
+
+                    p.official_contact_number,
+
+                    p.created_at
+                        AS business_created_at,
+
+                    p.updated_at
+                        AS business_updated_at,
+
+
+                    -- ============================================
+                    -- DOCUMENTS
+                    -- ============================================
+
+                    d.supplier_document_id,
+
+                    d.government_issued_id,
+
+                    d.business_permit,
+
+                    d.business_registration,
+
+                    d.milling_license,
+
+                    d.created_at
+                        AS documents_created_at,
+
+                    d.updated_at
+                        AS documents_updated_at
+
+
+                FROM users u
+
+
+                LEFT JOIN supplier_profiles p
+
+                    ON p.user_id =
+                        u.user_id
+
+
+                LEFT JOIN supplier_documents d
+
+                    ON d.user_id =
+                        u.user_id
+
+
+                WHERE
+
+                    u.user_id = %s
+
+                    AND u.user_role = %s
+
+
+                LIMIT 1
+                """,
+                [
+                    numeric_user_id,
+                    MILLER_ROLE,
+                ],
+            )
+
+            user_details = _row_to_dict(
+                cursor
+            )
+
+            if user_details:
+                user_details["is_partnership"] = False
+                return user_details
+
+    from django.core.exceptions import ValidationError
     from ...models import PartnershipInquiry
-    inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    try:
+        inquiry = PartnershipInquiry.objects.filter(
+            partnership_inquiry_id=user_id,
+            partner_role="miller",
+            status=PartnershipInquiry.Status.TO_REVIEW,
+        ).first()
+    except (ValueError, TypeError, ValidationError):
+        inquiry = None
     if inquiry:
         name_parts = str(inquiry.name or "").strip().split()
         first_name = name_parts[0] if name_parts else "Applicant"
@@ -541,7 +722,7 @@ def get_miller_details(
             "business_created_at": inquiry.created_at,
             "business_updated_at": inquiry.updated_at,
             "supplier_document_id": None,
-            "government_issued_id": None,
+            "government_issued_id": inquiry.government_issued_id,
             "business_permit": None,
             "business_registration": (
                 json.loads(inquiry.business_verification_document)[0]
@@ -549,179 +730,12 @@ def get_miller_details(
                 else inquiry.business_verification_document
             ),
             "milling_license": None,
+            "is_partnership": True,
             "documents_created_at": inquiry.created_at,
             "documents_updated_at": inquiry.updated_at,
         }
 
-    try:
-        numeric_user_id = int(user_id)
-    except (ValueError, TypeError):
-        return None
-    """
-    Full Miller registration details.
-
-    Used by:
-        Review Application
-        View Owner
-        MillerInfo
-
-    Password hashes are deliberately excluded.
-
-    supplier_documents is LEFT JOINED so a legacy
-    account with missing documents does not make the
-    entire owner record disappear.
-    """
-
-    with connection.cursor() as cursor:
-
-        cursor.execute(
-            """
-            SELECT
-
-                -- ============================================
-                -- ACCOUNT / PERSONAL
-                -- ============================================
-
-                u.user_id,
-
-                u.first_name,
-
-                u.middle_initial,
-
-                u.last_name,
-
-                u.suffix,
-
-                u.gender,
-
-
-                -- ============================================
-                -- PERSONAL ADDRESS
-                -- ============================================
-
-                u.province,
-
-                u.municipality,
-
-                u.postal_code,
-
-                u.barangay,
-
-                u.street_address,
-
-
-                -- ============================================
-                -- ACCOUNT CONTACT
-                -- ============================================
-
-                u.email,
-
-                u.contact_number,
-
-                u.username,
-
-                u.user_role
-                    AS user_role,
-
-                u.status
-                    AS status,
-
-                u.created_at,
-
-                u.updated_at,
-
-
-                -- ============================================
-                -- BUSINESS
-                -- ============================================
-
-                p.supplier_profile_id,
-
-                p.business_name,
-
-                p.organization_name,
-
-                p.province
-                    AS business_province,
-
-                p.municipality
-                    AS business_municipality,
-
-                p.postal_code
-                    AS business_postal_code,
-
-                p.barangay
-                    AS business_barangay,
-
-                p.street_address
-                    AS business_street_address,
-
-                p.official_email,
-
-                p.official_contact_number,
-
-                p.created_at
-                    AS business_created_at,
-
-                p.updated_at
-                    AS business_updated_at,
-
-
-                -- ============================================
-                -- DOCUMENTS
-                -- ============================================
-
-                d.supplier_document_id,
-
-                d.government_issued_id,
-
-                d.business_permit,
-
-                d.business_registration,
-
-                d.milling_license,
-
-                d.created_at
-                    AS documents_created_at,
-
-                d.updated_at
-                    AS documents_updated_at
-
-
-            FROM users u
-
-
-            INNER JOIN supplier_profiles p
-
-                ON p.user_id =
-                    u.user_id
-
-
-            LEFT JOIN supplier_documents d
-
-                ON d.user_id =
-                    u.user_id
-
-
-            WHERE
-
-                u.user_id = %s
-
-                AND u.user_role = %s
-
-
-            LIMIT 1
-            """,
-            [
-                numeric_user_id,
-                MILLER_ROLE,
-            ],
-        )
-
-
-        return _row_to_dict(
-            cursor
-        )
+    return None
 
 
 # ============================================================
@@ -735,6 +749,10 @@ def get_miller_account_summary(
     Lightweight Miller record used by
     account service actions.
     """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return None
 
     with connection.cursor() as cursor:
 
@@ -767,7 +785,7 @@ def get_miller_account_summary(
             FROM users u
 
 
-            INNER JOIN supplier_profiles p
+            LEFT JOIN supplier_profiles p
 
                 ON p.user_id =
                     u.user_id
@@ -805,6 +823,10 @@ def miller_exists(
     True only when the ID belongs to a
     Miller Manager account.
     """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return False
 
     with connection.cursor() as cursor:
 
@@ -851,6 +873,10 @@ def get_miller_view_overview(
     Optional ratings/reports tables are checked first
     so missing support tables do not crash the page.
     """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return None
 
     has_ratings = (
         _table_exists(
@@ -1072,6 +1098,10 @@ def get_miller_employees(
         deactivated
         archived
     """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return []
 
     normalized_tab = str(
         employee_tab
@@ -1312,7 +1342,7 @@ def get_miller_employees(
         )
 
 
-        return inquiry_rows + _rows_to_dicts(cursor)
+        return _rows_to_dicts(cursor)
 
 
 # ============================================================
@@ -1335,6 +1365,10 @@ def get_miller_ratings(
 
         return []
 
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return []
 
     with connection.cursor() as cursor:
 
@@ -1412,12 +1446,12 @@ def get_miller_ratings(
                 mr.miller_rating_id DESC
             """,
             [
-                user_id,
+                numeric_user_id,
             ],
         )
 
 
-        return inquiry_rows + _rows_to_dicts(cursor)
+        return _rows_to_dicts(cursor)
 
 
 # ============================================================
@@ -1440,6 +1474,10 @@ def get_miller_reports(
 
         return []
 
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return []
 
     with connection.cursor() as cursor:
 
@@ -1521,12 +1559,12 @@ def get_miller_reports(
                 mr.miller_report_id DESC
             """,
             [
-                user_id,
+                numeric_user_id,
             ],
         )
 
 
-        return inquiry_rows + _rows_to_dicts(cursor)
+        return _rows_to_dicts(cursor)
 
 
 # ============================================================

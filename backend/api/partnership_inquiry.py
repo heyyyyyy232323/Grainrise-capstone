@@ -59,7 +59,7 @@ def _generate_verification_token():
     token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
     return raw_token, token_hash
 
-def _validate_and_save_document(uploaded_file, inquiry_id):
+def _validate_and_save_document(uploaded_file, inquiry_id, prefix="doc"):
     if not uploaded_file:
         return None
     if uploaded_file.size > MAX_FILE_BYTES:
@@ -69,17 +69,201 @@ def _validate_and_save_document(uploaded_file, inquiry_id):
         raise ValueError(f"Unsupported file extension '{ext}'. Allowed: JPG, PNG, WEBP, PDF.")
     
     unique_suffix = secrets.token_hex(16)
-    filename = f"doc_{unique_suffix}{ext}"
+    filename = f"{prefix}_{unique_suffix}{ext}"
     rel_dir = os.path.join("partnership_documents", str(inquiry_id))
     abs_dir = os.path.join(settings.MEDIA_ROOT, rel_dir)
     os.makedirs(abs_dir, exist_ok=True)
     abs_path = os.path.join(abs_dir, filename)
 
+    try:
+        uploaded_file.seek(0)
+    except Exception:
+        pass
+
     with open(abs_path, "wb") as dest:
         for chunk in uploaded_file.chunks():
             dest.write(chunk)
 
+    try:
+        uploaded_file.seek(0)
+    except Exception:
+        pass
+
     return os.path.join(rel_dir, filename).replace("\\", "/")
+
+
+# ============================================================
+# OCR ENGINE & NAME VS ID VALIDATION
+# ============================================================
+
+ID_KEYWORDS = {
+    "republic", "philippines", "pilipinas", "driver", "license", "licence",
+    "identification", "identity", "card", "passport", "postal", "voter",
+    "surname", "name", "pangalan", "apelyido", "given", "middle", "birth",
+    "sex", "philsys", "umid", "sss", "prc", "republika", "komisyon",
+    "department", "kagawaran", "republica", "social", "security", "system",
+    "national", "bureau", "internal", "revenue", "tin", "philhealth",
+}
+
+def _load_id_ocr_dependencies():
+    try:
+        import pymupdf
+        import pytesseract
+        from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+    except ImportError as exc:
+        logger.error("OCR dependencies missing: %s", exc)
+        return None, None, None, None, None, None
+
+    tesseract_cmd = os.getenv("TESSERACT_CMD")
+    if tesseract_cmd and os.path.exists(tesseract_cmd):
+        pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
+    elif os.path.exists(r"C:\Program Files\Tesseract-OCR\tesseract.exe"):
+        pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+    return pymupdf, pytesseract, Image, ImageEnhance, ImageFilter, ImageOps
+
+
+def _prepare_image_for_id_ocr(image, ImageOps, ImageEnhance, ImageFilter):
+    image = image.convert("RGB")
+    longest_side = max(image.width, image.height)
+    if longest_side < 800:
+        scale = 3
+    elif longest_side < 1400:
+        scale = 2
+    else:
+        scale = 1
+
+    if scale > 1:
+        from PIL import Image as PILImage
+        image = image.resize(
+            (image.width * scale, image.height * scale),
+            PILImage.Resampling.LANCZOS,
+        )
+
+    gray = ImageOps.grayscale(image)
+    contrasted = ImageOps.autocontrast(gray)
+    enhanced = ImageEnhance.Contrast(contrasted).enhance(1.6)
+    return enhanced.filter(ImageFilter.SHARPEN)
+
+
+def _extract_text_from_id_file(uploaded_file):
+    pymupdf, pytesseract, Image, ImageEnhance, ImageFilter, ImageOps = _load_id_ocr_dependencies()
+    if not pytesseract:
+        return ""
+
+    filename = getattr(uploaded_file, "name", "") or ""
+    _, ext = os.path.splitext(filename.lower())
+
+    results = []
+    try:
+        uploaded_file.seek(0)
+        if ext == ".pdf":
+            pdf_bytes = uploaded_file.read()
+            doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+            for page in doc:
+                text = page.get_text("text") or ""
+                if len(text.strip()) >= 50:
+                    results.append(text)
+                else:
+                    matrix = pymupdf.Matrix(2.5, 2.5)
+                    pix = page.get_pixmap(matrix=matrix, alpha=False)
+                    pil_img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                    proc_img = _prepare_image_for_id_ocr(pil_img, ImageOps, ImageEnhance, ImageFilter)
+                    for psm in (6, 11, 3):
+                        try:
+                            ocr_txt = pytesseract.image_to_string(proc_img, config=f"--oem 3 --psm {psm}")
+                            if ocr_txt.strip():
+                                results.append(ocr_txt)
+                        except Exception:
+                            pass
+            doc.close()
+        else:
+            img = Image.open(uploaded_file)
+            img.load()
+            proc_img = _prepare_image_for_id_ocr(img, ImageOps, ImageEnhance, ImageFilter)
+            for psm in (6, 11, 3):
+                try:
+                    txt = pytesseract.image_to_string(proc_img, config=f"--oem 3 --psm {psm}")
+                    if txt.strip():
+                        results.append(txt)
+                except Exception:
+                    pass
+    except Exception as exc:
+        logger.exception("Error extracting text from ID: %s", exc)
+    finally:
+        try:
+            uploaded_file.seek(0)
+        except Exception:
+            pass
+
+    return "\n".join(results)
+
+
+def _clean_name_string(s):
+    s = str(s or "").lower().replace("ñ", "n")
+    s = re.sub(r"[\.,\-/\'\"\(\):;#]", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _verify_name_against_id(legal_name, uploaded_id_file):
+    """
+    Compare entered legal name with name read from uploaded ID using OCR.
+    Returns: (validation_status, reason)
+    validation_status is one of: 'MATCH', 'MISMATCH', 'UNCERTAIN'
+    """
+    if not uploaded_id_file:
+        return "UNCERTAIN", "No government ID uploaded."
+
+    try:
+        ocr_text = _extract_text_from_id_file(uploaded_id_file)
+    except Exception as exc:
+        logger.exception("OCR extraction failed: %s", exc)
+        return "UNCERTAIN", "Could not process document with OCR."
+
+    ocr_clean = _clean_name_string(ocr_text)
+    ocr_compact = ocr_clean.replace(" ", "")
+    ocr_words = ocr_clean.split()
+
+    alpha_chars = re.findall(r"[a-z]", ocr_clean)
+    if len(alpha_chars) < 25:
+        logger.info("OCR returned fewer than 25 alpha characters (%d)", len(alpha_chars))
+        return "UNCERTAIN", "Image too blurry or insufficient text."
+
+    has_id_context = any(k in ocr_clean for k in ID_KEYWORDS)
+
+    name_clean = _clean_name_string(legal_name)
+    name_words = [w for w in name_clean.split() if w not in {"mr", "ms", "mrs", "dr", "atty", "engr"}]
+    if not name_words:
+        return "MISMATCH", "Full legal name is required."
+
+    suffixes = {"jr", "sr", "ii", "iii", "iv", "v", "junior", "senior"}
+    core_words = [w for w in name_words if w not in suffixes]
+
+    matched_words = []
+    import difflib
+    for w in core_words:
+        if len(w) == 1:
+            # Middle initial match
+            matched = any(ow.startswith(w) for ow in ocr_words)
+        else:
+            # Full word, compact substring, fuzzy, or initial match
+            matched = (
+                (w in ocr_words)
+                or (w in ocr_compact)
+                or any(difflib.SequenceMatcher(None, w, ow).ratio() >= 0.82 for ow in ocr_words if len(ow) >= len(w) - 1)
+                or any(len(ow) == 1 and w.startswith(ow) for ow in ocr_words)
+            )
+        if matched:
+            matched_words.append(w)
+
+    significant_words = [w for w in core_words if len(w) > 1]
+    if significant_words and len(matched_words) >= len(significant_words) * 0.75:
+        return "MATCH", "Name verified."
+
+    if has_id_context and len(matched_words) == 0:
+        return "MISMATCH", "Valid ID detected but legal name was not found."
+
+    return "UNCERTAIN", "Could not confidently verify that the name matches."
 
 def _send_verification_email(name, email, role, raw_token):
     frontend_base = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
@@ -301,16 +485,15 @@ def submit_partnership_inquiry(request):
     raw_phone = data.get("contact_number") or data.get("contact")
     raw_message = data.get("message")
 
-    # Support multiple document uploads
-    uploaded_docs = request.FILES.getlist("business_verification_documents")
-    if not uploaded_docs:
-        uploaded_docs = request.FILES.getlist("business_verification_document")
-    if not uploaded_docs and request.FILES.get("business_verification_document"):
-        uploaded_docs = [request.FILES.get("business_verification_document")]
+    # Two required single-file uploads: government_issued_id and business_verification_document
+    uploaded_gov_id = request.FILES.get("government_issued_id")
+    uploaded_biz_doc = request.FILES.get("business_verification_document")
+    if not uploaded_biz_doc:
+        uploaded_biz_doc = request.FILES.get("business_verification_documents")
 
     errors = {}
     if not name:
-        errors["name"] = "Name is required."
+        errors["name"] = "Full legal name is required."
     else:
         name_used, name_err = _check_name_used(name)
         if name_used:
@@ -345,35 +528,66 @@ def submit_partnership_inquiry(request):
     if not clean_msg:
         errors["message"] = "Partnership message is required."
 
-    if not uploaded_docs:
-        errors["business_verification_document"] = "Please upload at least one business verification document."
+    if not uploaded_gov_id:
+        errors["government_issued_id"] = "Valid Government-Issued ID is required."
     else:
-        for doc in uploaded_docs:
-            if doc.size > MAX_FILE_BYTES:
-                errors["business_verification_document"] = f"File '{doc.name}' exceeds the 5MB size limit."
-                break
-            _, ext = os.path.splitext((doc.name or "").lower())
+        if uploaded_gov_id.size > MAX_FILE_BYTES:
+            errors["government_issued_id"] = f"File '{uploaded_gov_id.name}' exceeds the 5MB size limit."
+        else:
+            _, ext = os.path.splitext((uploaded_gov_id.name or "").lower())
             if ext not in ALLOWED_EXTENSIONS:
-                errors["business_verification_document"] = f"File '{doc.name}' has an unsupported file type '{ext}'. Allowed: JPG, PNG, WEBP, PDF."
-                break
+                errors["government_issued_id"] = f"File '{uploaded_gov_id.name}' has an unsupported file type '{ext}'. Allowed: JPG, PNG, WEBP, PDF."
+
+    if not uploaded_biz_doc:
+        errors["business_verification_document"] = "Valid Business Document is required."
+    else:
+        if uploaded_biz_doc.size > MAX_FILE_BYTES:
+            errors["business_verification_document"] = f"File '{uploaded_biz_doc.name}' exceeds the 5MB size limit."
+        else:
+            _, ext = os.path.splitext((uploaded_biz_doc.name or "").lower())
+            if ext not in ALLOWED_EXTENSIONS:
+                errors["business_verification_document"] = f"File '{uploaded_biz_doc.name}' has an unsupported file type '{ext}'. Allowed: JPG, PNG, WEBP, PDF."
 
     if errors:
         return Response(errors, status=http_status.HTTP_400_BAD_REQUEST)
 
-    # Save documents
+    # Validate Legal Name vs Government-Issued ID via OCR
+    validation_status, reason = _verify_name_against_id(name, uploaded_gov_id)
+    logger.info("Partnership Inquiry name-vs-ID verification: status=%s, reason=%s", validation_status, reason)
+
+    if validation_status == "MISMATCH":
+        return Response(
+            {
+                "success": False,
+                "validation_status": "MISMATCH",
+                "error_code": "NAME_MISMATCH",
+                "title": "Name Does Not Match ID",
+                "detail": "The full legal name you entered does not match the name detected on your uploaded government-issued ID. Please enter your name exactly as shown on your ID or upload the correct document.",
+            },
+            status=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
+
+    if validation_status == "UNCERTAIN":
+        return Response(
+            {
+                "success": False,
+                "validation_status": "UNCERTAIN",
+                "error_code": "NAME_UNCERTAIN",
+                "title": "We Could Not Verify the Name",
+                "detail": "We could not confidently verify that the name you entered matches the name on your uploaded ID. Please review your legal name or upload a clearer ID image.",
+            },
+            status=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
+
+    # Save documents only after validation passes
     import uuid
     app_uuid = uuid.uuid4()
-    saved_doc_paths = []
     try:
-        for doc in uploaded_docs:
-            rel_path = _validate_and_save_document(doc, app_uuid)
-            if rel_path:
-                saved_doc_paths.append(rel_path)
+        gov_id_path = _validate_and_save_document(uploaded_gov_id, app_uuid, prefix="gov_id")
+        biz_doc_path = _validate_and_save_document(uploaded_biz_doc, app_uuid, prefix="biz_doc")
     except Exception as exc:
         logger.exception("Failed to save documents: %s", exc)
         return Response({"detail": "Failed to store uploaded document."}, status=http_status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    doc_storage_val = json.dumps(saved_doc_paths) if len(saved_doc_paths) > 1 else (saved_doc_paths[0] if saved_doc_paths else None)
 
     # Save temporary inquiry for email verification
     raw_token, token_hash = _generate_verification_token()
@@ -388,14 +602,22 @@ def submit_partnership_inquiry(request):
             partner_role=partner_role,
             contact_number=normalized_phone,
             message=clean_msg,
-            business_verification_document=doc_storage_val,
+            government_issued_id=gov_id_path,
+            business_verification_document=biz_doc_path,
             status=PartnershipInquiry.Status.TO_REVIEW,
             email_verified=False,
             verification_token_hash=token_hash,
             verification_expires_at=expires_at,
         )
     except Exception as exc:
-        logger.exception("Error creating inquiry: %s", exc)
+        logger.exception("Error creating partnership inquiry: %s", exc)
+        return Response(
+            {
+                "success": False,
+                "detail": "Unable to save partnership application.",
+            },
+            status=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
     # Send verification email
     try:
@@ -405,11 +627,11 @@ def submit_partnership_inquiry(request):
 
     return Response({
         "success": True,
+        "validation_status": "MATCH",
         "message": "Your partnership application has been received and submitted for review.",
         "requires_email_verification": True,
         "inquiry_id": str(app_uuid),
         "email": email,
-        "uploaded_files_count": len(saved_doc_paths),
     }, status=http_status.HTTP_201_CREATED)
 
 

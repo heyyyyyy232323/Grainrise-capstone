@@ -26,7 +26,7 @@ const POLICY_VERSION = '1.0';
 const API_BASE = `${import.meta.env.VITE_API_BASE_URL}/api`;
 
 function validateName(v) {
-  if (!v.trim()) return 'Name is required.';
+  if (!v.trim()) return 'Full legal name is required.';
   if (!NAME_RE.test(v)) return 'Only letters, spaces, hyphens, and apostrophes are allowed.';
   if (/\s{2,}/.test(v)) return 'Multiple consecutive spaces are not allowed.';
   return '';
@@ -111,18 +111,18 @@ export default function PartnerWithUs() {
   const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
   const verifyingRef = useRef(false);
 
-  /* ── Image / Document state ── */
-  const [imageFiles, setImageFiles] = useState([]);
+  /* ── Document states: government_issued_id & business_verification_document ── */
+  const [govIdFile, setGovIdFile] = useState(null);
+  const [bizDocFile, setBizDocFile] = useState(null);
+  const [govIdError, setGovIdError] = useState('');
+  const [bizDocError, setBizDocError] = useState('');
+  const [isGovDragging, setIsGovDragging] = useState(false);
+  const [isBizDragging, setIsBizDragging] = useState(false);
+  const govIdInputRef = useRef(null);
+  const bizDocInputRef = useRef(null);
+  const [mismatchModalOpen, setMismatchModalOpen] = useState(false);
+  const [uncertainModalOpen, setUncertainModalOpen] = useState(false);
   const [availabilityChecking, setAvailabilityChecking] = useState({ name: false, email: false, organization: false });
-  const [imageError, setImageError] = useState('');
-  const [imageLoading, setImageLoading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const cameraInputRef = useRef(null);
-  const videoRef = useRef(null);
-  const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
-  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
-  const [cameraActive, setCameraActive] = useState(false);
-  const [cameraError, setCameraError] = useState('');
 
   /* -- Check for token in URL path or query parameter on mount/change -- calls real API -- */
   useEffect(() => {
@@ -220,184 +220,73 @@ export default function PartnerWithUs() {
     Boolean(formData.partnerRole) && !validateRole(formData.partnerRole) &&
     formData.contactNumber && !validatePhone(formData.contactNumber) &&
     formData.message.trim() && !validateMessage(formData.message) &&
-    imageFiles.length > 0 && !imageError &&
+    Boolean(govIdFile) && !govIdError &&
+    Boolean(bizDocFile) && !bizDocError &&
     agreedToTerms;
 
-    /* ── Multi-image Document processing ── */
-  const processImageFiles = (files) => {
-    if (!files || files.length === 0) return;
-    setImageLoading(true);
-    setImageError('');
+  /* ── Single Document Processing (Government-Issued ID & Business Document) ── */
+  const processSingleFile = (file, type) => {
+    if (!file) return;
+    const isGov = type === 'govId';
+    const setFile = isGov ? setGovIdFile : setBizDocFile;
+    const setError = isGov ? setGovIdError : setBizDocError;
+    const inputRef = isGov ? govIdInputRef : bizDocInputRef;
 
-    const fileList = Array.from(files);
-    for (const f of fileList) {
-      const err = validateImageFile(f);
-      if (err) {
-        setImageError(err);
-        setImageLoading(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        if (cameraInputRef.current) cameraInputRef.current.value = '';
-        return;
-      }
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.pdf'];
+    if (!allowed.includes(ext)) {
+      setError('Only JPG, PNG, WEBP, and PDF files are allowed.');
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      setError('File size must not exceed 5 MB.');
+      if (inputRef.current) inputRef.current.value = '';
+      return;
     }
 
-    let loaded = 0;
-    const newDocs = [];
-    fileList.forEach(file => {
+    setError('');
+    const isPdf = ext === '.pdf';
+    if (isPdf) {
+      setFile({
+        file,
+        preview: null,
+        name: file.name,
+        size: file.size,
+        isPdf: true,
+      });
+      if (inputRef.current) inputRef.current.value = '';
+    } else {
       const reader = new FileReader();
       reader.onload = (e) => {
-        newDocs.push({
-          id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        setFile({
           file,
           preview: e.target.result,
           name: file.name,
           size: file.size,
+          isPdf: false,
         });
-        loaded++;
-        if (loaded === fileList.length) {
-          setImageFiles(prev => [...prev, ...newDocs]);
-          setImageLoading(false);
-          setImageError('');
-          if (fileInputRef.current) fileInputRef.current.value = '';
-          if (cameraInputRef.current) cameraInputRef.current.value = '';
-        }
+        if (inputRef.current) inputRef.current.value = '';
       };
       reader.onerror = () => {
-        loaded++;
-        if (loaded === fileList.length) {
-          setImageLoading(false);
-          setImageError('Failed to read some document images.');
-        }
+        setError('Failed to read image file.');
       };
       reader.readAsDataURL(file);
-    });
+    }
   };
 
-  const handleFileInputChange = (e) => {
-    const files = e.target.files;
-    if (files && files.length > 0) processImageFiles(files);
-  };
-
-  const handleRemoveImage = (idToRemove) => {
-    setImageFiles(prev => {
-      const next = prev.filter(item => item.id !== idToRemove);
-      if (submitAttempted && next.length === 0) {
-        setImageError('Please upload at least one business verification document.');
-      } else {
-        setImageError('');
-      }
-      return next;
-    });
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    if (cameraInputRef.current) cameraInputRef.current.value = '';
-  };
-
-  /* ── Open Document Source Modal ── */
-  const handleOpenSourceModal = () => {
-    setIsSourceModalOpen(true);
-  };
-
-  /* ── Choose Upload File from Device ── */
-  const handleChooseUpload = () => {
-    setIsSourceModalOpen(false);
-    fileInputRef.current?.click();
-  };
-
-  /* ── Choose Take a Photo (Camera) ── */
-  const handleChooseCamera = () => {
-    setIsSourceModalOpen(false);
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
-    if (isMobile || !navigator.mediaDevices?.getUserMedia) {
-      cameraInputRef.current?.click();
+  const handleRemoveSingleFile = (type) => {
+    if (type === 'govId') {
+      setGovIdFile(null);
+      if (submitAttempted) setGovIdError('Valid Government-Issued ID is required.');
+      else setGovIdError('');
+      if (govIdInputRef.current) govIdInputRef.current.value = '';
     } else {
-      setIsCameraModalOpen(true);
-      setCameraError('');
-      setCameraActive(false);
+      setBizDocFile(null);
+      if (submitAttempted) setBizDocError('Valid Business Document is required.');
+      else setBizDocError('');
+      if (bizDocInputRef.current) bizDocInputRef.current.value = '';
     }
-  };
-
-  /* ── Stop Webcam Stream Helper ── */
-  const stopWebcamStream = () => {
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject;
-      stream.getTracks().forEach(t => t.stop());
-      videoRef.current.srcObject = null;
-    }
-    setCameraActive(false);
-  };
-
-  /* ── Start Webcam when Camera Modal Opens ── */
-  useEffect(() => {
-    if (!isCameraModalOpen) {
-      stopWebcamStream();
-      return;
-    }
-
-    let isMounted = true;
-    navigator.mediaDevices?.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-      audio: false,
-    })
-      .then((stream) => {
-        if (!isMounted) {
-          stream.getTracks().forEach(t => t.stop());
-          return;
-        }
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().catch(() => { });
-        }
-        setCameraActive(true);
-        setCameraError('');
-      })
-      .catch((err) => {
-        console.warn('Webcam stream error:', err);
-        setCameraError('Unable to access webcam. Switching to file camera...');
-        setTimeout(() => {
-          setIsCameraModalOpen(false);
-          cameraInputRef.current?.click();
-        }, 1200);
-      });
-
-    return () => {
-      isMounted = false;
-      stopWebcamStream();
-    };
-  }, [isCameraModalOpen]);
-
-  /* ── Capture Frame from Live Webcam ── */
-  const handleCaptureWebcam = () => {
-    const video = videoRef.current;
-    if (!video || !video.videoWidth) return;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const file = new File([blob], `document_capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
-        processImageFiles([file]);
-      }
-      setIsCameraModalOpen(false);
-      stopWebcamStream();
-    }, 'image/jpeg', 0.92);
-  };
-
-  const handleCloseCameraModal = () => {
-    setIsCameraModalOpen(false);
-    stopWebcamStream();
-  };
-
-  const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
-  const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) processImageFiles([file]);
   };
 
   /* ── Field handlers ── */
@@ -485,13 +374,21 @@ export default function PartnerWithUs() {
       contactNumber: validatePhone(formData.contactNumber),
       message: validateMessage(formData.message),
     };
-    if (imageFiles.length === 0) {
-      setImageError('Please upload at least one business verification document.');
+    if (!govIdFile) {
+      setGovIdError('Valid Government-Issued ID is required.');
+    }
+    if (!bizDocFile) {
+      setBizDocError('Valid Business Document is required.');
     }
     setErrors(newErrors);
     setTouched({ name: true, email: true, organization: true, contactNumber: true, message: true });
 
-    if (Object.values(newErrors).some(v => v) || imageFiles.length === 0 || imageError || !agreedToTerms) return;
+    if (
+      Object.values(newErrors).some(v => v) ||
+      !govIdFile || govIdError ||
+      !bizDocFile || bizDocError ||
+      !agreedToTerms
+    ) return;
 
     setIsSubmitting(true);
 
@@ -506,10 +403,8 @@ export default function PartnerWithUs() {
         : `+63${formData.contactNumber}`;
       fd.append('contact_number', phoneToSend);
       fd.append('message', formData.message);
-      imageFiles.forEach((docItem) => {
-        fd.append('business_verification_documents', docItem.file);
-        fd.append('business_verification_document', docItem.file);
-      });
+      fd.append('government_issued_id', govIdFile.file);
+      fd.append('business_verification_document', bizDocFile.file);
 
       const res = await fetch(`${API_BASE}/partnership-inquiries/`, {
         method: 'POST',
@@ -518,14 +413,30 @@ export default function PartnerWithUs() {
 
       const data = await res.json().catch(() => ({}));
 
+      if (data.validation_status === 'MISMATCH' || data.error_code === 'NAME_MISMATCH' || data.code === 'NAME_ID_MISMATCH') {
+        setMismatchModalOpen(true);
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (data.validation_status === 'UNCERTAIN' || data.error_code === 'NAME_UNCERTAIN' || data.code === 'NAME_ID_UNCERTAIN') {
+        setUncertainModalOpen(true);
+        setIsSubmitting(false);
+        return;
+      }
+
       if (res.status === 201 && data.success) {
         // Happy path: inquiry saved & verification email sent
+        setMismatchModalOpen(false);
+        setUncertainModalOpen(false);
         setInquiryId(data.inquiry_id || '');
         setViewState('awaiting_verification');
         setResendCooldown(60);
         setResendMessage('');
       } else if (res.status === 503 && data.inquiry_id) {
         // Inquiry saved but email send failed — still show awaiting screen
+        setMismatchModalOpen(false);
+        setUncertainModalOpen(false);
         setInquiryId(data.inquiry_id);
         setViewState('awaiting_verification');
         setResendCooldown(0);
@@ -540,7 +451,8 @@ export default function PartnerWithUs() {
         if (data.partner_role) backendErrors.partnerRole = data.partner_role;
         if (data.contact_number) backendErrors.contactNumber = data.contact_number;
         if (data.message) backendErrors.message = data.message;
-        if (data.business_verification_document) setImageError(data.business_verification_document);
+        if (data.government_issued_id) setGovIdError(data.government_issued_id);
+        if (data.business_verification_document) setBizDocError(data.business_verification_document);
         setErrors(prev => ({ ...prev, ...backendErrors }));
       } else {
         // Generic server error
@@ -592,16 +504,18 @@ export default function PartnerWithUs() {
     setTouched({ name: false, email: false, organization: false, partnerRole: false, contactNumber: false, message: false });
     setSubmitAttempted(false);
     setAgreedToTerms(false);
-    setImageFiles([]);
-    setImageError('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    setGovIdFile(null);
+    setBizDocFile(null);
+    setGovIdError('');
+    setBizDocError('');
+    if (govIdInputRef.current) govIdInputRef.current.value = '';
+    if (bizDocInputRef.current) bizDocInputRef.current.value = '';
     setViewState('form');
     navigate('/partner-with-us', { replace: true });
   };
 
   const phoneError = (touched.contactNumber || submitAttempted) && errors.contactNumber;
   const msgCharCount = formData.message.replace(/\u00A0/g, ' ').trim().length;
-  const documentHasError = (submitAttempted && imageFiles.length === 0) || Boolean(imageError);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f7f2] dark:bg-[#07150d] text-gray-800 dark:text-gray-200 font-sans transition-colors">
@@ -837,15 +751,18 @@ export default function PartnerWithUs() {
                   <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
 
-                      {/* Name */}
+                      {/* Full Legal Name */}
                       <div className="flex flex-col">
-                        <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5" htmlFor="name">
-                          NAME <span className="text-red-500">*</span>
+                        <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1 flex items-center gap-0.5" htmlFor="name">
+                          FULL LEGAL NAME <span className="text-red-500">*</span>
                         </label>
+                        <p className="text-[10.5px] text-gray-500 dark:text-gray-400 mb-1.5 leading-tight">
+                          Enter your name exactly as shown on your government-issued ID.
+                        </p>
                         <input
                           id="name" name="name" type="text"
                           className={inputCls((touched.name || submitAttempted) && errors.name)}
-                          placeholder="Enter your full name"
+                          placeholder="Enter your full legal name"
                           value={formData.name}
                           onChange={handleNameChange}
                           onPaste={handleNamePaste}
@@ -855,25 +772,51 @@ export default function PartnerWithUs() {
                       </div>
 
                       {/* Email */}
-                      <div className="flex flex-col">
-                        <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5" htmlFor="email">
-                          EMAIL ADDRESS <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          id="email" name="email" type="email"
-                          className={inputCls((touched.email || submitAttempted) && errors.email)}
-                          placeholder="Enter your email address"
-                          value={formData.email}
-                          onChange={handleEmailChange}
-                          onBlur={() => {
-                            setTouched(p => ({ ...p, email: true }));
-                            const err = validateEmail(formData.email, true);
-                            setErrors(p => ({ ...p, email: err }));
-                            if (!err) checkAvailability('email', formData.email);
-                          }}
-                        />
-                        <FieldError msg={(touched.email || submitAttempted) ? errors.email : ''} />
-                      </div>
+<div className="flex flex-col pt-[10px]">
+  {/* spacer para kapantay ng FULL LEGAL NAME label */}
+  <div className="h-[17px] mb-1" aria-hidden="true" />
+
+  <label
+    className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5 leading-tight"
+    htmlFor="email"
+  >
+    EMAIL ADDRESS <span className="text-red-500">*</span>
+  </label>
+
+  <input
+    id="email"
+    name="email"
+    type="email"
+    className={inputCls(
+      (touched.email || submitAttempted) && errors.email
+    )}
+    placeholder="Enter your email address"
+    value={formData.email}
+    onChange={handleEmailChange}
+    onBlur={() => {
+      setTouched(p => ({ ...p, email: true }));
+
+      const err = validateEmail(formData.email, true);
+
+      setErrors(p => ({
+        ...p,
+        email: err,
+      }));
+
+      if (!err) {
+        checkAvailability('email', formData.email);
+      }
+    }}
+  />
+
+  <FieldError
+    msg={
+      (touched.email || submitAttempted)
+        ? errors.email
+        : ''
+    }
+  />
+</div>
 
 
                       {/* Intended Partner Role Dropdown */}
@@ -972,167 +915,204 @@ export default function PartnerWithUs() {
                         </div>
                       </div>
 
-                      {/* ── Business Verification Document Upload (Required) ── */}
+                      {/* ── 1. Valid Government-Issued ID (Required single file) ── */}
                       <div className="flex flex-col col-span-full">
                         <div className="flex flex-col mb-1.5">
                           <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase flex items-center gap-0.5">
-                            BUSINESS VERIFICATION DOCUMENT <span className="text-red-500">*</span>
+                            VALID GOVERNMENT-ISSUED ID <span className="text-red-500">*</span>
                           </label>
                           <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed mt-0.5">
-                            Required for partnership qualification. Please upload a clear photo or scanned copy of your business credential
-                            {formData.partnerRole === 'miller' && " (e.g., Milling License, BIR Form 2303, Mayor's / Business Permit, or DTI / SEC Registration)."}
-                            {formData.partnerRole === 'warehouse' && " (e.g., Warehouse Operating License, Mayor's Permit, DTI / SEC, or Fire Safety Certificate)."}
-                            {formData.partnerRole === 'retailer' && " (e.g., Barangay / Mayor's Business Permit, DTI / SEC Registration, or Valid ID)."}
-                            {!formData.partnerRole && " (e.g., BIR Form 2303, Mayor's / Business Permit, DTI / SEC Registration, or RSBSA Certificate)."}
+                            Upload a clear photo or scanned copy of your government-issued ID (e.g., Driver's License, Passport, UMID, PhilSys National ID, Postal ID, PRC ID).
                           </p>
                         </div>
 
                         <input
-                          ref={fileInputRef}
+                          ref={govIdInputRef}
                           type="file"
-                          multiple
-                          accept="image/jpeg,image/png,image/webp"
+                          accept="image/jpeg,image/png,image/webp,application/pdf"
                           className="hidden"
-                          onChange={handleFileInputChange}
-                        />
-                        <input
-                          ref={cameraInputRef}
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          className="hidden"
-                          onChange={handleFileInputChange}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) processSingleFile(file, 'govId');
+                          }}
                         />
 
-                        {imageFiles.length > 0 ? (
-                          <div className="flex flex-col gap-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
-                                <FileCheck size={14} className="text-[#00580C] dark:text-emerald-400" />
-                                Attached Documents ({imageFiles.length})
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={handleChooseUpload}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-[#00580C] dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-md border border-emerald-200 dark:border-emerald-800 transition-colors cursor-pointer"
-                                >
-                                  <Plus size={13} />
-                                  <span>Add More Files</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleChooseCamera}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-md border border-gray-200 dark:border-gray-700 transition-colors cursor-pointer"
-                                >
-                                  <Camera size={13} />
-                                  <span>Take Photo</span>
-                                </button>
+                        {govIdFile ? (
+                          <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/30">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="relative w-11 h-11 rounded-md overflow-hidden border border-emerald-200 dark:border-emerald-800 shrink-0 bg-white dark:bg-emerald-900/40 flex items-center justify-center">
+                                {govIdFile.isPdf ? (
+                                  <FileCheck size={20} className="text-[#00580C] dark:text-emerald-400" />
+                                ) : (
+                                  <img src={govIdFile.preview} alt={govIdFile.name} className="w-full h-full object-cover" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate" title={govIdFile.name}>
+                                  {govIdFile.name}
+                                </p>
+                                <p className="text-[10px] text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
+                                  <CheckCircle2 size={10} />
+                                  {formatBytes(govIdFile.size)} • Attached
+                                </p>
                               </div>
                             </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                              {imageFiles.map((docItem) => (
-                                <div
-                                  key={docItem.id}
-                                  className="flex items-center gap-3 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800/80 bg-emerald-50/60 dark:bg-emerald-950/30 transition-all hover:shadow-xs"
-                                >
-                                  <div className="relative w-12 h-12 rounded-md overflow-hidden border border-emerald-200 dark:border-emerald-800 shrink-0 bg-black/5">
-                                    <img src={docItem.preview} alt={docItem.name} className="w-full h-full object-cover" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate" title={docItem.name}>
-                                      {docItem.name}
-                                    </p>
-                                    <p className="text-[10px] text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
-                                      <CheckCircle2 size={10} />
-                                      {formatBytes(docItem.size)} • Attached
-                                    </p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveImage(docItem.id)}
-                                    className="w-6 h-6 flex items-center justify-center rounded-full bg-white dark:bg-[#163321] border border-gray-200 dark:border-[#2d5c3c] text-gray-400 hover:text-red-500 hover:border-red-300 transition-colors shrink-0 cursor-pointer"
-                                    aria-label="Remove document"
-                                  >
-                                    <X size={12} />
-                                  </button>
-                                </div>
-                              ))}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => govIdInputRef.current?.click()}
+                                className="px-2.5 py-1 text-xs font-semibold text-[#00580C] dark:text-emerald-400 bg-white dark:bg-[#163321] border border-emerald-200 dark:border-emerald-800 rounded-md hover:bg-emerald-50 transition-colors cursor-pointer"
+                              >
+                                Change
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSingleFile('govId')}
+                                className="w-6 h-6 flex items-center justify-center rounded-full bg-white dark:bg-[#163321] border border-gray-200 dark:border-[#2d5c3c] text-gray-400 hover:text-red-500 hover:border-red-300 transition-colors cursor-pointer"
+                                aria-label="Remove government ID"
+                              >
+                                <X size={12} />
+                              </button>
                             </div>
-
-                            {/* Drop zone to add more */}
-                            <div
-                              onClick={handleOpenSourceModal}
-                              onDragOver={handleDragOver}
-                              onDragLeave={handleDragLeave}
-                              onDrop={handleDrop}
-                              className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed cursor-pointer transition-all ${
-                                isDragging
-                                  ? 'border-[#00580C] dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30'
-                                  : 'border-gray-200 dark:border-[#244f35] hover:border-[#00580C] dark:hover:border-emerald-600 bg-white/50 dark:bg-[#163321]/50'
-                              }`}
-                            >
-                              <Plus size={14} className="text-[#00580C] dark:text-emerald-400" />
-                              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
-                                Click or drag more documents here
-                              </span>
-                            </div>
-                          </div>
-                        ) : imageLoading ? (
-                          <div className="flex items-center justify-center gap-2 p-5 rounded-lg border border-gray-200 dark:border-[#2d5c3c] bg-white dark:bg-[#163321]">
-                            <Loader2 size={16} className="animate-spin text-[#00580C] dark:text-emerald-400" />
-                            <span className="text-xs text-gray-500 dark:text-gray-400">Validating documents...</span>
                           </div>
                         ) : (
                           <div
-                            onClick={handleOpenSourceModal}
-                            onDragOver={handleDragOver}
-                            onDragLeave={handleDragLeave}
-                            onDrop={handleDrop}
-                            className={`flex flex-col items-center justify-center gap-2.5 p-6 rounded-lg border-2 border-dashed cursor-pointer transition-all
-                              ${documentHasError
+                            onClick={() => govIdInputRef.current?.click()}
+                            onDragOver={(e) => { e.preventDefault(); setIsGovDragging(true); }}
+                            onDragLeave={() => setIsGovDragging(false)}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              setIsGovDragging(false);
+                              const file = e.dataTransfer.files?.[0];
+                              if (file) processSingleFile(file, 'govId');
+                            }}
+                            className={`flex flex-col items-center justify-center gap-2 p-5 rounded-lg border-2 border-dashed cursor-pointer transition-all
+                              ${(submitAttempted && govIdError)
                                 ? 'border-red-400 dark:border-red-500 bg-red-50/40 dark:bg-red-950/20 ring-2 ring-red-200/40'
-                                : isDragging
+                                : isGovDragging
                                   ? 'border-[#00580C] dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 scale-[1.01]'
-                                  : 'border-gray-300 dark:border-[#2d5c3c] hover:border-[#00580C] dark:hover:border-emerald-600 bg-white dark:bg-[#163321] hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20'}`}
+                                  : 'border-gray-300 dark:border-[#2d5c3c] hover:border-[#00580C] dark:hover:border-emerald-600 bg-white dark:bg-[#163321] hover:bg-emerald-50/30'}`}
                           >
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isDragging ? 'bg-emerald-100 dark:bg-emerald-900 text-[#00580C] dark:text-emerald-400' : 'bg-emerald-50 dark:bg-[#1e3d2a] text-[#00580C] dark:text-emerald-400'}`}>
-                              <UploadCloud size={20} />
+                            <div className="w-9 h-9 rounded-full flex items-center justify-center bg-emerald-50 dark:bg-[#1e3d2a] text-[#00580C] dark:text-emerald-400">
+                              <UploadCloud size={18} />
                             </div>
                             <div className="text-center">
-                              <p className="text-xs sm:text-[13px] font-semibold text-gray-800 dark:text-gray-200">
-                                {isDragging ? 'Drop documents here' : 'Click to attach documents or drag & drop'}
+                              <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                                {isGovDragging ? 'Drop Government ID here' : 'Click to upload Government-Issued ID or drag & drop'}
                               </p>
-                              <div className="flex items-center justify-center gap-2.5 mt-2.5">
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); handleChooseUpload(); }}
-                                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-gray-200 dark:border-[#244f35] bg-white dark:bg-[#163321] text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-[#00580C] dark:hover:border-emerald-500 hover:text-[#00580C] dark:hover:text-emerald-400 shadow-sm transition-all cursor-pointer"
-                                >
-                                  <UploadCloud size={14} className="text-[#00580C] dark:text-emerald-400" />
-                                  <span>Upload Files</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); handleChooseCamera(); }}
-                                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-gray-200 dark:border-[#244f35] bg-white dark:bg-[#163321] text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-[#00580C] dark:hover:border-emerald-500 hover:text-[#00580C] dark:hover:text-emerald-400 shadow-sm transition-all cursor-pointer"
-                                >
-                                  <Camera size={14} className="text-[#00580C] dark:text-emerald-400" />
-                                  <span>Take a Photo</span>
-                                </button>
-                              </div>
                               <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-                                Supported formats: JPG, PNG, WEBP • Maximum 5 MB per file • Multiple files supported
+                                Supported formats: JPG, PNG, WEBP, PDF • Maximum 5 MB
                               </p>
                             </div>
                           </div>
                         )}
-
-                        {documentHasError && (
+                        {(submitAttempted && govIdError) && (
                           <p className="mt-1.5 text-[11px] text-red-500 leading-tight flex items-center gap-1 font-medium">
                             <ImageIcon size={12} className="shrink-0" />
-                            {imageError || 'Please upload a valid business verification document.'}
+                            {govIdError}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* ── 2. Valid Business Document (Required single file) ── */}
+                      <div className="flex flex-col col-span-full">
+                        <div className="flex flex-col mb-1.5">
+                          <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase flex items-center gap-0.5">
+                            VALID BUSINESS DOCUMENT <span className="text-red-500">*</span>
+                          </label>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed mt-0.5">
+                            Upload a clear photo or scanned copy of your valid business document
+                            {formData.partnerRole === 'miller' && " (e.g., Milling License, BIR Form 2303, Mayor's / Business Permit, or DTI / SEC Registration)."}
+                            {formData.partnerRole === 'warehouse' && " (e.g., Warehouse Operating License, Mayor's Permit, DTI / SEC, or Fire Safety Certificate)."}
+                            {formData.partnerRole === 'retailer' && " (e.g., Barangay / Mayor's Business Permit, or DTI / SEC Registration)."}
+                            {!formData.partnerRole && " (e.g., BIR Form 2303, Mayor's / Business Permit, or DTI / SEC Registration)."}
+                          </p>
+                        </div>
+
+                        <input
+                          ref={bizDocInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,application/pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) processSingleFile(file, 'bizDoc');
+                          }}
+                        />
+
+                        {bizDocFile ? (
+                          <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/30">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="relative w-11 h-11 rounded-md overflow-hidden border border-emerald-200 dark:border-emerald-800 shrink-0 bg-white dark:bg-emerald-900/40 flex items-center justify-center">
+                                {bizDocFile.isPdf ? (
+                                  <FileCheck size={20} className="text-[#00580C] dark:text-emerald-400" />
+                                ) : (
+                                  <img src={bizDocFile.preview} alt={bizDocFile.name} className="w-full h-full object-cover" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate" title={bizDocFile.name}>
+                                  {bizDocFile.name}
+                                </p>
+                                <p className="text-[10px] text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
+                                  <CheckCircle2 size={10} />
+                                  {formatBytes(bizDocFile.size)} • Attached
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => bizDocInputRef.current?.click()}
+                                className="px-2.5 py-1 text-xs font-semibold text-[#00580C] dark:text-emerald-400 bg-white dark:bg-[#163321] border border-emerald-200 dark:border-emerald-800 rounded-md hover:bg-emerald-50 transition-colors cursor-pointer"
+                              >
+                                Change
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSingleFile('bizDoc')}
+                                className="w-6 h-6 flex items-center justify-center rounded-full bg-white dark:bg-[#163321] border border-gray-200 dark:border-[#2d5c3c] text-gray-400 hover:text-red-500 hover:border-red-300 transition-colors cursor-pointer"
+                                aria-label="Remove business document"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            onClick={() => bizDocInputRef.current?.click()}
+                            onDragOver={(e) => { e.preventDefault(); setIsBizDragging(true); }}
+                            onDragLeave={() => setIsBizDragging(false)}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              setIsBizDragging(false);
+                              const file = e.dataTransfer.files?.[0];
+                              if (file) processSingleFile(file, 'bizDoc');
+                            }}
+                            className={`flex flex-col items-center justify-center gap-2 p-5 rounded-lg border-2 border-dashed cursor-pointer transition-all
+                              ${(submitAttempted && bizDocError)
+                                ? 'border-red-400 dark:border-red-500 bg-red-50/40 dark:bg-red-950/20 ring-2 ring-red-200/40'
+                                : isBizDragging
+                                  ? 'border-[#00580C] dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 scale-[1.01]'
+                                  : 'border-gray-300 dark:border-[#2d5c3c] hover:border-[#00580C] dark:hover:border-emerald-600 bg-white dark:bg-[#163321] hover:bg-emerald-50/30'}`}
+                          >
+                            <div className="w-9 h-9 rounded-full flex items-center justify-center bg-emerald-50 dark:bg-[#1e3d2a] text-[#00580C] dark:text-emerald-400">
+                              <UploadCloud size={18} />
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                                {isBizDragging ? 'Drop Business Document here' : 'Click to upload Business Document or drag & drop'}
+                              </p>
+                              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+                                Supported formats: JPG, PNG, WEBP, PDF • Maximum 5 MB
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        {(submitAttempted && bizDocError) && (
+                          <p className="mt-1.5 text-[11px] text-red-500 leading-tight flex items-center gap-1 font-medium">
+                            <ImageIcon size={12} className="shrink-0" />
+                            {bizDocError}
                           </p>
                         )}
                       </div>
@@ -1205,179 +1185,112 @@ export default function PartnerWithUs() {
 
       <LandingFooter />
 
-      {/* ── Document Source Chooser Modal ── */}
-      {isSourceModalOpen && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
-          onClick={() => setIsSourceModalOpen(false)}
-        >
-          <div
-            className="bg-white dark:bg-[#0e2417] border border-gray-200 dark:border-[#204830] rounded-2xl shadow-2xl max-w-md w-full overflow-hidden p-6 animate-in zoom-in-95"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-[#1d3d29] mb-4">
-              <div>
-                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
-                  Attach Business Document
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  Choose how you would like to provide your credential
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsSourceModalOpen(false)}
-                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1a3a26] transition-colors cursor-pointer"
-                aria-label="Close"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 my-3">
-              {/* Option 1: Upload File */}
-              <button
-                type="button"
-                onClick={handleChooseUpload}
-                className="flex flex-col items-center justify-center text-center p-5 rounded-xl border-2 border-gray-200 dark:border-[#244f35] bg-gray-50/70 dark:bg-[#153422] hover:border-[#00580C] dark:hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-[#184029] transition-all group cursor-pointer"
-              >
-                <div className="w-12 h-12 rounded-full bg-white dark:bg-[#0e2417] shadow-sm flex items-center justify-center text-[#00580C] dark:text-emerald-400 mb-2.5 group-hover:scale-110 transition-transform">
-                  <UploadCloud size={24} />
-                </div>
-                <span className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-100">
-                  Upload File
-                </span>
-                <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-snug">
-                  Choose an image from files or gallery
-                </span>
-              </button>
-
-              {/* Option 2: Take Photo */}
-              <button
-                type="button"
-                onClick={handleChooseCamera}
-                className="flex flex-col items-center justify-center text-center p-5 rounded-xl border-2 border-gray-200 dark:border-[#244f35] bg-gray-50/70 dark:bg-[#153422] hover:border-[#00580C] dark:hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-[#184029] transition-all group cursor-pointer"
-              >
-                <div className="w-12 h-12 rounded-full bg-white dark:bg-[#0e2417] shadow-sm flex items-center justify-center text-[#00580C] dark:text-emerald-400 mb-2.5 group-hover:scale-110 transition-transform">
-                  <Camera size={24} />
-                </div>
-                <span className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-100">
-                  Take a Photo
-                </span>
-                <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-snug">
-                  Use camera to capture physical document
-                </span>
-              </button>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-gray-100 dark:border-[#1d3d29] flex justify-end">
-              <button
-                type="button"
-                onClick={() => setIsSourceModalOpen(false)}
-                className="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1a3a26] rounded-lg transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* ── Live Webcam Capture Modal (Desktop) ── */}
-      {isCameraModalOpen && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
-          onClick={handleCloseCameraModal}
-        >
-          <div
-            className="bg-white dark:bg-[#0e2417] border border-gray-200 dark:border-[#204830] rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden p-4 sm:p-5 animate-in zoom-in-95 duration-200"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-[#1d3d29] mb-3">
-              <div>
-                <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Camera size={18} className="text-[#00580C] dark:text-emerald-400" />
-                  Capture Document Photo
-                </h3>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  Position your document clearly within the camera frame
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleCloseCameraModal}
-                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1a3a26] transition-colors cursor-pointer"
-                aria-label="Close"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Video Viewfinder */}
-            <div className="relative rounded-lg overflow-hidden bg-black aspect-[4/3] flex items-center justify-center border border-gray-200 dark:border-[#244f35]">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
-              />
-              {!cameraActive && !cameraError && (
-                <div className="flex flex-col items-center gap-2 text-white text-xs">
-                  <Loader2 size={24} className="animate-spin text-emerald-400" />
-                  <span>Starting camera...</span>
-                </div>
-              )}
-              {cameraError && (
-                <div className="text-center p-4 text-xs text-red-300">
-                  <p>{cameraError}</p>
-                </div>
-              )}
-              {/* Viewfinder overlay guide box */}
-              {cameraActive && (
-                <div className="pointer-events-none absolute inset-4 border-2 border-dashed border-white/60 rounded-md flex items-end justify-center pb-2">
-                  <span className="bg-black/60 backdrop-blur-sm text-[10px] text-white/90 px-2 py-0.5 rounded">
-                    Align document inside the frame
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Camera Controls */}
-            <div className="mt-4 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={handleCloseCameraModal}
-                className="px-3.5 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1a3a26] rounded-lg transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={!cameraActive}
-                onClick={handleCaptureWebcam}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00580C] hover:bg-[#00470a] disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-semibold rounded-lg shadow-sm transition-all cursor-pointer"
-              >
-                <Camera size={16} />
-                <span>Snap Photo</span>
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
       {/* ── Policy Modal ── */}
       <PolicyModal
         isOpen={isPolicyModalOpen}
         onClose={() => setIsPolicyModalOpen(false)}
         onAgree={() => setAgreedToTerms(true)}
       />
+
+      {/* ── Name Does Not Match ID Modal ── */}
+      {mismatchModalOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="bg-white dark:bg-[#0e2417] border border-gray-200 dark:border-[#204830] rounded-2xl shadow-2xl max-w-md w-full overflow-hidden p-6 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <AlertTriangle size={24} />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                Name Does Not Match ID
+              </h3>
+            </div>
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-6">
+              The full legal name you entered does not match the name detected on your uploaded government-issued ID. Please enter your name exactly as shown on your ID or upload the correct document.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5">
+              <button
+                type="button"
+                className="w-full sm:w-auto px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/15 rounded-lg transition-colors cursor-pointer"
+                onClick={() => {
+                  setMismatchModalOpen(false);
+                  setTimeout(() => document.getElementById('name')?.focus(), 100);
+                }}
+              >
+                Review Name
+              </button>
+              <button
+                type="button"
+                className="w-full sm:w-auto px-4 py-2 text-xs font-semibold text-white bg-[#00580C] hover:bg-[#014209] rounded-lg transition-colors cursor-pointer"
+                onClick={() => {
+                  setMismatchModalOpen(false);
+                  handleRemoveSingleFile('govId');
+                  setTimeout(() => govIdInputRef.current?.click(), 100);
+                }}
+              >
+                Upload Different ID
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── We Could Not Verify the Name Modal ── */}
+      {uncertainModalOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="bg-white dark:bg-[#0e2417] border border-gray-200 dark:border-[#204830] rounded-2xl shadow-2xl max-w-md w-full overflow-hidden p-6 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <AlertTriangle size={24} />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                We Could Not Verify the Name
+              </h3>
+            </div>
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-6">
+              We could not confidently verify that the name you entered matches the name on your uploaded ID. Please review your legal name or upload a clearer ID image.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5">
+              <button
+                type="button"
+                className="w-full sm:w-auto px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/15 rounded-lg transition-colors cursor-pointer"
+                onClick={() => {
+                  setUncertainModalOpen(false);
+                  setTimeout(() => document.getElementById('name')?.focus(), 100);
+                }}
+              >
+                Review Name
+              </button>
+              <button
+                type="button"
+                className="w-full sm:w-auto px-4 py-2 text-xs font-semibold text-white bg-[#00580C] hover:bg-[#014209] rounded-lg transition-colors cursor-pointer"
+                onClick={() => {
+                  setUncertainModalOpen(false);
+                  handleRemoveSingleFile('govId');
+                  setTimeout(() => govIdInputRef.current?.click(), 100);
+                }}
+              >
+                Upload Different ID
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

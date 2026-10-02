@@ -196,6 +196,9 @@ def _build_retailer_detail_response(
         "user_id":
             row["user_id"],
 
+        "is_partnership":
+            bool(row.get("is_partnership", False)),
+
         "status":
             row["status"],
 
@@ -704,9 +707,9 @@ def archive_retailer_management_account(
                         ],
 
                     "retailer_name":
-                        result[
+                        result.get(
                             "retailer_name"
-                        ],
+                        ),
 
                     "status":
                         result[

@@ -167,7 +167,7 @@ def list_warehouses(
         for inq in inquiries:
             inquiry_rows.append({
                 "id": str(inq.partnership_inquiry_id),
-                "warehouse_manager_name": inq.name,
+                "manager_name": inq.name,
                 "business_name": inq.organization_company,
                 "organization_name": inq.organization_company,
                 "email": inq.email,
@@ -427,8 +427,186 @@ def get_warehouse_status_counts():
 def get_warehouse_details(
     user_id,
 ):
+    """
+    Return complete Warehouse Manager
+    registration information.
+
+    Used by:
+        Review Application modal
+        View Owner modal
+        Warehouse View Details
+
+    Password hash is deliberately excluded.
+    """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        numeric_user_id = None
+
+    if numeric_user_id is not None:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+
+                    -- ============================================
+                    -- PERSONAL INFORMATION
+                    -- ============================================
+
+                    u.user_id,
+
+                    u.first_name,
+
+                    u.middle_initial,
+
+                    u.last_name,
+
+                    u.suffix,
+
+                    u.gender,
+
+
+                    -- ============================================
+                    -- PERSONAL ADDRESS
+                    -- ============================================
+
+                    u.province,
+
+                    u.municipality,
+
+                    u.postal_code,
+
+                    u.barangay,
+
+                    u.street_address,
+
+
+                    -- ============================================
+                    -- ACCOUNT
+                    -- ============================================
+
+                    u.email,
+
+                    u.contact_number,
+
+                    u.username,
+
+                    u.user_role
+                        AS user_role,
+
+                    u.status
+                        AS status,
+
+                    u.created_at,
+
+                    u.updated_at,
+
+
+                    -- ============================================
+                    -- WAREHOUSE PROFILE
+                    -- ============================================
+
+                    wp.warehouse_profile_id,
+
+                    wp.business_name,
+
+                    wp.organization_name,
+
+                    wp.province
+                        AS business_province,
+
+                    wp.municipality
+                        AS business_municipality,
+
+                    wp.postal_code
+                        AS business_postal_code,
+
+                    wp.barangay
+                        AS business_barangay,
+
+                    wp.street_address
+                        AS business_street_address,
+
+                    wp.official_email,
+
+                    wp.official_contact_number,
+
+                    wp.created_at
+                        AS business_created_at,
+
+                    wp.updated_at
+                        AS business_updated_at,
+
+
+                    -- ============================================
+                    -- COMPLIANCE DOCUMENTS
+                    -- ============================================
+
+                    wd.warehouse_document_id,
+
+                    wd.government_issued_id,
+
+                    wd.business_permit,
+
+                    wd.business_registration,
+
+                    wd.warehouse_license,
+
+                    wd.created_at
+                        AS documents_created_at,
+
+                    wd.updated_at
+                        AS documents_updated_at
+
+
+                FROM users u
+
+
+                LEFT JOIN warehouse_profiles wp
+
+                    ON wp.user_id =
+                        u.user_id
+
+
+                LEFT JOIN warehouse_documents wd
+
+                    ON wd.user_id =
+                        u.user_id
+
+
+                WHERE
+
+                    u.user_id = %s
+
+                    AND u.user_role = %s
+
+
+                LIMIT 1
+                """,
+                [
+                    numeric_user_id,
+                    WAREHOUSE_ROLE,
+                ],
+            )
+
+            user_details = _row_to_dict(
+                cursor
+            )
+
+            if user_details:
+                user_details["is_partnership"] = False
+                return user_details
+
+    from django.core.exceptions import ValidationError
     from ...models import PartnershipInquiry
-    inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    try:
+        inquiry = PartnershipInquiry.objects.filter(
+            partnership_inquiry_id=user_id,
+            partner_role="warehouse",
+            status=PartnershipInquiry.Status.TO_REVIEW,
+        ).first()
+    except (ValueError, TypeError, ValidationError):
+        inquiry = None
     if inquiry:
         name_parts = str(inquiry.name or "").strip().split()
         first_name = name_parts[0] if name_parts else "Applicant"
@@ -465,7 +643,7 @@ def get_warehouse_details(
             "business_created_at": inquiry.created_at,
             "business_updated_at": inquiry.updated_at,
             "warehouse_document_id": None,
-            "government_issued_id": None,
+            "government_issued_id": inquiry.government_issued_id,
             "business_permit": None,
             "business_registration": (
                 json.loads(inquiry.business_verification_document)[0]
@@ -473,176 +651,12 @@ def get_warehouse_details(
                 else inquiry.business_verification_document
             ),
             "warehouse_license": None,
+            "is_partnership": True,
             "documents_created_at": inquiry.created_at,
             "documents_updated_at": inquiry.updated_at,
         }
 
-    try:
-        numeric_user_id = int(user_id)
-    except (ValueError, TypeError):
-        return None
-    """
-    Return complete Warehouse Manager
-    registration information.
-
-    Used by:
-        Review Application modal
-        View Owner modal
-        Warehouse View Details
-
-    Password hash is deliberately excluded.
-    """
-
-    with connection.cursor() as cursor:
-
-        cursor.execute(
-            """
-            SELECT
-
-                -- ============================================
-                -- PERSONAL INFORMATION
-                -- ============================================
-
-                u.user_id,
-
-                u.first_name,
-
-                u.middle_initial,
-
-                u.last_name,
-
-                u.suffix,
-
-                u.gender,
-
-
-                -- ============================================
-                -- PERSONAL ADDRESS
-                -- ============================================
-
-                u.province,
-
-                u.municipality,
-
-                u.postal_code,
-
-                u.barangay,
-
-                u.street_address,
-
-
-                -- ============================================
-                -- ACCOUNT
-                -- ============================================
-
-                u.email,
-
-                u.contact_number,
-
-                u.username,
-
-                u.user_role
-                    AS user_role,
-
-                u.status
-                    AS status,
-
-                u.created_at,
-
-                u.updated_at,
-
-
-                -- ============================================
-                -- WAREHOUSE PROFILE
-                -- ============================================
-
-                wp.warehouse_profile_id,
-
-                wp.business_name,
-
-                wp.organization_name,
-
-                wp.province
-                    AS business_province,
-
-                wp.municipality
-                    AS business_municipality,
-
-                wp.postal_code
-                    AS business_postal_code,
-
-                wp.barangay
-                    AS business_barangay,
-
-                wp.street_address
-                    AS business_street_address,
-
-                wp.official_email,
-
-                wp.official_contact_number,
-
-                wp.created_at
-                    AS business_created_at,
-
-                wp.updated_at
-                    AS business_updated_at,
-
-
-                -- ============================================
-                -- COMPLIANCE DOCUMENTS
-                -- ============================================
-
-                wd.warehouse_document_id,
-
-                wd.government_issued_id,
-
-                wd.business_permit,
-
-                wd.business_registration,
-
-                wd.warehouse_license,
-
-                wd.created_at
-                    AS documents_created_at,
-
-                wd.updated_at
-                    AS documents_updated_at
-
-
-            FROM users u
-
-
-            INNER JOIN warehouse_profiles wp
-
-                ON wp.user_id =
-                    u.user_id
-
-
-            INNER JOIN warehouse_documents wd
-
-                ON wd.user_id =
-                    u.user_id
-
-
-            WHERE
-
-                u.user_id = %s
-
-                AND u.user_role = %s
-
-
-            LIMIT 1
-            """,
-            [
-                numeric_user_id,
-                WAREHOUSE_ROLE,
-            ],
-        )
-
-
-        return _row_to_dict(
-            cursor
-        )
+    return None
 
 
 # ============================================================
@@ -662,6 +676,10 @@ def get_warehouse_account_summary(
         permanent delete
         confirmation email
     """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return None
 
     with connection.cursor() as cursor:
 
@@ -695,7 +713,7 @@ def get_warehouse_account_summary(
             FROM users u
 
 
-            INNER JOIN warehouse_profiles wp
+            LEFT JOIN warehouse_profiles wp
 
                 ON wp.user_id =
                     u.user_id
@@ -733,6 +751,10 @@ def warehouse_exists(
     Return True only when the given user exists
     and is a Warehouse Manager.
     """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return False
 
     with connection.cursor() as cursor:
 
@@ -784,6 +806,10 @@ def get_warehouse_view_overview(
         Rating count
         Report count
     """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return None
 
     with connection.cursor() as cursor:
 
@@ -969,6 +995,10 @@ def get_warehouse_employees(
 
     Latest archive reason is returned when available.
     """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return []
 
     normalized_tab = str(
         employee_tab
@@ -1184,7 +1214,7 @@ def get_warehouse_employees(
         )
 
 
-        return inquiry_rows + _rows_to_dicts(cursor)
+        return _rows_to_dicts(cursor)
 
 
 # ============================================================
@@ -1197,6 +1227,10 @@ def get_warehouse_ratings(
     """
     Return all ratings for one Warehouse account.
     """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return []
 
     with connection.cursor() as cursor:
 
@@ -1277,12 +1311,12 @@ def get_warehouse_ratings(
                 wr.warehouse_rating_id DESC
             """,
             [
-                user_id,
+                numeric_user_id,
             ],
         )
 
 
-        return inquiry_rows + _rows_to_dicts(cursor)
+        return _rows_to_dicts(cursor)
 
 
 # ============================================================
@@ -1296,6 +1330,10 @@ def get_warehouse_reports(
     Return reports submitted against one
     Warehouse Manager account.
     """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return []
 
     with connection.cursor() as cursor:
 
@@ -1380,12 +1418,12 @@ def get_warehouse_reports(
                 wr.warehouse_report_id DESC
             """,
             [
-                user_id,
+                numeric_user_id,
             ],
         )
 
 
-        return inquiry_rows + _rows_to_dicts(cursor)
+        return _rows_to_dicts(cursor)
 
 
 # ============================================================

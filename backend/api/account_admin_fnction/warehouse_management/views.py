@@ -280,6 +280,9 @@ def _build_warehouse_detail_response(
         "user_id":
             row["user_id"],
 
+        "is_partnership":
+            bool(row.get("is_partnership", False)),
+
         "status":
             row["status"],
 
@@ -439,24 +442,24 @@ def _build_warehouse_detail_response(
         "documents": {
 
             "warehouse_document_id":
-                row[
+                row.get(
                     "warehouse_document_id"
-                ],
+                ),
 
 
             "government_issued_id": {
 
                 "path":
-                    row[
+                    row.get(
                         "government_issued_id"
-                    ],
+                    ),
 
                 "url":
                     _document_url(
                         request,
-                        row[
+                        row.get(
                             "government_issued_id"
-                        ],
+                        ),
                     ),
             },
 
@@ -464,16 +467,16 @@ def _build_warehouse_detail_response(
             "business_permit": {
 
                 "path":
-                    row[
+                    row.get(
                         "business_permit"
-                    ],
+                    ),
 
                 "url":
                     _document_url(
                         request,
-                        row[
+                        row.get(
                             "business_permit"
-                        ],
+                        ),
                     ),
             },
 
@@ -481,16 +484,16 @@ def _build_warehouse_detail_response(
             "business_registration": {
 
                 "path":
-                    row[
+                    row.get(
                         "business_registration"
-                    ],
+                    ),
 
                 "url":
                     _document_url(
                         request,
-                        row[
+                        row.get(
                             "business_registration"
-                        ],
+                        ),
                     ),
             },
 
@@ -498,32 +501,32 @@ def _build_warehouse_detail_response(
             "warehouse_license": {
 
                 "path":
-                    row[
+                    row.get(
                         "warehouse_license"
-                    ],
+                    ),
 
                 "url":
                     _document_url(
                         request,
-                        row[
+                        row.get(
                             "warehouse_license"
-                        ],
+                        ),
                     ),
             },
 
 
             "created_at":
                 _serialize_value(
-                    row[
+                    row.get(
                         "documents_created_at"
-                    ]
+                    )
                 ),
 
             "updated_at":
                 _serialize_value(
-                    row[
+                    row.get(
                         "documents_updated_at"
-                    ]
+                    )
                 ),
         },
     }

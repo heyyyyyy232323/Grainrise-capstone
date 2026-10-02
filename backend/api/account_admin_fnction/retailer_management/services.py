@@ -495,22 +495,6 @@ def archive_retailer_account(
     user_id,
     reason,
 ):
-    from ...models import PartnershipInquiry
-    inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
-    if inquiry:
-        cleaned_reason = _clean_archive_reason(reason)
-        inquiry.status = PartnershipInquiry.Status.INACTIVE
-        inquiry.archive_reason = cleaned_reason
-        inquiry.save(update_fields=["status", "archive_reason", "updated_at"])
-        return {
-            "user_id": str(inquiry.partnership_inquiry_id),
-            "status": "inactive",
-            "updated_at": inquiry.updated_at,
-            "archive_reason_id": None,
-            "archive_reason": cleaned_reason,
-            "archived_at": inquiry.updated_at,
-            "message": "Retailer application archived successfully.",
-        }
     """
     Archive an active Retailer account.
 
@@ -526,166 +510,192 @@ def archive_retailer_account(
         )
     )
 
+    # 1. Check actual users record FIRST.
+    retailer = None
+    numeric_user_id = None
+    try:
+        numeric_user_id = int(user_id)
+        retailer = get_retailer_account_summary(numeric_user_id)
+    except (ValueError, TypeError):
+        retailer = None
 
-    _require_table(
-        "retailer_archive_reasons",
-        "Retailer archive history",
+    # 2. If confirmed user exists:
+    if retailer:
+        _require_table(
+            "retailer_archive_reasons",
+            "Retailer archive history",
+        )
+
+        current_status = str(
+            retailer.get(
+                "status"
+            )
+            or ""
+        ).strip().lower()
+
+        if current_status == "archived":
+            raise ValueError(
+                "This Retailer account is already archived."
+            )
+
+        if current_status != "active":
+            raise ValueError(
+                "Only active Retailer accounts can be archived."
+            )
+
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE users
+
+                    SET
+                        status = 'archived',
+
+                        updated_at = CURRENT_TIMESTAMP
+
+                    WHERE
+
+                        user_id = %s
+
+                        AND user_role = %s
+
+                        AND status = 'active'
+                    """,
+                    [
+                        numeric_user_id,
+                        RETAILER_ROLE,
+                    ],
+                )
+
+                if cursor.rowcount == 0:
+                    raise RuntimeError(
+                        "The Retailer account could not be archived "
+                        "because its status changed before the update completed."
+                    )
+
+                cursor.execute(
+                    """
+                    SELECT
+                        user_id,
+                        status,
+                        updated_at
+                    FROM users
+                    WHERE user_id = %s
+                    """,
+                    [numeric_user_id],
+                )
+
+                updated = cursor.fetchone()
+
+                cursor.execute(
+                    """
+                    INSERT INTO retailer_archive_reasons
+                    (
+                        user_id,
+                        reason
+                    )
+
+                    VALUES
+                    (
+                        %s,
+                        %s
+                    )
+                    """,
+                    [
+                        numeric_user_id,
+                        cleaned_reason,
+                    ],
+                )
+
+                archive_reason_id = cursor.lastrowid
+
+                cursor.execute(
+                    """
+                    SELECT
+                        retailer_archive_reason_id,
+                        reason,
+                        created_at
+                    FROM retailer_archive_reasons
+                    WHERE retailer_archive_reason_id = %s
+                    """,
+                    [archive_reason_id],
+                )
+
+                archive_row = cursor.fetchone()
+
+                if not archive_row:
+                    raise RuntimeError(
+                        "The Retailer archive reason could not be saved."
+                    )
+
+        return {
+            "user_id":
+                int(
+                    updated[0]
+                ),
+
+            "retailer_name":
+                _build_retailer_display_name(
+                    retailer
+                ),
+
+            "status":
+                updated[1],
+
+            "updated_at":
+                updated[2],
+
+            "archive_reason_id":
+                int(
+                    archive_row[0]
+                ),
+
+            "archive_reason":
+                archive_row[1],
+
+            "archived_at":
+                archive_row[2],
+
+            "message":
+                "Retailer account archived successfully.",
+        }
+
+    # 3. Only if no user exists, archive pending inquiry:
+    #    - filter correct partner_role
+    #    - status='to_review'
+    #    - set inquiry.status = inactive
+    # IMPORTANT: partnership_inquiries has NO archive_reason field.
+    # Do not use inquiry.archive_reason.
+    # Do not delete inquiries or documents.
+    from django.core.exceptions import ValidationError
+    from ...models import PartnershipInquiry
+    try:
+        inquiry = PartnershipInquiry.objects.filter(
+            partnership_inquiry_id=user_id,
+            partner_role="retailer",
+            status=PartnershipInquiry.Status.TO_REVIEW,
+        ).first()
+    except (ValueError, TypeError, ValidationError):
+        inquiry = None
+
+    if inquiry:
+        inquiry.status = PartnershipInquiry.Status.INACTIVE
+        inquiry.save(update_fields=["status", "updated_at"])
+        return {
+            "user_id": str(inquiry.partnership_inquiry_id),
+            "retailer_name": inquiry.name,
+            "status": "inactive",
+            "updated_at": inquiry.updated_at,
+            "archive_reason_id": None,
+            "archive_reason": None,
+            "archived_at": inquiry.updated_at,
+            "message": "Retailer application archived successfully.",
+        }
+
+    raise ValueError(
+        "Retailer account was not found."
     )
-
-
-    retailer = (
-        get_retailer_account_summary(
-            user_id
-        )
-    )
-
-
-    if not retailer:
-        raise ValueError(
-            "Retailer account was not found."
-        )
-
-
-    current_status = str(
-        retailer.get(
-            "status"
-        )
-        or ""
-    ).strip().lower()
-
-
-    if current_status == "archived":
-        raise ValueError(
-            "This Retailer account is already archived."
-        )
-
-
-    if current_status != "active":
-        raise ValueError(
-            "Only active Retailer accounts can be archived."
-        )
-
-
-    with transaction.atomic():
-
-        with connection.cursor() as cursor:
-
-            cursor.execute(
-                """
-                UPDATE users
-
-                SET
-                    status = 'archived',
-
-                    updated_at = CURRENT_TIMESTAMP
-
-                WHERE
-
-                    user_id = %s
-
-                    AND user_role = %s
-
-                    AND status = 'active'
-                """,
-                [
-                    user_id,
-                    RETAILER_ROLE,
-                ],
-            )
-
-            if cursor.rowcount == 0:
-                raise RuntimeError(
-                    "The Retailer account could not be archived "
-                    "because its status changed before the update completed."
-                )
-
-            cursor.execute(
-                """
-                SELECT
-                    user_id,
-                    status,
-                    updated_at
-                FROM users
-                WHERE user_id = %s
-                """,
-                [user_id],
-            )
-
-            updated = cursor.fetchone()
-
-            cursor.execute(
-                """
-                INSERT INTO retailer_archive_reasons
-                (
-                    user_id,
-                    reason
-                )
-
-                VALUES
-                (
-                    %s,
-                    %s
-                )
-                """,
-                [
-                    user_id,
-                    cleaned_reason,
-                ],
-            )
-
-            archive_reason_id = cursor.lastrowid
-
-            cursor.execute(
-                """
-                SELECT
-                    retailer_archive_reason_id,
-                    reason,
-                    created_at
-                FROM retailer_archive_reasons
-                WHERE retailer_archive_reason_id = %s
-                """,
-                [archive_reason_id],
-            )
-
-            archive_row = cursor.fetchone()
-
-            if not archive_row:
-                raise RuntimeError(
-                    "The Retailer archive reason could not be saved."
-                )
-
-
-    return {
-        "user_id":
-            int(
-                updated[0]
-            ),
-
-        "retailer_name":
-            _build_retailer_display_name(
-                retailer
-            ),
-
-        "status":
-            updated[1],
-
-        "updated_at":
-            updated[2],
-
-        "archive_reason_id":
-            int(
-                archive_row[0]
-            ),
-
-        "archive_reason":
-            archive_row[1],
-
-        "archived_at":
-            archive_row[2],
-
-        "message":
-            "Retailer account archived successfully.",
-    }
 
 
 # ============================================================

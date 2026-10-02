@@ -315,11 +315,12 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
                         user_id, government_issued_id, business_permit, business_registration, milling_license,
                         created_at, updated_at
                     ) VALUES (
-                        %s, NULL, NULL, %s, NULL,
+                        %s, %s, NULL, %s, NULL,
                         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                     )
                 ''', [
                     created_user_id,
+                    inquiry.government_issued_id,
                     doc_path,
                 ])
 
@@ -347,11 +348,12 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
                         user_id, government_issued_id, business_permit, business_registration, warehouse_license,
                         created_at, updated_at
                     ) VALUES (
-                        %s, NULL, NULL, %s, NULL,
+                        %s, %s, NULL, %s, NULL,
                         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                     )
                 ''', [
                     created_user_id,
+                    inquiry.government_issued_id,
                     doc_path,
                 ])
 
@@ -361,12 +363,13 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
                         user_id, barangay_permit, valid_id,
                         created_at, updated_at
                     ) VALUES (
-                        %s, NULL, %s,
+                        %s, %s, %s,
                         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                     )
                 ''', [
                     created_user_id,
                     doc_path,
+                    inquiry.government_issued_id,
                 ])
 
         inquiry.status = PartnershipInquiry.Status.ACTIVE

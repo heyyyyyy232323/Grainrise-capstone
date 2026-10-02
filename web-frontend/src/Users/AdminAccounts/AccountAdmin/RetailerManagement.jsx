@@ -511,42 +511,67 @@ const RetailerManagement = () => {
   // =========================================================
 
   const handleMessage =
-    () => {
-      const account =
-        selectedRetailerDetails
-          ?.account_information ||
-        {};
+    (target) => {
+      const details =
+        target ||
+        selectedRetailerDetails ||
+        selectedRetailer;
 
+      const account =
+        details?.account_information ||
+        {};
 
       const personal =
-        selectedRetailerDetails
-          ?.personal_information ||
+        details?.personal_information ||
         {};
 
+      const recipientId =
+        details?.user_id ||
+        details?.id ||
+        selectedRetailerDetails?.user_id ||
+        selectedRetailer?.id;
+
+      const isPartnership = Boolean(
+        details?.is_partnership ||
+        selectedRetailerDetails?.is_partnership ||
+        (typeof recipientId === "string" && recipientId.includes("-"))
+      );
 
       navigate(
         "/admin/email-users",
         {
           state: {
             recipient: {
+              recipientType:
+                isPartnership
+                  ? "partnership_inquiry"
+                  : "user",
+
+              recipientId:
+                recipientId,
+
               userId:
-                selectedRetailerDetails
-                  ?.user_id ||
-                selectedRetailer
-                  ?.id,
+                recipientId,
 
               email:
                 account.email ||
-                selectedRetailer
-                  ?.email ||
+                details?.email ||
+                selectedRetailer?.email ||
                 "",
 
               firstName:
                 personal.first_name ||
+                details?.first_name ||
                 "",
 
               lastName:
                 personal.last_name ||
+                details?.last_name ||
+                "",
+
+              businessName:
+                details?.business_name ||
+                selectedRetailer?.company ||
                 "",
 
               source:

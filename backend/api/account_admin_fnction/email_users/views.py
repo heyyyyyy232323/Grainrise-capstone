@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from api.utils import authorization_payload
+from api.models import PartnershipInquiry
 
 from ..admin_auth import account_admin_required
 
@@ -496,37 +497,63 @@ def email_users_send(
         ).strip()
 
 
-        recipient_user_id = (
-            data.get(
-                "recipient_user_id"
-            )
-        )
-
+        recipient_id = data.get("recipient_id")
+        recipient_user_id = data.get("recipient_user_id")
 
         # ====================================================
-        # OPTIONAL USER ID NORMALIZATION
+        # RECIPIENT RESOLUTION
         # ====================================================
 
-        if recipient_user_id in {
-            None,
-            "",
-        }:
+        if recipient_type == "partnership_inquiry":
+            lookup_id = recipient_id or recipient_user_id
+            inquiry = None
+            if lookup_id:
+                try:
+                    inquiry = PartnershipInquiry.objects.filter(
+                        partnership_inquiry_id=lookup_id
+                    ).first()
+                except Exception:
+                    inquiry = None
+
+            if not inquiry:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": "Invalid partnership inquiry recipient.",
+                    },
+                    status=400,
+                )
+
+            recipient_email = inquiry.email
+            recipient_name = inquiry.name
             recipient_user_id = None
 
         else:
-            try:
-                recipient_user_id = int(
-                    recipient_user_id
-                )
+            lookup_user_id = (
+                recipient_id
+                if recipient_type in ("user", "specific_user") and recipient_id
+                else recipient_user_id
+            )
 
-            except (
-                TypeError,
-                ValueError,
-            ) as exc:
-                raise ValueError(
-                    "Invalid recipient user ID."
-                ) from exc
+            if lookup_user_id in {
+                None,
+                "",
+            }:
+                recipient_user_id = None
 
+            else:
+                try:
+                    recipient_user_id = int(
+                        lookup_user_id
+                    )
+
+                except (
+                    TypeError,
+                    ValueError,
+                ) as exc:
+                    raise ValueError(
+                        "Invalid recipient user ID."
+                    ) from exc
 
         # ====================================================
         # SEND SERVICE
