@@ -120,6 +120,17 @@ export default function PartnerWithUs() {
   const [isBizDragging, setIsBizDragging] = useState(false);
   const govIdInputRef = useRef(null);
   const bizDocInputRef = useRef(null);
+
+  /* ── Choice & Camera modal state & refs ── */
+  const [choiceModalOpen, setChoiceModalOpen] = useState(false);
+  const [choiceTarget, setChoiceTarget] = useState(null); // 'govId' | 'bizDoc'
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
+  const [cameraTarget, setCameraTarget] = useState(null); // 'govId' | 'bizDoc'
+  const [capturedImage, setCapturedImage] = useState(null);
+  const [cameraError, setCameraError] = useState('');
+  const [isStartingCamera, setIsStartingCamera] = useState(false);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
   const [mismatchModalOpen, setMismatchModalOpen] = useState(false);
   const [uncertainModalOpen, setUncertainModalOpen] = useState(false);
   const [availabilityChecking, setAvailabilityChecking] = useState({ name: false, email: false, organization: false });
@@ -288,6 +299,181 @@ export default function PartnerWithUs() {
       if (bizDocInputRef.current) bizDocInputRef.current.value = '';
     }
   };
+
+  /* ── Choice modal handlers ── */
+  const openChoiceModal = (target) => {
+    setChoiceTarget(target);
+    setChoiceModalOpen(true);
+  };
+
+  const closeChoiceModal = useCallback(() => {
+    setChoiceModalOpen(false);
+    setChoiceTarget(null);
+  }, []);
+
+  const handleSelectUpload = () => {
+    const target = choiceTarget;
+    closeChoiceModal();
+    setTimeout(() => {
+      if (target === 'govId') {
+        govIdInputRef.current?.click();
+      } else if (target === 'bizDoc') {
+        bizDocInputRef.current?.click();
+      }
+    }, 80);
+  };
+
+  const handleSelectCamera = () => {
+    const target = choiceTarget;
+    closeChoiceModal();
+    openCamera(target);
+  };
+
+  /* ── Camera stream and capture handlers ── */
+  const stopCameraStream = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch {}
+      });
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }, []);
+
+  const closeCameraModal = useCallback(() => {
+    stopCameraStream();
+    setCameraModalOpen(false);
+    setCapturedImage(null);
+    setCameraError('');
+    setCameraTarget(null);
+    setIsStartingCamera(false);
+  }, [stopCameraStream]);
+
+  const openCamera = async (target) => {
+    setCameraTarget(target);
+    setCapturedImage(null);
+    setCameraError('');
+    setIsStartingCamera(true);
+    setCameraModalOpen(true);
+
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      setCameraError('Camera access is not supported by your browser or device. Please upload a file instead.');
+      setIsStartingCamera(false);
+      return;
+    }
+
+    try {
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      }
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {});
+      }
+    } catch (err) {
+      console.error('Camera access error:', err);
+      let msg = 'Unable to access camera. Please check camera permissions in your browser or upload a file.';
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        msg = 'Camera permission was denied. Please allow camera access in your browser settings or upload a file instead.';
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        msg = 'No camera device was found on your device. Please upload a file instead.';
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        msg = 'Camera is currently in use by another application. Please close it and try again, or upload a file.';
+      }
+      setCameraError(msg);
+    } finally {
+      setIsStartingCamera(false);
+    }
+  };
+
+  const handleCapturePhoto = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const videoWidth = video.videoWidth || 1280;
+    const videoHeight = video.videoHeight || 720;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    setCapturedImage(dataUrl);
+  };
+
+  const handleRetakePhoto = () => {
+    setCapturedImage(null);
+    if (videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(() => {});
+    }
+  };
+
+  const handleAcceptPhoto = () => {
+    if (!capturedImage || !cameraTarget) return;
+
+    try {
+      const arr = capturedImage.split(',');
+      const mimeMatch = arr[0].match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      const filename = `${cameraTarget === 'govId' ? 'government_id' : 'business_document'}_${Date.now()}.jpg`;
+      const file = new File([u8arr], filename, { type: mime });
+
+      const target = cameraTarget;
+      closeCameraModal();
+      processSingleFile(file, target);
+    } catch (err) {
+      console.error('Error accepting captured photo:', err);
+      setCameraError('Failed to process captured image. Please try again or upload a file.');
+    }
+  };
+
+  useEffect(() => {
+    if (cameraModalOpen && streamRef.current && videoRef.current && !capturedImage) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [cameraModalOpen, capturedImage, isStartingCamera]);
+
+  useEffect(() => {
+    return () => {
+      stopCameraStream();
+    };
+  }, [stopCameraStream]);
+
+  useEffect(() => {
+    if (!cameraModalOpen && !choiceModalOpen) return;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (cameraModalOpen) closeCameraModal();
+        if (choiceModalOpen) closeChoiceModal();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [cameraModalOpen, choiceModalOpen, closeCameraModal, closeChoiceModal]);
 
   /* ── Field handlers ── */
   const handleNameChange = (e) => {
@@ -510,6 +696,8 @@ export default function PartnerWithUs() {
     setBizDocError('');
     if (govIdInputRef.current) govIdInputRef.current.value = '';
     if (bizDocInputRef.current) bizDocInputRef.current.value = '';
+    if (govIdCameraRef.current) govIdCameraRef.current.value = '';
+    if (bizDocCameraRef.current) bizDocCameraRef.current.value = '';
     setViewState('form');
     navigate('/partner-with-us', { replace: true });
   };
@@ -960,7 +1148,7 @@ export default function PartnerWithUs() {
                             <div className="flex items-center gap-2 shrink-0">
                               <button
                                 type="button"
-                                onClick={() => govIdInputRef.current?.click()}
+                                onClick={() => openChoiceModal('govId')}
                                 className="px-2.5 py-1 text-xs font-semibold text-[#00580C] dark:text-emerald-400 bg-white dark:bg-[#163321] border border-emerald-200 dark:border-emerald-800 rounded-md hover:bg-emerald-50 transition-colors cursor-pointer"
                               >
                                 Change
@@ -977,7 +1165,7 @@ export default function PartnerWithUs() {
                           </div>
                         ) : (
                           <div
-                            onClick={() => govIdInputRef.current?.click()}
+                            onClick={() => openChoiceModal('govId')}
                             onDragOver={(e) => { e.preventDefault(); setIsGovDragging(true); }}
                             onDragLeave={() => setIsGovDragging(false)}
                             onDrop={(e) => {
@@ -1063,7 +1251,7 @@ export default function PartnerWithUs() {
                             <div className="flex items-center gap-2 shrink-0">
                               <button
                                 type="button"
-                                onClick={() => bizDocInputRef.current?.click()}
+                                onClick={() => openChoiceModal('bizDoc')}
                                 className="px-2.5 py-1 text-xs font-semibold text-[#00580C] dark:text-emerald-400 bg-white dark:bg-[#163321] border border-emerald-200 dark:border-emerald-800 rounded-md hover:bg-emerald-50 transition-colors cursor-pointer"
                               >
                                 Change
@@ -1080,7 +1268,7 @@ export default function PartnerWithUs() {
                           </div>
                         ) : (
                           <div
-                            onClick={() => bizDocInputRef.current?.click()}
+                            onClick={() => openChoiceModal('bizDoc')}
                             onDragOver={(e) => { e.preventDefault(); setIsBizDragging(true); }}
                             onDragLeave={() => setIsBizDragging(false)}
                             onDrop={(e) => {
@@ -1287,6 +1475,244 @@ export default function PartnerWithUs() {
                 Upload Different ID
               </button>
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Choice Modal: Upload File vs Take Photo ── */}
+      {choiceModalOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeChoiceModal();
+          }}
+        >
+          <div
+            className="bg-white dark:bg-[#0e2417] border border-gray-200 dark:border-[#204830] rounded-2xl shadow-2xl max-w-md w-full overflow-hidden p-5 sm:p-6 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100 dark:border-white/10">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">
+                  {choiceTarget === 'govId' ? 'Government-Issued ID' : 'Valid Business Document'}
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Select how you want to add this document
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeChoiceModal}
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
+                aria-label="Close selection modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* 2 Large Options */}
+            <div className="flex flex-col gap-3 my-2">
+              <button
+                type="button"
+                onClick={handleSelectUpload}
+                className="flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 dark:border-[#204830] hover:border-[#00580C] dark:hover:border-emerald-500 bg-gray-50/50 dark:bg-white/[0.03] hover:bg-emerald-50/40 dark:hover:bg-emerald-950/30 transition-all text-left group cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white dark:bg-[#163321] text-[#00580C] dark:text-emerald-400 border border-gray-200 dark:border-[#2d5c3c] shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                  <UploadCloud size={24} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm sm:text-base font-bold text-gray-900 dark:text-white group-hover:text-[#00580C] dark:group-hover:text-emerald-400 transition-colors">
+                    Upload / Attach File
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                    Select a JPG, PNG, WEBP, or PDF file from your device
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSelectCamera}
+                className="flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 dark:border-[#204830] hover:border-[#00580C] dark:hover:border-emerald-500 bg-gray-50/50 dark:bg-white/[0.03] hover:bg-emerald-50/40 dark:hover:bg-emerald-950/30 transition-all text-left group cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white dark:bg-[#163321] text-[#00580C] dark:text-emerald-400 border border-gray-200 dark:border-[#2d5c3c] shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                  <Camera size={24} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm sm:text-base font-bold text-gray-900 dark:text-white group-hover:text-[#00580C] dark:group-hover:text-emerald-400 transition-colors">
+                    Open Camera
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                    Take a live photo directly using your camera
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-gray-100 dark:border-white/10 flex justify-end">
+              <button
+                type="button"
+                onClick={closeChoiceModal}
+                className="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Live Camera Modal ── */}
+      {cameraModalOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 md:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeCameraModal();
+          }}
+        >
+          <div
+            className="bg-white dark:bg-[#0e2417] border border-gray-200 dark:border-[#204830] rounded-2xl sm:rounded-3xl shadow-2xl max-w-3xl lg:max-w-4xl w-full overflow-hidden p-4 sm:p-6 md:p-7 flex flex-col animate-in zoom-in-95 duration-200 max-h-[92vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 sm:pb-4 mb-3 sm:mb-4 border-b border-gray-100 dark:border-white/10 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-[#00580C] dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-200/60 dark:border-emerald-800/60 shadow-xs">
+                  <Camera size={22} className="sm:w-6 sm:h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">
+                    {cameraTarget === 'govId' ? 'Capture Government-Issued ID' : 'Capture Business Document'}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                    Position your document clearly within the frame under good lighting
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeCameraModal}
+                className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-full bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-600 dark:text-gray-200 transition-colors cursor-pointer shrink-0"
+                aria-label="Close camera modal"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            {cameraError ? (
+              <div className="flex flex-col items-center text-center py-8 sm:py-12 px-3">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mb-4 border border-amber-200 dark:border-amber-800/50">
+                  <AlertTriangle size={32} />
+                </div>
+                <h3 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  Camera Access Unavailable
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-md mb-6 leading-relaxed">
+                  {cameraError}
+                </p>
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto justify-center">
+                  <button
+                    type="button"
+                    className="w-full sm:w-auto px-6 py-3 text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/15 rounded-xl transition-colors cursor-pointer"
+                    onClick={closeCameraModal}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full sm:w-auto px-7 py-3 text-sm sm:text-base font-bold text-white bg-[#00580C] hover:bg-[#014209] rounded-xl shadow-md transition-colors cursor-pointer flex items-center justify-center gap-2"
+                    onClick={() => {
+                      const target = cameraTarget;
+                      closeCameraModal();
+                      setTimeout(() => {
+                        if (target === 'govId') govIdInputRef.current?.click();
+                        else if (target === 'bizDoc') bizDocInputRef.current?.click();
+                      }, 100);
+                    }}
+                  >
+                    <UploadCloud size={18} />
+                    <span>Upload File Instead</span>
+                  </button>
+                </div>
+              </div>
+            ) : isStartingCamera ? (
+              <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] max-h-[55vh] sm:max-h-[60vh] bg-black rounded-xl sm:rounded-2xl overflow-hidden flex flex-col items-center justify-center gap-3 text-white">
+                <Loader2 className="animate-spin text-emerald-400" size={40} />
+                <p className="text-sm sm:text-base text-gray-200 font-medium">Starting camera preview...</p>
+                <p className="text-xs text-gray-400">Please grant camera permission if prompted</p>
+              </div>
+            ) : capturedImage ? (
+              <div className="flex flex-col min-h-0 flex-1">
+                <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] max-h-[55vh] sm:max-h-[60vh] bg-black rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center border border-gray-200 dark:border-white/10 shadow-inner">
+                  <img
+                    src={capturedImage}
+                    alt="Captured document"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-4 sm:pt-5 mt-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleRetakePhoto}
+                    className="w-full sm:w-auto px-6 py-3 sm:px-7 sm:py-3.5 text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/15 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw size={18} />
+                    <span>Retake Photo</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAcceptPhoto}
+                    className="w-full sm:w-auto px-7 py-3 sm:px-9 sm:py-3.5 text-sm sm:text-base font-bold text-white bg-[#00580C] hover:bg-[#014209] rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2.5 active:scale-98"
+                  >
+                    <CheckCircle2 size={20} />
+                    <span>Use Photo</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col min-h-0 flex-1">
+                <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] max-h-[55vh] sm:max-h-[60vh] bg-black rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center border border-gray-200 dark:border-white/10 shadow-inner">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-contain bg-black"
+                  />
+                  {/* Framing guideline overlay */}
+                  <div className="pointer-events-none absolute inset-4 sm:inset-8 border-2 border-dashed border-white/80 rounded-xl flex items-end justify-center pb-3">
+                    <span className="text-xs sm:text-sm text-white font-medium bg-black/65 px-4 py-1.5 rounded-full backdrop-blur-md shadow-md">
+                      Center document within frame
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-4 sm:pt-5 mt-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={closeCameraModal}
+                    className="w-full sm:w-auto px-6 py-3 sm:px-7 sm:py-3.5 text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/15 rounded-xl transition-colors cursor-pointer text-center"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCapturePhoto}
+                    className="w-full sm:w-auto px-7 py-3 sm:px-9 sm:py-3.5 text-sm sm:text-base font-bold text-white bg-[#00580C] hover:bg-[#014209] rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2.5 active:scale-98"
+                  >
+                    <Camera size={20} />
+                    <span>Capture Photo</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>,
         document.body
