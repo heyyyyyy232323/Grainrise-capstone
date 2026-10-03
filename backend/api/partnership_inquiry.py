@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import secrets
+import shutil
 import smtplib
 from datetime import datetime, timedelta
 from django.utils import timezone
@@ -22,6 +23,8 @@ from rest_framework.response import Response
 from .models import PartnershipInquiry
 
 logger = logging.getLogger(__name__)
+
+print("TESSERACT PATH:", shutil.which("tesseract"))
 
 ALLOWED_PARTNER_ROLES = {"miller", "warehouse", "retailer"}
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".pdf"}
