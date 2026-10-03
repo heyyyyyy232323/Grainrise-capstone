@@ -111,19 +111,32 @@ ID_KEYWORDS = {
 def _load_id_ocr_dependencies():
     try:
         import pymupdf
-        import pytesseract
         from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+        from rapidocr import RapidOCR
     except ImportError as exc:
         logger.error("OCR dependencies missing: %s", exc)
         return None, None, None, None, None, None
 
-    tesseract_cmd = os.getenv("TESSERACT_CMD")
-    if tesseract_cmd and os.path.exists(tesseract_cmd):
-        pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
-    elif os.path.exists(r"C:\Program Files\Tesseract-OCR\tesseract.exe"):
-        pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    try:
+        ocr_engine = RapidOCR()
+    except Exception as exc:
+        logger.exception("Failed to initialize RapidOCR: %s", exc)
+        return None, None, None, None, None, None
 
-    return pymupdf, pytesseract, Image, ImageEnhance, ImageFilter, ImageOps
+    return pymupdf, ocr_engine, Image, ImageEnhance, ImageFilter, ImageOps
+
+def _run_rapidocr(ocr_engine, image):
+    try:
+        result = ocr_engine(image)
+        texts = getattr(result, "txts", None)
+
+        if texts:
+            return "\n".join(str(text) for text in texts if text)
+
+        return ""
+    except Exception as exc:
+        logger.exception("RapidOCR failed: %s", exc)
+        return ""
 
 
 def _prepare_image_for_id_ocr(image, ImageOps, ImageEnhance, ImageFilter):
@@ -150,56 +163,82 @@ def _prepare_image_for_id_ocr(image, ImageOps, ImageEnhance, ImageFilter):
 
 
 def _extract_text_from_id_file(uploaded_file):
-    pymupdf, pytesseract, Image, ImageEnhance, ImageFilter, ImageOps = _load_id_ocr_dependencies()
-    if not pytesseract:
+    pymupdf, ocr_engine, Image, ImageEnhance, ImageFilter, ImageOps = _load_id_ocr_dependencies()
+
+    if not ocr_engine:
         return ""
 
     filename = getattr(uploaded_file, "name", "") or ""
     _, ext = os.path.splitext(filename.lower())
 
     results = []
+
     try:
         uploaded_file.seek(0)
+
         if ext == ".pdf":
             pdf_bytes = uploaded_file.read()
             doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+
             for page in doc:
                 text = page.get_text("text") or ""
+
                 if len(text.strip()) >= 50:
                     results.append(text)
                 else:
                     matrix = pymupdf.Matrix(2.5, 2.5)
                     pix = page.get_pixmap(matrix=matrix, alpha=False)
-                    pil_img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                    proc_img = _prepare_image_for_id_ocr(pil_img, ImageOps, ImageEnhance, ImageFilter)
-                    for psm in (6, 11, 3):
-                        try:
-                            ocr_txt = pytesseract.image_to_string(proc_img, config=f"--oem 3 --psm {psm}")
-                            if ocr_txt.strip():
-                                results.append(ocr_txt)
-                        except Exception:
-                            pass
+
+                    pil_img = Image.frombytes(
+                        "RGB",
+                        [pix.width, pix.height],
+                        pix.samples
+                    )
+
+                    proc_img = _prepare_image_for_id_ocr(
+                        pil_img,
+                        ImageOps,
+                        ImageEnhance,
+                        ImageFilter
+                    )
+
+                    ocr_txt = _run_rapidocr(ocr_engine, proc_img)
+
+                    if ocr_txt.strip():
+                        results.append(ocr_txt)
+
             doc.close()
+
         else:
             img = Image.open(uploaded_file)
             img.load()
-            proc_img = _prepare_image_for_id_ocr(img, ImageOps, ImageEnhance, ImageFilter)
-            for psm in (6, 11, 3):
-                try:
-                    txt = pytesseract.image_to_string(proc_img, config=f"--oem 3 --psm {psm}")
-                    if txt.strip():
-                        results.append(txt)
-                except Exception:
-                    pass
+
+            proc_img = _prepare_image_for_id_ocr(
+                img,
+                ImageOps,
+                ImageEnhance,
+                ImageFilter
+            )
+
+            txt = _run_rapidocr(ocr_engine, proc_img)
+
+            if txt.strip():
+                results.append(txt)
+
     except Exception as exc:
         logger.exception("Error extracting text from ID: %s", exc)
+
     finally:
         try:
             uploaded_file.seek(0)
         except Exception:
             pass
 
-    return "\n".join(results)
+    final_text = "\n".join(results)
+
+    logger.info("OCR extracted %d characters", len(final_text))
+
+    return final_text
 
 
 def _clean_name_string(s):
