@@ -217,9 +217,14 @@ def _document_url(
     """
 
     if not relative_path:
-
         return None
 
+    str_path = str(relative_path).strip()
+    if not str_path:
+        return None
+
+    if str_path.startswith("http://") or str_path.startswith("https://"):
+        return str_path
 
     media_url = str(
         getattr(
@@ -230,18 +235,12 @@ def _document_url(
         or "/media/"
     )
 
-
     if not media_url.endswith(
         "/"
     ):
-
         media_url += "/"
 
-
-    cleaned_path = str(
-        relative_path
-    ).lstrip("/")
-
+    cleaned_path = str_path.replace("\\", "/").lstrip("/")
 
     return request.build_absolute_uri(
         f"{media_url}{cleaned_path}"
@@ -1361,7 +1360,9 @@ def delete_miller_management_account(
                     False,
 
                 "message":
-                    "Unable to permanently delete the Miller account.",
+                    f"Unable to permanently delete the Miller account: {str(exc)}"
+                    if str(exc)
+                    else "Unable to permanently delete the Miller account.",
 
                 "error":
                     str(

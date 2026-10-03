@@ -482,8 +482,12 @@ def _send_miller_confirmation_email(
 def confirm_miller_application(
     user_id,
 ):
+    from django.core.exceptions import ValidationError
     from ...models import PartnershipInquiry
-    inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    try:
+        inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    except (ValueError, TypeError, ValidationError):
+        inquiry = None
     if inquiry:
         from ..partner_account_service import create_partner_user_from_inquiry
         return create_partner_user_from_inquiry(inquiry_id=user_id, expected_role="miller")
@@ -994,13 +998,20 @@ def restore_miller_account(
 def delete_miller_account(
     user_id,
 ):
+    from django.core.exceptions import ValidationError
     from ...models import PartnershipInquiry
-    inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    try:
+        inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    except (ValueError, TypeError, ValidationError):
+        inquiry = None
+
     if inquiry:
-        b_name = inquiry.organization_company
+        b_name = inquiry.organization_company or inquiry.name or "Miller Partner"
+        m_name = inquiry.name or "Miller Applicant"
         inquiry.delete()
         return {
             "user_id": str(user_id),
+            "miller_name": m_name,
             "business_name": b_name,
             "message": "Miller inquiry deleted permanently.",
         }
@@ -1011,8 +1022,9 @@ def delete_miller_account(
         archived
         deactivated
 
-    Related profile/documents/employees/support records
-    are expected to follow their database ON DELETE CASCADE.
+    Dependent records (employees, documents, profiles, archive reasons,
+    ratings, reports, reactions, comments) are explicitly deleted within
+    a transaction to avoid foreign key constraint failures.
     """
 
     miller = (
@@ -1078,6 +1090,160 @@ def delete_miller_account(
 
         with connection.cursor() as cursor:
 
+            # 1. Supplier employee archive reasons
+            if (
+                _table_exists("supplier_employee_archive_reasons")
+                and _table_exists("supplier_employees")
+                and _table_exists("supplier_profiles")
+            ):
+                cursor.execute(
+                    """
+                    DELETE FROM supplier_employee_archive_reasons
+                    WHERE supplier_employee_id IN (
+                        SELECT se.supplier_employee_id
+                        FROM supplier_employees se
+                        JOIN supplier_profiles sp ON se.supplier_profile_id = sp.supplier_profile_id
+                        WHERE sp.user_id = %s
+                    )
+                    """,
+                    [user_id],
+                )
+
+            # 2. Supplier employees
+            if (
+                _table_exists("supplier_employees")
+                and _table_exists("supplier_profiles")
+            ):
+                cursor.execute(
+                    """
+                    DELETE FROM supplier_employees
+                    WHERE supplier_profile_id IN (
+                        SELECT supplier_profile_id
+                        FROM supplier_profiles
+                        WHERE user_id = %s
+                    )
+                    """,
+                    [user_id],
+                )
+
+            # 3. Supplier documents
+            if _table_exists("supplier_documents"):
+                cursor.execute(
+                    """
+                    DELETE FROM supplier_documents
+                    WHERE user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 4. Supplier profiles
+            if _table_exists("supplier_profiles"):
+                cursor.execute(
+                    """
+                    DELETE FROM supplier_profiles
+                    WHERE user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 5. Miller archive reasons
+            if _table_exists("miller_archive_reasons"):
+                cursor.execute(
+                    """
+                    DELETE FROM miller_archive_reasons
+                    WHERE user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 6. Miller ratings
+            if _table_exists("miller_ratings"):
+                cursor.execute(
+                    """
+                    DELETE FROM miller_ratings
+                    WHERE miller_user_id = %s
+                       OR reviewer_user_id = %s
+                    """,
+                    [user_id, user_id],
+                )
+
+            # 7. Miller reports
+            if _table_exists("miller_reports"):
+                cursor.execute(
+                    """
+                    DELETE FROM miller_reports
+                    WHERE miller_user_id = %s
+                       OR reported_by_user_id = %s
+                    """,
+                    [user_id, user_id],
+                )
+
+            # 8. News comments
+            if _table_exists("news_comments"):
+                cursor.execute(
+                    """
+                    UPDATE news_comments
+                    SET parent_comment_id = NULL
+                    WHERE parent_comment_id IN (
+                        SELECT c.comment_id FROM (
+                            SELECT comment_id FROM news_comments WHERE user_id = %s
+                        ) c
+                    )
+                    """,
+                    [user_id],
+                )
+                cursor.execute(
+                    """
+                    DELETE FROM news_comments
+                    WHERE user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 9. News reactions
+            if _table_exists("news_reactions"):
+                cursor.execute(
+                    """
+                    DELETE FROM news_reactions
+                    WHERE user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 10. Admin notifications
+            if _table_exists("admin_notifications"):
+                cursor.execute(
+                    """
+                    UPDATE admin_notifications
+                    SET related_user_id = NULL
+                    WHERE related_user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 11. System activity logs
+            if _table_exists("system_activity_logs"):
+                cursor.execute(
+                    """
+                    UPDATE system_activity_logs
+                    SET related_user_id = NULL
+                    WHERE related_user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 12. Email sent history
+            if _table_exists("email_sent_history"):
+                cursor.execute(
+                    """
+                    UPDATE email_sent_history
+                    SET recipient_user_id = NULL
+                    WHERE recipient_user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 13. Users
             cursor.execute(
                 """
                 DELETE FROM users

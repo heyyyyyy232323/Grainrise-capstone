@@ -74,6 +74,36 @@ def _row_to_dict(cursor):
 
 
 # ============================================================
+# SAFE DOCUMENT PATH EXTRACTION
+# ============================================================
+
+def _safe_extract_document_path(value):
+    """
+    Safely extract a single document path string from a stored document field.
+    Handles raw path strings, JSON array strings, and malformed strings
+    with invalid escape characters.
+    """
+    if not value:
+        return None
+    val_str = str(value).strip()
+    if not val_str:
+        return None
+    if val_str.startswith("[") and val_str.endswith("]"):
+        try:
+            parsed = json.loads(val_str)
+            if isinstance(parsed, list) and parsed:
+                return str(parsed[0]).strip() or None
+            if isinstance(parsed, str) and parsed:
+                return parsed.strip() or None
+        except Exception:
+            pass
+        inner = val_str[1:-1].strip()
+        inner = inner.strip("\"' \t\r\n\\")
+        return inner or None
+    return val_str
+
+
+# ============================================================
 # DATABASE TABLE CHECK
 # ============================================================
 
@@ -682,7 +712,6 @@ def get_miller_details(
         inquiry = PartnershipInquiry.objects.filter(
             partnership_inquiry_id=user_id,
             partner_role="miller",
-            status=PartnershipInquiry.Status.TO_REVIEW,
         ).first()
     except (ValueError, TypeError, ValidationError):
         inquiry = None
@@ -722,13 +751,9 @@ def get_miller_details(
             "business_created_at": inquiry.created_at,
             "business_updated_at": inquiry.updated_at,
             "supplier_document_id": None,
-            "government_issued_id": inquiry.government_issued_id,
+            "government_issued_id": _safe_extract_document_path(inquiry.government_issued_id),
             "business_permit": None,
-            "business_registration": (
-                json.loads(inquiry.business_verification_document)[0]
-                if (inquiry.business_verification_document and inquiry.business_verification_document.strip().startswith('['))
-                else inquiry.business_verification_document
-            ),
+            "business_registration": _safe_extract_document_path(inquiry.business_verification_document),
             "milling_license": None,
             "is_partnership": True,
             "documents_created_at": inquiry.created_at,

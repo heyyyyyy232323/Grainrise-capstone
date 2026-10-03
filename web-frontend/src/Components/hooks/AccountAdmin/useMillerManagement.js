@@ -413,10 +413,6 @@ const useMillerManagement = (
           true
         );
 
-        setError(
-          ""
-        );
-
 
         try {
           const response =
@@ -438,17 +434,6 @@ const useMillerManagement = (
         } catch (
           requestError
         ) {
-          const message =
-            requestError
-              ?.message ||
-            "Unable to load Miller details.";
-
-
-          setError(
-            message
-          );
-
-
           throw requestError;
 
         } finally {
@@ -481,10 +466,6 @@ const useMillerManagement = (
           true
         );
 
-        setError(
-          ""
-        );
-
 
         try {
           const response =
@@ -512,17 +493,6 @@ const useMillerManagement = (
         } catch (
           requestError
         ) {
-          const message =
-            requestError
-              ?.message ||
-            "Unable to load Miller View Details.";
-
-
-          setError(
-            message
-          );
-
-
           setMillerViewDetails(
             null
           );
@@ -560,10 +530,6 @@ const useMillerManagement = (
           true
         );
 
-        setError(
-          ""
-        );
-
 
         try {
           const response =
@@ -589,17 +555,6 @@ const useMillerManagement = (
         } catch (
           requestError
         ) {
-          const message =
-            requestError
-              ?.message ||
-            "Unable to confirm Miller application.";
-
-
-          setError(
-            message
-          );
-
-
           throw requestError;
 
         } finally {
@@ -641,10 +596,6 @@ const useMillerManagement = (
           true
         );
 
-        setError(
-          ""
-        );
-
 
         try {
           const response =
@@ -675,17 +626,6 @@ const useMillerManagement = (
         } catch (
           requestError
         ) {
-          const message =
-            requestError
-              ?.message ||
-            "Unable to archive Miller account.";
-
-
-          setError(
-            message
-          );
-
-
           throw requestError;
 
         } finally {
@@ -720,10 +660,6 @@ const useMillerManagement = (
           true
         );
 
-        setError(
-          ""
-        );
-
 
         try {
           const response =
@@ -749,17 +685,6 @@ const useMillerManagement = (
         } catch (
           requestError
         ) {
-          const message =
-            requestError
-              ?.message ||
-            "Unable to restore Miller account.";
-
-
-          setError(
-            message
-          );
-
-
           throw requestError;
 
         } finally {
@@ -794,10 +719,6 @@ const useMillerManagement = (
           true
         );
 
-        setError(
-          ""
-        );
-
 
         try {
           const response =
@@ -823,17 +744,6 @@ const useMillerManagement = (
         } catch (
           requestError
         ) {
-          const message =
-            requestError
-              ?.message ||
-            "Unable to permanently delete Miller account.";
-
-
-          setError(
-            message
-          );
-
-
           throw requestError;
 
         } finally {
@@ -881,10 +791,6 @@ const useMillerManagement = (
           true
         );
 
-        setError(
-          ""
-        );
-
 
         try {
           const response =
@@ -915,17 +821,6 @@ const useMillerManagement = (
         } catch (
           requestError
         ) {
-          const message =
-            requestError
-              ?.message ||
-            "Unable to archive Miller employee.";
-
-
-          setError(
-            message
-          );
-
-
           throw requestError;
 
         } finally {
@@ -965,10 +860,6 @@ const useMillerManagement = (
           true
         );
 
-        setError(
-          ""
-        );
-
 
         try {
           const response =
@@ -994,17 +885,6 @@ const useMillerManagement = (
         } catch (
           requestError
         ) {
-          const message =
-            requestError
-              ?.message ||
-            "Unable to retrieve Miller employee account.";
-
-
-          setError(
-            message
-          );
-
-
           throw requestError;
 
         } finally {
@@ -1044,10 +924,6 @@ const useMillerManagement = (
           true
         );
 
-        setError(
-          ""
-        );
-
 
         try {
           const response =
@@ -1073,17 +949,6 @@ const useMillerManagement = (
         } catch (
           requestError
         ) {
-          const message =
-            requestError
-              ?.message ||
-            "Unable to permanently delete Miller employee account.";
-
-
-          setError(
-            message
-          );
-
-
           throw requestError;
 
         } finally {
