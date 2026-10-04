@@ -173,7 +173,9 @@ def _matching_terms(
 RICE_ANCHOR_TERMS = (
     "rice",
     "palay",
+    "bigas",
     "paddy",
+    "paddies",
     "rice farming",
     "rice farmer",
     "rice farmers",
@@ -185,6 +187,11 @@ RICE_ANCHOR_TERMS = (
     "rice inventory",
     "rice import",
     "rice imports",
+    "rice prices",
+    "rice price",
+    "rice market",
+    "rice markets",
+    "rice stocks",
 )
 
 
@@ -442,7 +449,33 @@ CATEGORY_CONTEXT_TERMS = {
         "demand",
         "import",
         "imports",
+        "importation",
+        "export",
+        "exports",
         "consumption",
+        "cost",
+        "costs",
+        "inflation",
+        "procurement",
+        "trade",
+        "trading",
+        "trader",
+        "traders",
+        "wholesale",
+        "retail",
+        "retailer",
+        "retailers",
+        "tariff",
+        "tariffs",
+        "buffer stock",
+        "buffer stocks",
+        "stockpile",
+        "stockpiles",
+        "storage",
+        "logistics",
+        "distribution",
+        "shortage",
+        "surplus",
     ),
 
     "advisory_best_practices": (
@@ -533,8 +566,26 @@ CATEGORY_CONTEXT_TERMS = {
         "agriculture",
         "agricultural",
         "crop",
+        "crops",
         "harvest",
+        "harvesting",
         "production",
+        "planting",
+        "yield",
+        "yields",
+        "irrigation",
+        "cultivation",
+        "farm",
+        "farms",
+        "farmland",
+        "farmlands",
+        "agri",
+        "seed",
+        "seeds",
+        "fertilizer",
+        "fertilizers",
+        "palay",
+        "paddy",
     ),
 }
 
@@ -900,6 +951,11 @@ def evaluate_grainrise_article_relevance(
         category_terms
         and
         not category_matches
+        and
+        (
+            len(context_matches) < 2
+            or score < 6
+        )
     ):
 
         return {

@@ -209,16 +209,46 @@ const AdminNewsUpdates = () => {
           confirmState.kind ===
           "fetch"
         ) {
-          await fetchLatestNews();
+          const response =
+            await fetchLatestNews();
           await loadNewsSyncStatus();
 
-          showToast({
-            type: "success",
-            title: "News Updated",
-            message:
-              "Latest available news was fetched successfully.",
-            duration: 4000,
-          });
+          const syncResult =
+            response?.data?.sync_result;
+          const created =
+            Number(
+              syncResult?.articles_created || 0
+            );
+          const updated =
+            Number(
+              syncResult?.articles_updated || 0
+            );
+
+          if (created > 0) {
+            refreshManageList();
+            await loadAdminArticles({
+              page: 1,
+              page_size: 12,
+            }).catch(() => {});
+
+            showToast({
+              type: "success",
+              title: "News Updated",
+              message:
+                response?.message ||
+                `${created} new article(s) added. ${updated} existing article(s) updated.`,
+              duration: 4000,
+            });
+          } else {
+            showToast({
+              type: "warning",
+              title: "No New Articles",
+              message:
+                response?.message ||
+                `No new articles found. ${updated} existing article(s) updated.`,
+              duration: 5000,
+            });
+          }
         }
 
         else if (

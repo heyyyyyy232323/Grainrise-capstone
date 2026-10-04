@@ -566,6 +566,7 @@ def upsert_news_article(
 
             if existing:
                 news_id = int(existing[0])
+                created = False
                 cursor.execute(
                     """
                     UPDATE news_articles
@@ -647,6 +648,7 @@ def upsert_news_article(
                     ],
                 )
                 news_id = cursor.lastrowid
+                created = True
 
             if roles:
                 for role in roles:
@@ -669,7 +671,9 @@ def upsert_news_article(
 
     return {
         "news_id":
-            int(news_id)
+            int(news_id),
+        "created":
+            bool(created),
     }
 
 

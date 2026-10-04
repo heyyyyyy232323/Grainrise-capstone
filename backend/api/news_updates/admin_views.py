@@ -271,10 +271,33 @@ def admin_fetch_latest_news(
             run_newsdata_sync()
         )
 
+        articles_created = int(
+            sync_result.get(
+                "articles_created",
+                0,
+            )
+        )
+
+        articles_updated = int(
+            sync_result.get(
+                "articles_updated",
+                0,
+            )
+        )
+
+        if articles_created > 0:
+            message = (
+                f"{articles_created} new article(s) added. "
+                f"{articles_updated} existing article(s) updated."
+            )
+        else:
+            message = (
+                f"No new articles found. "
+                f"{articles_updated} existing article(s) updated."
+            )
+
         return _success(
-            message=(
-                "Latest news has been fetched successfully."
-            ),
+            message=message,
             data={
                 "sync_result":
                     sync_result,

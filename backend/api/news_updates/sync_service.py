@@ -1,4 +1,5 @@
 import json
+import logging
 
 from .newsdata_provider import (
     NEWSDATA_PROVIDER_NAME,
@@ -8,6 +9,7 @@ from .newsdata_provider import (
 )
 
 from .relevance import (
+    evaluate_grainrise_article_relevance,
     is_grainrise_relevant_article,
 )
 
@@ -20,6 +22,11 @@ from .services import (
     fail_news_sync,
     start_news_sync,
     upsert_news_article,
+)
+
+
+logger = logging.getLogger(
+    "grainrise.news_sync"
 )
 
 
@@ -254,10 +261,25 @@ def _process_newsdata_article(
     )
 
 
-    if not is_grainrise_relevant_article(
-        raw_article,
-        category_code=category_code,
-    ):
+    relevance_result = (
+        evaluate_grainrise_article_relevance(
+            raw_article,
+            category_code=category_code,
+        )
+    )
+
+    if not relevance_result.get("is_relevant"):
+        article_title = (
+            raw_article.get("title")
+            if isinstance(raw_article, dict)
+            else "<unknown>"
+        )
+        logger.info(
+            "NewsData article rejected by relevance check: %r - Reason: %s (score=%s)",
+            article_title,
+            relevance_result.get("reason"),
+            relevance_result.get("score"),
+        )
         return None
 
 
@@ -281,10 +303,7 @@ def _process_newsdata_article(
         **normalized_article
     )
 
-
-    return result[
-        "news_id"
-    ]
+    return result
 
 
 # ============================================================
@@ -313,6 +332,10 @@ def _process_newsdata_query(
     request_count = 0
 
     articles_received = 0
+
+    articles_created = 0
+
+    articles_updated = 0
 
     articles_processed = 0
 
@@ -373,25 +396,26 @@ def _process_newsdata_query(
         # ====================================================
 
         for raw_article in results:
+            article_title = (
+                raw_article.get("title")
+                if isinstance(raw_article, dict)
+                else "<unknown>"
+            )
 
             try:
-
-                news_id = (
+                upsert_result = (
                     _process_newsdata_article(
                         raw_article,
                         fetch_query,
                     )
                 )
 
-
-                if news_id is None:
-
+                if upsert_result is None:
                     articles_filtered += 1
-
+                elif upsert_result.get("created"):
+                    articles_created += 1
                 else:
-
-                    articles_processed += 1
-
+                    articles_updated += 1
 
             # =================================================
             # MALFORMED / INCOMPLETE ARTICLE
@@ -403,9 +427,14 @@ def _process_newsdata_query(
             except (
                 NewsDataArticleError,
                 ValueError,
-            ):
-
+            ) as exc:
                 articles_failed += 1
+                logger.warning(
+                    "NewsData article processing failed for %r (%s): %s",
+                    article_title,
+                    type(exc).__name__,
+                    exc,
+                )
 
 
         # ====================================================
@@ -432,12 +461,25 @@ def _process_newsdata_query(
         page = next_page
 
 
+    articles_processed = (
+        articles_created
+        +
+        articles_updated
+    )
+
+
     return {
         "request_count":
             request_count,
 
         "articles_received":
             articles_received,
+
+        "articles_created":
+            articles_created,
+
+        "articles_updated":
+            articles_updated,
 
         "articles_processed":
             articles_processed,
@@ -507,6 +549,10 @@ def run_newsdata_sync():
 
     articles_received = 0
 
+    articles_created = 0
+
+    articles_updated = 0
+
     articles_processed = 0
 
     articles_filtered = 0
@@ -555,9 +601,16 @@ def run_newsdata_sync():
             ]
 
 
-            articles_processed += result[
-                "articles_processed"
-            ]
+            articles_created += result.get(
+                "articles_created",
+                0,
+            )
+
+
+            articles_updated += result.get(
+                "articles_updated",
+                0,
+            )
 
 
             articles_filtered += result[
@@ -568,6 +621,13 @@ def run_newsdata_sync():
             articles_failed += result[
                 "articles_failed"
             ]
+
+
+        articles_processed = (
+            articles_created
+            +
+            articles_updated
+        )
 
 
         # ====================================================
@@ -610,6 +670,12 @@ def run_newsdata_sync():
 
             "articles_received":
                 articles_received,
+
+            "articles_created":
+                articles_created,
+
+            "articles_updated":
+                articles_updated,
 
             "articles_processed":
                 articles_processed,
