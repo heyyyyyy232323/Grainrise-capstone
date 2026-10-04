@@ -5,7 +5,6 @@ import logging
 import os
 import re
 import secrets
-import shutil
 import smtplib
 from datetime import datetime, timedelta
 from django.utils import timezone
@@ -24,7 +23,6 @@ from .models import PartnershipInquiry
 
 logger = logging.getLogger(__name__)
 
-print("TESSERACT PATH:", shutil.which("tesseract"))
 
 ALLOWED_PARTNER_ROLES = {"miller", "warehouse", "retailer"}
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".pdf"}
@@ -108,7 +106,9 @@ ID_KEYWORDS = {
     "national", "bureau", "internal", "revenue", "tin", "philhealth",
 }
 
+OCR_MAX_SIDE = 1200
 _RAPID_OCR_ENGINE = None
+
 
 def _load_id_ocr_dependencies():
     global _RAPID_OCR_ENGINE
@@ -124,7 +124,14 @@ def _load_id_ocr_dependencies():
     try:
         if _RAPID_OCR_ENGINE is None:
             logger.info("Initializing RapidOCR engine once...")
-            _RAPID_OCR_ENGINE = RapidOCR()
+            _RAPID_OCR_ENGINE = RapidOCR(
+                params={
+                    "Global.use_cls": False,
+                    "Global.max_side_len": OCR_MAX_SIDE,
+                    "EngineConfig.onnxruntime.intra_op_num_threads": 1,
+                    "EngineConfig.onnxruntime.inter_op_num_threads": 1,
+                }
+            )
 
         ocr_engine = _RAPID_OCR_ENGINE
 
@@ -133,6 +140,7 @@ def _load_id_ocr_dependencies():
         return None, None, None, None, None, None
 
     return pymupdf, ocr_engine, Image, ImageEnhance, ImageFilter, ImageOps
+
 
 def _run_rapidocr(ocr_engine, image):
     try:
@@ -143,43 +151,60 @@ def _run_rapidocr(ocr_engine, image):
             return "\n".join(str(text) for text in texts if text)
 
         return ""
+
     except Exception as exc:
         logger.exception("RapidOCR failed: %s", exc)
         return ""
 
 
 def _prepare_image_for_id_ocr(image, ImageOps, ImageEnhance, ImageFilter):
-    image = image.convert("RGB")
-    longest_side = max(image.width, image.height)
-    if longest_side < 800:
-        scale = 3
-    elif longest_side < 1400:
-        scale = 2
-    else:
-        scale = 1
+    """
+    Prepare a government ID image for OCR with lower memory usage.
 
-    if scale > 1:
-        from PIL import Image as PILImage
-        image = image.resize(
-            (image.width * scale, image.height * scale),
-            PILImage.Resampling.LANCZOS,
-        )
+    Important:
+    - Never upscale.
+    - Do NOT close the source image here because it may still be backed
+      by Django's uploaded file and is needed later for permanent saving.
+    """
 
+    try:
+        image.draft("RGB", (OCR_MAX_SIDE, OCR_MAX_SIDE))
+    except Exception:
+        pass
+
+    # Downscale only.
+    image.thumbnail((OCR_MAX_SIDE, OCR_MAX_SIDE))
+
+    # Convert to grayscale for lower memory usage.
     gray = ImageOps.grayscale(image)
-    contrasted = ImageOps.autocontrast(gray)
-    enhanced = ImageEnhance.Contrast(contrasted).enhance(1.6)
-    return enhanced.filter(ImageFilter.SHARPEN)
+
+    # Lightweight preprocessing only.
+    processed = ImageOps.autocontrast(gray)
+
+    if processed is not gray:
+        try:
+            gray.close()
+        except Exception:
+            pass
+
+    return processed
 
 
 def _extract_text_from_id_file(uploaded_file):
-    pymupdf, ocr_engine, Image, ImageEnhance, ImageFilter, ImageOps = _load_id_ocr_dependencies()
+    (
+        pymupdf,
+        ocr_engine,
+        Image,
+        ImageEnhance,
+        ImageFilter,
+        ImageOps,
+    ) = _load_id_ocr_dependencies()
 
     if not ocr_engine:
         return ""
 
     filename = getattr(uploaded_file, "name", "") or ""
     _, ext = os.path.splitext(filename.lower())
-
     results = []
 
     try:
@@ -189,50 +214,73 @@ def _extract_text_from_id_file(uploaded_file):
             pdf_bytes = uploaded_file.read()
             doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
 
-            for page in doc:
-                text = page.get_text("text") or ""
+            try:
+                # Government-ID PDFs should not require scanning a long file.
+                max_pages = min(len(doc), 2)
 
-                if len(text.strip()) >= 50:
-                    results.append(text)
-                else:
-                    matrix = pymupdf.Matrix(2.5, 2.5)
+                for page_index in range(max_pages):
+                    page = doc[page_index]
+                    text = page.get_text("text") or ""
+
+                    # Prefer embedded PDF text when available.
+                    if len(text.strip()) >= 50:
+                        results.append(text)
+                        continue
+
+                    # Lower render scale than the previous 2.5x to save RAM.
+                    matrix = pymupdf.Matrix(1.5, 1.5)
                     pix = page.get_pixmap(matrix=matrix, alpha=False)
 
                     pil_img = Image.frombytes(
                         "RGB",
                         [pix.width, pix.height],
-                        pix.samples
+                        pix.samples,
                     )
+                    pix = None
 
                     proc_img = _prepare_image_for_id_ocr(
                         pil_img,
                         ImageOps,
                         ImageEnhance,
-                        ImageFilter
+                        ImageFilter,
                     )
 
-                    ocr_txt = _run_rapidocr(ocr_engine, proc_img)
+                    try:
+                        ocr_txt = _run_rapidocr(ocr_engine, proc_img)
 
-                    if ocr_txt.strip():
-                        results.append(ocr_txt)
+                        if ocr_txt.strip():
+                            results.append(ocr_txt)
+                    finally:
+                        try:
+                            proc_img.close()
+                        except Exception:
+                            pass
 
-            doc.close()
+            finally:
+                doc.close()
 
         else:
             img = Image.open(uploaded_file)
-            img.load()
 
+            # Do not call img.load() here. draft()/thumbnail() may allow Pillow
+            # to avoid expanding a huge phone photo at full resolution first.
             proc_img = _prepare_image_for_id_ocr(
                 img,
                 ImageOps,
                 ImageEnhance,
-                ImageFilter
+                ImageFilter,
             )
 
-            txt = _run_rapidocr(ocr_engine, proc_img)
+            try:
+                txt = _run_rapidocr(ocr_engine, proc_img)
 
-            if txt.strip():
-                results.append(txt)
+                if txt.strip():
+                    results.append(txt)
+            finally:
+                try:
+                    proc_img.close()
+                except Exception:
+                    pass
 
     except Exception as exc:
         logger.exception("Error extracting text from ID: %s", exc)
@@ -244,11 +292,8 @@ def _extract_text_from_id_file(uploaded_file):
             pass
 
     final_text = "\n".join(results)
-
     logger.info("OCR extracted %d characters", len(final_text))
-
     return final_text
-
 
 def _clean_name_string(s):
     s = str(s or "").lower().replace("ñ", "n")
