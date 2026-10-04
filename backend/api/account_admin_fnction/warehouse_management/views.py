@@ -289,6 +289,9 @@ def _build_warehouse_detail_response(
         "user_role":
             row["user_role"],
 
+        "message":
+            row.get("message") or "",
+
 
         # ====================================================
         # PERSONAL INFORMATION
@@ -350,6 +353,9 @@ def _build_warehouse_detail_response(
 
             "username":
                 row["username"],
+
+            "message":
+                row.get("message") or "",
 
             "created_at":
                 _serialize_value(
@@ -1356,7 +1362,9 @@ def delete_warehouse_management_account(
                     False,
 
                 "message":
-                    "Unable to permanently delete the Warehouse Manager account.",
+                    f"Unable to permanently delete the Warehouse Manager account: {str(exc)}"
+                    if str(exc)
+                    else "Unable to permanently delete the Warehouse Manager account.",
 
                 "error":
                     str(

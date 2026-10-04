@@ -162,6 +162,7 @@ def list_warehouses(
         inquiries = PartnershipInquiry.objects.filter(
             partner_role="warehouse",
             status=PartnershipInquiry.Status.TO_REVIEW,
+            email_verified=True,
         ).order_by("-created_at")
 
         for inq in inquiries:
@@ -340,6 +341,7 @@ def get_warehouse_status_counts():
     inquiry_to_review_count = PartnershipInquiry.objects.filter(
         partner_role="warehouse",
         status=PartnershipInquiry.Status.TO_REVIEW,
+        email_verified=True,
     ).count()
     """
     Return badge counts for:
@@ -604,6 +606,7 @@ def get_warehouse_details(
             partnership_inquiry_id=user_id,
             partner_role="warehouse",
             status=PartnershipInquiry.Status.TO_REVIEW,
+            email_verified=True,
         ).first()
     except (ValueError, TypeError, ValidationError):
         inquiry = None
@@ -652,6 +655,7 @@ def get_warehouse_details(
             ),
             "warehouse_license": None,
             "is_partnership": True,
+            "message": inquiry.message or "",
             "documents_created_at": inquiry.created_at,
             "documents_updated_at": inquiry.updated_at,
         }

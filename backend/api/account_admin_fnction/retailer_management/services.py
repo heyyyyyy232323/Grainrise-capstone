@@ -336,8 +336,12 @@ def _send_retailer_confirmation_email(
 def confirm_retailer_application(
     user_id,
 ):
+    from django.core.exceptions import ValidationError
     from ...models import PartnershipInquiry
-    inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    try:
+        inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    except (ValueError, TypeError, ValidationError):
+        inquiry = None
     if inquiry:
         from ..partner_account_service import create_partner_user_from_inquiry
         return create_partner_user_from_inquiry(inquiry_id=user_id, expected_role="retailer")
@@ -842,15 +846,28 @@ def restore_retailer_account(
 def delete_retailer_account(
     user_id,
 ):
+    from django.core.exceptions import ValidationError
     from ...models import PartnershipInquiry
-    inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    try:
+        inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    except (ValueError, TypeError, ValidationError):
+        inquiry = None
+
     if inquiry:
+        current_status = str(inquiry.status or "").strip().lower()
+        if current_status not in {"inactive", "archived"}:
+            raise ValueError(
+                "Only archived or inactive Retailer inquiries can be permanently deleted."
+            )
+        r_name = inquiry.name or "Retailer Applicant"
         inquiry.delete()
         return {
             "user_id": str(user_id),
-            "email": inquiry.email,
+            "retailer_name": r_name,
+            "email": inquiry.email or "",
             "message": "Retailer inquiry deleted permanently.",
         }
+
     """
     Permanently delete a Retailer account.
 
@@ -859,7 +876,6 @@ def delete_retailer_account(
         deactivated
 
     Active accounts must be archived first.
-
     Registration-pending inactive accounts cannot be
     deleted using the Management Inactive action.
     """
@@ -870,12 +886,10 @@ def delete_retailer_account(
         )
     )
 
-
     if not retailer:
         raise ValueError(
             "Retailer account was not found."
         )
-
 
     current_status = str(
         retailer.get(
@@ -884,19 +898,16 @@ def delete_retailer_account(
         or ""
     ).strip().lower()
 
-
     if current_status == "active":
         raise ValueError(
             "Archive the Retailer account before permanently deleting it."
         )
-
 
     if current_status == "inactive":
         raise ValueError(
             "Retailer applications under review cannot be permanently deleted "
             "through the Management Inactive action."
         )
-
 
     if current_status not in {
         "archived",
@@ -907,13 +918,11 @@ def delete_retailer_account(
             "can be permanently deleted."
         )
 
-
     retailer_name = (
         _build_retailer_display_name(
             retailer
         )
     )
-
 
     retailer_email = str(
         retailer.get(
@@ -922,21 +931,136 @@ def delete_retailer_account(
         or ""
     ).strip()
 
-
     with transaction.atomic():
-
         with connection.cursor() as cursor:
+            # 1. Retailer documents
+            if _table_exists("retailer_documents"):
+                cursor.execute(
+                    """
+                    DELETE FROM retailer_documents
+                    WHERE user_id = %s
+                    """,
+                    [user_id],
+                )
 
+            # 2. Retailer archive reasons
+            if _table_exists("retailer_archive_reasons"):
+                cursor.execute(
+                    """
+                    DELETE FROM retailer_archive_reasons
+                    WHERE user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 3. Miller ratings / reports where retailer was reviewer / reporter
+            if _table_exists("miller_ratings"):
+                cursor.execute(
+                    """
+                    DELETE FROM miller_ratings
+                    WHERE reviewer_user_id = %s
+                    """,
+                    [user_id],
+                )
+            if _table_exists("miller_reports"):
+                cursor.execute(
+                    """
+                    DELETE FROM miller_reports
+                    WHERE reported_by_user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 4. Warehouse ratings / reports where retailer was reviewer / reporter
+            if _table_exists("warehouse_ratings"):
+                cursor.execute(
+                    """
+                    DELETE FROM warehouse_ratings
+                    WHERE reviewer_user_id = %s
+                    """,
+                    [user_id],
+                )
+            if _table_exists("warehouse_reports"):
+                cursor.execute(
+                    """
+                    DELETE FROM warehouse_reports
+                    WHERE reported_by_user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 5. News comments (break parent hierarchy first, then delete)
+            if _table_exists("news_comments"):
+                cursor.execute(
+                    """
+                    UPDATE news_comments
+                    SET parent_comment_id = NULL
+                    WHERE parent_comment_id IN (
+                        SELECT c.comment_id FROM (
+                            SELECT comment_id FROM news_comments WHERE user_id = %s
+                        ) c
+                    )
+                    """,
+                    [user_id],
+                )
+                cursor.execute(
+                    """
+                    DELETE FROM news_comments
+                    WHERE user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 6. News reactions
+            if _table_exists("news_reactions"):
+                cursor.execute(
+                    """
+                    DELETE FROM news_reactions
+                    WHERE user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 7. Admin notifications
+            if _table_exists("admin_notifications"):
+                cursor.execute(
+                    """
+                    UPDATE admin_notifications
+                    SET related_user_id = NULL
+                    WHERE related_user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 8. System activity logs
+            if _table_exists("system_activity_logs"):
+                cursor.execute(
+                    """
+                    UPDATE system_activity_logs
+                    SET related_user_id = NULL
+                    WHERE related_user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 9. Email sent history
+            if _table_exists("email_sent_history"):
+                cursor.execute(
+                    """
+                    UPDATE email_sent_history
+                    SET recipient_user_id = NULL
+                    WHERE recipient_user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 10. Users
             cursor.execute(
                 """
                 DELETE FROM users
-
                 WHERE
-
                     user_id = %s
-
                     AND user_role = %s
-
                     AND status IN (
                         'archived',
                         'deactivated'
@@ -956,19 +1080,9 @@ def delete_retailer_account(
 
             deleted = (user_id,)
 
-
     return {
-        "user_id":
-            int(
-                deleted[0]
-            ),
-
-        "retailer_name":
-            retailer_name,
-
-        "email":
-            retailer_email,
-
-        "message":
-            "Retailer account permanently deleted successfully.",
+        "user_id": int(deleted[0]),
+        "retailer_name": retailer_name,
+        "email": retailer_email,
+        "message": "Retailer account permanently deleted successfully.",
     }

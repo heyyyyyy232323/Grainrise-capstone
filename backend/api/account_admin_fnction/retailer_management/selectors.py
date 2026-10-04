@@ -189,6 +189,7 @@ def list_retailers(
         inquiries = PartnershipInquiry.objects.filter(
             partner_role="retailer",
             status=PartnershipInquiry.Status.TO_REVIEW,
+            email_verified=True,
         ).order_by("-created_at")
 
         for inq in inquiries:
@@ -349,6 +350,7 @@ def get_retailer_status_counts():
     inquiry_to_review_count = PartnershipInquiry.objects.filter(
         partner_role="retailer",
         status=PartnershipInquiry.Status.TO_REVIEW,
+        email_verified=True,
     ).count()
     """
     Return Retailer Management tab counts.
@@ -560,6 +562,7 @@ def get_retailer_details(
             partnership_inquiry_id=user_id,
             partner_role="retailer",
             status=PartnershipInquiry.Status.TO_REVIEW,
+            email_verified=True,
         ).first()
     except (ValueError, TypeError, ValidationError):
         inquiry = None
@@ -584,6 +587,9 @@ def get_retailer_details(
             "username": None,
             "user_role": "retailer",
             "status": inquiry.status,
+            "business_name": inquiry.organization_company,
+            "organization_name": inquiry.organization_company,
+            "message": inquiry.message or "",
             "created_at": inquiry.created_at,
             "updated_at": inquiry.updated_at,
             "retailer_document_id": None,

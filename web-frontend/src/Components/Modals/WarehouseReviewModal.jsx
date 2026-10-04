@@ -3,6 +3,7 @@ import {
   FileText,
   Mail,
   MapPin,
+  MessageSquare,
   Phone,
   User,
   X,
@@ -594,6 +595,12 @@ const WarehouseReviewModal = ({
       business.business_name,
       "Warehouse Business"
     );
+
+  const inquiryMessage = String(
+    warehouse?.message ||
+    account?.message ||
+    ""
+  ).trim();
 
 
   // =========================================================
@@ -1268,6 +1275,49 @@ const WarehouseReviewModal = ({
                       )}
                     </p>
                   </div>
+                </div>
+              </section>
+
+
+              {/* =============================================
+                  PARTNERSHIP INQUIRY MESSAGE
+              ============================================= */}
+
+              <section
+                className="
+                  rounded-2xl
+                  border
+                  border-slate-200
+                  bg-white
+                  p-5
+                "
+              >
+                <SectionHeader
+                  icon={MessageSquare}
+                  title="Partnership Inquiry Message"
+                  description="Message submitted by the applicant through Partner With Us."
+                />
+
+                <div
+                  className="
+                    rounded-xl
+                    border
+                    border-slate-100
+                    bg-slate-50
+                    p-4
+                  "
+                >
+                  <p
+                    className="
+                      whitespace-pre-wrap
+                      break-words
+                      text-[13px]
+                      leading-6
+                      text-slate-700
+                    "
+                  >
+                    {inquiryMessage || "No message provided."}
+                  </p>
                 </div>
               </section>
 

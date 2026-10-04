@@ -255,6 +255,19 @@ const MillerReviewModal = ({
   const fullName =
     formatFullName(personal);
 
+  const companyName =
+    business.business_name ||
+    business.organization_name ||
+    miller?.business_name ||
+    miller?.organization_name ||
+    "Not provided";
+
+  const inquiryMessage = String(
+    miller?.message ||
+    account?.message ||
+    ""
+  ).trim();
+
 
   const personalFullAddress =
     formatAddress(personalAddress);
@@ -545,69 +558,41 @@ const MillerReviewModal = ({
 
 
               {/* =================================================
-                  PERSONAL + ACCOUNT
+                  APPLICATION INFORMATION
               ================================================= */}
 
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
 
-
-                {/* PERSONAL */}
-
+                {/* APPLICANT */}
                 <Section
                   icon={User}
-                  title="Personal Information"
+                  title="Applicant Information"
                 >
-
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-
+                  <div className="space-y-3">
                     <Field
-                      label="First Name"
-                      value={personal.first_name}
+                      label="Applicant Name"
+                      value={fullName}
                     />
 
                     <Field
-                      label="Middle Initial"
-                      value={personal.middle_initial}
+                      label="Company / Business Name"
+                      value={companyName}
                     />
-
-                    <Field
-                      label="Last Name"
-                      value={personal.last_name}
-                    />
-
-                    <Field
-                      label="Suffix"
-                      value={personal.suffix}
-                    />
-
-                    <Field
-                      label="Gender"
-                      value={personal.gender}
-                    />
-
                   </div>
-
                 </Section>
 
-
-                {/* ACCOUNT */}
-
+                {/* CONTACT */}
                 <Section
                   icon={Mail}
-                  title="Account Information"
+                  title="Contact Details"
                 >
-
-                  <div className="space-y-4">
-
-
+                  <div className="space-y-3">
                     <div>
-
                       <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">
                         Email Address
                       </p>
 
                       <div className="flex items-center gap-2 text-[13px] font-medium text-slate-700">
-
                         <Mail
                           size={14}
                           className="shrink-0 text-slate-400"
@@ -618,20 +603,15 @@ const MillerReviewModal = ({
                             account.email
                           )}
                         </span>
-
                       </div>
-
                     </div>
 
-
                     <div>
-
                       <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">
                         Contact Number
                       </p>
 
                       <div className="flex items-center gap-2 text-[13px] font-medium text-slate-700">
-
                         <Phone
                           size={14}
                           className="shrink-0 text-slate-400"
@@ -642,19 +622,9 @@ const MillerReviewModal = ({
                             account.contact_number
                           )}
                         </span>
-
                       </div>
-
                     </div>
-
-
-                    <Field
-                      label="Username"
-                      value={account.username}
-                    />
-
                   </div>
-
                 </Section>
 
               </div>
@@ -667,14 +637,27 @@ const MillerReviewModal = ({
  
 
 
-              {/* =================================================
-                  BUSINESS
-              ================================================= */}
 
               
 
 
                
+
+              {/* =================================================
+                  PARTNERSHIP INQUIRY MESSAGE
+              ================================================= */}
+
+              <Section
+                icon={MessageSquare}
+                title="Partnership Inquiry Message"
+              >
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                  <p className="whitespace-pre-wrap break-words text-[13px] leading-6 text-slate-700">
+                    {inquiryMessage || "No message provided."}
+                  </p>
+                </div>
+              </Section>
+
 
               {/* =================================================
                   DOCUMENTS

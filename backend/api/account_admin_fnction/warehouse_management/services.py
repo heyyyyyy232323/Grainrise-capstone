@@ -7,6 +7,36 @@ from django.utils.html import escape
 
 from .selectors import get_warehouse_account_summary
 
+WAREHOUSE_ROLE = "warehouse_manager"
+
+
+# ============================================================
+# DATABASE HELPERS
+# ============================================================
+
+def _table_exists(table_name):
+    """
+    Return True when the given table exists in the MySQL database.
+    """
+    normalized_name = str(table_name or "").strip()
+    if not normalized_name:
+        return False
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name = %s
+            LIMIT 1
+            """,
+            [normalized_name],
+        )
+        row = cursor.fetchone()
+
+    return bool(row and row[0])
+
 
 # ============================================================
 # GENERAL HELPERS
@@ -453,8 +483,12 @@ def _send_warehouse_confirmation_email(
 def confirm_warehouse_application(
     user_id,
 ):
+    from django.core.exceptions import ValidationError
     from ...models import PartnershipInquiry
-    inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    try:
+        inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    except (ValueError, TypeError, ValidationError):
+        inquiry = None
     if inquiry:
         from ..partner_account_service import create_partner_user_from_inquiry
         return create_partner_user_from_inquiry(inquiry_id=user_id, expected_role="warehouse")
@@ -962,16 +996,29 @@ def restore_warehouse_account(
 def delete_warehouse_account(
     user_id,
 ):
+    from django.core.exceptions import ValidationError
     from ...models import PartnershipInquiry
-    inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    try:
+        inquiry = PartnershipInquiry.objects.filter(partnership_inquiry_id=user_id).first()
+    except (ValueError, TypeError, ValidationError):
+        inquiry = None
+
     if inquiry:
-        b_name = inquiry.organization_company
+        current_status = str(inquiry.status or "").strip().lower()
+        if current_status not in {"inactive", "archived"}:
+            raise ValueError(
+                "Only archived or inactive Warehouse inquiries can be permanently deleted."
+            )
+        b_name = inquiry.organization_company or inquiry.name or "Warehouse Partner"
+        m_name = inquiry.name or "Warehouse Applicant"
         inquiry.delete()
         return {
             "user_id": str(user_id),
+            "manager_name": m_name,
             "business_name": b_name,
             "message": "Warehouse inquiry deleted permanently.",
         }
+
     """
     Permanently delete Warehouse Manager account.
 
@@ -989,13 +1036,10 @@ def delete_warehouse_account(
         )
     )
 
-
     if not warehouse:
-
         raise ValueError(
             "Warehouse Manager account was not found."
         )
-
 
     current_status = str(
         warehouse.get(
@@ -1004,40 +1048,33 @@ def delete_warehouse_account(
         or ""
     ).strip().lower()
 
-
     if current_status == "active":
-
         raise ValueError(
             "Active Warehouse Manager accounts must be archived "
             "before they can be permanently deleted."
         )
 
-
     if current_status == "inactive":
-
         raise ValueError(
             "Warehouse Manager applications currently under review "
             "cannot be permanently deleted from this tab."
         )
 
-
     if current_status not in {
         "archived",
         "deactivated",
     }:
-
         raise ValueError(
-            "This Warehouse Manager account cannot be permanently "
-            "deleted from its current status."
+            "Only archived or deactivated Warehouse Manager accounts "
+            "can be permanently deleted."
         )
 
-
-    business_name = (
+    business_name = str(
         warehouse.get(
             "business_name"
         )
-    )
-
+        or ""
+    ).strip()
 
     display_name = (
         _build_warehouse_display_name(
@@ -1045,21 +1082,186 @@ def delete_warehouse_account(
         )
     )
 
-
     with transaction.atomic():
-
         with connection.cursor() as cursor:
+            # 1. Warehouse employee archive reasons
+            if (
+                _table_exists("warehouse_employee_archive_reasons")
+                and _table_exists("warehouse_employees")
+                and _table_exists("warehouse_profiles")
+            ):
+                cursor.execute(
+                    """
+                    DELETE FROM warehouse_employee_archive_reasons
+                    WHERE warehouse_employee_id IN (
+                        SELECT we.warehouse_employee_id
+                        FROM warehouse_employees we
+                        JOIN warehouse_profiles wp ON we.warehouse_profile_id = wp.warehouse_profile_id
+                        WHERE wp.user_id = %s
+                    )
+                    """,
+                    [user_id],
+                )
 
+            # 2. Warehouse employees
+            if (
+                _table_exists("warehouse_employees")
+                and _table_exists("warehouse_profiles")
+            ):
+                cursor.execute(
+                    """
+                    DELETE FROM warehouse_employees
+                    WHERE warehouse_profile_id IN (
+                        SELECT warehouse_profile_id
+                        FROM warehouse_profiles
+                        WHERE user_id = %s
+                    )
+                    """,
+                    [user_id],
+                )
+
+            # 3. Warehouse documents
+            if _table_exists("warehouse_documents"):
+                cursor.execute(
+                    """
+                    DELETE FROM warehouse_documents
+                    WHERE user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 4. Warehouse profiles
+            if _table_exists("warehouse_profiles"):
+                cursor.execute(
+                    """
+                    DELETE FROM warehouse_profiles
+                    WHERE user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 5. Warehouse archive reasons
+            if _table_exists("warehouse_archive_reasons"):
+                cursor.execute(
+                    """
+                    DELETE FROM warehouse_archive_reasons
+                    WHERE user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 6. Warehouse ratings
+            if _table_exists("warehouse_ratings"):
+                cursor.execute(
+                    """
+                    DELETE FROM warehouse_ratings
+                    WHERE warehouse_user_id = %s
+                       OR reviewer_user_id = %s
+                    """,
+                    [user_id, user_id],
+                )
+
+            # 7. Warehouse reports
+            if _table_exists("warehouse_reports"):
+                cursor.execute(
+                    """
+                    DELETE FROM warehouse_reports
+                    WHERE warehouse_user_id = %s
+                       OR reported_by_user_id = %s
+                    """,
+                    [user_id, user_id],
+                )
+
+            # 8. Miller ratings / reports where warehouse user was reviewer / reporter
+            if _table_exists("miller_ratings"):
+                cursor.execute(
+                    """
+                    DELETE FROM miller_ratings
+                    WHERE reviewer_user_id = %s
+                    """,
+                    [user_id],
+                )
+            if _table_exists("miller_reports"):
+                cursor.execute(
+                    """
+                    DELETE FROM miller_reports
+                    WHERE reported_by_user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 9. News comments (break parent hierarchy first, then delete)
+            if _table_exists("news_comments"):
+                cursor.execute(
+                    """
+                    UPDATE news_comments
+                    SET parent_comment_id = NULL
+                    WHERE parent_comment_id IN (
+                        SELECT c.comment_id FROM (
+                            SELECT comment_id FROM news_comments WHERE user_id = %s
+                        ) c
+                    )
+                    """,
+                    [user_id],
+                )
+                cursor.execute(
+                    """
+                    DELETE FROM news_comments
+                    WHERE user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 10. News reactions
+            if _table_exists("news_reactions"):
+                cursor.execute(
+                    """
+                    DELETE FROM news_reactions
+                    WHERE user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 11. Admin notifications
+            if _table_exists("admin_notifications"):
+                cursor.execute(
+                    """
+                    UPDATE admin_notifications
+                    SET related_user_id = NULL
+                    WHERE related_user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 12. System activity logs
+            if _table_exists("system_activity_logs"):
+                cursor.execute(
+                    """
+                    UPDATE system_activity_logs
+                    SET related_user_id = NULL
+                    WHERE related_user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 13. Email sent history
+            if _table_exists("email_sent_history"):
+                cursor.execute(
+                    """
+                    UPDATE email_sent_history
+                    SET recipient_user_id = NULL
+                    WHERE recipient_user_id = %s
+                    """,
+                    [user_id],
+                )
+
+            # 14. Users
             cursor.execute(
                 """
                 DELETE FROM users
-
                 WHERE
-
                     user_id = %s
-
-                    AND user_role = 'warehouse_manager'
-
+                    AND user_role = %s
                     AND status IN (
                         'archived',
                         'deactivated'
@@ -1067,32 +1269,23 @@ def delete_warehouse_account(
                 """,
                 [
                     user_id,
+                    WAREHOUSE_ROLE,
                 ],
             )
 
             if cursor.rowcount == 0:
                 raise RuntimeError(
-                    "The Warehouse Manager account could not be permanently deleted."
+                    "The Warehouse Manager account could not be permanently deleted "
+                    "because its status changed before the deletion completed."
                 )
 
             deleted = (user_id,)
 
-
     return {
-
-        "user_id":
-            int(
-                deleted[0]
-            ),
-
-        "manager_name":
-            display_name,
-
-        "business_name":
-            business_name,
-
-        "message":
-            "Warehouse Manager account deleted permanently.",
+        "user_id": int(deleted[0]),
+        "manager_name": display_name,
+        "business_name": business_name,
+        "message": "Warehouse Manager account deleted permanently.",
     }
 
 
@@ -1508,6 +1701,15 @@ def delete_warehouse_employee(
     with transaction.atomic():
 
         with connection.cursor() as cursor:
+
+            if _table_exists("warehouse_employee_archive_reasons"):
+                cursor.execute(
+                    """
+                    DELETE FROM warehouse_employee_archive_reasons
+                    WHERE warehouse_employee_id = %s
+                    """,
+                    [employee_id],
+                )
 
             cursor.execute(
                 """

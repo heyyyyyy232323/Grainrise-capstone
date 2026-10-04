@@ -1,7 +1,13 @@
+import base64
+import json
 import logging
+import os
 import secrets
 import smtplib
 import string
+import urllib.error
+import urllib.parse
+import urllib.request
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.core.mail import EmailMultiAlternatives
@@ -186,6 +192,104 @@ GrainRise Administration Team"""
     </html>
     """
 
+    gmail_client_id = (os.getenv("GMAIL_API_CLIENT_ID") or "").strip()
+    gmail_client_secret = (os.getenv("GMAIL_API_CLIENT_SECRET") or "").strip()
+    gmail_refresh_token = (os.getenv("GMAIL_API_REFRESH_TOKEN") or "").strip()
+
+    if gmail_client_id and gmail_client_secret and gmail_refresh_token:
+        try:
+            sender_email = (
+                os.getenv("GMAIL_SENDER_EMAIL")
+                or getattr(settings, "EMAIL_HOST_USER", "")
+                or getattr(settings, "DEFAULT_FROM_EMAIL", "")
+                or ""
+            ).strip()
+
+            if not sender_email:
+                raise RuntimeError(
+                    "GMAIL_SENDER_EMAIL is not configured and no email fallback is available."
+                )
+
+            # 1) Exchange the long-lived refresh token for a short-lived access token.
+            token_body = urllib.parse.urlencode(
+                {
+                    "client_id": gmail_client_id,
+                    "client_secret": gmail_client_secret,
+                    "refresh_token": gmail_refresh_token,
+                    "grant_type": "refresh_token",
+                }
+            ).encode("utf-8")
+
+            token_request = urllib.request.Request(
+                "https://oauth2.googleapis.com/token",
+                data=token_body,
+                method="POST",
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Accept": "application/json",
+                },
+            )
+
+            with urllib.request.urlopen(token_request, timeout=20) as response:
+                token_payload = json.loads(
+                    response.read().decode("utf-8", errors="replace")
+                )
+
+            access_token = str(token_payload.get("access_token") or "").strip()
+            if not access_token:
+                raise RuntimeError(
+                    f"Gmail OAuth response did not include an access token: {token_payload}"
+                )
+
+            # 2) Build the same multipart text + HTML email as a raw RFC 2822 message.
+            msg = EmailMultiAlternatives(
+                subject,
+                text_content,
+                sender_email,
+                [email],
+            )
+            msg.attach_alternative(html_content, "text/html")
+
+            mime_message = msg.message()
+            raw_message = base64.urlsafe_b64encode(
+                mime_message.as_bytes()
+            ).decode("ascii")
+
+            send_payload = json.dumps({"raw": raw_message}).encode("utf-8")
+            send_request = urllib.request.Request(
+                "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                data=send_payload,
+                method="POST",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
+            )
+
+            with urllib.request.urlopen(send_request, timeout=30) as response:
+                response_body = response.read().decode("utf-8", errors="replace")
+                if response.status not in (200, 201):
+                    raise RuntimeError(
+                        f"Gmail API returned HTTP {response.status}: {response_body}"
+                    )
+                logger.info(
+                    "Credentials email sent via Gmail API to %s (HTTP %s)",
+                    email,
+                    response.status,
+                )
+                return True, None
+
+        except Exception as exc:
+            logger.warning(
+                "Gmail API credentials email failed: %s; falling back to SMTP.",
+                exc,
+            )
+
+    # Local development fallback / SMTP fallback:
+    logger.info(
+        "Sending credentials email via Django email backend fallback."
+    )
     message = EmailMultiAlternatives(
         subject,
         text_content,
@@ -202,7 +306,7 @@ GrainRise Administration Team"""
         logger.exception(err)
         return False, err
     except Exception as exc:
-        logger.exception("Failed to send credential email: %s", exc)
+        logger.exception("Failed to send credential email via SMTP: %s", exc)
         return False, str(exc)
 
 def create_partner_user_from_inquiry(inquiry_id, expected_role):
@@ -215,8 +319,14 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
     if partner_role != expected_role:
         raise ValueError(f'Inquiry role ({partner_role}) does not match expected role ({expected_role}).')
 
+    if not inquiry.email_verified:
+        raise ValueError('Partnership inquiry email must be verified before confirmation.')
+
     if inquiry.status == 'active':
         raise ValueError('This partnership inquiry has already been confirmed and activated.')
+
+    if inquiry.status != PartnershipInquiry.Status.TO_REVIEW:
+        raise ValueError('Only inquiries under review can be confirmed.')
 
     # Check if a user with this email already exists
     with connection.cursor() as cursor:

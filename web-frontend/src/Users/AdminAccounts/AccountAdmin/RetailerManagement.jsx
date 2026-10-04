@@ -23,7 +23,7 @@ import CustomRedButton from "../../../Components/Minor-Components/CustomRedButto
 import Toast from "../../../Components/Minor-Components/Toast";
 
 import RetailerReviewModal from "../../../Components/Modals/RetailerReviewModal";
-import RetailerDetailsModal from "../../../Components/Modals/RetailerReviewModal";
+import RetailerDetailsModal from "../../../Components/Modals/RetailerDetailsModal";
 
 import ArchiveAccountModal from "../../../Components/Modals/ArchiveAccountModal";
 import AccountActionConfirmModal from "../../../Components/Modals/AccountActionConfirmModal";

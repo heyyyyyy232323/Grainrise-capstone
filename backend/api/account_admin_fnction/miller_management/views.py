@@ -288,6 +288,9 @@ def _build_miller_detail_response(
         "user_role":
             row["user_role"],
 
+        "message":
+            row.get("message") or "",
+
 
         # ====================================================
         # PERSONAL INFORMATION
@@ -349,6 +352,9 @@ def _build_miller_detail_response(
 
             "username":
                 row["username"],
+
+            "message":
+                row.get("message") or "",
 
             "created_at":
                 _serialize_value(

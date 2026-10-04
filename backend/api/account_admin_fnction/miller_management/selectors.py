@@ -243,6 +243,7 @@ def list_millers(
         inquiries = PartnershipInquiry.objects.filter(
             partner_role="miller",
             status=PartnershipInquiry.Status.TO_REVIEW,
+            email_verified=True,
         ).order_by("-created_at")
 
         for inq in inquiries:
@@ -449,6 +450,7 @@ def get_miller_status_counts():
     inquiry_to_review_count = PartnershipInquiry.objects.filter(
         partner_role="miller",
         status=PartnershipInquiry.Status.TO_REVIEW,
+        email_verified=True,
     ).count()
     """
     Return badge counts for:
@@ -712,6 +714,8 @@ def get_miller_details(
         inquiry = PartnershipInquiry.objects.filter(
             partnership_inquiry_id=user_id,
             partner_role="miller",
+            status=PartnershipInquiry.Status.TO_REVIEW,
+            email_verified=True,
         ).first()
     except (ValueError, TypeError, ValidationError):
         inquiry = None
@@ -756,6 +760,7 @@ def get_miller_details(
             "business_registration": _safe_extract_document_path(inquiry.business_verification_document),
             "milling_license": None,
             "is_partnership": True,
+            "message": inquiry.message or "",
             "documents_created_at": inquiry.created_at,
             "documents_updated_at": inquiry.updated_at,
         }

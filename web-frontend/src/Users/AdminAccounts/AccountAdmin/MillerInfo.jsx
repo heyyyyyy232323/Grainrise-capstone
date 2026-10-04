@@ -8,9 +8,11 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
+import { createPortal } from "react-dom";
 
 import {
   Search,
+  X,
 } from "lucide-react";
 
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
@@ -20,8 +22,6 @@ import Toast from "../../../Components/Minor-Components/Toast";
 
 import ArchiveAccountModal from "../../../Components/Modals/ArchiveAccountModal";
 import AccountActionConfirmModal from "../../../Components/Modals/AccountActionConfirmModal";
-
-import MillerReviewModal from "./MillerReviewModal";
 
 import useToast from "../../../Components/hooks/useToast";
 import useMillerManagement from "../../../Components/hooks/AccountAdmin/useMillerManagement";
@@ -175,6 +175,233 @@ const statusBadgeClass = (
     text-gray-600
     border-gray-200
   `;
+};
+
+
+// ============================================================
+// OWNER MODAL
+// ============================================================
+
+const MillerOwnerModal = ({
+  isOpen,
+  owner,
+  onClose,
+}) => {
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        onClose?.();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen || !owner) {
+    return null;
+  }
+
+  const personal = owner.personal_information || {};
+  const address = owner.personal_address || {};
+  const account = owner.account_information || {};
+  const business = owner.business_information || {};
+  const documents = owner.documents || {};
+
+  const fullName = [
+    personal.first_name,
+    personal.middle_initial,
+    personal.last_name,
+    personal.suffix,
+  ]
+    .map((v) => String(v || "").trim())
+    .filter(Boolean)
+    .join(" ") || "Miller Owner";
+
+  const fullAddress = (addr = {}) =>
+    [
+      addr.street_address,
+      addr.barangay,
+      addr.municipality,
+      addr.province,
+      addr.postal_code,
+    ]
+      .map((v) => String(v || "").trim())
+      .filter(Boolean)
+      .join(", ") || "Not provided";
+
+  const documentRows = [
+    {
+      label: "Valid Government-Issued ID",
+      document: documents.government_issued_id,
+    },
+    {
+      label: "Mayor's / Business Permit",
+      document: documents.business_permit,
+    },
+    {
+      label: "DTI / SEC / CDA Registration",
+      document: documents.business_registration,
+    },
+    {
+      label: "BPI / NFA / Milling License",
+      document: documents.milling_license,
+    },
+  ];
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 p-4">
+      <div className="flex max-h-[calc(100vh-40px)] w-full max-w-[900px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-[#08751e]">
+              Miller Account
+            </p>
+            <h2 className="mt-1 text-xl font-extrabold text-slate-900">
+              Owner Information
+            </h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Registered Miller / Supplier and business information.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Close owner details"
+          >
+            <X size={17} />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-slate-50/60 p-6">
+          <section className="rounded-xl border border-slate-200 bg-white p-5">
+            <h3 className="mb-4 text-sm font-extrabold text-slate-800">
+              Personal Information
+            </h3>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-400">Full Name</p>
+                <p className="mt-1 text-[13px] font-semibold text-slate-700">{fullName}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-400">Gender</p>
+                <p className="mt-1 text-[13px] font-semibold text-slate-700">{displayValue(personal.gender)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-400">Username</p>
+                <p className="mt-1 text-[13px] font-semibold text-slate-700">{displayValue(account.username)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-400">Email</p>
+                <p className="mt-1 text-[13px] font-semibold text-slate-700">{displayValue(account.email)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-400">Contact Number</p>
+                <p className="mt-1 text-[13px] font-semibold text-slate-700">{displayValue(account.contact_number)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-400">Account Status</p>
+                <p className="mt-1 text-[13px] font-semibold text-slate-700">{displayValue(owner.status)}</p>
+              </div>
+            </div>
+            <div className="mt-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-400">Personal Address</p>
+              <p className="mt-1 text-[13px] font-semibold text-slate-700">{fullAddress(address)}</p>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-slate-200 bg-white p-5">
+            <h3 className="mb-4 text-sm font-extrabold text-slate-800">
+              Miller Business Information
+            </h3>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-400">Business Name</p>
+                <p className="mt-1 text-[13px] font-semibold text-slate-700">{displayValue(business.business_name)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-400">Organization Name</p>
+                <p className="mt-1 text-[13px] font-semibold text-slate-700">{displayValue(business.organization_name)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-400">Official Email</p>
+                <p className="mt-1 text-[13px] font-semibold text-slate-700">{displayValue(business.official_email)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-400">Official Contact Number</p>
+                <p className="mt-1 text-[13px] font-semibold text-slate-700">{displayValue(business.official_contact_number)}</p>
+              </div>
+            </div>
+            <div className="mt-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.05em] text-slate-400">Business Address</p>
+              <p className="mt-1 text-[13px] font-semibold text-slate-700">{fullAddress(business)}</p>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-slate-200 bg-white p-5">
+            <h3 className="mb-4 text-sm font-extrabold text-slate-800">
+              Submitted Documents
+            </h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {documentRows.map((item) => (
+                <div
+                  key={item.label}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4"
+                >
+                  <p className="text-xs font-semibold text-slate-700">{item.label}</p>
+                  {item.document?.url ? (
+                    <a
+                      href={item.document.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="shrink-0 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-[11px] font-bold text-[#08751e] transition hover:bg-emerald-50"
+                    >
+                      View
+                    </a>
+                  ) : (
+                    <span className="text-[11px] text-slate-400">Unavailable</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <div className="flex justify-end border-t border-slate-200 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 };
 
 
@@ -2369,10 +2596,10 @@ const MillerInfo = () => {
 
       {/* =====================================================
           VIEW OWNER
-          REUSE EXISTING MILLER REVIEW UI
+          CONFIRMED MILLER OWNER INFORMATION
       ===================================================== */}
 
-      <MillerReviewModal
+      <MillerOwnerModal
         isOpen={
           ownerModal
         }
@@ -2381,20 +2608,8 @@ const MillerInfo = () => {
             false
           )
         }
-        miller={
+        owner={
           owner
-        }
-        isLoading={
-          false
-        }
-        isConfirming={
-          false
-        }
-        hideActions={
-          true
-        }
-        readOnly={
-          true
         }
       />
 

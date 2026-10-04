@@ -205,6 +205,15 @@ def _build_retailer_detail_response(
         "user_role":
             row["user_role"],
 
+        "message":
+            row.get("message") or "",
+
+        "business_name":
+            row.get("business_name") or row.get("organization_name") or "",
+
+        "organization_name":
+            row.get("organization_name") or row.get("business_name") or "",
+
 
         # ====================================================
         # PERSONAL INFORMATION
@@ -267,6 +276,9 @@ def _build_retailer_detail_response(
             "username":
                 row["username"],
 
+            "message":
+                row.get("message") or "",
+
             "created_at":
                 _serialize_value(
                     row["created_at"]
@@ -276,6 +288,20 @@ def _build_retailer_detail_response(
                 _serialize_value(
                     row["updated_at"]
                 ),
+        },
+
+
+        # ====================================================
+        # BUSINESS INFORMATION
+        # ====================================================
+
+        "business_information": {
+
+            "business_name":
+                row.get("business_name") or row.get("organization_name") or "",
+
+            "organization_name":
+                row.get("organization_name") or row.get("business_name") or "",
         },
 
 
@@ -320,6 +346,44 @@ def _build_retailer_detail_response(
                         request,
                         row.get(
                             "valid_id"
+                        ),
+                    ),
+            },
+
+
+            "government_issued_id": {
+
+                "path":
+                    row.get(
+                        "government_issued_id"
+                    ) or row.get(
+                        "valid_id"
+                    ),
+
+                "url":
+                    _document_url(
+                        request,
+                        row.get(
+                            "government_issued_id"
+                        ) or row.get(
+                            "valid_id"
+                        ),
+                    ),
+            },
+
+
+            "business_verification_document": {
+
+                "path":
+                    row.get(
+                        "barangay_permit"
+                    ),
+
+                "url":
+                    _document_url(
+                        request,
+                        row.get(
+                            "barangay_permit"
                         ),
                     ),
             },
@@ -956,7 +1020,9 @@ def delete_retailer_management_account(
                     False,
 
                 "message":
-                    "Unable to permanently delete the Retailer account.",
+                    f"Unable to permanently delete the Retailer account: {str(exc)}"
+                    if str(exc)
+                    else "Unable to permanently delete the Retailer account.",
 
                 "error":
                     str(exc),
