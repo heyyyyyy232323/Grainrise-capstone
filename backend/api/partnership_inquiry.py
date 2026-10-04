@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import hmac
 import json
@@ -5,7 +6,9 @@ import logging
 import os
 import re
 import secrets
-import smtplib
+import urllib.error
+import urllib.parse
+import urllib.request
 from datetime import datetime, timedelta
 from django.utils import timezone
 
@@ -33,7 +36,7 @@ RESEND_COOLDOWN_SECONDS = 60
 
 ROLE_LABELS = {
     "miller": "Miller / Supplier",
-    "warehouse": "Warehouse Manager",
+    "warehouse": "Warehouse Owner",
     "retailer": "Retailer",
 }
 
@@ -457,9 +460,130 @@ GrainRise Team"""
     </body>
     </html>
     """
-    msg = EmailMultiAlternatives(subject, text_content, settings.DEFAULT_FROM_EMAIL, [email])
+    gmail_client_id = (os.getenv("GMAIL_API_CLIENT_ID") or "").strip()
+    gmail_client_secret = (os.getenv("GMAIL_API_CLIENT_SECRET") or "").strip()
+    gmail_refresh_token = (os.getenv("GMAIL_API_REFRESH_TOKEN") or "").strip()
+
+    # Production path for Render Free:
+    # Gmail API uses HTTPS (443), so it does not rely on SMTP ports 465/587.
+    if gmail_client_id and gmail_client_secret and gmail_refresh_token:
+        sender_email = (
+            os.getenv("GMAIL_SENDER_EMAIL")
+            or getattr(settings, "EMAIL_HOST_USER", "")
+            or getattr(settings, "DEFAULT_FROM_EMAIL", "")
+            or ""
+        ).strip()
+
+        if not sender_email:
+            raise RuntimeError(
+                "GMAIL_SENDER_EMAIL is not configured and no email fallback is available."
+            )
+
+        # 1) Exchange the long-lived refresh token for a short-lived access token.
+        token_body = urllib.parse.urlencode(
+            {
+                "client_id": gmail_client_id,
+                "client_secret": gmail_client_secret,
+                "refresh_token": gmail_refresh_token,
+                "grant_type": "refresh_token",
+            }
+        ).encode("utf-8")
+
+        token_request = urllib.request.Request(
+            "https://oauth2.googleapis.com/token",
+            data=token_body,
+            method="POST",
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+            },
+        )
+
+        try:
+            with urllib.request.urlopen(token_request, timeout=20) as response:
+                token_payload = json.loads(
+                    response.read().decode("utf-8", errors="replace")
+                )
+        except urllib.error.HTTPError as exc:
+            error_body = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(
+                f"Gmail OAuth token request failed with HTTP {exc.code}: {error_body}"
+            ) from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError(
+                f"Gmail OAuth network error: {getattr(exc, 'reason', exc)}"
+            ) from exc
+
+        access_token = str(token_payload.get("access_token") or "").strip()
+        if not access_token:
+            raise RuntimeError(
+                f"Gmail OAuth response did not include an access token: {token_payload}"
+            )
+
+        # 2) Build the same multipart text + HTML email as a raw RFC 2822 message.
+        msg = EmailMultiAlternatives(
+            subject,
+            text_content,
+            sender_email,
+            [email],
+        )
+        msg.attach_alternative(html_content, "text/html")
+
+        mime_message = msg.message()
+        raw_message = base64.urlsafe_b64encode(
+            mime_message.as_bytes()
+        ).decode("ascii")
+
+        send_payload = json.dumps({"raw": raw_message}).encode("utf-8")
+        send_request = urllib.request.Request(
+            "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+            data=send_payload,
+            method="POST",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+        )
+
+        try:
+            with urllib.request.urlopen(send_request, timeout=30) as response:
+                response_body = response.read().decode("utf-8", errors="replace")
+                if response.status not in (200, 201):
+                    raise RuntimeError(
+                        f"Gmail API returned HTTP {response.status}: {response_body}"
+                    )
+                logger.info(
+                    "Verification email sent via Gmail API to %s (HTTP %s)",
+                    email,
+                    response.status,
+                )
+                return True
+
+        except urllib.error.HTTPError as exc:
+            error_body = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(
+                f"Gmail API send failed with HTTP {exc.code}: {error_body}"
+            ) from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError(
+                f"Gmail API network error: {getattr(exc, 'reason', exc)}"
+            ) from exc
+
+    # Local development fallback:
+    # if Gmail API credentials are not configured, retain the existing SMTP path.
+    logger.info(
+        "Gmail API credentials are not configured; falling back to Django email backend."
+    )
+    msg = EmailMultiAlternatives(
+        subject,
+        text_content,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+    )
     msg.attach_alternative(html_content, "text/html")
     msg.send(fail_silently=False)
+    return True
 
 
 def _check_email_used(email):
@@ -715,17 +839,34 @@ def submit_partnership_inquiry(request):
             status=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
-    # Send verification email
+    # Send verification email.
+    # The inquiry has already been saved, so return its ID even if delivery fails.
     try:
         _send_verification_email(name, email, partner_role, raw_token)
     except Exception as exc:
-        logger.warning("Could not send verification email: %s", exc)
+        logger.exception("Could not send verification email: %s", exc)
+        return Response(
+            {
+                "success": False,
+                "validation_status": "MATCH",
+                "requires_email_verification": True,
+                "email_sent": False,
+                "inquiry_id": str(app_uuid),
+                "email": email,
+                "detail": (
+                    "Your partnership application was saved, but the verification "
+                    "email could not be sent. Please use Resend Verification Email."
+                ),
+            },
+            status=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
 
     return Response({
         "success": True,
         "validation_status": "MATCH",
-        "message": "Your partnership application has been received and submitted for review.",
+        "message": "Your partnership application has been received. Please verify your email address.",
         "requires_email_verification": True,
+        "email_sent": True,
         "inquiry_id": str(app_uuid),
         "email": email,
     }, status=http_status.HTTP_201_CREATED)
@@ -738,37 +879,175 @@ def verify_partnership_email(request, token):
     GET /api/partnership-inquiries/verify-email/<token>/
     """
     token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+
     try:
-        inquiry = PartnershipInquiry.objects.filter(verification_token_hash=token_hash).first()
-        if inquiry:
-            inquiry.email_verified = True
-            inquiry.verified_at = timezone.now()
-            inquiry.save(update_fields=["email_verified", "verified_at", "updated_at"])
-            
+        inquiry = PartnershipInquiry.objects.filter(
+            verification_token_hash=token_hash
+        ).first()
+
+        if inquiry is None:
+            return Response(
+                {
+                    "success": False,
+                    "error_code": "INVALID_VERIFICATION_TOKEN",
+                    "detail": (
+                        "This verification link is invalid or has already "
+                        "been replaced by a newer verification link."
+                    ),
+                },
+                status=http_status.HTTP_400_BAD_REQUEST,
+            )
+
+        if inquiry.email_verified:
+            return Response(
+                {
+                    "success": True,
+                    "already_verified": True,
+                    "message": "This email address has already been verified.",
+                },
+                status=http_status.HTTP_200_OK,
+            )
+
+        if (
+            inquiry.verification_expires_at
+            and timezone.now() > inquiry.verification_expires_at
+        ):
+            return Response(
+                {
+                    "success": False,
+                    "error_code": "VERIFICATION_LINK_EXPIRED",
+                    "inquiry_id": str(inquiry.partnership_inquiry_id),
+                    "email": inquiry.email,
+                    "detail": (
+                        "This verification link has expired. "
+                        "Please request a new verification email."
+                    ),
+                },
+                status=http_status.HTTP_410_GONE,
+            )
+
+        inquiry.email_verified = True
+        inquiry.verified_at = timezone.now()
+        inquiry.save(
+            update_fields=[
+                "email_verified",
+                "verified_at",
+                "updated_at",
+            ]
+        )
+
+        return Response(
+            {
+                "success": True,
+                "already_verified": False,
+                "message": (
+                    "Email verified successfully! "
+                    "Your application is now in review."
+                ),
+            },
+            status=http_status.HTTP_200_OK,
+        )
+
     except Exception as exc:
         logger.exception("Verification error: %s", exc)
 
-    return Response({
-        "success": True,
-        "message": "Email verified successfully! Your application is now in review.",
-    }, status=http_status.HTTP_200_OK)
+        return Response(
+            {
+                "success": False,
+                "detail": "Unable to verify this email address at this time.",
+            },
+            status=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def resend_partnership_verification(request):
     data = request.data
+
+    inquiry_id = str(data.get("inquiry_id") or "").strip()
     email = (data.get("email") or "").strip().lower()
-    inquiry = PartnershipInquiry.objects.filter(email=email).order_by("-created_at").first()
-    if inquiry:
-        raw_token, token_hash = _generate_verification_token()
-        inquiry.verification_token_hash = token_hash
-        inquiry.verification_expires_at = timezone.now() + timedelta(seconds=VERIFICATION_TOKEN_TTL_SECONDS)
-        inquiry.save(update_fields=["verification_token_hash", "verification_expires_at", "updated_at"])
-        try:
-            _send_verification_email(inquiry.name, inquiry.email, inquiry.partner_role, raw_token)
-        except Exception:
-            pass
-    return Response({"success": True, "message": "A new verification link has been sent if the email exists."})
+
+    inquiry = None
+
+    if inquiry_id:
+        inquiry = PartnershipInquiry.objects.filter(
+            partnership_inquiry_id=inquiry_id
+        ).first()
+
+    # Compatibility fallback for any older frontend/client still sending email.
+    if inquiry is None and email:
+        inquiry = PartnershipInquiry.objects.filter(
+            email=email
+        ).order_by("-created_at").first()
+
+    if inquiry is None:
+        return Response(
+            {
+                "success": False,
+                "detail": "Partnership application could not be found.",
+            },
+            status=http_status.HTTP_404_NOT_FOUND,
+        )
+
+    if inquiry.email_verified:
+        return Response(
+            {
+                "success": False,
+                "detail": "This email address has already been verified.",
+            },
+            status=http_status.HTTP_400_BAD_REQUEST,
+        )
+
+    raw_token, token_hash = _generate_verification_token()
+
+    inquiry.verification_token_hash = token_hash
+    inquiry.verification_expires_at = (
+        timezone.now() + timedelta(seconds=VERIFICATION_TOKEN_TTL_SECONDS)
+    )
+    inquiry.save(
+        update_fields=[
+            "verification_token_hash",
+            "verification_expires_at",
+            "updated_at",
+        ]
+    )
+
+    try:
+        _send_verification_email(
+            inquiry.name,
+            inquiry.email,
+            inquiry.partner_role,
+            raw_token,
+        )
+    except Exception as exc:
+        logger.exception(
+            "Could not resend partnership verification email for inquiry %s: %s",
+            inquiry.partnership_inquiry_id,
+            exc,
+        )
+        return Response(
+            {
+                "success": False,
+                "inquiry_id": str(inquiry.partnership_inquiry_id),
+                "email": inquiry.email,
+                "detail": (
+                    "Verification email could not be sent. "
+                    "Please try again in a moment."
+                ),
+            },
+            status=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    return Response(
+        {
+            "success": True,
+            "inquiry_id": str(inquiry.partnership_inquiry_id),
+            "email": inquiry.email,
+            "message": "A new verification email has been sent.",
+        },
+        status=http_status.HTTP_200_OK,
+    )
 
 # Stubs for backwards compatibility if called
 @api_view(["GET"])

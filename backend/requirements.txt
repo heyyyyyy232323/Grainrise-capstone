@@ -54,3 +54,5 @@ gunicorn
 
 rapidocr
 onnxruntime
+
+google-auth-oauthlib
