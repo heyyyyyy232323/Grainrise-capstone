@@ -115,7 +115,7 @@ def _load_env_file(path: Path) -> None:
 
         # actually takes effect after the server restarts.
 
-        os.environ[key] = value
+        os.environ.setdefault(key, value)
 
 
 
