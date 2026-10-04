@@ -108,7 +108,11 @@ ID_KEYWORDS = {
     "national", "bureau", "internal", "revenue", "tin", "philhealth",
 }
 
+_RAPID_OCR_ENGINE = None
+
 def _load_id_ocr_dependencies():
+    global _RAPID_OCR_ENGINE
+
     try:
         import pymupdf
         from PIL import Image, ImageEnhance, ImageFilter, ImageOps
@@ -118,7 +122,12 @@ def _load_id_ocr_dependencies():
         return None, None, None, None, None, None
 
     try:
-        ocr_engine = RapidOCR()
+        if _RAPID_OCR_ENGINE is None:
+            logger.info("Initializing RapidOCR engine once...")
+            _RAPID_OCR_ENGINE = RapidOCR()
+
+        ocr_engine = _RAPID_OCR_ENGINE
+
     except Exception as exc:
         logger.exception("Failed to initialize RapidOCR: %s", exc)
         return None, None, None, None, None, None
