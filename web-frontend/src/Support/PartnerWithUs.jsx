@@ -251,7 +251,8 @@ export default function PartnerWithUs() {
       return;
     }
     if (file.size > MAX_FILE_BYTES) {
-      setError('File size must not exceed 5 MB.');
+      setFile(null);
+      setError(`File is too large (${formatBytes(file.size)}). Maximum allowed file size is 5 MB. Please choose a smaller file.`);
       if (inputRef.current) inputRef.current.value = '';
       return;
     }
@@ -1175,7 +1176,7 @@ export default function PartnerWithUs() {
                               if (file) processSingleFile(file, 'govId');
                             }}
                             className={`flex flex-col items-center justify-center gap-2 p-5 rounded-lg border-2 border-dashed cursor-pointer transition-all
-                              ${(submitAttempted && govIdError)
+                              ${govIdError
                                 ? 'border-red-400 dark:border-red-500 bg-red-50/40 dark:bg-red-950/20 ring-2 ring-red-200/40'
                                 : isGovDragging
                                   ? 'border-[#00580C] dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 scale-[1.01]'
@@ -1194,7 +1195,13 @@ export default function PartnerWithUs() {
                             </div>
                           </div>
                         )}
-                        {(submitAttempted && govIdError) && (
+
+                        <div className="mt-2  mb-4 inline-flex w-fit items-center gap-1.5 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-2.5 py-1 text-[10.5px] font-semibold text-amber-700 dark:text-amber-300">
+                          <AlertTriangle size={12} className="shrink-0" />
+                          <span>Maximum file size: 5 MB per file. Larger files will be rejected immediately.</span>
+                        </div>
+
+                        {govIdError && (
                           <p className="mt-1.5 text-[11px] text-red-500 leading-tight flex items-center gap-1 font-medium">
                             <ImageIcon size={12} className="shrink-0" />
                             {govIdError}
@@ -1278,7 +1285,7 @@ export default function PartnerWithUs() {
                               if (file) processSingleFile(file, 'bizDoc');
                             }}
                             className={`flex flex-col items-center justify-center gap-2 p-5 rounded-lg border-2 border-dashed cursor-pointer transition-all
-                              ${(submitAttempted && bizDocError)
+                              ${bizDocError
                                 ? 'border-red-400 dark:border-red-500 bg-red-50/40 dark:bg-red-950/20 ring-2 ring-red-200/40'
                                 : isBizDragging
                                   ? 'border-[#00580C] dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 scale-[1.01]'
@@ -1297,7 +1304,13 @@ export default function PartnerWithUs() {
                             </div>
                           </div>
                         )}
-                        {(submitAttempted && bizDocError) && (
+
+                        <div className="mt-2 mb-1 inline-flex w-fit items-center gap-1.5 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-2.5 py-1 text-[10.5px] font-semibold text-amber-700 dark:text-amber-300">
+                          <AlertTriangle size={12} className="shrink-0" />
+                          <span>Maximum file size: 5 MB per file. Larger files will be rejected immediately.</span>
+                        </div>
+
+                        {bizDocError && (
                           <p className="mt-1.5 text-[11px] text-red-500 leading-tight flex items-center gap-1 font-medium">
                             <ImageIcon size={12} className="shrink-0" />
                             {bizDocError}
