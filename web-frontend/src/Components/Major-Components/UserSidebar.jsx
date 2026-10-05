@@ -27,6 +27,7 @@ import {
   SlidersHorizontal,
   CircleDollarSign,
   Tractor,
+  Megaphone,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import Logo from "../../assets/Logo.png";
@@ -78,6 +79,11 @@ export const getUserSidebarConfig = (role = "admin") => {
               label: "News & Updates",
               icon: Newspaper,
               path: "/admin/news-updates",
+            },
+            {
+              label: "Announcements",
+              icon: Megaphone,
+              path: "/admin/announcements",
             },
           ],
         },

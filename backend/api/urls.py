@@ -76,6 +76,7 @@ urlpatterns = [
         name="auth-complete-profile",
     ),
 
+
     # ========================================================
     # ADMIN AUTHENTICATION
     # ========================================================
@@ -89,10 +90,12 @@ urlpatterns = [
 
     # ========================================================
     # REGISTRATION FUNCTIONALITY DISABLED
-    # Public self-registration for Millers/Suppliers, Retailers,
-    # and Warehouses has been removed in favor of the Partner With Us flow.
-    # The registration handlers in views.py, supplier_registration.py,
-    # and warehouse_registration.py are preserved for future use.
+    #
+    # Public self-registration for Millers/Suppliers,
+    # Retailers, and Warehouses has been removed in favor
+    # of the Partner With Us flow.
+    #
+    # Existing registration handlers are preserved.
     # ========================================================
 
 
@@ -102,8 +105,11 @@ urlpatterns = [
 
     path(
         "admin/",
-        include("api.account_admin_fnction.accountadmin_urls"),
+        include(
+            "api.account_admin_fnction.accountadmin_urls"
+        ),
     ),
+
 
 
 
@@ -113,7 +119,9 @@ urlpatterns = [
 
     path(
         "miller/",
-        include("api.miller_function.urls"),
+        include(
+            "api.miller_function.urls"
+        ),
     ),
 
 
@@ -123,7 +131,9 @@ urlpatterns = [
 
     path(
         "news/",
-        include("api.news_updates.urls"),
+        include(
+            "api.news_updates.urls"
+        ),
     ),
 
 
@@ -206,64 +216,83 @@ urlpatterns = [
         name="forgot-password-reset",
     ),
 
+
     # ========================================================
     # PARTNERSHIP INQUIRIES (PUBLIC)
     # ========================================================
+
     path(
         "partnership-inquiries/check-availability/",
         partnership_inquiry.check_partnership_availability,
         name="partnership-inquiry-check-availability",
     ),
+
     path(
         "partnership-inquiries/",
         partnership_inquiry.submit_partnership_inquiry,
         name="partnership-inquiry-submit",
     ),
+
     path(
         "partnership-inquiries/verify-email/<str:token>",
         partnership_inquiry.verify_partnership_email,
         name="partnership-inquiry-verify-email-no-slash",
     ),
+
     path(
         "partnership-inquiries/verify-email/<str:token>/",
         partnership_inquiry.verify_partnership_email,
         name="partnership-inquiry-verify-email",
     ),
+
     path(
         "partnership-inquiries/resend-verification/",
         partnership_inquiry.resend_partnership_verification,
         name="partnership-inquiry-resend-verification",
     ),
 
+
     # ========================================================
     # PARTNERSHIP INQUIRIES (ADMIN — by role)
-    # GET /api/admin/partnership-inquiries/?role=miller&tab=to-review
-    # GET /api/admin/partnership-inquiries/?role=warehouse&tab=active
-    # GET /api/admin/partnership-inquiries/?role=retailer&tab=inactive
-    # PATCH/DELETE /api/admin/partnership-inquiries/<id>/
-    # POST /api/admin/partnership-inquiries/<id>/status/
+    #
+    # GET:
+    # /api/admin/partnership-inquiries/
+    #
+    # PATCH / DELETE:
+    # /api/admin/partnership-inquiries/<id>/
+    #
+    # STATUS:
+    # /api/admin/partnership-inquiries/<id>/status/
     # ========================================================
+
     path(
         "admin/partnership-inquiries/",
         partnership_inquiry.admin_list_partnership_inquiries,
         name="admin-partnership-inquiries-list",
     ),
+
     path(
         "admin/partnership-inquiries/<str:inquiry_id>/",
         partnership_inquiry.admin_get_or_update_partnership_inquiry,
         name="admin-partnership-inquiry-detail",
     ),
+
     path(
         "admin/partnership-inquiries/<str:inquiry_id>/status/",
         partnership_inquiry.admin_update_partnership_inquiry_status,
         name="admin-partnership-inquiry-status",
     ),
 
+
     # ========================================================
-    # EMAIL USERS (general admin email)
+    # EMAIL USERS
+    # GENERAL ADMIN EMAIL
     # ========================================================
+
     path(
         "admin/email-users/send/",
-        include("api.account_admin_fnction.email_users.urls"),
+        include(
+            "api.account_admin_fnction.email_users.urls"
+        ),
     ),
 ]
