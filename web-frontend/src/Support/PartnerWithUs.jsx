@@ -22,6 +22,9 @@ const ORG_RE = /^[a-zA-Z0-9\s&.,'\-]+$/;
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
 const ALLOWED_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_SOURCE_IMAGE_BYTES = 20 * 1024 * 1024;
+const IMAGE_UPLOAD_MAX_SIDE = 1280;
+const IMAGE_UPLOAD_JPEG_QUALITY = 0.76;
 const POLICY_VERSION = '1.0';
 const API_BASE = `${import.meta.env.VITE_API_BASE_URL}/api`;
 
@@ -72,6 +75,99 @@ function formatBytes(bytes) {
   if (bytes < 1024) return bytes + ' B';
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+}
+
+async function compressImageForUpload(file) {
+  if (!file) throw new Error('No image file provided.');
+  if (file.size > MAX_SOURCE_IMAGE_BYTES) {
+    throw new Error('Image is too large to process. Please choose an image smaller than 20 MB.');
+  }
+
+  let bitmap = null;
+  let objectUrl = null;
+  let imageEl = null;
+
+  try {
+    let width;
+    let height;
+    let drawSource;
+
+    if (typeof createImageBitmap === 'function') {
+      bitmap = await createImageBitmap(file);
+      width = bitmap.width;
+      height = bitmap.height;
+      drawSource = bitmap;
+    } else {
+      objectUrl = URL.createObjectURL(file);
+      imageEl = new Image();
+      await new Promise((resolve, reject) => {
+        imageEl.onload = resolve;
+        imageEl.onerror = () => reject(new Error('Unable to decode image.'));
+        imageEl.src = objectUrl;
+      });
+      width = imageEl.naturalWidth || imageEl.width;
+      height = imageEl.naturalHeight || imageEl.height;
+      drawSource = imageEl;
+    }
+
+    if (!width || !height) throw new Error('Unable to read image dimensions.');
+
+    const scale = Math.min(1, IMAGE_UPLOAD_MAX_SIDE / Math.max(width, height));
+    let targetWidth = Math.max(1, Math.round(width * scale));
+    let targetHeight = Math.max(1, Math.round(height * scale));
+
+    const encode = async (w, h, quality) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d', { alpha: false });
+      if (!ctx) throw new Error('Unable to prepare image for upload.');
+
+      // JPEG has no transparency; use white so PNG/WebP documents stay readable.
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(drawSource, 0, 0, w, h);
+
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(
+          (value) => value ? resolve(value) : reject(new Error('Image compression failed.')),
+          'image/jpeg',
+          quality,
+        );
+      });
+      canvas.width = 1;
+      canvas.height = 1;
+      return blob;
+    };
+
+    let quality = IMAGE_UPLOAD_JPEG_QUALITY;
+    let blob = await encode(targetWidth, targetHeight, quality);
+
+    // Keep stepping down only if a particularly detailed photo is still large.
+    while (blob.size > 1024 * 1024 && quality > 0.58) {
+      quality -= 0.06;
+      blob = await encode(targetWidth, targetHeight, quality);
+    }
+
+    // Final safeguard: shrink dimensions once more rather than sending a huge JPEG.
+    if (blob.size > 1024 * 1024) {
+      const extraScale = Math.min(1, 1024 / Math.max(targetWidth, targetHeight));
+      targetWidth = Math.max(1, Math.round(targetWidth * extraScale));
+      targetHeight = Math.max(1, Math.round(targetHeight * extraScale));
+      blob = await encode(targetWidth, targetHeight, Math.max(0.58, quality));
+    }
+
+    const originalBase = (file.name || 'document').replace(/\.[^.]+$/, '');
+    return new File([blob], `${originalBase}_optimized.jpg`, {
+      type: 'image/jpeg',
+      lastModified: Date.now(),
+    });
+  } finally {
+    if (bitmap?.close) bitmap.close();
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+  }
 }
 const FieldError = ({ msg }) =>
   msg ? <p className="mt-1 text-[11px] text-red-500 leading-tight">{msg}</p> : null;
@@ -236,7 +332,7 @@ export default function PartnerWithUs() {
     agreedToTerms;
 
   /* ── Single Document Processing (Government-Issued ID & Business Document) ── */
-  const processSingleFile = (file, type) => {
+  const processSingleFile = async (file, type) => {
     if (!file) return;
     const isGov = type === 'govId';
     const setFile = isGov ? setGovIdFile : setBizDocFile;
@@ -250,50 +346,73 @@ export default function PartnerWithUs() {
       if (inputRef.current) inputRef.current.value = '';
       return;
     }
-    if (file.size > MAX_FILE_BYTES) {
-      setFile(null);
-      setError(`File is too large (${formatBytes(file.size)}). Maximum allowed file size is 5 MB. Please choose a smaller file.`);
-      if (inputRef.current) inputRef.current.value = '';
-      return;
-    }
 
     setError('');
     const isPdf = ext === '.pdf';
+
     if (isPdf) {
+      if (file.size > MAX_FILE_BYTES) {
+        setError(`File is too large (${formatBytes(file.size)}). PDF files must not exceed 5 MB.`);
+        if (inputRef.current) inputRef.current.value = '';
+        return;
+      }
+
       setFile({
         file,
         preview: null,
         name: file.name,
         size: file.size,
+        originalSize: file.size,
+        optimized: false,
         isPdf: true,
       });
       if (inputRef.current) inputRef.current.value = '';
-    } else {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setFile({
-          file,
-          preview: e.target.result,
-          name: file.name,
-          size: file.size,
-          isPdf: false,
-        });
+      return;
+    }
+
+    try {
+      // Force every image (camera or gallery/upload) through one predictable,
+      // Render-friendly format before it is attached to FormData.
+      const optimizedFile = await compressImageForUpload(file);
+
+      if (optimizedFile.size > MAX_FILE_BYTES) {
+        setError(`Optimized image is still too large (${formatBytes(optimizedFile.size)}). Please choose a smaller image.`);
         if (inputRef.current) inputRef.current.value = '';
-      };
-      reader.onerror = () => {
-        setError('Failed to read image file.');
-      };
-      reader.readAsDataURL(file);
+        return;
+      }
+
+      const preview = URL.createObjectURL(optimizedFile);
+      setFile((previous) => {
+        if (previous?.preview?.startsWith?.('blob:')) {
+          URL.revokeObjectURL(previous.preview);
+        }
+        return {
+          file: optimizedFile,
+          preview,
+          name: optimizedFile.name,
+          size: optimizedFile.size,
+          originalSize: file.size,
+          optimized: true,
+          isPdf: false,
+        };
+      });
+    } catch (err) {
+      console.error('Image optimization failed:', err);
+      setError(err?.message || 'Failed to optimize image. Please try a different photo.');
+    } finally {
+      if (inputRef.current) inputRef.current.value = '';
     }
   };
 
   const handleRemoveSingleFile = (type) => {
     if (type === 'govId') {
+      if (govIdFile?.preview?.startsWith?.('blob:')) URL.revokeObjectURL(govIdFile.preview);
       setGovIdFile(null);
       if (submitAttempted) setGovIdError('Valid Government-Issued ID is required.');
       else setGovIdError('');
       if (govIdInputRef.current) govIdInputRef.current.value = '';
     } else {
+      if (bizDocFile?.preview?.startsWith?.('blob:')) URL.revokeObjectURL(bizDocFile.preview);
       setBizDocFile(null);
       if (submitAttempted) setBizDocError('Valid Business Document is required.');
       else setBizDocError('');
@@ -406,15 +525,24 @@ export default function PartnerWithUs() {
     const video = videoRef.current;
     const videoWidth = video.videoWidth || 1280;
     const videoHeight = video.videoHeight || 720;
+    const scale = Math.min(1, IMAGE_UPLOAD_MAX_SIDE / Math.max(videoWidth, videoHeight));
+    const targetWidth = Math.max(1, Math.round(videoWidth * scale));
+    const targetHeight = Math.max(1, Math.round(videoHeight * scale));
 
     const canvas = document.createElement('canvas');
-    canvas.width = videoWidth;
-    canvas.height = videoHeight;
-    const ctx = canvas.getContext('2d');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
-    ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, targetWidth, targetHeight);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+    const dataUrl = canvas.toDataURL('image/jpeg', IMAGE_UPLOAD_JPEG_QUALITY);
+    canvas.width = 1;
+    canvas.height = 1;
     setCapturedImage(dataUrl);
   };
 
@@ -686,6 +814,8 @@ export default function PartnerWithUs() {
 
   /* ── Start a completely new inquiry (Reset) ── */
   const handleStartNewInquiry = () => {
+    if (govIdFile?.preview?.startsWith?.('blob:')) URL.revokeObjectURL(govIdFile.preview);
+    if (bizDocFile?.preview?.startsWith?.('blob:')) URL.revokeObjectURL(bizDocFile.preview);
     setFormData({ name: '', email: '', organization: '', partnerRole: '', contactNumber: '', message: '' });
     setErrors({ name: '', email: '', organization: '', partnerRole: '', contactNumber: '', message: '' });
     setTouched({ name: false, email: false, organization: false, partnerRole: false, contactNumber: false, message: false });
@@ -1195,18 +1325,16 @@ export default function PartnerWithUs() {
                             </div>
                           </div>
                         )}
-
-                        <div className="mt-2  mb-4 inline-flex w-fit items-center gap-1.5 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-2.5 py-1 text-[10.5px] font-semibold text-amber-700 dark:text-amber-300">
-                          <AlertTriangle size={12} className="shrink-0" />
-                          <span>Maximum file size: 5 MB per file. Larger files will be rejected immediately.</span>
-                        </div>
-
                         {govIdError && (
                           <p className="mt-1.5 text-[11px] text-red-500 leading-tight flex items-center gap-1 font-medium">
                             <ImageIcon size={12} className="shrink-0" />
                             {govIdError}
                           </p>
                         )}
+                        <div className="mt-2 mb-4 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[10.5px] font-medium leading-relaxed text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+                          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                          <span>Maximum file size: 5 MB per file. Image files are automatically resized and compressed before upload to reduce processing memory.</span>
+                        </div>
                       </div>
 
                       {/* ── 2. Valid Business Document (Required single file) ── */}
@@ -1304,18 +1432,16 @@ export default function PartnerWithUs() {
                             </div>
                           </div>
                         )}
-
-                        <div className="mt-2 mb-1 inline-flex w-fit items-center gap-1.5 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-2.5 py-1 text-[10.5px] font-semibold text-amber-700 dark:text-amber-300">
-                          <AlertTriangle size={12} className="shrink-0" />
-                          <span>Maximum file size: 5 MB per file. Larger files will be rejected immediately.</span>
-                        </div>
-
                         {bizDocError && (
                           <p className="mt-1.5 text-[11px] text-red-500 leading-tight flex items-center gap-1 font-medium">
                             <ImageIcon size={12} className="shrink-0" />
                             {bizDocError}
                           </p>
                         )}
+                        <div className="mt-2 mb-4 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[10.5px] font-medium leading-relaxed text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+                          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                          <span>Maximum file size: 5 MB per file. Image files are automatically resized and compressed before upload to reduce processing memory.</span>
+                        </div>
                       </div>
 
                     </div>

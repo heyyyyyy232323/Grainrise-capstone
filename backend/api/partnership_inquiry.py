@@ -1,4 +1,5 @@
 import base64
+import gc
 import hashlib
 import hmac
 import json
@@ -109,7 +110,7 @@ ID_KEYWORDS = {
     "national", "bureau", "internal", "revenue", "tin", "philhealth",
 }
 
-OCR_MAX_SIDE = 1200
+OCR_MAX_SIDE = 960
 _RAPID_OCR_ENGINE = None
 
 
@@ -129,10 +130,14 @@ def _load_id_ocr_dependencies():
             logger.info("Initializing RapidOCR engine once...")
             _RAPID_OCR_ENGINE = RapidOCR(
                 params={
+                    # Keep the OCR pipeline small enough for Render's 512 MB instance.
                     "Global.use_cls": False,
                     "Global.max_side_len": OCR_MAX_SIDE,
+                    "Rec.rec_batch_num": 1,
+                    "Cls.cls_batch_num": 1,
                     "EngineConfig.onnxruntime.intra_op_num_threads": 1,
                     "EngineConfig.onnxruntime.inter_op_num_threads": 1,
+                    "EngineConfig.onnxruntime.enable_cpu_mem_arena": False,
                 }
             )
 
@@ -146,8 +151,13 @@ def _load_id_ocr_dependencies():
 
 
 def _run_rapidocr(ocr_engine, image):
+    """Run OCR with the orientation classifier forcibly disabled."""
+    result = None
     try:
-        result = ocr_engine(image)
+        # Passing use_cls=False here is intentional. It prevents RapidOCR from
+        # lazily loading the classifier model even if a package/default config
+        # differs from our constructor parameters.
+        result = ocr_engine(image, use_cls=False)
         texts = getattr(result, "txts", None)
 
         if texts:
@@ -158,6 +168,10 @@ def _run_rapidocr(ocr_engine, image):
     except Exception as exc:
         logger.exception("RapidOCR failed: %s", exc)
         return ""
+
+    finally:
+        result = None
+        gc.collect()
 
 
 def _prepare_image_for_id_ocr(image, ImageOps, ImageEnhance, ImageFilter):
@@ -216,6 +230,7 @@ def _extract_text_from_id_file(uploaded_file):
         if ext == ".pdf":
             pdf_bytes = uploaded_file.read()
             doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+            del pdf_bytes
 
             try:
                 # Government-ID PDFs should not require scanning a long file.
@@ -231,7 +246,7 @@ def _extract_text_from_id_file(uploaded_file):
                         continue
 
                     # Lower render scale than the previous 2.5x to save RAM.
-                    matrix = pymupdf.Matrix(1.5, 1.5)
+                    matrix = pymupdf.Matrix(1.25, 1.25)
                     pix = page.get_pixmap(matrix=matrix, alpha=False)
 
                     pil_img = Image.frombytes(
@@ -258,9 +273,16 @@ def _extract_text_from_id_file(uploaded_file):
                             proc_img.close()
                         except Exception:
                             pass
+                        try:
+                            pil_img.close()
+                        except Exception:
+                            pass
+                        pix = None
+                        gc.collect()
 
             finally:
                 doc.close()
+                gc.collect()
 
         else:
             img = Image.open(uploaded_file)
@@ -284,6 +306,7 @@ def _extract_text_from_id_file(uploaded_file):
                     proc_img.close()
                 except Exception:
                     pass
+                gc.collect()
 
     except Exception as exc:
         logger.exception("Error extracting text from ID: %s", exc)
@@ -293,6 +316,7 @@ def _extract_text_from_id_file(uploaded_file):
             uploaded_file.seek(0)
         except Exception:
             pass
+        gc.collect()
 
     final_text = "\n".join(results)
     logger.info("OCR extracted %d characters", len(final_text))
