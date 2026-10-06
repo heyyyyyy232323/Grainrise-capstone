@@ -986,9 +986,9 @@ export const getUserSidebarConfig = (role = "admin") => {
               path: "/miller-manager/branches",
             },
             {
-              label: "Contracts",
-              icon: FileText,
-              path: "/miller-manager/contracts",
+              label: "Supplier Management",
+              icon: Truck,
+              path: "/miller-manager/suppliers",
             },
             {
               label: "Messages",

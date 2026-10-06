@@ -1,0 +1,878 @@
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
+import { Search, Plus, Truck, X, CheckCircle2, AlertCircle, ChevronDown, Star, Eye } from "lucide-react";
+import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
+import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
+import useApi from "../../../Components/hooks/useApi";
+import usePhilippineAddress from "../../../Components/hooks/usePhilippineAddress";
+
+const statusStyleMap = {
+  active: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+  inactive: "bg-slate-100 text-slate-700 border border-slate-200",
+};
+
+const INITIAL_SUPPLIER_FORM = {
+  supplier_profile_id: "",
+  supplier_farm: "",
+  organization: "",
+  contact_person: "",
+  contact_number: "",
+  email: "",
+  street_address: "",
+  status: "active",
+};
+
+export default function SupplierManagement() {
+  const navigate = useNavigate();
+  const { request } = useApi();
+  const address = usePhilippineAddress();
+
+  const [suppliers, setSuppliers] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedBranch, setSelectedBranch] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Modal State
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [formData, setFormData] = useState(INITIAL_SUPPLIER_FORM);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [toastMsg, setToastMsg] = useState("");
+
+  const showToast = (msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(""), 3000);
+  };
+
+  // Fetch branches owned by Miller
+  const fetchBranches = useCallback(async () => {
+    try {
+      const res = await request("/miller/branches/", { method: "GET" });
+      const list = res?.data ?? (Array.isArray(res) ? res : []);
+      if (Array.isArray(list)) {
+        setBranches(list);
+        if (list.length > 0) {
+          setFormData((prev) => ({
+            ...prev,
+            supplier_profile_id: prev.supplier_profile_id || String(list[0].supplier_profile_id),
+          }));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load miller branches:", err);
+    }
+  }, [request]);
+
+  // Fetch suppliers owned by Miller
+  const fetchSuppliers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await request("/miller/suppliers/", { method: "GET" });
+      const raw = res?.data ?? (Array.isArray(res) ? res : []);
+      if (Array.isArray(raw)) {
+        setSuppliers(raw);
+      }
+    } catch (err) {
+      console.error("Failed to load miller suppliers:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [request]);
+
+  useEffect(() => {
+    fetchBranches();
+    fetchSuppliers();
+  }, [fetchBranches, fetchSuppliers]);
+
+  // Ensure provinces are loaded when modal is opened or if options are empty
+  useEffect(() => {
+    if (showAddModal && (!address.provinceOptions || address.provinceOptions.length === 0) && !address.loading.provinces) {
+      address.reloadProvinces?.();
+    }
+  }, [showAddModal, address.provinceOptions, address.loading.provinces, address.reloadProvinces]);
+
+  // Form input change handlers
+  const handleInputChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
+  // Address selection handlers (matching MillerCreatePostingModal / CompleteProfile)
+  const handleProvinceChange = async (provinceName) => {
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next.province;
+      delete next.municipality;
+      delete next.barangay;
+      return next;
+    });
+    await address.selectProvince(provinceName);
+  };
+
+  const handleMunicipalityChange = async (munName) => {
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next.municipality;
+      delete next.barangay;
+      return next;
+    });
+    await address.selectMunicipality(munName);
+  };
+
+  const handleBarangayChange = (brgyName) => {
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next.barangay;
+      return next;
+    });
+    address.selectBarangay(brgyName);
+  };
+
+  const handleOpenAddModal = () => {
+    setFormData({
+      ...INITIAL_SUPPLIER_FORM,
+      supplier_profile_id: branches[0]?.supplier_profile_id
+        ? String(branches[0].supplier_profile_id)
+        : "",
+    });
+    setFormError("");
+    setFieldErrors({});
+    address.resetAddress();
+    if (!address.provinceOptions || address.provinceOptions.length === 0) {
+      address.reloadProvinces?.();
+    }
+    setShowAddModal(true);
+  };
+
+  const handleCloseAddModal = () => {
+    setShowAddModal(false);
+    setFormData(INITIAL_SUPPLIER_FORM);
+    setFormError("");
+    setFieldErrors({});
+    address.resetAddress();
+  };
+
+  // Submit new supplier
+  const handleAddSupplier = async (e) => {
+    e.preventDefault();
+    setFormError("");
+
+    const errors = {};
+    if (!formData.supplier_profile_id) {
+      errors.supplier_profile_id = "Please select a branch.";
+    }
+    if (!formData.contact_person.trim()) {
+      errors.contact_person = "Contact person is required.";
+    }
+    if (!formData.contact_number.trim()) {
+      errors.contact_number = "Contact number is required.";
+    }
+    if (!address.province) {
+      errors.province = "Province is required.";
+    }
+    if (!address.municipality) {
+      errors.municipality = "City / Municipality is required.";
+    }
+
+    const addressParts = [
+      formData.street_address?.trim(),
+      address.barangay?.trim(),
+      address.municipality?.trim(),
+      address.province?.trim(),
+      address.postalCode?.trim(),
+    ].filter(Boolean);
+
+    const combinedAddress = addressParts.join(", ");
+    if (!combinedAddress) {
+      errors.address = "Address is required.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setFormError("Please fill in all required fields.");
+      return;
+    }
+    setFieldErrors({});
+
+    try {
+      setSubmitting(true);
+      const payload = {
+        supplier_profile_id: Number(formData.supplier_profile_id),
+        supplier_farm: formData.supplier_farm.trim() || null,
+        organization: formData.organization.trim() || null,
+        contact_person: formData.contact_person.trim(),
+        contact_number: formData.contact_number.trim(),
+        email: formData.email.trim() || null,
+        address: combinedAddress,
+        status: formData.status || "active",
+      };
+
+      await request("/miller/suppliers/", {
+        method: "POST",
+        body: payload,
+        throwOnError: true,
+      });
+
+      const displaySupplier =
+        formData.supplier_farm.trim() || formData.contact_person.trim();
+      handleCloseAddModal();
+      showToast(`Supplier "${displaySupplier}" added successfully!`);
+      fetchSuppliers();
+    } catch (err) {
+      console.error("Failed to add supplier:", err);
+      setFormError(err.message || "Failed to add supplier. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Filtered suppliers
+  const filtered = useMemo(() => {
+    return suppliers.filter((item) => {
+      if (statusFilter !== "all") {
+        const itemStatus = (item.status || "active").toLowerCase();
+        if (itemStatus !== statusFilter.toLowerCase()) return false;
+      }
+
+      if (selectedBranch !== "all") {
+        if (String(item.supplier_profile_id) !== String(selectedBranch)) return false;
+      }
+
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const farmMatch = (item.supplier_farm || "").toLowerCase().includes(q);
+        const orgMatch = (item.organization || "").toLowerCase().includes(q);
+        const personMatch = (item.contact_person || "").toLowerCase().includes(q);
+        const phoneMatch = (item.contact_number || "").toLowerCase().includes(q);
+        const emailMatch = (item.email || "").toLowerCase().includes(q);
+        const addressMatch = (item.address || "").toLowerCase().includes(q);
+        return farmMatch || orgMatch || personMatch || phoneMatch || emailMatch || addressMatch;
+      }
+
+      return true;
+    });
+  }, [suppliers, statusFilter, selectedBranch, search]);
+
+  const itemsPerPage = 10;
+  const totalCount = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
+  const tableSections = useMemo(() => [{ rows: paginated }], [paginated]);
+
+  const columns = useMemo(
+    () => [
+      {
+        key: "supplier_farm",
+        label: "Supplier / Farm",
+        width: "24%",
+        render: (row) => (
+          <div>
+            <div className="font-semibold text-slate-900">
+              {row.supplier_farm || "Independent Supplier"}
+            </div>
+            {row.address && (
+              <div className="text-xs text-slate-400 truncate max-w-xs" title={row.address}>
+                {row.address}
+              </div>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: "organization",
+        label: "Organization",
+        width: "18%",
+        render: (row) => (
+          <span className="text-slate-600 font-medium">
+            {row.organization || "Independent"}
+          </span>
+        ),
+      },
+      {
+        key: "contact_person",
+        label: "Contact Person",
+        width: "22%",
+        render: (row) => (
+          <div>
+            <div className="font-medium text-slate-900">{row.contact_person}</div>
+            <div className="text-xs text-slate-400">
+              {row.contact_number}
+              {row.email && ` • ${row.email}`}
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: "performance",
+        label: "Performance",
+        width: "16%",
+        render: (row) =>
+          row.performance_rating != null && !isNaN(Number(row.performance_rating)) ? (
+            <div className="flex items-center gap-1.5">
+              <div className="flex text-amber-400">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    size={13}
+                    fill={
+                      star <= Math.round(Number(row.performance_rating))
+                        ? "currentColor"
+                        : "none"
+                    }
+                    className={
+                      star <= Math.round(Number(row.performance_rating))
+                        ? "text-amber-400"
+                        : "text-gray-300"
+                    }
+                  />
+                ))}
+              </div>
+              <span className="text-xs font-semibold text-slate-700">
+                {Number(row.performance_rating).toFixed(1)}
+              </span>
+            </div>
+          ) : (
+            <span className="text-slate-400 font-medium text-xs">N/A</span>
+          ),
+      },
+      {
+        key: "status",
+        label: "Status",
+        width: "10%",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
+        render: (row) => (
+          <span
+            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium capitalize ${
+              statusStyleMap[(row.status || "active").toLowerCase()] || "bg-gray-100 text-gray-700"
+            }`}
+          >
+            {row.status || "active"}
+          </span>
+        ),
+      },
+      {
+        key: "action",
+        label: "Actions",
+        width: "10%",
+        headerClassName: "text-center",
+        cellClassName: "text-center",
+        render: (row) => (
+          <button
+            type="button"
+            onClick={() => navigate(`/miller-manager/suppliers/${row.farmer_contact_id || row.id}`)}
+            className="p-1.5 rounded-lg text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition inline-flex items-center gap-1 text-xs cursor-pointer font-medium"
+            title="View Details"
+          >
+            <Eye size={15} />
+            <span>View</span>
+          </button>
+        ),
+      },
+    ],
+    [navigate]
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* ── Breadcrumbs & Title ──────────────────────────────────────────────── */}
+      <div className="space-y-1">
+        <Breadcrumbs
+          items={[
+            { label: "Management" },
+            { label: "Supplier Management" },
+          ]}
+        />
+        <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-bold tracking-[-0.03em] text-slate-900">
+          Supplier Management
+        </h2>
+        <p className="text-sm text-slate-500">
+          Manage and monitor suppliers across your registered branches.
+        </p>
+      </div>
+
+      {/* ── Toast Notification ───────────────────────────────────────────────── */}
+      {toastMsg && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
+          <CheckCircle2 size={16} /> {toastMsg}
+        </div>
+      )}
+
+      {/* ── Filter Controls (Matching MillerOrderApproval.jsx) ────────────────── */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-2 items-stretch sm:items-center justify-between">
+        <div className="flex flex-wrap items-center gap-2 flex-1">
+          {/* Search Bar */}
+          <div className="relative min-w-[240px] max-w-sm flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Search supplier, organization, contact person"
+              className="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setCurrentPage(1);
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+
+          {/* Status Select Filter */}
+          <div className="relative w-full sm:w-auto">
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="appearance-none border border-gray-200 bg-white pl-3 pr-8 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto transition-colors cursor-pointer h-[38px] focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            >
+              <option value="all">Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <ChevronDown
+              size={16}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+            />
+          </div>
+
+          {/* Branch Select Filter (if multiple branches exist) */}
+          {branches.length > 1 && (
+            <div className="relative w-full sm:w-auto">
+              <select
+                value={selectedBranch}
+                onChange={(e) => {
+                  setSelectedBranch(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="appearance-none border border-gray-200 bg-white pl-3 pr-8 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto transition-colors cursor-pointer h-[38px] focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              >
+                <option value="all">All Branches</option>
+                {branches.map((b) => (
+                  <option key={b.supplier_profile_id} value={b.supplier_profile_id}>
+                    {b.business_name || b.organization_name || `Branch #${b.supplier_profile_id}`}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={16}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Total Badge & Add Supplier Button */}
+        <div className="flex items-center gap-2 self-start sm:self-center">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-full text-xs font-semibold text-gray-700 h-[38px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+            <span>{totalCount} suppliers</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleOpenAddModal}
+            className="flex items-center justify-center gap-1.5 bg-[#0B5D1E] hover:bg-[#084b18] text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all cursor-pointer whitespace-nowrap h-[38px]"
+          >
+            <Plus size={16} /> Add Supplier
+          </button>
+        </div>
+      </div>
+
+      {/* ── SectionedTableCard ──────────────────────────────────────────────── */}
+      {loading ? (
+        <div className="w-full rounded-[14px] border border-slate-200 bg-white p-12 text-center shadow-[0_6px_18px_rgba(15,23,42,0.06)]">
+          <div className="flex justify-center items-center gap-2 text-slate-500 text-sm">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-700" />
+            <span>Loading suppliers...</span>
+          </div>
+        </div>
+      ) : (
+        <SectionedTableCard
+          columns={columns}
+          sections={tableSections}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          footerLabel={
+            totalCount === 0
+              ? "Showing 0 suppliers"
+              : `Showing ${startIndex + 1}-${Math.min(startIndex + itemsPerPage, totalCount)} of ${totalCount} suppliers`
+          }
+          emptyStateTitle="No suppliers found"
+          emptyStateDescription="No matching records were found. Try adjusting your search or filters, or add a new supplier."
+        />
+      )}
+
+      {/* ── Add Supplier Modal ───────────────────────────────────────────────── */}
+      {showAddModal &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in duration-200 max-h-[92vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                    <Truck size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base">Add New Supplier</h3>
+                    <p className="text-xs text-gray-500">Register a farmer or supplier contact</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCloseAddModal}
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleAddSupplier} className="space-y-3.5">
+                {formError && (
+                  <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs flex items-center gap-2">
+                    <AlertCircle size={15} className="shrink-0" />
+                    <span>{formError}</span>
+                  </div>
+                )}
+
+                {/* Branch Selection */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Associated Branch <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={formData.supplier_profile_id}
+                    onChange={(e) => handleInputChange("supplier_profile_id", e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl text-sm outline-none bg-white text-gray-700 transition ${
+                      fieldErrors.supplier_profile_id
+                        ? "border-rose-400 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                        : "border-gray-200 focus:ring-1 focus:ring-emerald-600"
+                    }`}
+                  >
+                    {branches.length === 0 && (
+                      <option value="">No branches found</option>
+                    )}
+                    {branches.map((b) => (
+                      <option key={b.supplier_profile_id} value={b.supplier_profile_id}>
+                        {b.business_name || b.organization_name || `Branch #${b.supplier_profile_id}`}
+                      </option>
+                    ))}
+                  </select>
+                  {fieldErrors.supplier_profile_id && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.supplier_profile_id}</p>
+                  )}
+                </div>
+
+                {/* Supplier / Farm & Organization */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                      Supplier / Farm Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Green Valley Farm"
+                      value={formData.supplier_farm}
+                      onChange={(e) => handleInputChange("supplier_farm", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                      Organization / Co-op
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Farmers Association"
+                      value={formData.organization}
+                      onChange={(e) => handleInputChange("organization", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Contact Person & Contact Number */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                      Contact Person <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Juan Dela Cruz"
+                      value={formData.contact_person}
+                      onChange={(e) => handleInputChange("contact_person", e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-xl text-sm outline-none transition ${
+                        fieldErrors.contact_person
+                          ? "border-rose-400 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                          : "border-gray-200 focus:ring-1 focus:ring-emerald-600"
+                      }`}
+                    />
+                    {fieldErrors.contact_person && (
+                      <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.contact_person}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                      Contact Number <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 09123456789"
+                      value={formData.contact_number}
+                      onChange={(e) => handleInputChange("contact_number", e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-xl text-sm outline-none transition ${
+                        fieldErrors.contact_number
+                          ? "border-rose-400 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                          : "border-gray-200 focus:ring-1 focus:ring-emerald-600"
+                      }`}
+                    />
+                    {fieldErrors.contact_number && (
+                      <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.contact_number}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Email Address & Status */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                      Email Address <span className="text-xs text-gray-400 font-normal">(optional)</span>
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="e.g. supplier@example.com"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) => handleInputChange("status", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none bg-white text-gray-700"
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Province & City / Municipality */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                      Province <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={address.province}
+                        onChange={(e) => handleProvinceChange(e.target.value)}
+                        onFocus={() => {
+                          if ((!address.provinceOptions || address.provinceOptions.length === 0) && !address.loading.provinces) {
+                            address.reloadProvinces?.();
+                          }
+                        }}
+                        className={`w-full appearance-none pl-3 pr-8 py-2 border rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer ${
+                          fieldErrors.province
+                            ? "border-rose-400 focus:ring-rose-500 bg-rose-50/20"
+                            : "border-gray-200"
+                        }`}
+                      >
+                        <option value="">
+                          {address.loading.provinces
+                            ? "Loading Provinces..."
+                            : "Select Province"}
+                        </option>
+                        {address.provinceOptions.map((prov) => (
+                          <option key={prov} value={prov}>
+                            {prov}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    </div>
+                    {fieldErrors.province && (
+                      <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.province}</p>
+                    )}
+                    {address.errors.provinces && (
+                      <p className="text-[11px] text-rose-600 mt-1 font-medium flex items-center gap-1">
+                        <span>{address.errors.provinces}</span>
+                        <button
+                          type="button"
+                          onClick={() => address.reloadProvinces?.()}
+                          className="underline font-bold text-emerald-700 ml-1 cursor-pointer"
+                        >
+                          Retry
+                        </button>
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                      City / Municipality <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={address.municipality}
+                        onChange={(e) => handleMunicipalityChange(e.target.value)}
+                        disabled={!address.province || address.loading.municipalities}
+                        className={`w-full appearance-none pl-3 pr-8 py-2 border rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer disabled:bg-gray-50 disabled:text-gray-400 ${
+                          fieldErrors.municipality
+                            ? "border-rose-400 focus:ring-rose-500 bg-rose-50/20"
+                            : "border-gray-200"
+                        }`}
+                      >
+                        <option value="">
+                          {address.loading.municipalities
+                            ? "Loading Cities/Municipalities..."
+                            : !address.province
+                            ? "Select Province First"
+                            : "Select City / Municipality"}
+                        </option>
+                        {address.municipalityOptions.map((mun) => (
+                          <option key={mun} value={mun}>
+                            {mun}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    </div>
+                    {fieldErrors.municipality && (
+                      <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.municipality}</p>
+                    )}
+                    {address.errors.municipalities && (
+                      <p className="text-[11px] text-rose-600 mt-1 font-medium">{address.errors.municipalities}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Barangay & Postal Code */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                      Barangay
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={address.barangay}
+                        onChange={(e) => handleBarangayChange(e.target.value)}
+                        disabled={!address.municipality || address.loading.barangays}
+                        className="w-full appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer disabled:bg-gray-50 disabled:text-gray-400"
+                      >
+                        <option value="">
+                          {address.loading.barangays
+                            ? "Loading Barangays..."
+                            : !address.municipality
+                            ? "Select Municipality First"
+                            : "Select Barangay"}
+                        </option>
+                        {address.barangayOptions.map((brgy) => (
+                          <option key={brgy} value={brgy}>
+                            {brgy}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    </div>
+                    {address.errors.barangays && (
+                      <p className="text-[11px] text-rose-600 mt-1 font-medium">{address.errors.barangays}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                      Postal Code <span className="text-gray-400 font-normal">(auto-filled)</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={address.loading.postalCode ? "Loading..." : "e.g. 2300"}
+                      value={address.postalCode}
+                      onChange={(e) => address.updatePostalCode(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Street Address */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Street Address
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 123 Agri Valley Road, Gate 2"
+                    value={formData.street_address}
+                    onChange={(e) => handleInputChange("street_address", e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
+                  />
+                  {fieldErrors.address && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.address}</p>
+                  )}
+                </div>
+
+                {/* Modal Footer Buttons */}
+                <div className="flex gap-3 pt-3">
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={handleCloseAddModal}
+                    className="flex-1 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-1 py-2.5 bg-[#0B5D1E] hover:bg-[#094d19] text-white rounded-xl text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {submitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      "Save Supplier"
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
+    </div>
+  );
+}

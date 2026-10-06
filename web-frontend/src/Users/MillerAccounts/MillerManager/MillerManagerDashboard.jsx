@@ -290,8 +290,8 @@ export default function MillerManagerDashboard() {
         <PendingReviewsCard
           title="Upcoming Deadlines"
           items={upcomingDeadlines}
-          onViewAll={() => navigate("/miller-manager/contracts")}
-          viewAllLabel="View Contracts"
+          onViewAll={() => navigate("/miller-manager/suppliers")}
+          viewAllLabel="View Suppliers"
         />
       </div>
 
