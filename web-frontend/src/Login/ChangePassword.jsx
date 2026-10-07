@@ -7,6 +7,7 @@ import Logo from "../assets/Logo.png";
 import userBackgroundImage from "../assets/UserloginBG.png";
 import useApi from "../Components/hooks/useApi";
 import useAuth from "../Components/hooks/useAuth";
+import { resolvePostLoginDashboard } from "./UserLogin";
 
 const ChangePassword = () => {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -22,13 +23,6 @@ const ChangePassword = () => {
   const navigate = useNavigate();
   const { request } = useApi();
   const { user, token, login } = useAuth();
-
-  const roleRoutes = {
-    retailer: "/retailer/point-of-sale",
-    warehouse_manager: "/warehouse-manager/dashboard",
-    miller_manager: "/miller-manager/dashboard",
-    farmer: "/farmer/dashboard",
-  };
 
   const hasMinLength = newPassword.length >= 8;
   const hasUpperCase = /[A-Z]/.test(newPassword);
@@ -68,15 +62,26 @@ const ChangePassword = () => {
         throwOnError: true,
       });
 
+      const currentUserData = {
+        ...(user || {}),
+        ...(response.user || {}),
+      };
+
       if (response.access_token && response.user) {
-        login(response.access_token, response.user);
+        login(response.access_token, currentUserData);
       }
 
       if (response.profile_incomplete) {
         navigate("/complete-profile", { replace: true });
       } else {
-        const dest = roleRoutes[response.user?.role || user?.role] || "/dashboard-preview";
-        navigate(dest, { replace: true });
+        const dest = resolvePostLoginDashboard(currentUserData);
+        if (dest) {
+          navigate(dest, { replace: true });
+        } else {
+          setErrorMessage(
+            "No valid dashboard route configured for your account role or position."
+          );
+        }
       }
     } catch (err) {
       setErrorMessage(

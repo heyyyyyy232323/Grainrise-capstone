@@ -211,7 +211,8 @@ import MillerDriverAssignedHistory from "./Users/MillerAccounts/MillerDriver/Mil
 // ============================================================
 
 import MillerManagerDashboard from "./Users/MillerAccounts/MillerManager/MillerManagerDashboard";
-import MillerContracts from "./Users/MillerAccounts/MillerManager/MillerContracts";
+import MillerSupplierManagement from "./Users/MillerAccounts/MillerManager/SupplierManagement";
+import MillerSupplierDetails from "./Users/MillerAccounts/MillerManager/SupplierDetails";
 import MillerOrderApproval from "./Users/MillerAccounts/MillerManager/MillerOrderApproval";
 import MillerPassFeeManagement from "./Users/MillerAccounts/MillerManager/MillerPassFeeManagement";
 import MillerPerformanceMonitoring from "./Users/MillerAccounts/MillerManager/MillerPerformanceMonitoring";
@@ -219,6 +220,8 @@ import MillerManagerFulfillmentHistory from "./Users/MillerAccounts/MillerManage
 import MillerManagerSalesHistory from "./Users/MillerAccounts/MillerManager/MillerSalesHistory";
 import MillerProcurementReceivingHistory from "./Users/MillerAccounts/MillerManager/MillerProcurementReceivingHistory";
 import MillerFinanceManagementHistory from "./Users/MillerAccounts/MillerManager/MillerFinanceManagementHistory";
+import MillerBranchManagement from "./Users/MillerAccounts/MillerManager/BranchManagement";
+import MillerEmployeeManagement from "./Users/MillerAccounts/MillerManager/EmployeeManagement";
 import MillerManagerNewsUpdates from "./Users/MillerAccounts/MillerManager/MillerManagerNewsUpdates";
 import MillerManagerNewsArticle from "./Users/MillerAccounts/MillerManager/MillerManagerNewsArticle";
 import MillerManagerMessages from "./Users/MillerAccounts/MillerManager/MillerManagerMessages";
@@ -978,12 +981,22 @@ function App() {
 
           <Route
             path="/miller-manager/branches"
-            element={<BranchManagement />}
+            element={<MillerBranchManagement />}
           />
 
           <Route
-            path="/miller-manager/contracts"
-            element={<MillerContracts />}
+            path="/miller-manager/branches/:branchId/employees"
+            element={<MillerEmployeeManagement />}
+          />
+
+          <Route
+            path="/miller-manager/suppliers"
+            element={<MillerSupplierManagement />}
+          />
+
+          <Route
+            path="/miller-manager/suppliers/:supplierId"
+            element={<MillerSupplierDetails />}
           />
 
           <Route

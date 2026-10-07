@@ -1,4 +1,4 @@
-﻿import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import TermsModal from "../Components/Modals/TermsModal";
@@ -21,6 +21,132 @@ const features = [
   "Analytics & Performance Insights",
   "Warehouse & Supplier Management",
 ];
+
+export const resolvePostLoginDashboard = (user) => {
+  if (!user) return null;
+
+  const role = String(user.role || "").trim().toLowerCase();
+  const accountType = String(user.account_type || "").trim().toLowerCase();
+  const orgType = String(user.organization_type || "").trim().toLowerCase();
+  const position = String(user.position || "").trim().toLowerCase();
+
+  // RETAILER
+  if (role === "retailer") {
+    return "/retailer/dashboard";
+  }
+
+  // MILLER MANAGER (including legacy "supplier")
+  if (role === "miller_manager" || role === "supplier") {
+    return "/miller-manager/dashboard";
+  }
+
+  // WAREHOUSE MANAGER
+  if (role === "warehouse_manager") {
+    return "/warehouse-manager/dashboard";
+  }
+
+  // SUPPLIER / MILLER EMPLOYEES
+  const isSupplierEmployee =
+    role === "supplier_employee" ||
+    accountType === "supplier_employee" ||
+    orgType === "supplier";
+
+  if (isSupplierEmployee) {
+    if (position === "encoder" || role === "supplier_encoder" || role === "miller_encoder") {
+      return "/supplier-encoder/dashboard";
+    }
+    if (position === "procurement" || role === "miller_procurement") {
+      return "/miller-procurement/dashboard";
+    }
+    if (position === "finance" || role === "miller_finance") {
+      return "/miller-finance/dashboard";
+    }
+    if (position === "seller" || position === "sales" || role === "miller_sales") {
+      return "/miller-sales/dashboard";
+    }
+    if (
+      position === "fulfillment_logistics_coordinator" ||
+      position === "fulfillment & logistics" ||
+      position === "fulfillment and logistics" ||
+      position === "logistics" ||
+      role === "miller_logistics"
+    ) {
+      return "/miller-logistics/dashboard";
+    }
+    if (position === "driver" || role === "miller_driver") {
+      return "/miller-driver/dashboard";
+    }
+    if (position === "branch_manager" || position === "branch manager") {
+      // Per requirements: Do NOT send Miller Branch Manager to Warehouse Branch Manager route.
+      // Use existing Miller Branch Manager route if implemented in project; currently not implemented in App.jsx.
+      return null;
+    }
+  }
+
+  // WAREHOUSE EMPLOYEES
+  const isWarehouseEmployee =
+    role === "warehouse_employee" ||
+    accountType === "warehouse_employee" ||
+    orgType === "warehouse";
+
+  if (isWarehouseEmployee) {
+    if (position === "encoder" || role === "warehouse_encoder") {
+      return "/warehouse-encoder/dashboard";
+    }
+    if (position === "procurement" || role === "warehouse_procurement") {
+      return "/warehouse-procurement/dashboard";
+    }
+    if (position === "finance" || role === "warehouse_finance") {
+      return "/warehouse-finance/dashboard";
+    }
+    if (position === "seller" || position === "sales" || role === "warehouse_sales") {
+      return "/warehouse-sales/dashboard";
+    }
+    if (
+      position === "fulfillment_logistics_coordinator" ||
+      position === "fulfillment & logistics" ||
+      position === "fulfillment and logistics" ||
+      position === "logistics" ||
+      role === "warehouse_logistics"
+    ) {
+      return "/warehouse-logistics/dashboard";
+    }
+    if (position === "driver" || role === "warehouse_driver") {
+      return "/warehouse-driver/dashboard";
+    }
+    if (position === "branch_manager" || position === "branch manager" || role === "branch_manager") {
+      return "/branch-manager/dashboard";
+    }
+  }
+
+  // Standalone branch manager (not associated with supplier/miller)
+  if (role === "branch_manager") {
+    return "/branch-manager/dashboard";
+  }
+
+  // Explicit direct role routes configured in App.jsx
+  const directRoleRoutes = {
+    supplier_encoder: "/supplier-encoder/dashboard",
+    miller_sales: "/miller-sales/dashboard",
+    miller_logistics: "/miller-logistics/dashboard",
+    miller_procurement: "/miller-procurement/dashboard",
+    miller_finance: "/miller-finance/dashboard",
+    miller_driver: "/miller-driver/dashboard",
+    warehouse_encoder: "/warehouse-encoder/dashboard",
+    warehouse_sales: "/warehouse-sales/dashboard",
+    warehouse_logistics: "/warehouse-logistics/dashboard",
+    warehouse_procurement: "/warehouse-procurement/dashboard",
+    warehouse_finance: "/warehouse-finance/dashboard",
+    warehouse_driver: "/warehouse-driver/dashboard",
+    admin: "/admin/dashboard",
+  };
+
+  if (directRoleRoutes[role]) {
+    return directRoleRoutes[role];
+  }
+
+  return null;
+};
 
 const UserLogin = () => {
   const [email, setEmail] = useState("");
@@ -78,26 +204,12 @@ const UserLogin = () => {
         return;
       }
 
-      const role = response.user?.role;
+      const destination = resolvePostLoginDashboard(response.user);
 
-      const roleRoutes = {
-  farmer: "/farmer/dashboard",
-
-  retailer: "/retailer/point-of-sale",
-
-  warehouse_manager:
-    "/warehouse-manager/dashboard",
-
-  miller_manager:
-    "/miller-manager/dashboard",
-
-  // legacy compatibility
-  supplier:
-    "/miller-manager/dashboard",
-};
-
-      const destination =
-        roleRoutes[role] || "/dashboard-preview";
+      if (!destination) {
+        setLoginError("No valid dashboard route configured for your account role or position.");
+        return;
+      }
 
       navigate(destination);
 
