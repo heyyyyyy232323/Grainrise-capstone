@@ -15,4 +15,14 @@ export { default as RetailerMobileInventoryView } from "./RetailerMobile/Retaile
 export { default as RetailerMobileMoreView } from "./RetailerMobile/RetailerMobileMoreView";
 export { default as RetailerMobileNewsView } from "./RetailerMobile/RetailerMobileNewsView";
 export { default as RetailerMobileArticleDetailView } from "./RetailerMobile/RetailerMobileArticleDetailView";
+export { default as RetailerMobileSalesHistoryView } from "./RetailerMobile/RetailerMobileSalesHistoryView";
+export { default as RetailerMobilePurchasesView } from "./RetailerMobile/RetailerMobilePurchasesView";
+export { default as RetailerMobileReturnsView } from "./RetailerMobile/RetailerMobileReturnsView";
+export { default as RetailerMobileMessagesView } from "./RetailerMobile/RetailerMobileMessagesView";
 export { INITIAL_RETAILER_DATA } from "./RetailerMobile/RetailerMobileMockData";
+
+// Startup Mobile
+export { default as StartupMobileSplashScreen } from "./StartupMobile/StartupMobileSplashScreen";
+export { default as StartupMobileOnboardingView } from "./StartupMobile/StartupMobileOnboardingView";
+export { default as StartupMobileLoginView } from "./StartupMobile/StartupMobileLoginView";
+export { default as StartupMobileApp } from "./StartupMobile/StartupMobileApp";

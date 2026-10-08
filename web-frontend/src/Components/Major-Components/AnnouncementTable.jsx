@@ -571,30 +571,27 @@ const AnnouncementTable = ({
                                     announcement
                                   )
                                 }
-                                title="Archive"
+                                title="Archive Announcement"
+                                aria-label="Archive Announcement"
                                 className="
                                   flex
                                   h-9
+                                  w-9
                                   items-center
                                   justify-center
-                                  gap-1.5
                                   rounded-lg
                                   border
                                   border-orange-200
                                   bg-orange-50
-                                  px-3
-                                  text-xs
-                                  font-semibold
                                   text-orange-700
                                   transition
                                   hover:bg-orange-100
+                                  hover:text-orange-800
                                 "
                               >
                                 <Archive
-                                  size={15}
+                                  size={16}
                                 />
-
-                                Archive
                               </button>
                             )}
 
@@ -609,30 +606,26 @@ const AnnouncementTable = ({
                                     announcement
                                   )
                                 }
-                                title="Reactivate"
+                                title="Reactivate Announcement"
+                                aria-label="Reactivate Announcement"
                                 className="
                                   flex
                                   h-9
+                                  w-9
                                   items-center
                                   justify-center
-                                  gap-1.5
                                   rounded-lg
                                   border
                                   border-green-200
                                   bg-green-50
-                                  px-3
-                                  text-xs
-                                  font-semibold
                                   text-[#08511f]
                                   transition
                                   hover:bg-green-100
                                 "
                               >
                                 <RotateCcw
-                                  size={15}
+                                  size={16}
                                 />
-
-                                Reactivate
                               </button>
                             )}
 
@@ -647,30 +640,27 @@ const AnnouncementTable = ({
                                     announcement
                                   )
                                 }
-                                title="Delete"
+                                title="Delete Announcement"
+                                aria-label="Delete Announcement"
                                 className="
                                   flex
                                   h-9
+                                  w-9
                                   items-center
                                   justify-center
-                                  gap-1.5
                                   rounded-lg
                                   border
                                   border-red-200
                                   bg-red-50
-                                  px-3
-                                  text-xs
-                                  font-semibold
                                   text-red-600
                                   transition
                                   hover:bg-red-100
+                                  hover:text-red-700
                                 "
                               >
                                 <Trash2
-                                  size={15}
+                                  size={16}
                                 />
-
-                                Delete
                               </button>
                             )}
                           </div>

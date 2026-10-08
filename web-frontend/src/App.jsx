@@ -261,6 +261,7 @@ import RetailerNewsUpdates from "./Users/RetailerAccounts/RetailerNewsUpdates";
 import RetailerNewsArticle from "./Users/RetailerAccounts/RetailerNewsArticle";
 import RetailerMobilePreviewPage from "./Users/RetailerAccounts/RetailerMobilePreviewPage";
 import RetailerWebMobileDashboard from "./Users/RetailerAccounts/RetailerWebMobile/RetailerWebMobileDashboard";
+import { StartupMobileApp } from "./Users/MobileAppView";
 
 
 
@@ -309,6 +310,18 @@ function App() {
         <Route
           path="/mobile-preview"
           element={<RetailerMobilePreviewPage />}
+        />
+        <Route
+          path="/retailer/mobile-preview"
+          element={<RetailerMobilePreviewPage />}
+        />
+        <Route
+          path="/startup/mobile-preview"
+          element={<StartupMobileApp />}
+        />
+        <Route
+          path="/startup-mobile"
+          element={<StartupMobileApp />}
         />
 
 

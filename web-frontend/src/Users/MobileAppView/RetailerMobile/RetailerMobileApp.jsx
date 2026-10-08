@@ -14,10 +14,21 @@ import RetailerMobilePosView from "./RetailerMobilePosView";
 import RetailerMobileOrdersView from "./RetailerMobileOrdersView";
 import RetailerMobileInventoryView from "./RetailerMobileInventoryView";
 import RetailerMobileMoreView from "./RetailerMobileMoreView";
+import RetailerMobileSalesHistoryView from "./RetailerMobileSalesHistoryView";
+import RetailerMobilePurchasesView from "./RetailerMobilePurchasesView";
+import RetailerMobileReturnsView from "./RetailerMobileReturnsView";
+import RetailerMobileMessagesView from "./RetailerMobileMessagesView";
 
 export default function RetailerMobileApp({ onExternalNavigate }) {
   const [data, setData] = useState(INITIAL_RETAILER_DATA);
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (tabParam) return tabParam;
+    }
+    return "dashboard";
+  });
   const [showNewSaleModal, setShowNewSaleModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -112,6 +123,7 @@ export default function RetailerMobileApp({ onExternalNavigate }) {
                 if (metric.id === "sales-today") setActiveTab("pos");
                 else if (metric.id === "low-stock") setActiveTab("inventory");
                 else if (metric.id === "active-orders") setActiveTab("orders");
+                else if (metric.id === "returns-issues") setActiveTab("returns");
                 else showToast(`Opening ${metric.title} records`);
               }}
             />
@@ -120,8 +132,7 @@ export default function RetailerMobileApp({ onExternalNavigate }) {
             <RetailerMobileSalesTrend
               salesData={data.salesTrend}
               onViewHistoryClick={() => {
-                showToast("Opening Sales History logs...");
-                if (onExternalNavigate) onExternalNavigate("/retailer/sales-history");
+                setActiveTab("sales-history");
               }}
             />
 
@@ -157,6 +168,8 @@ export default function RetailerMobileApp({ onExternalNavigate }) {
               onActionClick={(act) => {
                 if (act.actionType === "inventory") setActiveTab("inventory");
                 else if (act.actionType === "tracking") setActiveTab("orders");
+                else if (act.actionType === "returns") setActiveTab("returns");
+                else if (act.actionType === "messages") setActiveTab("messages");
                 else showToast(`Action Triggered: ${act.actionText} on ${act.ref}`);
               }}
             />
@@ -165,8 +178,7 @@ export default function RetailerMobileApp({ onExternalNavigate }) {
             <RetailerMobileRecentActivity
               activities={data.recentActivities}
               onViewHistoryClick={() => {
-                showToast("Viewing full activity history...");
-                if (onExternalNavigate) onExternalNavigate("/retailer/sales-history");
+                setActiveTab("sales-history");
               }}
             />
           </>
@@ -209,13 +221,25 @@ export default function RetailerMobileApp({ onExternalNavigate }) {
                 setActiveTab("dashboard");
                 return;
               }
+              if (id === "sales-history") {
+                setActiveTab("sales-history");
+                return;
+              }
+              if (id === "purchases") {
+                setActiveTab("purchases");
+                return;
+              }
+              if (id === "returns") {
+                setActiveTab("returns");
+                return;
+              }
+              if (id === "messages") {
+                setActiveTab("messages");
+                return;
+              }
               if (onExternalNavigate) {
                 showToast(`Navigating to ${id}...`);
                 if (id === "marketplace") onExternalNavigate("/retailer/warehouse-marketplace");
-                else if (id === "sales-history") onExternalNavigate("/retailer/sales-history");
-                else if (id === "purchases") onExternalNavigate("/retailer/my-purchases");
-                else if (id === "returns") onExternalNavigate("/retailer/product-returns");
-                else if (id === "messages") onExternalNavigate("/retailer/messages");
                 else if (id === "news") onExternalNavigate("/retailer/news-updates");
                 else if (id === "profile") onExternalNavigate("/retailer/profile");
               } else {
@@ -224,11 +248,42 @@ export default function RetailerMobileApp({ onExternalNavigate }) {
             }}
           />
         )}
+
+        {activeTab === "sales-history" && (
+          <RetailerMobileSalesHistoryView
+            onBack={() => setActiveTab("more")}
+          />
+        )}
+
+        {activeTab === "purchases" && (
+          <RetailerMobilePurchasesView
+            onBack={() => setActiveTab("more")}
+          />
+        )}
+
+        {activeTab === "returns" && (
+          <RetailerMobileReturnsView
+            onBack={() => setActiveTab("more")}
+          />
+        )}
+
+        {activeTab === "messages" && (
+          <RetailerMobileMessagesView
+            onBack={() => setActiveTab("more")}
+          />
+        )}
       </main>
 
       {/* ── 5-Tab Sticky Bottom Navigation Bar ────────────────────────── */}
       <RetailerMobileBottomNav
-        activeTab={activeTab}
+        activeTab={
+          activeTab === "sales-history" ||
+          activeTab === "purchases" ||
+          activeTab === "returns" ||
+          activeTab === "messages"
+            ? "more"
+            : activeTab
+        }
         onTabChange={(tabId) => setActiveTab(tabId)}
       />
 

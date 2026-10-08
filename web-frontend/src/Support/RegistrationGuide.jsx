@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -12,7 +12,6 @@ import {
   ChevronUp,
   ShieldCheck,
   AlertCircle,
-  Leaf,
   Building2,
   Warehouse,
   ShoppingBag,
@@ -45,7 +44,7 @@ export default function RegistrationGuide() {
     {
       num: '04',
       title: 'Complete Your Information',
-      desc: 'Provide your personal details and any farm, business, warehouse, or retail information required for your selected role.',
+      desc: 'Provide your personal details and any business, warehouse, or retail information required for your selected role.',
     },
     {
       num: '05',
@@ -61,25 +60,10 @@ export default function RegistrationGuide() {
 
   const roles = [
     {
-      id: 'farmer',
-      badge: 'Primary Producer',
-      icon: <Leaf size={20} />,
-      title: 'Farmer',
-      bestFor: 'Individuals who own, manage, or operate rice farms.',
-      provide: [
-        'Personal and contact information',
-        'Farm information and location',
-        'Farm area & cropping details',
-        'Rice variety or crop details',
-        'Applicable farmer verification documents',
-      ],
-      access: 'Farm management, forecasting, inventory, contracts, selling, and other farmer operations.',
-    },
-    {
-      id: 'supplier',
+      id: 'miller',
       badge: 'Processing & Sourcing',
       icon: <Building2 size={20} />,
-      title: 'Supplier / Miller',
+      title: 'Miller',
       bestFor: 'Rice millers and suppliers involved in processing, sourcing, and distribution.',
       provide: [
         'Personal and contact information',
@@ -128,7 +112,7 @@ export default function RegistrationGuide() {
     {
       icon: <FileText size={20} />,
       title: 'Accurate Information',
-      desc: 'Make sure names, addresses, contact details, and farm or business information are correct.',
+      desc: 'Make sure names, addresses, contact details, and business or facility information are correct.',
     },
     {
       icon: <UploadCloud size={20} />,
@@ -151,7 +135,7 @@ export default function RegistrationGuide() {
 
   const checklistRight = [
     'Your contact information is current',
-    'Farm or business information is accurate',
+    'Business or facility information is accurate',
     'Required documents are clear and valid',
   ];
 
@@ -202,7 +186,7 @@ export default function RegistrationGuide() {
     },
     {
       q: 'What if I entered incorrect information?',
-      a: 'You can update some profile details after logging in. For critical information such as RSBSA numbers or business registrations, please contact the GrainRise support team.',
+      a: 'You can update some profile details after logging in. For critical information such as business registrations or facility permits, please contact the GrainRise support team.',
     },
     {
       q: 'Can I create multiple roles under one registration?',

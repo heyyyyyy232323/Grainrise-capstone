@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { MessageCircle, X, Send, ChevronDown } from "lucide-react";
 import Logo from "../../assets/Logo.png";
 
@@ -14,6 +15,7 @@ const INITIAL_MESSAGES = [
 const QUICK_REPLIES = ["How do I register?", "Track my order", "Contact support"];
 
 export default function FloatingChatbot() {
+  const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const [showTooltip, setShowTooltip] = useState(true);
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
@@ -64,6 +66,13 @@ export default function FloatingChatbot() {
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
   };
+
+  const isMobileRoute =
+    pathname.includes("mobile") ||
+    pathname.includes("startup") ||
+    pathname.startsWith("/retailer/mobile");
+
+  if (isMobileRoute) return null;
 
   return (
     <div style={{ position: "fixed", bottom: 28, right: 28, zIndex: 9999 }}>
