@@ -29,5 +29,13 @@ urlpatterns = [
         "dashboard",
         include("api.miller_employees_function.miller_encoder.dashboard.urls"),
     ),
+    path(
+        "notifications/",
+        include("api.miller_employees_function.miller_encoder.notifications.urls"),
+    ),
+    path(
+        "notifications",
+        include("api.miller_employees_function.miller_encoder.notifications.urls"),
+    ),
 ]
 
