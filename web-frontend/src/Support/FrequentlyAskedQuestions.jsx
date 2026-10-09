@@ -45,12 +45,12 @@ export default function FrequentlyAskedQuestions() {
         {
           id: 'pop-1',
           q: 'What is GrainRise?',
-          a: 'GrainRise is a digital rice supply chain management platform that helps connect and support different participants involved in farming, sourcing, warehousing, distribution, retail, and related transactions.',
+          a: 'GrainRise is a digital rice supply chain management platform that helps connect and support participants involved in milling, sourcing, warehousing, distribution, retail, and related transactions.',
         },
         {
           id: 'pop-2',
           q: 'Who can use GrainRise?',
-          a: 'GrainRise is designed for rice farmers, cooperative rice millers, suppliers, warehouse managers, and retailers participating in the rice supply chain.',
+          a: 'GrainRise is designed for rice millers, warehouse managers, and retailers participating in the rice supply chain.',
         },
         {
           id: 'pop-3',
@@ -113,17 +113,17 @@ export default function FrequentlyAskedQuestions() {
         {
           id: 'reg-2',
           q: 'What user roles can register?',
-          a: 'GrainRise supports Farmers, Rice Suppliers/Millers, Warehouse Managers, and Retailers. Choose the role that reflects your primary business activity.',
+          a: 'GrainRise supports Rice Millers, Warehouse Managers, and Retailers. Choose the role that reflects your primary business activity.',
         },
         {
           id: 'reg-3',
           q: 'What information do I need to register?',
-          a: 'Depending on your role, you will need basic contact details, farm or facility locations, identification documents (such as RSBSA or government ID), and business permits.',
+          a: 'Depending on your role, you will need basic contact details, facility or business locations, identification documents (such as valid government ID), and business permits or operational licenses.',
         },
         {
           id: 'reg-4',
           q: 'Why does my registration need to be reviewed?',
-          a: 'Reviewing registrations ensures platform security, authenticates supply chain participants, and maintains accurate agricultural records.',
+          a: 'Reviewing registrations ensures platform security, authenticates supply chain participants, and maintains accurate operational records.',
         },
         {
           id: 'reg-5',
@@ -142,12 +142,12 @@ export default function FrequentlyAskedQuestions() {
         {
           id: 'use-1',
           q: 'What features are available in GrainRise?',
-          a: 'Features include harvest forecasting, inventory tracking, order management, grain batch traceability, warehouse intake/dispatch logging, and transaction reporting.',
+          a: 'Features include production planning, inventory tracking, order management, grain batch traceability, warehouse intake/dispatch logging, and transaction reporting.',
         },
         {
           id: 'use-2',
           q: 'Why do different users see different features?',
-          a: 'GrainRise provides a role-customized interface. Farmers see harvest and crop management tools, while millers and warehouse managers see processing and storage dashboards.',
+          a: 'GrainRise provides a role-customized interface. Millers and warehouse managers see processing, storage, and inventory dashboards, while retailers see purchasing, catalog, and order management tools.',
         },
         {
           id: 'use-3',
@@ -157,7 +157,7 @@ export default function FrequentlyAskedQuestions() {
         {
           id: 'use-4',
           q: 'Can I update my account information?',
-          a: 'Yes, basic profile details, passwords, and contact numbers can be updated from your account settings. Significant business or RSBSA changes require re-verification.',
+          a: 'Yes, basic profile details, passwords, and contact numbers can be updated from your account settings. Significant business details or permit changes require re-verification.',
         },
       ],
     },

@@ -259,6 +259,10 @@ import RetailerOrderTracking from "./Users/RetailerAccounts/RetailerOrderTrackin
 import RetailerMessages from "./Users/RetailerAccounts/RetailerMessages";
 import RetailerNewsUpdates from "./Users/RetailerAccounts/RetailerNewsUpdates";
 import RetailerNewsArticle from "./Users/RetailerAccounts/RetailerNewsArticle";
+import RetailerMobilePreviewPage from "./Users/RetailerAccounts/RetailerMobilePreviewPage";
+import RetailerWebMobileDashboard from "./Users/RetailerAccounts/RetailerWebMobile/RetailerWebMobileDashboard";
+import { StartupMobileApp } from "./Users/MobileAppView";
+
 
 
 
@@ -303,6 +307,23 @@ function App() {
           path="/toasts"
           element={<ToastPreviewPage />}
         />
+        <Route
+          path="/mobile-preview"
+          element={<RetailerMobilePreviewPage />}
+        />
+        <Route
+          path="/retailer/mobile-preview"
+          element={<RetailerMobilePreviewPage />}
+        />
+        <Route
+          path="/startup/mobile-preview"
+          element={<StartupMobileApp />}
+        />
+        <Route
+          path="/startup-mobile"
+          element={<StartupMobileApp />}
+        />
+
 
         {/* Registration routes disabled - redirected to Partner With Us */}
         <Route path="/register" element={<Navigate to="/partner-with-us" replace />} />
@@ -1053,9 +1074,22 @@ function App() {
 
 
         {/* ==================================================
-              RETAILER
+              RETAILER — WEB DESKTOP ROUTES (with sidebar layout)
           ================================================== */}
 
+        {/* Standalone fullscreen — Figma mobile app view */}
+        <Route
+          path="/retailer/mobile-preview"
+          element={<RetailerMobilePreviewPage />}
+        />
+
+        {/* Standalone fullscreen — Web responsive mobile view (for phone browsers) */}
+        <Route
+          path="/retailer/web-mobile"
+          element={<RetailerWebMobileDashboard />}
+        />
+
+        {/* All web desktop pages inside WarehouseEncoderLayout (sidebar + navbar) */}
         <Route element={<WarehouseEncoderLayout role="retailer" />}>
           <Route
             path="/retailer/dashboard"
