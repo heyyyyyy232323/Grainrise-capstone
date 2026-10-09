@@ -5,5 +5,9 @@ urlpatterns = [
         "encoder/",
         include("api.miller_employees_function.miller_encoder.urls"),
     ),
+    path(
+        "procurement/",
+        include("api.miller_employees_function.miller_procurement.urls"),
+    ),
 ]
 
