@@ -250,6 +250,23 @@ export default function MillerEncoderStockManagement() {
       });
   }, [fetchSuppliers]);
 
+  // Support URL filters: ?filter=low-stock, ?filter=no-stock
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const filterParam = (params.get("filter") || "").trim().toLowerCase();
+    if (filterParam === "low-stock" || filterParam === "low") {
+      setStockFilter("low");
+      setActiveTab("active");
+    } else if (
+      filterParam === "no-stock" ||
+      filterParam === "out" ||
+      filterParam === "out-of-stock"
+    ) {
+      setStockFilter("out");
+      setActiveTab("active");
+    }
+  }, []);
+
   // Load products for status
   const loadTabProducts = useCallback(
     async (statusKey) => {

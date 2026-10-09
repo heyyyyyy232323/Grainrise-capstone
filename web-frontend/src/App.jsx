@@ -741,6 +741,10 @@ function App() {
             path="/supplier-encoder/stock"
             element={<MillerEncoderStockManagement />}
           />
+          <Route
+            path="/supplier-encoder/stock-management"
+            element={<MillerEncoderStockManagement />}
+          />
 
           <Route
             path="/supplier-encoder/profile"

@@ -21,5 +21,13 @@ urlpatterns = [
         "order-history",
         include("api.miller_employees_function.miller_encoder.order_history.urls"),
     ),
+    path(
+        "dashboard/",
+        include("api.miller_employees_function.miller_encoder.dashboard.urls"),
+    ),
+    path(
+        "dashboard",
+        include("api.miller_employees_function.miller_encoder.dashboard.urls"),
+    ),
 ]
 
