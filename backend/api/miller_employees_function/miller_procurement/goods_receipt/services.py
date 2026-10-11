@@ -20,11 +20,12 @@ class InvalidReceivingStateError(Exception):
     pass
 
 
-def request_to_pay(supplier_profile_id, receiving_id):
+def request_to_pay(supplier_profile_id, receiving_id, requesting_employee_id=None):
     """
-    Transition inbound_purchase_history.status from 'pending' to 'request to pay'.
+    Transition inbound_purchase_history.status from 'pending' to 'request_to_pay'.
     Strictly scoped to the specific receiving_id and authenticated supplier_profile_id.
-    Prevents duplicate requests and does NOT affect other receiving records in the same batch.
+    Atomically creates a record in miller_finance_payables_payment_references.
+    Prevents duplicates and preserves existing status updates.
     """
     with transaction.atomic():
         with connection.cursor() as cursor:
@@ -63,11 +64,29 @@ def request_to_pay(supplier_profile_id, receiving_id):
                 [receiving_id, supplier_profile_id],
             )
 
+            # Atomically create payment reference record in miller_finance_payables_payment_references
+            cursor.execute(
+                """
+                INSERT INTO miller_finance_payables_payment_references (
+                    receiving_id,
+                    supplier_profile_id,
+                    requested_by_employee_id,
+                    requested_at
+                )
+                VALUES (%s, %s, %s, NOW())
+                ON DUPLICATE KEY UPDATE
+                    supplier_profile_id = VALUES(supplier_profile_id),
+                    requested_by_employee_id = COALESCE(miller_finance_payables_payment_references.requested_by_employee_id, VALUES(requested_by_employee_id))
+                """,
+                [receiving_id, supplier_profile_id, requesting_employee_id],
+            )
+
     logger.info(
-        "Successfully transitioned receiving_id=%s (ref=%s) to 'request_to_pay' for supplier_profile_id=%s",
+        "Successfully transitioned receiving_id=%s (ref=%s) to 'request_to_pay' and recorded payment reference for supplier_profile_id=%s, employee_id=%s",
         receiving_id,
         reference_no,
         supplier_profile_id,
+        requesting_employee_id,
     )
 
     # Return refreshed receipt detail

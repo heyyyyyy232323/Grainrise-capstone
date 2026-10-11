@@ -126,6 +126,7 @@ export default function MarkAsReceivedModal({
   const [hoverRating, setHoverRating] = useState(0);
   const [shelfLocation, setShelfLocation] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
+  const [reasonDescription, setReasonDescription] = useState("");
 
   // Files & Previews
   const [receivingProofFile, setReceivingProofFile] = useState(null);
@@ -148,6 +149,7 @@ export default function MarkAsReceivedModal({
       setHoverRating(0);
       setShelfLocation("");
       setExpiryDate("");
+      setReasonDescription("");
       setReceivingProofFile(null);
       setReceivingProofPreview(null);
       setPhotoEvidenceFile(null);
@@ -255,6 +257,7 @@ export default function MarkAsReceivedModal({
     setHasQualityIssue(checked);
     if (!checked) {
       setReceivedBad("");
+      setReasonDescription("");
       setPhotoEvidenceFile(null);
       setPhotoEvidencePreview((prev) => {
         if (prev) URL.revokeObjectURL(prev);
@@ -263,6 +266,7 @@ export default function MarkAsReceivedModal({
       setErrors((prev) => ({
         ...prev,
         receivedBad: "",
+        reasonDescription: "",
         photoEvidence: "",
       }));
     }
@@ -378,6 +382,10 @@ export default function MarkAsReceivedModal({
         newErrors.receivedBad = `Rejected quantity cannot exceed total received (${numTotalReceived.toLocaleString()} kg).`;
       }
 
+      if (!reasonDescription.trim()) {
+        newErrors.reasonDescription = "Reason & description is required.";
+      }
+
       if (!photoEvidenceFile) {
         newErrors.photoEvidence = "Proof of rejected goods photo is required.";
       }
@@ -432,6 +440,9 @@ export default function MarkAsReceivedModal({
     formData.append("expiry_date", expiryDate);
     if (receivingProofFile) {
       formData.append("receiving_proof_photo", receivingProofFile);
+    }
+    if (hasQualityIssue) {
+      formData.append("reason_description", reasonDescription.trim());
     }
     if (hasQualityIssue && photoEvidenceFile) {
       formData.append("photo_evidence", photoEvidenceFile);
@@ -614,7 +625,38 @@ export default function MarkAsReceivedModal({
                   </div>
                 </div>
 
-                {/* Proof of Rejected Goods Photo immediately below Received Bad */}
+                {/* Reason & Description */}
+                <div className="flex flex-col gap-1 py-1.5 text-xs sm:text-sm border-t border-amber-200/50">
+                  <div className="flex items-center justify-between">
+                    <span className="text-amber-950 font-medium text-xs">
+                      Reason & Description <span className="text-rose-500">*</span>:
+                    </span>
+                  </div>
+                  <textarea
+                    rows={2}
+                    value={reasonDescription}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setReasonDescription(val);
+                      if (val.trim()) {
+                        setErrors((prev) => ({ ...prev, reasonDescription: "" }));
+                      }
+                    }}
+                    placeholder="Specify reason for rejection (e.g., moisture, discoloration, damage)..."
+                    className={`w-full px-2.5 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-1 text-slate-900 bg-white resize-none ${
+                      errors.reasonDescription
+                        ? "border-rose-400 focus:ring-rose-500"
+                        : "border-amber-300 focus:ring-amber-500"
+                    }`}
+                  />
+                  {errors.reasonDescription && (
+                    <span className="text-[10px] text-rose-600 font-medium text-left">
+                      {errors.reasonDescription}
+                    </span>
+                  )}
+                </div>
+
+                {/* Proof of Rejected Goods Photo immediately below Reason & Description */}
                 <div className="w-full pt-1.5 border-t border-amber-200/50">
                   <PhotoUploadBox
                     label="Proof of Rejected Goods Photo *"

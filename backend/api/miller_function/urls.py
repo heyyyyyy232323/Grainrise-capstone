@@ -73,4 +73,15 @@ urlpatterns = [
             "api.miller_function.order_approval.urls"
         ),
     ),
+
+    # ========================================================
+    # RECEIVING HISTORY
+    # ========================================================
+
+    path(
+        "receiving-history/",
+        include(
+            "api.miller_function.receiving_history.urls"
+        ),
+    ),
 ]

@@ -24,6 +24,7 @@ import useAuth from "../hooks/useAuth";
 import useAdminNotifications from "../hooks/AccountAdmin/useAdminNotifications";
 import useFarmerNotifications from "../hooks/Farmer/UseFarmerNotifications";
 import useEncoderNotifications from "../hooks/MillerEncoder/useEncoderNotifications";
+import useProcurementNotifications from "../hooks/MillerProcurement/useProcurementNotifications";
 
 
 // ============================================================
@@ -292,6 +293,17 @@ const UserNavbar = ({
       authenticatedUser?.position === "encoder");
 
 
+  const isProcurement =
+    propRole === "supplier_procurement" ||
+    propRole === "miller_procurement" ||
+    role === "supplier_procurement" ||
+    role === "miller_procurement" ||
+    (authenticatedUser?.account_type === "supplier_employee" &&
+      authenticatedUser?.position === "procurement") ||
+    (authenticatedUser?.role === "supplier_employee" &&
+      authenticatedUser?.position === "procurement");
+
+
   // =========================================================
   // ACTUAL LOGGED-IN USER DISPLAY
   // =========================================================
@@ -451,6 +463,43 @@ const UserNavbar = ({
 
 
   // =========================================================
+  // MILLER PROCUREMENT NOTIFICATIONS
+  // =========================================================
+
+  const {
+    notifications:
+      procurementNotifications,
+
+    unseenCount:
+      procurementUnseenCount,
+
+    isLoading:
+      isLoadingProcurementNotifications,
+
+    isUpdating:
+      isUpdatingProcurementNotifications,
+
+    error:
+      procurementNotificationError,
+
+    loadUnseenCount:
+      loadProcurementUnseenCount,
+
+    refreshNotifications:
+      refreshProcurementNotifications,
+
+    openNotification:
+      openProcurementNotification,
+
+    markAllAsRead:
+      markAllProcurementNotificationsAsRead,
+  } = useProcurementNotifications({
+    enabled:
+      isProcurement,
+  });
+
+
+  // =========================================================
   // NAVBAR STATE
   // =========================================================
 
@@ -524,7 +573,8 @@ const UserNavbar = ({
       if (
         !isAdmin &&
         !isFarmer &&
-        !isEncoder
+        !isEncoder &&
+        !isProcurement
       ) {
         return undefined;
       }
@@ -538,7 +588,9 @@ const UserNavbar = ({
                 ? loadUnreadCount
                 : isFarmer
                   ? loadFarmerUnreadCount
-                  : loadEncoderUnseenCount;
+                  : isEncoder
+                    ? loadEncoderUnseenCount
+                    : loadProcurementUnseenCount;
 
 
             refreshCount().catch(
@@ -561,9 +613,11 @@ const UserNavbar = ({
       isAdmin,
       isFarmer,
       isEncoder,
+      isProcurement,
       loadUnreadCount,
       loadFarmerUnreadCount,
       loadEncoderUnseenCount,
+      loadProcurementUnseenCount,
     ]
   );
 
@@ -812,13 +866,16 @@ const UserNavbar = ({
         ? farmerNotifications
         : isEncoder
           ? encoderNotifications
-          : notifications;
+          : isProcurement
+            ? procurementNotifications
+            : notifications;
 
 
   const usesDatabaseNotifications =
     isAdmin ||
     isFarmer ||
-    isEncoder;
+    isEncoder ||
+    isProcurement;
 
 
   const isLoadingDatabaseNotifications =
@@ -828,7 +885,9 @@ const UserNavbar = ({
         ? isLoadingFarmerNotifications
         : isEncoder
           ? isLoadingEncoderNotifications
-          : false;
+          : isProcurement
+            ? isLoadingProcurementNotifications
+            : false;
 
 
   const isUpdatingDatabaseNotifications =
@@ -838,7 +897,9 @@ const UserNavbar = ({
         ? isUpdatingFarmerNotifications
         : isEncoder
           ? isUpdatingEncoderNotifications
-          : false;
+          : isProcurement
+            ? isUpdatingProcurementNotifications
+            : false;
 
 
   const databaseNotificationError =
@@ -848,7 +909,9 @@ const UserNavbar = ({
         ? farmerNotificationError
         : isEncoder
           ? encoderNotificationError
-          : "";
+          : isProcurement
+            ? procurementNotificationError
+            : "";
 
 
   // =========================================================
@@ -871,10 +934,12 @@ const UserNavbar = ({
         ? farmerUnreadCount
         : isEncoder
           ? encoderUnseenCount
-          : (
-              notificationCount ||
-              localUnreadCount
-            );
+          : isProcurement
+            ? procurementUnseenCount
+            : (
+                notificationCount ||
+                localUnreadCount
+              );
 
 
   // =========================================================
@@ -934,6 +999,20 @@ const UserNavbar = ({
             // Hook already stores error.
           }
         );
+
+        return;
+      }
+
+
+      if (
+        willOpen &&
+        isProcurement
+      ) {
+        refreshProcurementNotifications().catch(
+          () => {
+            // Hook already stores error.
+          }
+        );
       }
     };
 
@@ -981,6 +1060,24 @@ const UserNavbar = ({
           // Error remains available from hook.
         }
 
+
+        return;
+      }
+
+
+      if (isProcurement) {
+        if (
+          procurementUnseenCount <= 0 ||
+          isUpdatingProcurementNotifications
+        ) {
+          return;
+        }
+
+        try {
+          await markAllProcurementNotificationsAsRead();
+        } catch {
+          // Error remains available from hook.
+        }
 
         return;
       }
@@ -1125,6 +1222,33 @@ const UserNavbar = ({
           // Error displayed inside notification panel.
         }
 
+
+        return;
+      }
+
+
+      if (isProcurement) {
+        try {
+          const result =
+            await openProcurementNotification(
+              item
+            );
+
+          setNotificationOpen(
+            false
+          );
+
+          const targetPath =
+            result?.targetPath ||
+            item?.action_url ||
+            "/miller-procurement/dashboard";
+
+          navigate(
+            targetPath
+          );
+        } catch {
+          // Error displayed inside notification panel.
+        }
 
         return;
       }

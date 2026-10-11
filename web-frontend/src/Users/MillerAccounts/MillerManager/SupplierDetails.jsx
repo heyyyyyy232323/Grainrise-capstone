@@ -26,6 +26,48 @@ import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import useApi from "../../../Components/hooks/useApi";
 import usePhilippineAddress from "../../../Components/hooks/usePhilippineAddress";
+import ReceivingHistoryDetailsModal from "../../../Components/Modals/MillerProcurement/ReceivingHistoryDetailsModal";
+
+const resolvePhotoUrl = (raw) => {
+  if (!raw) return null;
+  const trimmed = String(raw).trim();
+  if (!trimmed) return null;
+  if (
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("//") ||
+    trimmed.startsWith("data:") ||
+    trimmed.startsWith("blob:")
+  ) {
+    return trimmed;
+  }
+  const clean = trimmed.replace(/^\/?(media\/)?/, "");
+  const backendBase = (
+    import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"
+  ).replace(/\/$/, "");
+  return `${backendBase}/media/${clean}`;
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return "—";
+  try {
+    const cleanStr = String(dateStr).split("T")[0].split(" ")[0].trim();
+    const parts = cleanStr.split("-");
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const monthIndex = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const monthNames = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+      ];
+      if (monthIndex >= 0 && monthIndex < 12 && !isNaN(day) && !isNaN(year)) {
+        return `${monthNames[monthIndex]} ${day}, ${year}`;
+      }
+    }
+  } catch {}
+  return String(dateStr);
+};
 
 const parseAddressString = (fullAddress = "") => {
   if (!fullAddress) {
@@ -85,14 +127,48 @@ export default function SupplierDetails() {
 
   // Modals
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [editForm, setEditForm] = useState(INITIAL_EDIT_FORM);
+  const [initialEditValues, setInitialEditValues] = useState(null);
   const [pendingPrefill, setPendingPrefill] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
 
   const [selectedActiveOrder, setSelectedActiveOrder] = useState(null);
-  const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [selectedHistoryDetail, setSelectedHistoryDetail] = useState(null);
+  const [historyDetailLoading, setHistoryDetailLoading] = useState(false);
+
+  const handleOpenHistoryDetails = async (row) => {
+    setIsHistoryModalOpen(true);
+    setSelectedHistoryDetail(null);
+    setHistoryDetailLoading(true);
+    try {
+      const recId = row.receiving_id || row.id;
+      const res = await request(
+        `/miller/receiving-history/${recId}/`,
+        {
+          method: "GET",
+          throwOnError: true,
+        }
+      );
+      const data = res?.data ?? res;
+      if (data && typeof data === "object") {
+        setSelectedHistoryDetail(data);
+      }
+    } catch (err) {
+      console.warn("Failed to retrieve receiving detail:", err);
+      setSelectedHistoryDetail(row);
+    } finally {
+      setHistoryDetailLoading(false);
+    }
+  };
+
+  const handleCloseHistoryModal = () => {
+    setIsHistoryModalOpen(false);
+    setSelectedHistoryDetail(null);
+  };
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -147,7 +223,7 @@ export default function SupplierDetails() {
   const handleOpenEditModal = () => {
     if (!supplier) return;
     const parsed = parseAddressString(supplier.address);
-    setEditForm({
+    const initialData = {
       supplier_profile_id: String(supplier.supplier_profile_id || ""),
       supplier_farm: supplier.supplier_farm || "",
       organization: supplier.organization || "",
@@ -156,6 +232,21 @@ export default function SupplierDetails() {
       email: supplier.email || "",
       street_address: parsed.street || "",
       status: supplier.status || "active",
+      province: parsed.province || "",
+      municipality: parsed.municipality || "",
+      barangay: parsed.barangay || "",
+      postalCode: parsed.postalCode || "",
+    };
+    setInitialEditValues(initialData);
+    setEditForm({
+      supplier_profile_id: initialData.supplier_profile_id,
+      supplier_farm: initialData.supplier_farm,
+      organization: initialData.organization,
+      contact_person: initialData.contact_person,
+      contact_number: initialData.contact_number,
+      email: initialData.email,
+      street_address: initialData.street_address,
+      status: initialData.status,
     });
     setFormError("");
     setFieldErrors({});
@@ -164,16 +255,50 @@ export default function SupplierDetails() {
       address.reloadProvinces?.();
     }
     setPendingPrefill(parsed);
+    setShowClearConfirm(false);
     setShowEditModal(true);
   };
 
   const handleCloseEditModal = () => {
     setShowEditModal(false);
+    setShowClearConfirm(false);
     setEditForm(INITIAL_EDIT_FORM);
+    setInitialEditValues(null);
     setPendingPrefill(null);
     setFormError("");
     setFieldErrors({});
     address.resetAddress();
+  };
+
+  const handleConfirmRestore = () => {
+    if (!initialEditValues) {
+      setShowClearConfirm(false);
+      return;
+    }
+    setEditForm({
+      supplier_profile_id: initialEditValues.supplier_profile_id,
+      supplier_farm: initialEditValues.supplier_farm,
+      organization: initialEditValues.organization,
+      contact_person: initialEditValues.contact_person,
+      contact_number: initialEditValues.contact_number,
+      email: initialEditValues.email,
+      street_address: initialEditValues.street_address,
+      status: initialEditValues.status,
+    });
+    setFormError("");
+    setFieldErrors({});
+    address.resetAddress();
+    if (!address.provinceOptions || address.provinceOptions.length === 0) {
+      address.reloadProvinces?.();
+    }
+    setPendingPrefill({
+      province: initialEditValues.province,
+      municipality: initialEditValues.municipality,
+      barangay: initialEditValues.barangay,
+      postalCode: initialEditValues.postalCode,
+      street: initialEditValues.street_address,
+    });
+    setShowClearConfirm(false);
   };
 
   // Sequential prefill handler across React lifecycle steps
@@ -262,7 +387,18 @@ export default function SupplierDetails() {
   ]);
 
   const handleEditInputChange = (field, value) => {
-    setEditForm((prev) => ({ ...prev, [field]: value }));
+    let cleanVal = value;
+    if (field === "contact_person") {
+      // Letters and spaces only, max 20 characters
+      cleanVal = cleanVal.replace(/[^a-zA-Z\s]/g, "").slice(0, 20);
+    } else if (field === "contact_number") {
+      // Digits only, max 12 digits
+      cleanVal = cleanVal.replace(/\D/g, "").slice(0, 12);
+    } else if (field === "supplier_farm" || field === "organization") {
+      cleanVal = cleanVal.slice(0, 20);
+    }
+
+    setEditForm((prev) => ({ ...prev, [field]: cleanVal }));
     if (fieldErrors[field]) {
       setFieldErrors((prev) => {
         const next = { ...prev };
@@ -311,11 +447,38 @@ export default function SupplierDetails() {
     if (!editForm.supplier_profile_id) {
       errors.supplier_profile_id = "Please select a branch.";
     }
-    if (!editForm.contact_person.trim()) {
-      errors.contact_person = "Contact person is required.";
+
+    if (editForm.supplier_farm && editForm.supplier_farm.trim().length > 20) {
+      errors.supplier_farm = "Supplier / Farm Name cannot exceed 20 characters.";
     }
-    if (!editForm.contact_number.trim()) {
+
+    if (editForm.organization && editForm.organization.trim().length > 20) {
+      errors.organization = "Organization / Co-op cannot exceed 20 characters.";
+    }
+
+    const cp = editForm.contact_person.trim();
+    if (!cp) {
+      errors.contact_person = "Contact person is required.";
+    } else if (cp.length > 20) {
+      errors.contact_person = "Contact person cannot exceed 20 characters.";
+    } else if (!/^[a-zA-Z\s]+$/.test(cp)) {
+      errors.contact_person = "Contact person must contain letters and spaces only.";
+    }
+
+    const cn = editForm.contact_number.trim();
+    if (!cn) {
       errors.contact_number = "Contact number is required.";
+    } else if (!/^\d+$/.test(cn)) {
+      errors.contact_number = "Contact number must contain digits only.";
+    } else if (!/^(09\d{9}|639\d{9})$/.test(cn)) {
+      errors.contact_number = "Must be a valid Philippine mobile number (09XXXXXXXXX or 639XXXXXXXXX).";
+    }
+
+    if (!address.province) {
+      errors.province = "Province is required.";
+    }
+    if (!address.municipality) {
+      errors.municipality = "City / Municipality is required.";
     }
 
     const addressParts = [
@@ -337,9 +500,10 @@ export default function SupplierDetails() {
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
-      setFormError("Please fill in all required fields.");
+      setFormError("Please correct the errors in the form.");
       return;
     }
+    setFieldErrors({});
 
     try {
       setSubmitting(true);
@@ -365,11 +529,52 @@ export default function SupplierDetails() {
       fetchSupplierDetails();
     } catch (err) {
       console.error("Failed to update supplier:", err);
-      setFormError(err.message || "Failed to update supplier. Please try again.");
+      const errMsg = err.message || "Failed to update supplier. Please try again.";
+      setFormError(errMsg);
+      if (errMsg.toLowerCase().includes("farm name")) {
+        setFieldErrors((prev) => ({ ...prev, supplier_farm: errMsg }));
+      } else if (errMsg.toLowerCase().includes("organization")) {
+        setFieldErrors((prev) => ({ ...prev, organization: errMsg }));
+      } else if (errMsg.toLowerCase().includes("contact person")) {
+        setFieldErrors((prev) => ({ ...prev, contact_person: errMsg }));
+      }
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Form change and validity detection for Edit Supplier
+  const hasFormChanged = useMemo(() => {
+    if (!initialEditValues) return false;
+    return (
+      String(editForm.supplier_profile_id || "").trim() !== String(initialEditValues.supplier_profile_id || "").trim() ||
+      (editForm.supplier_farm || "").trim() !== (initialEditValues.supplier_farm || "").trim() ||
+      (editForm.organization || "").trim() !== (initialEditValues.organization || "").trim() ||
+      (editForm.contact_person || "").trim() !== (initialEditValues.contact_person || "").trim() ||
+      (editForm.contact_number || "").trim() !== (initialEditValues.contact_number || "").trim() ||
+      (editForm.email || "").trim() !== (initialEditValues.email || "").trim() ||
+      (editForm.street_address || "").trim() !== (initialEditValues.street_address || "").trim() ||
+      (editForm.status || "active").toLowerCase() !== (initialEditValues.status || "active").toLowerCase() ||
+      (address.province || "").trim().toLowerCase() !== (initialEditValues.province || "").trim().toLowerCase() ||
+      (address.municipality || "").trim().toLowerCase() !== (initialEditValues.municipality || "").trim().toLowerCase() ||
+      (address.barangay || "").trim().toLowerCase() !== (initialEditValues.barangay || "").trim().toLowerCase() ||
+      (address.postalCode || "").trim() !== (initialEditValues.postalCode || "").trim()
+    );
+  }, [editForm, initialEditValues, address.province, address.municipality, address.barangay, address.postalCode]);
+
+  const isFormValid = useMemo(() => {
+    if (!editForm.supplier_profile_id) return false;
+    const cp = (editForm.contact_person || "").trim();
+    const cn = (editForm.contact_number || "").trim();
+    if (!cp || cp.length > 20 || !/^[a-zA-Z\s]+$/.test(cp)) return false;
+    if (!cn || !/^(09\d{9}|639\d{9})$/.test(cn)) return false;
+    if (!address.province || !address.municipality) return false;
+    if (editForm.supplier_farm && editForm.supplier_farm.trim().length > 20) return false;
+    if (editForm.organization && editForm.organization.trim().length > 20) return false;
+    return true;
+  }, [editForm, address.province, address.municipality]);
+
+  const canSave = hasFormChanged && isFormValid && !submitting;
 
   // Filtered Active Orders
   const filteredActiveOrders = useMemo(() => {
@@ -415,7 +620,7 @@ export default function SupplierDetails() {
         label: "Batch No.",
         width: "28%",
         render: (row) => (
-          <span className="font-bold text-slate-900">{row.batch_no}</span>
+          <span className="text-slate-800">{row.batch_no}</span>
         ),
       },
       {
@@ -423,22 +628,22 @@ export default function SupplierDetails() {
         label: "Product Name",
         width: "36%",
         render: (row) => (
-          <span className="text-slate-800 font-medium">{row.product_name}</span>
+          <span className="text-slate-800">{row.product_name}</span>
         ),
       },
       {
-        key: "expected_arrival_date",
-        label: "Expected Arrival",
+        key: "ordered_quantity",
+        label: "Ordered Quantity",
         width: "22%",
         render: (row) => (
-          <span className="text-slate-600 font-medium">
-            {row.expected_arrival_date || "—"}
+          <span className="text-slate-600">
+            {row.ordered_quantity != null ? `${Number(row.ordered_quantity).toLocaleString()} kg` : "—"}
           </span>
         ),
       },
       {
         key: "action",
-        label: "View Details",
+        label: "Action",
         width: "14%",
         headerClassName: "text-center",
         cellClassName: "text-center",
@@ -465,7 +670,7 @@ export default function SupplierDetails() {
         label: "Receiving Reference No.",
         width: "28%",
         render: (row) => (
-          <span className="font-bold text-slate-900">{row.receiving_reference_no}</span>
+          <span className="text-slate-800">{row.receiving_reference_no}</span>
         ),
       },
       {
@@ -473,29 +678,29 @@ export default function SupplierDetails() {
         label: "Product Name",
         width: "36%",
         render: (row) => (
-          <span className="text-slate-800 font-medium">{row.product_name}</span>
+          <span className="text-slate-800">{row.product_name}</span>
         ),
       },
       {
-        key: "expected_arrival_date",
-        label: "Expected Arrival",
+        key: "received_date",
+        label: "Received Date",
         width: "22%",
         render: (row) => (
-          <span className="text-slate-600 font-medium">
-            {row.expected_arrival_date || "—"}
+          <span className="text-slate-600">
+            {formatDate(row.received_date || row.received_at)}
           </span>
         ),
       },
       {
         key: "action",
-        label: "View Details",
+        label: "Action",
         width: "14%",
         headerClassName: "text-center",
         cellClassName: "text-center",
         render: (row) => (
           <button
             type="button"
-            onClick={() => setSelectedHistoryItem(row)}
+            onClick={() => handleOpenHistoryDetails(row)}
             className="p-1.5 rounded-lg text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition inline-flex items-center gap-1 text-xs cursor-pointer font-medium"
             title="View Details"
           >
@@ -833,7 +1038,7 @@ export default function SupplierDetails() {
               <div className="w-full h-48 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
                 {selectedActiveOrder.product_photo ? (
                   <img
-                    src={selectedActiveOrder.product_photo}
+                    src={resolvePhotoUrl(selectedActiveOrder.product_photo)}
                     alt={selectedActiveOrder.product_name}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -871,173 +1076,69 @@ export default function SupplierDetails() {
                 <div className="flex justify-between py-1 border-b border-slate-200/60">
                   <span className="text-slate-500 font-medium">Ordered Quantity:</span>
                   <span className="font-bold text-slate-900">
-                    {Number(selectedActiveOrder.ordered_quantity).toLocaleString()} kg
+                    {Number(selectedActiveOrder.ordered_quantity || 0).toLocaleString()} kg
                   </span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-slate-200/60">
-                  <span className="text-slate-500 font-medium">Expected Arrival:</span>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500 font-medium">Expected Arrival Date:</span>
                   <span className="font-semibold text-slate-900">
-                    {selectedActiveOrder.expected_arrival_date || "—"}
+                    {formatDate(selectedActiveOrder.expected_arrival_date)}
                   </span>
                 </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-slate-500 font-medium">Order Status:</span>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wide">
-                    {selectedActiveOrder.status}
-                  </span>
-                </div>
-              </div>
-
-              <div className="pt-2 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setSelectedActiveOrder(null)}
-                  className="px-5 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition cursor-pointer"
-                >
-                  Close
-                </button>
               </div>
             </div>
           </div>,
           document.body
         )}
 
-      {/* ── Purchase History View Details Modal ──────────────────────────────── */}
-      {selectedHistoryItem &&
-        createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-xs px-4">
-            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 space-y-5 animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                <div>
-                  <h3 className="font-bold text-gray-900 text-lg">
-                    {selectedHistoryItem.receiving_reference_no}
-                  </h3>
-                  <p className="text-xs text-gray-500">Procurement Receiving Record</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedHistoryItem(null)}
-                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Product Photo */}
-              <div className="w-full h-44 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
-                {selectedHistoryItem.product_photo ? (
-                  <img
-                    src={selectedHistoryItem.product_photo}
-                    alt={selectedHistoryItem.product_name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                      e.target.nextElementSibling?.classList.remove("hidden");
-                    }}
-                  />
-                ) : null}
-                <div
-                  className={`flex flex-col items-center gap-1.5 text-gray-400 ${
-                    selectedHistoryItem.product_photo ? "hidden" : ""
-                  }`}
-                >
-                  <ImageIcon size={32} />
-                  <span className="text-xs font-medium">No product photo uploaded</span>
-                </div>
-              </div>
-
-              {/* Details Grid */}
-              <div className="space-y-2 bg-gray-50 p-4 rounded-xl text-xs text-slate-700">
-                <div className="flex justify-between py-1 border-b border-slate-200/60">
-                  <span className="text-slate-500 font-medium">Receiving Reference No:</span>
-                  <span className="font-bold text-slate-900">{selectedHistoryItem.receiving_reference_no}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-200/60">
-                  <span className="text-slate-500 font-medium">Batch Number:</span>
-                  <span className="font-semibold text-slate-900">{selectedHistoryItem.batch_no}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-200/60">
-                  <span className="text-slate-500 font-medium">Product Name:</span>
-                  <span className="font-semibold text-slate-900">{selectedHistoryItem.product_name}</span>
-                </div>
-                <div className="py-1 border-b border-slate-200/60">
-                  <span className="text-slate-500 font-medium block mb-1">Product Description:</span>
-                  <span className="font-normal text-slate-800 leading-relaxed">
-                    {selectedHistoryItem.product_description || "No description provided."}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-200/60">
-                  <span className="text-slate-500 font-medium">Ordered Quantity:</span>
-                  <span className="font-bold text-slate-900">
-                    {Number(selectedHistoryItem.ordered_quantity).toLocaleString()} kg
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-200/60">
-                  <span className="text-slate-500 font-medium">Expected Arrival:</span>
-                  <span className="font-medium text-slate-900">
-                    {selectedHistoryItem.expected_arrival_date || "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-200/60">
-                  <span className="text-slate-500 font-medium">Price per kg:</span>
-                  <span className="font-bold text-slate-900">
-                    ₱{Number(selectedHistoryItem.price_per_kg || 0).toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-200/60">
-                  <span className="text-slate-500 font-medium">Total Price:</span>
-                  <span className="font-extrabold text-emerald-700 text-sm">
-                    ₱{Number(selectedHistoryItem.total_price || 0).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-200/60">
-                  <span className="text-slate-500 font-medium">Fulfillment Status:</span>
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
-                      selectedHistoryItem.fulfillment_status === "received"
-                        ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                        : "bg-blue-100 text-blue-800 border border-blue-200"
-                    }`}
-                  >
-                    {selectedHistoryItem.fulfillment_status}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-slate-500 font-medium">Payment Status:</span>
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
-                      selectedHistoryItem.payment_status === "paid"
-                        ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                        : "bg-amber-100 text-amber-800 border border-amber-200"
-                    }`}
-                  >
-                    {selectedHistoryItem.payment_status || "pending"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="pt-2 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setSelectedHistoryItem(null)}
-                  className="px-5 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition cursor-pointer"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
+      {/* ── Purchase History View Details Modal (Shared Modal) ──────────────── */}
+      <ReceivingHistoryDetailsModal
+        isOpen={isHistoryModalOpen}
+        onClose={handleCloseHistoryModal}
+        detail={selectedHistoryDetail}
+        isLoading={historyDetailLoading}
+      />
 
       {/* ── Edit Supplier Modal ──────────────────────────────────────────────── */}
       {showEditModal &&
         createPortal(
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-xs px-4">
-            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
+            {showClearConfirm ? (
+              /* Clear / Restore Confirmation Modal (temporarily replaces edit modal card) */
+              <div
+                className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in duration-150"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                    <AlertCircle size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-sm">Restore Original Values</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Are you sure you want to discard your changes and restore original values?
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowClearConfirm(false)}
+                    className="px-3.5 py-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition cursor-pointer"
+                  >
+                    No
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmRestore}
+                    className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#0B5D1E] hover:bg-[#084b18] rounded-lg transition cursor-pointer"
+                  >
+                    Yes
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-3 border-b border-gray-100">
                 <div>
                   <h3 className="font-bold text-gray-900 text-base">Edit Supplier Profile</h3>
@@ -1088,224 +1189,270 @@ export default function SupplierDetails() {
                   )}
                 </div>
 
-                {/* Supplier / Farm & Organization */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                {/* Supplier / Farm Name */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-gray-700">
                       Supplier / Farm Name
                     </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Green Valley Farm"
-                      value={editForm.supplier_farm}
-                      onChange={(e) => handleEditInputChange("supplier_farm", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
-                    />
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      {(editForm.supplier_farm || "").length}/20
+                    </span>
                   </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                  <input
+                    type="text"
+                    maxLength={20}
+                    placeholder="e.g. Green Valley Farm"
+                    value={editForm.supplier_farm}
+                    onChange={(e) => handleEditInputChange("supplier_farm", e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl text-sm outline-none transition ${
+                      fieldErrors.supplier_farm
+                        ? "border-rose-400 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                        : "border-gray-200 focus:ring-1 focus:ring-emerald-600"
+                    }`}
+                  />
+                  {fieldErrors.supplier_farm && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.supplier_farm}</p>
+                  )}
+                </div>
+
+                {/* Organization / Co-op */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-gray-700">
                       Organization / Co-op
                     </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Farmers Association"
-                      value={editForm.organization}
-                      onChange={(e) => handleEditInputChange("organization", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
-                    />
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      {(editForm.organization || "").length}/20
+                    </span>
                   </div>
+                  <input
+                    type="text"
+                    maxLength={20}
+                    placeholder="e.g. Farmers Association"
+                    value={editForm.organization}
+                    onChange={(e) => handleEditInputChange("organization", e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl text-sm outline-none transition ${
+                      fieldErrors.organization
+                        ? "border-rose-400 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                        : "border-gray-200 focus:ring-1 focus:ring-emerald-600"
+                    }`}
+                  />
+                  {fieldErrors.organization && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.organization}</p>
+                  )}
                 </div>
 
-                {/* Contact Person & Contact Number */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                {/* Contact Person */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-gray-700">
                       Contact Person <span className="text-rose-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Juan Dela Cruz"
-                      value={editForm.contact_person}
-                      onChange={(e) => handleEditInputChange("contact_person", e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-xl text-sm outline-none transition ${
-                        fieldErrors.contact_person
-                          ? "border-rose-400 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
-                          : "border-gray-200 focus:ring-1 focus:ring-emerald-600"
-                      }`}
-                    />
-                    {fieldErrors.contact_person && (
-                      <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.contact_person}</p>
-                    )}
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      {(editForm.contact_person || "").length}/20
+                    </span>
                   </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
-                      Contact Number <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 09123456789"
-                      value={editForm.contact_number}
-                      onChange={(e) => handleEditInputChange("contact_number", e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-xl text-sm outline-none transition ${
-                        fieldErrors.contact_number
-                          ? "border-rose-400 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
-                          : "border-gray-200 focus:ring-1 focus:ring-emerald-600"
-                      }`}
-                    />
-                    {fieldErrors.contact_number && (
-                      <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.contact_number}</p>
-                    )}
-                  </div>
+                  <input
+                    type="text"
+                    maxLength={20}
+                    required
+                    placeholder="e.g. Juan Dela Cruz"
+                    value={editForm.contact_person}
+                    onChange={(e) => handleEditInputChange("contact_person", e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl text-sm outline-none transition ${
+                      fieldErrors.contact_person
+                        ? "border-rose-400 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                        : "border-gray-200 focus:ring-1 focus:ring-emerald-600"
+                    }`}
+                  />
+                  {fieldErrors.contact_person && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.contact_person}</p>
+                  )}
                 </div>
 
-                {/* Email Address & Status */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
-                      Email Address <span className="text-xs text-gray-400 font-normal">(optional)</span>
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="e.g. supplier@example.com"
-                      value={editForm.email}
-                      onChange={(e) => handleEditInputChange("email", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
-                      Status
-                    </label>
+                {/* Contact Number */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Contact Number <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={12}
+                    required
+                    placeholder="e.g. 09123456789 or 639123456789"
+                    value={editForm.contact_number}
+                    onChange={(e) => handleEditInputChange("contact_number", e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl text-sm outline-none transition ${
+                      fieldErrors.contact_number
+                        ? "border-rose-400 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                        : "border-gray-200 focus:ring-1 focus:ring-emerald-600"
+                    }`}
+                  />
+                  {fieldErrors.contact_number && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.contact_number}</p>
+                  )}
+                </div>
+
+                {/* Email Address */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Email Address <span className="text-xs text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="e.g. supplier@example.com"
+                    value={editForm.email}
+                    onChange={(e) => handleEditInputChange("email", e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
+                  />
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => handleEditInputChange("status", e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none bg-white text-gray-700"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+
+                {/* Province */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Province <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
                     <select
-                      value={editForm.status}
-                      onChange={(e) => handleEditInputChange("status", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none bg-white text-gray-700"
+                      value={address.province}
+                      onChange={(e) => handleProvinceChange(e.target.value)}
+                      onFocus={() => {
+                        if ((!address.provinceOptions || address.provinceOptions.length === 0) && !address.loading.provinces) {
+                          address.reloadProvinces?.();
+                        }
+                      }}
+                      className={`w-full appearance-none pl-3 pr-8 py-2 border rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer ${
+                        fieldErrors.province
+                          ? "border-rose-400 focus:ring-rose-500 bg-rose-50/20"
+                          : "border-gray-200"
+                      }`}
                     >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
+                      <option value="">
+                        {address.loading.provinces
+                          ? "Loading Provinces..."
+                          : "Select Province"}
+                      </option>
+                      {address.provinceOptions.map((prov) => (
+                        <option key={prov} value={prov}>
+                          {prov}
+                        </option>
+                      ))}
                     </select>
+                    <ChevronDown size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                  {fieldErrors.province && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.province}</p>
+                  )}
+                  {address.errors.provinces && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium flex items-center gap-1">
+                      <span>{address.errors.provinces}</span>
+                      <button
+                        type="button"
+                        onClick={() => address.reloadProvinces?.()}
+                        className="underline font-bold text-emerald-700 ml-1 cursor-pointer"
+                      >
+                        Retry
+                      </button>
+                    </p>
+                  )}
+                </div>
+
+                {/* City / Municipality */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    City / Municipality <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={address.municipality}
+                      onChange={(e) => handleMunicipalityChange(e.target.value)}
+                      disabled={!address.province || address.loading.municipalities}
+                      className={`w-full appearance-none pl-3 pr-8 py-2 border rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer disabled:bg-gray-50 disabled:text-gray-400 ${
+                        fieldErrors.municipality
+                          ? "border-rose-400 focus:ring-rose-500 bg-rose-50/20"
+                          : "border-gray-200"
+                      }`}
+                    >
+                      <option value="">
+                        {address.loading.municipalities
+                          ? "Loading Cities/Municipalities..."
+                          : !address.province
+                          ? "Select Province First"
+                          : "Select City / Municipality"}
+                      </option>
+                      {address.municipalityOptions.map((mun) => (
+                        <option key={mun} value={mun}>
+                          {mun}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                  {fieldErrors.municipality && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.municipality}</p>
+                  )}
+                  {address.errors.municipalities && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{address.errors.municipalities}</p>
+                  )}
+                </div>
+
+                {/* Barangay */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Barangay
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={address.barangay}
+                      onChange={(e) => handleBarangayChange(e.target.value)}
+                      disabled={!address.municipality || address.loading.barangays}
+                      className="w-full appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer disabled:bg-gray-50 disabled:text-gray-400"
+                    >
+                      <option value="">
+                        {address.loading.barangays
+                          ? "Loading Barangays..."
+                          : !address.municipality
+                          ? "Select Municipality First"
+                          : "Select Barangay"}
+                      </option>
+                      {address.barangayOptions.map((brgy) => (
+                        <option key={brgy} value={brgy}>
+                          {brgy}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
                 </div>
 
-                {/* Province & City / Municipality */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
-                      Province <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={address.province}
-                        onChange={(e) => handleProvinceChange(e.target.value)}
-                        onFocus={() => {
-                          if ((!address.provinceOptions || address.provinceOptions.length === 0) && !address.loading.provinces) {
-                            address.reloadProvinces?.();
-                          }
-                        }}
-                        className={`w-full appearance-none pl-3 pr-8 py-2 border rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer ${
-                          fieldErrors.province
-                            ? "border-rose-400 focus:ring-rose-500 bg-rose-50/20"
-                            : "border-gray-200"
-                        }`}
-                      >
-                        <option value="">
-                          {address.loading.provinces
-                            ? "Loading Provinces..."
-                            : "Select Province"}
-                        </option>
-                        {address.provinceOptions.map((prov) => (
-                          <option key={prov} value={prov}>
-                            {prov}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div>
-                    {fieldErrors.province && (
-                      <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.province}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
-                      City / Municipality <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={address.municipality}
-                        onChange={(e) => handleMunicipalityChange(e.target.value)}
-                        disabled={!address.province || address.loading.municipalities}
-                        className={`w-full appearance-none pl-3 pr-8 py-2 border rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer disabled:bg-gray-50 disabled:text-gray-400 ${
-                          fieldErrors.municipality
-                            ? "border-rose-400 focus:ring-rose-500 bg-rose-50/20"
-                            : "border-gray-200"
-                        }`}
-                      >
-                        <option value="">
-                          {address.loading.municipalities
-                            ? "Loading Cities/Municipalities..."
-                            : !address.province
-                            ? "Select Province First"
-                            : "Select City / Municipality"}
-                        </option>
-                        {address.municipalityOptions.map((mun) => (
-                          <option key={mun} value={mun}>
-                            {mun}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div>
-                    {fieldErrors.municipality && (
-                      <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.municipality}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Barangay & Postal Code */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
-                      Barangay
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={address.barangay}
-                        onChange={(e) => handleBarangayChange(e.target.value)}
-                        disabled={!address.municipality || address.loading.barangays}
-                        className="w-full appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer disabled:bg-gray-50 disabled:text-gray-400"
-                      >
-                        <option value="">
-                          {address.loading.barangays
-                            ? "Loading Barangays..."
-                            : !address.municipality
-                            ? "Select Municipality First"
-                            : "Select Barangay"}
-                        </option>
-                        {address.barangayOptions.map((brgy) => (
-                          <option key={brgy} value={brgy}>
-                            {brgy}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
-                      Postal Code <span className="text-gray-400 font-normal">(auto-filled)</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={address.loading.postalCode ? "Loading..." : "e.g. 2300"}
-                      value={address.postalCode}
-                      onChange={(e) => address.updatePostalCode(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
-                    />
-                  </div>
+                {/* Postal Code */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Postal Code <span className="text-gray-400 font-normal">(auto-filled)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={address.loading.postalCode ? "Loading..." : "e.g. 2300"}
+                    value={address.postalCode}
+                    onChange={(e) => address.updatePostalCode(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
+                  />
                 </div>
 
                 {/* Street Address */}
@@ -1326,14 +1473,15 @@ export default function SupplierDetails() {
                 <div className="flex gap-2.5 pt-3 border-t border-gray-100">
                   <button
                     type="button"
-                    onClick={handleCloseEditModal}
-                    className="flex-1 px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition cursor-pointer"
+                    disabled={!hasFormChanged || submitting}
+                    onClick={() => setShowClearConfirm(true)}
+                    className="flex-1 px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Cancel
+                    Clear
                   </button>
                   <button
                     type="submit"
-                    disabled={submitting}
+                    disabled={!canSave}
                     className="flex-1 px-4 py-2 text-xs font-semibold text-white bg-[#0B5D1E] hover:bg-[#084b18] rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     {submitting ? (
@@ -1348,6 +1496,7 @@ export default function SupplierDetails() {
                 </div>
               </form>
             </div>
+            )}
           </div>,
           document.body
         )}

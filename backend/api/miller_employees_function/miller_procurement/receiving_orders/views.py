@@ -140,6 +140,7 @@ def receive_order_view(request, order_id):
         farmer_rating = request.data.get("farmer_rating")
         shelf_location = request.data.get("shelf_location")
         expiry_date = request.data.get("expiry_date")
+        reason_description = request.data.get("reason_description")
 
         receiving_proof_file = request.FILES.get("receiving_proof_photo")
         photo_evidence_file = request.FILES.get("photo_evidence")
@@ -157,6 +158,7 @@ def receive_order_view(request, order_id):
             expiry_date=expiry_date,
             receiving_proof_file=receiving_proof_file,
             photo_evidence_file=photo_evidence_file,
+            reason_description=reason_description,
         )
 
         return Response(

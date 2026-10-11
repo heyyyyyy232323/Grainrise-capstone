@@ -47,7 +47,8 @@ def _list_suppliers(request):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        suppliers = list_miller_suppliers(miller_user_id)
+        branch_id = request.query_params.get("branch_id")
+        suppliers = list_miller_suppliers(miller_user_id, branch_id=branch_id)
         return Response(
             {
                 "success": True,

@@ -122,11 +122,13 @@ def goods_receipt_request_to_pay_view(request, receiving_id):
     Transition receiving status from 'pending' to 'request to pay'.
     """
     supplier_profile_id = request.grainrise_supplier_profile_id
+    requesting_employee_id = getattr(request, "grainrise_supplier_employee_id", None)
 
     try:
         detail = request_to_pay(
             supplier_profile_id=supplier_profile_id,
             receiving_id=receiving_id,
+            requesting_employee_id=requesting_employee_id,
         )
 
         return Response(

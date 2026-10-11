@@ -77,6 +77,11 @@ export default function GoodsReceiptReceiptModal({
 
   if (!isOpen || !receipt) return null;
 
+  const isPaid = Boolean(
+    receipt?.is_paid ||
+      (receipt?.status && String(receipt?.status).toLowerCase() === "paid")
+  );
+
   const handleDownloadPdf = () => {
     const doc = new jsPDF({
       orientation: "portrait",
@@ -119,7 +124,12 @@ export default function GoodsReceiptReceiptModal({
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     doc.setTextColor(15, 23, 42); // Slate-900
-    doc.text("OFFICIAL GOODS RECEIPT", pageWidth / 2, y, { align: "center" });
+    doc.text(
+      isPaid ? "OFFICIAL GOODS & PAYMENT RECEIPT" : "OFFICIAL GOODS RECEIPT",
+      pageWidth / 2,
+      y,
+      { align: "center" }
+    );
     y += 5.5;
 
     doc.setFont("helvetica", "normal");
@@ -138,30 +148,45 @@ export default function GoodsReceiptReceiptModal({
 
     // Details Box
     const boxStartY = y;
-    const rowHeight = 9.8;
+    const rowHeight = 9.2;
     const rows = [
-      ["Batch No.", sanitizePdfText(receipt.batch_no)],
+      ["Batch No.", sanitizePdfText(receipt.batch_no), false],
       [
         "Reference No.",
         sanitizePdfText(receipt.receiving_reference_no || receipt.reference_no),
+        false,
       ],
-      ["Product Variant", sanitizePdfText(receipt.variant)],
-      ["Supplier", sanitizePdfText(receipt.supplier)],
+      ["Product Variant", sanitizePdfText(receipt.variant), false],
+      ["Supplier", sanitizePdfText(receipt.supplier), false],
       [
         "Order Quantity",
         formatQuantityForPdf(receipt.original_order_quantity || receipt.ordered_quantity),
+        false,
       ],
-      ["Received Quantity", formatQuantityForPdf(receipt.total_received)],
+      ["Received Quantity", formatQuantityForPdf(receipt.total_received), false],
       [
         "Quantity to Pay (Received Good)",
         formatQuantityForPdf(receipt.received_good),
+        false,
       ],
       [
         "Unit Cost / Price per kg",
         formatCurrencyForPdf(receipt.price_per_kg || receipt.unit_price),
+        false,
       ],
-      ["Amount to Pay", formatCurrencyForPdf(receipt.amount_to_pay)],
+      ["Amount to Pay", formatCurrencyForPdf(receipt.amount_to_pay), true],
     ];
+
+    if (isPaid) {
+      rows.push(
+        ["Requested Date", sanitizePdfText(receipt.requested_date || receipt.requested_at_formatted), false],
+        ["Paid Date", sanitizePdfText(receipt.paid_date || receipt.paid_at_formatted), false],
+        ["Paid By", sanitizePdfText(receipt.paid_by), false],
+        ["Payment Method", sanitizePdfText(receipt.payment_method), false],
+        ["Payment Reference", sanitizePdfText(receipt.payment_reference || receipt.payment_reference_id), false]
+      );
+    }
+
     const boxHeight = rows.length * rowHeight + 4;
 
     doc.setFillColor(248, 250, 252);
@@ -169,8 +194,8 @@ export default function GoodsReceiptReceiptModal({
     doc.setLineWidth(0.3);
     doc.roundedRect(margin, boxStartY, usableWidth, boxHeight, 3, 3, "FD");
 
-    let rowY = boxStartY + 7.5;
-    rows.forEach(([label, value], idx) => {
+    let rowY = boxStartY + 7.2;
+    rows.forEach(([label, value, isAmount], idx) => {
       // Label
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9.5);
@@ -178,7 +203,7 @@ export default function GoodsReceiptReceiptModal({
       doc.text(label, margin + 8, rowY);
 
       // Value
-      if (idx === rows.length - 1) {
+      if (isAmount) {
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10.5);
         doc.setTextColor(11, 93, 30);
@@ -267,7 +292,7 @@ export default function GoodsReceiptReceiptModal({
             <h1>${receipt.business_name || "GrainRise Miller"}</h1>
             <h2>${receipt.business_address || "Address"} • ${receipt.business_contact || "Contact"}</h2>
           </div>
-          <div class="badge-title">OFFICIAL GOODS RECEIPT</div>
+          <div class="badge-title">${isPaid ? "OFFICIAL GOODS & PAYMENT RECEIPT" : "OFFICIAL GOODS RECEIPT"}</div>
           <div class="receipt-box">
             <div class="row"><span class="label">Batch No.:</span><span class="value">${receipt.batch_no || "—"}</span></div>
             <div class="row"><span class="label">Reference No.:</span><span class="value">${receipt.receiving_reference_no || receipt.reference_no || "—"}</span></div>
@@ -278,6 +303,17 @@ export default function GoodsReceiptReceiptModal({
             <div class="row"><span class="label">Quantity to Pay (Received Good):</span><span class="value">${receipt.received_good || "—"}</span></div>
             <div class="row"><span class="label">Unit Cost / Price per kg:</span><span class="value">${receipt.price_per_kg || receipt.unit_price || "—"}</span></div>
             <div class="row amount-row"><span class="label">Amount to Pay:</span><span class="value">${receipt.amount_to_pay || "—"}</span></div>
+            ${
+              isPaid
+                ? `
+            <div class="row"><span class="label">Requested Date:</span><span class="value">${receipt.requested_date || receipt.requested_at_formatted || "—"}</span></div>
+            <div class="row"><span class="label">Paid Date:</span><span class="value">${receipt.paid_date || receipt.paid_at_formatted || "—"}</span></div>
+            <div class="row"><span class="label">Paid By:</span><span class="value">${receipt.paid_by || "—"}</span></div>
+            <div class="row"><span class="label">Payment Method:</span><span class="value">${receipt.payment_method || "—"}</span></div>
+            <div class="row"><span class="label">Payment Reference:</span><span class="value">${receipt.payment_reference || receipt.payment_reference_id || "—"}</span></div>
+            `
+                : ""
+            }
           </div>
           <div class="footer-note">This document serves as proof of goods received and payment request in GrainRise.</div>
         </body>
@@ -330,7 +366,7 @@ export default function GoodsReceiptReceiptModal({
               )}
             </h2>
             <div className="mt-3 inline-flex items-center px-3 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold tracking-wide uppercase">
-              Official Goods Receipt
+              {isPaid ? "Official Goods & Payment Receipt" : "Official Goods Receipt"}
             </div>
           </div>
 
@@ -361,6 +397,30 @@ export default function GoodsReceiptReceiptModal({
               value={receipt.amount_to_pay}
               isAmount={true}
             />
+
+            {isPaid && (
+              <>
+                <div className="pt-2.5 pb-1 border-t border-slate-200/80 my-1">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    Payment Details
+                  </span>
+                </div>
+                <ReceiptRow
+                  label="Requested Date"
+                  value={receipt.requested_date || receipt.requested_at_formatted}
+                />
+                <ReceiptRow
+                  label="Paid Date"
+                  value={receipt.paid_date || receipt.paid_at_formatted}
+                />
+                <ReceiptRow label="Paid By" value={receipt.paid_by} />
+                <ReceiptRow label="Payment Method" value={receipt.payment_method} />
+                <ReceiptRow
+                  label="Payment Reference"
+                  value={receipt.payment_reference || receipt.payment_reference_id}
+                />
+              </>
+            )}
           </div>
         </div>
 

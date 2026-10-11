@@ -450,6 +450,7 @@ def receive_inbound_order(
     expiry_date,
     receiving_proof_file,
     photo_evidence_file=None,
+    reason_description=None,
 ):
     """
     Process receiving of an inbound order as one atomic database transaction.
@@ -542,10 +543,13 @@ def receive_inbound_order(
             if parsed_expiry_date and parsed_expiry_date < today_local:
                 raise ReceivingValidationError("Expiry date must be today or a future date (cannot be a past date).")
 
-    # Validate Files
+    # Validate Files & Rejection Details
     _validate_upload_file(receiving_proof_file, field_name="Proof of receiving photo")
 
+    reason_desc_clean = _clean_str(reason_description)
     if bad_dec > Decimal("0.00"):
+        if not reason_desc_clean:
+            raise ReceivingValidationError("Reason & description is required when rejected quantity is greater than 0 kg.")
         if not photo_evidence_file:
             raise ReceivingValidationError("Proof of rejected goods photo is required when rejected quantity is greater than 0 kg.")
         _validate_upload_file(photo_evidence_file, field_name="Proof of rejected goods photo")
@@ -794,11 +798,12 @@ def receive_inbound_order(
                             receiving_reference_no,
                             return_reference_no,
                             quantity_kg,
+                            reason_description,
                             status,
                             created_at,
                             returned_at
                         ) VALUES (
-                            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                         )
                         """,
                         [
@@ -810,6 +815,7 @@ def receive_inbound_order(
                             receiving_ref,
                             generated_return_ref,
                             bad_dec,
+                            reason_desc_clean,
                             "pending",
                             now_dt,
                             None,
