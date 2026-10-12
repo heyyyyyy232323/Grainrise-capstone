@@ -108,6 +108,7 @@ const MainPageLayout = ({ role = "warehouse_encoder" }) => {
         {/* Navbar */}
         <UserNavbar
           user={user}
+          role={userRole}
           onToggleSidebar={handleToggleSidebar}
           menuItems={getUserNavbarMenuItems(userRole)}
         />

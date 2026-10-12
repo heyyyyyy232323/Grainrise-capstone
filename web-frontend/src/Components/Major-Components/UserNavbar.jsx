@@ -23,6 +23,8 @@ import {
 import useAuth from "../hooks/useAuth";
 import useAdminNotifications from "../hooks/AccountAdmin/useAdminNotifications";
 import useFarmerNotifications from "../hooks/Farmer/UseFarmerNotifications";
+import useEncoderNotifications from "../hooks/MillerEncoder/useEncoderNotifications";
+import useProcurementNotifications from "../hooks/MillerProcurement/useProcurementNotifications";
 
 
 // ============================================================
@@ -242,6 +244,8 @@ const UserNavbar = ({
     avatarUrl: "",
   },
 
+  role: propRole,
+
   notificationCount = 0,
 
   onToggleSidebar,
@@ -277,6 +281,27 @@ const UserNavbar = ({
 
   const isFarmer =
     role === "farmer";
+
+
+  const isEncoder =
+    propRole === "supplier_encoder" ||
+    role === "supplier_encoder" ||
+    role === "miller_encoder" ||
+    (authenticatedUser?.account_type === "supplier_employee" &&
+      authenticatedUser?.position === "encoder") ||
+    (authenticatedUser?.role === "supplier_employee" &&
+      authenticatedUser?.position === "encoder");
+
+
+  const isProcurement =
+    propRole === "supplier_procurement" ||
+    propRole === "miller_procurement" ||
+    role === "supplier_procurement" ||
+    role === "miller_procurement" ||
+    (authenticatedUser?.account_type === "supplier_employee" &&
+      authenticatedUser?.position === "procurement") ||
+    (authenticatedUser?.role === "supplier_employee" &&
+      authenticatedUser?.position === "procurement");
 
 
   // =========================================================
@@ -404,6 +429,77 @@ const UserNavbar = ({
 
 
   // =========================================================
+  // MILLER ENCODER NOTIFICATIONS
+  // =========================================================
+
+  const {
+    notifications:
+      encoderNotifications,
+
+    unseenCount:
+      encoderUnseenCount,
+
+    isLoading:
+      isLoadingEncoderNotifications,
+
+    isUpdating:
+      isUpdatingEncoderNotifications,
+
+    error:
+      encoderNotificationError,
+
+    loadUnseenCount:
+      loadEncoderUnseenCount,
+
+    refreshNotifications:
+      refreshEncoderNotifications,
+
+    openNotification:
+      openEncoderNotification,
+  } = useEncoderNotifications({
+    enabled:
+      isEncoder,
+  });
+
+
+  // =========================================================
+  // MILLER PROCUREMENT NOTIFICATIONS
+  // =========================================================
+
+  const {
+    notifications:
+      procurementNotifications,
+
+    unseenCount:
+      procurementUnseenCount,
+
+    isLoading:
+      isLoadingProcurementNotifications,
+
+    isUpdating:
+      isUpdatingProcurementNotifications,
+
+    error:
+      procurementNotificationError,
+
+    loadUnseenCount:
+      loadProcurementUnseenCount,
+
+    refreshNotifications:
+      refreshProcurementNotifications,
+
+    openNotification:
+      openProcurementNotification,
+
+    markAllAsRead:
+      markAllProcurementNotificationsAsRead,
+  } = useProcurementNotifications({
+    enabled:
+      isProcurement,
+  });
+
+
+  // =========================================================
   // NAVBAR STATE
   // =========================================================
 
@@ -476,7 +572,9 @@ const UserNavbar = ({
     () => {
       if (
         !isAdmin &&
-        !isFarmer
+        !isFarmer &&
+        !isEncoder &&
+        !isProcurement
       ) {
         return undefined;
       }
@@ -488,7 +586,11 @@ const UserNavbar = ({
             const refreshCount =
               isAdmin
                 ? loadUnreadCount
-                : loadFarmerUnreadCount;
+                : isFarmer
+                  ? loadFarmerUnreadCount
+                  : isEncoder
+                    ? loadEncoderUnseenCount
+                    : loadProcurementUnseenCount;
 
 
             refreshCount().catch(
@@ -510,8 +612,12 @@ const UserNavbar = ({
     [
       isAdmin,
       isFarmer,
+      isEncoder,
+      isProcurement,
       loadUnreadCount,
       loadFarmerUnreadCount,
+      loadEncoderUnseenCount,
+      loadProcurementUnseenCount,
     ]
   );
 
@@ -758,12 +864,18 @@ const UserNavbar = ({
       ? adminNotifications
       : isFarmer
         ? farmerNotifications
-        : notifications;
+        : isEncoder
+          ? encoderNotifications
+          : isProcurement
+            ? procurementNotifications
+            : notifications;
 
 
   const usesDatabaseNotifications =
     isAdmin ||
-    isFarmer;
+    isFarmer ||
+    isEncoder ||
+    isProcurement;
 
 
   const isLoadingDatabaseNotifications =
@@ -771,7 +883,11 @@ const UserNavbar = ({
       ? isLoadingAdminNotifications
       : isFarmer
         ? isLoadingFarmerNotifications
-        : false;
+        : isEncoder
+          ? isLoadingEncoderNotifications
+          : isProcurement
+            ? isLoadingProcurementNotifications
+            : false;
 
 
   const isUpdatingDatabaseNotifications =
@@ -779,7 +895,11 @@ const UserNavbar = ({
       ? isUpdatingAdminNotifications
       : isFarmer
         ? isUpdatingFarmerNotifications
-        : false;
+        : isEncoder
+          ? isUpdatingEncoderNotifications
+          : isProcurement
+            ? isUpdatingProcurementNotifications
+            : false;
 
 
   const databaseNotificationError =
@@ -787,7 +907,11 @@ const UserNavbar = ({
       ? adminNotificationError
       : isFarmer
         ? farmerNotificationError
-        : "";
+        : isEncoder
+          ? encoderNotificationError
+          : isProcurement
+            ? procurementNotificationError
+            : "";
 
 
   // =========================================================
@@ -808,10 +932,14 @@ const UserNavbar = ({
       ? adminUnreadCount
       : isFarmer
         ? farmerUnreadCount
-        : (
-            notificationCount ||
-            localUnreadCount
-          );
+        : isEncoder
+          ? encoderUnseenCount
+          : isProcurement
+            ? procurementUnseenCount
+            : (
+                notificationCount ||
+                localUnreadCount
+              );
 
 
   // =========================================================
@@ -853,6 +981,34 @@ const UserNavbar = ({
         isFarmer
       ) {
         refreshFarmerNotifications().catch(
+          () => {
+            // Hook already stores error.
+          }
+        );
+
+        return;
+      }
+
+
+      if (
+        willOpen &&
+        isEncoder
+      ) {
+        refreshEncoderNotifications().catch(
+          () => {
+            // Hook already stores error.
+          }
+        );
+
+        return;
+      }
+
+
+      if (
+        willOpen &&
+        isProcurement
+      ) {
+        refreshProcurementNotifications().catch(
           () => {
             // Hook already stores error.
           }
@@ -904,6 +1060,24 @@ const UserNavbar = ({
           // Error remains available from hook.
         }
 
+
+        return;
+      }
+
+
+      if (isProcurement) {
+        if (
+          procurementUnseenCount <= 0 ||
+          isUpdatingProcurementNotifications
+        ) {
+          return;
+        }
+
+        try {
+          await markAllProcurementNotificationsAsRead();
+        } catch {
+          // Error remains available from hook.
+        }
 
         return;
       }
@@ -1016,6 +1190,65 @@ const UserNavbar = ({
           // Error displayed inside notification panel.
         }
 
+
+        return;
+      }
+
+
+      if (isEncoder) {
+        try {
+          const result =
+            await openEncoderNotification(
+              item
+            );
+
+
+          setNotificationOpen(
+            false
+          );
+
+
+          const targetPath =
+            result?.targetPath ||
+            item?.action_url ||
+            "/supplier-encoder/stock";
+
+
+          navigate(
+            targetPath
+          );
+
+        } catch {
+          // Error displayed inside notification panel.
+        }
+
+
+        return;
+      }
+
+
+      if (isProcurement) {
+        try {
+          const result =
+            await openProcurementNotification(
+              item
+            );
+
+          setNotificationOpen(
+            false
+          );
+
+          const targetPath =
+            result?.targetPath ||
+            item?.action_url ||
+            "/miller-procurement/dashboard";
+
+          navigate(
+            targetPath
+          );
+        } catch {
+          // Error displayed inside notification panel.
+        }
 
         return;
       }
@@ -1199,30 +1432,33 @@ const UserNavbar = ({
                 </div>
 
 
-                <button
-                  type="button"
-                  onClick={
-                    handleMarkAllAsRead
-                  }
-                  disabled={
-                    badgeCount <= 0 ||
-                    (
-                      usesDatabaseNotifications &&
-                      isUpdatingDatabaseNotifications
-                    )
-                  }
-                  className="text-[11px] font-semibold text-[#0B7A2A] hover:text-[#096322] transition cursor-pointer disabled:text-gray-300 disabled:cursor-not-allowed"
-                >
+                {
+                  !isEncoder && (
+                    <button
+                      type="button"
+                      onClick={
+                        handleMarkAllAsRead
+                      }
+                      disabled={
+                        badgeCount <= 0 ||
+                        (
+                          usesDatabaseNotifications &&
+                          isUpdatingDatabaseNotifications
+                        )
+                      }
+                      className="text-[11px] font-semibold text-[#0B7A2A] hover:text-[#096322] transition cursor-pointer disabled:text-gray-300 disabled:cursor-not-allowed"
+                    >
 
-                  {
-                    usesDatabaseNotifications &&
-                    isUpdatingDatabaseNotifications
-                      ? "Updating..."
-                      : "Mark all as read"
-                  }
+                      {
+                        usesDatabaseNotifications &&
+                        isUpdatingDatabaseNotifications
+                          ? "Updating..."
+                          : "Mark all as read"
+                      }
 
-                </button>
-
+                    </button>
+                  )
+                }
               </div>
 
 
@@ -1258,15 +1494,14 @@ const UserNavbar = ({
                       ) => {
                         const itemId =
                           usesDatabaseNotifications
-                            ? item
-                                ?.notification_id
+                            ? (item?.notification_id || item?.id)
                             : item?.id;
 
 
                         const itemRead =
                           usesDatabaseNotifications
                             ? Boolean(
-                                item?.is_read
+                                item?.is_read || item?.status === "seen"
                               )
                             : Boolean(
                                 item?.read
@@ -1274,13 +1509,16 @@ const UserNavbar = ({
 
 
                         const itemTitle =
+                          item?.notification_title ||
                           item?.title ||
                           "Notification";
 
 
                         const itemDescription =
                           usesDatabaseNotifications
-                            ? item?.message
+                            ? (item?.notification_content ||
+                                item?.message ||
+                                item?.content)
                             : item?.description;
 
 
@@ -1291,13 +1529,21 @@ const UserNavbar = ({
                               )
                             : item?.time;
 
+                        const seenByName =
+                          item?.seen_by_name;
+
 
                         return (
                           <div
                             key={
                               itemId
                             }
-                            className={`dark-readable-notification-item p-3 border-b border-slate-100 last:border-b-0 ${
+                            onClick={() =>
+                              handleNotificationView(
+                                item
+                              )
+                            }
+                            className={`dark-readable-notification-item p-3 border-b border-slate-100 last:border-b-0 cursor-pointer hover:bg-slate-50 transition-colors ${
                               itemRead
                                 ? "bg-white"
                                 : "bg-[#F0F8F1]"
@@ -1356,13 +1602,24 @@ const UserNavbar = ({
                                 </p>
 
 
+                                {
+                                  seenByName && (
+                                    <div className="mt-1.5 flex items-center gap-1.5 text-[10px] font-medium text-emerald-700">
+                                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                      <span>Seen by {seenByName}</span>
+                                    </div>
+                                  )
+                                }
+
+
                                 <button
                                   type="button"
-                                  onClick={() =>
+                                  onClick={(event) => {
+                                    event.stopPropagation();
                                     handleNotificationView(
                                       item
-                                    )
-                                  }
+                                    );
+                                  }}
                                   disabled={
                                     usesDatabaseNotifications &&
                                     isUpdatingDatabaseNotifications

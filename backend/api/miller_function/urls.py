@@ -56,4 +56,32 @@ urlpatterns = [
             "api.miller_function.suppliers.urls"
         ),
     ),
+
+    # ========================================================
+    # ORDER APPROVAL
+    # ========================================================
+
+    path(
+        "order-approval/",
+        include(
+            "api.miller_function.order_approval.urls"
+        ),
+    ),
+    path(
+        "order-approval",
+        include(
+            "api.miller_function.order_approval.urls"
+        ),
+    ),
+
+    # ========================================================
+    # RECEIVING HISTORY
+    # ========================================================
+
+    path(
+        "receiving-history/",
+        include(
+            "api.miller_function.receiving_history.urls"
+        ),
+    ),
 ]

@@ -38,6 +38,7 @@ export default function SupplierManagement() {
 
   // Modal State
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [formData, setFormData] = useState(INITIAL_SUPPLIER_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
@@ -98,7 +99,18 @@ export default function SupplierManagement() {
 
   // Form input change handlers
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    let cleanVal = value;
+    if (field === "contact_person") {
+      // Letters and spaces only, max 20 characters
+      cleanVal = cleanVal.replace(/[^a-zA-Z\s]/g, "").slice(0, 20);
+    } else if (field === "contact_number") {
+      // Digits only, max 12 digits
+      cleanVal = cleanVal.replace(/\D/g, "").slice(0, 12);
+    } else if (field === "supplier_farm" || field === "organization") {
+      cleanVal = cleanVal.slice(0, 20);
+    }
+
+    setFormData((prev) => ({ ...prev, [field]: cleanVal }));
     if (fieldErrors[field]) {
       setFieldErrors((prev) => {
         const next = { ...prev };
@@ -157,11 +169,70 @@ export default function SupplierManagement() {
 
   const handleCloseAddModal = () => {
     setShowAddModal(false);
+    setShowClearConfirm(false);
     setFormData(INITIAL_SUPPLIER_FORM);
     setFormError("");
     setFieldErrors({});
     address.resetAddress();
   };
+
+  const handleConfirmClear = () => {
+    setFormData({
+      ...INITIAL_SUPPLIER_FORM,
+      supplier_profile_id: branches[0]?.supplier_profile_id
+        ? String(branches[0].supplier_profile_id)
+        : "",
+    });
+    setFormError("");
+    setFieldErrors({});
+    address.resetAddress();
+    setShowClearConfirm(false);
+  };
+
+  // Change & Required completion detection for Add Supplier
+  const hasAddChanged = useMemo(() => {
+    const defaultBranch = branches[0]?.supplier_profile_id
+      ? String(branches[0].supplier_profile_id)
+      : "";
+    return (
+      String(formData.supplier_profile_id || "") !== defaultBranch ||
+      (formData.supplier_farm || "").trim() !== "" ||
+      (formData.organization || "").trim() !== "" ||
+      (formData.contact_person || "").trim() !== "" ||
+      (formData.contact_number || "").trim() !== "" ||
+      (formData.email || "").trim() !== "" ||
+      (formData.status || "active") !== "active" ||
+      (formData.street_address || "").trim() !== "" ||
+      (address.province || "").trim() !== "" ||
+      (address.municipality || "").trim() !== "" ||
+      (address.barangay || "").trim() !== "" ||
+      (address.postalCode || "").trim() !== ""
+    );
+  }, [formData, address.province, address.municipality, address.barangay, address.postalCode, branches]);
+
+  const isAddValid = useMemo(() => {
+    if (!formData.supplier_profile_id) return false;
+    const cp = (formData.contact_person || "").trim();
+    const cn = (formData.contact_number || "").trim();
+    if (!cp || cp.length > 20 || !/^[a-zA-Z\s]+$/.test(cp)) return false;
+    if (!cn || !/^(09\d{9}|639\d{9})$/.test(cn)) return false;
+    if (!(address.province || "").trim()) return false;
+    if (!(address.municipality || "").trim()) return false;
+    if (formData.supplier_farm && formData.supplier_farm.trim().length > 20) return false;
+    if (formData.organization && formData.organization.trim().length > 20) return false;
+    return true;
+  }, [
+    formData.supplier_profile_id,
+    formData.contact_person,
+    formData.contact_number,
+    formData.supplier_farm,
+    formData.organization,
+    address.province,
+    address.municipality,
+  ]);
+
+  const canClearAdd = hasAddChanged && isAddValid;
+  const canSaveAdd = hasAddChanged && isAddValid && !submitting;
 
   // Submit new supplier
   const handleAddSupplier = async (e) => {
@@ -172,12 +243,33 @@ export default function SupplierManagement() {
     if (!formData.supplier_profile_id) {
       errors.supplier_profile_id = "Please select a branch.";
     }
-    if (!formData.contact_person.trim()) {
+
+    if (formData.supplier_farm && formData.supplier_farm.trim().length > 20) {
+      errors.supplier_farm = "Supplier / Farm Name cannot exceed 20 characters.";
+    }
+
+    if (formData.organization && formData.organization.trim().length > 20) {
+      errors.organization = "Organization / Co-op cannot exceed 20 characters.";
+    }
+
+    const cp = formData.contact_person.trim();
+    if (!cp) {
       errors.contact_person = "Contact person is required.";
+    } else if (cp.length > 20) {
+      errors.contact_person = "Contact person cannot exceed 20 characters.";
+    } else if (!/^[a-zA-Z\s]+$/.test(cp)) {
+      errors.contact_person = "Contact person must contain letters and spaces only.";
     }
-    if (!formData.contact_number.trim()) {
+
+    const cn = formData.contact_number.trim();
+    if (!cn) {
       errors.contact_number = "Contact number is required.";
+    } else if (!/^\d+$/.test(cn)) {
+      errors.contact_number = "Contact number must contain digits only.";
+    } else if (!/^(09\d{9}|639\d{9})$/.test(cn)) {
+      errors.contact_number = "Must be a valid Philippine mobile number (09XXXXXXXXX or 639XXXXXXXXX).";
     }
+
     if (!address.province) {
       errors.province = "Province is required.";
     }
@@ -198,9 +290,33 @@ export default function SupplierManagement() {
       errors.address = "Address is required.";
     }
 
+    // Branch duplicate validation: prevent duplicate Farm Name, Organization, or Contact Person within the same branch
+    const targetBranch = String(formData.supplier_profile_id);
+    const farmTrimmed = (formData.supplier_farm || "").trim().toLowerCase();
+    const orgTrimmed = (formData.organization || "").trim().toLowerCase();
+    const cpTrimmed = (formData.contact_person || "").trim().toLowerCase();
+
+    const dupSupplier = suppliers.find((s) => {
+      if (String(s.supplier_profile_id) !== targetBranch) return false;
+      if (farmTrimmed && (s.supplier_farm || "").trim().toLowerCase() === farmTrimmed) return true;
+      if (orgTrimmed && (s.organization || "").trim().toLowerCase() === orgTrimmed) return true;
+      if (cpTrimmed && (s.contact_person || "").trim().toLowerCase() === cpTrimmed) return true;
+      return false;
+    });
+
+    if (dupSupplier) {
+      if (farmTrimmed && (dupSupplier.supplier_farm || "").trim().toLowerCase() === farmTrimmed) {
+        errors.supplier_farm = "A supplier with this Farm Name already exists in this branch.";
+      } else if (orgTrimmed && (dupSupplier.organization || "").trim().toLowerCase() === orgTrimmed) {
+        errors.organization = "A supplier with this Organization / Co-op already exists in this branch.";
+      } else if (cpTrimmed && (dupSupplier.contact_person || "").trim().toLowerCase() === cpTrimmed) {
+        errors.contact_person = "A supplier with this Contact Person already exists in this branch.";
+      }
+    }
+
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
-      setFormError("Please fill in all required fields.");
+      setFormError(Object.values(errors)[0] || "Please correct the errors in the form.");
       return;
     }
     setFieldErrors({});
@@ -231,7 +347,15 @@ export default function SupplierManagement() {
       fetchSuppliers();
     } catch (err) {
       console.error("Failed to add supplier:", err);
-      setFormError(err.message || "Failed to add supplier. Please try again.");
+      const errMsg = err.message || "Failed to add supplier. Please try again.";
+      setFormError(errMsg);
+      if (errMsg.toLowerCase().includes("farm name")) {
+        setFieldErrors((prev) => ({ ...prev, supplier_farm: errMsg }));
+      } else if (errMsg.toLowerCase().includes("organization")) {
+        setFieldErrors((prev) => ({ ...prev, organization: errMsg }));
+      } else if (errMsg.toLowerCase().includes("contact person")) {
+        setFieldErrors((prev) => ({ ...prev, contact_person: errMsg }));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -532,7 +656,42 @@ export default function SupplierManagement() {
       {showAddModal &&
         createPortal(
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in duration-200 max-h-[92vh] overflow-y-auto">
+            {showClearConfirm ? (
+              /* Clear Form Confirmation Modal (temporarily replaces Add modal) */
+              <div
+                className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in duration-150"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                    <AlertCircle size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-sm">Clear Form</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Are you sure you want to clear all fields?
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowClearConfirm(false)}
+                    className="px-3.5 py-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition cursor-pointer"
+                  >
+                    No
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmClear}
+                    className="px-3.5 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition cursor-pointer"
+                  >
+                    Yes
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in duration-200 max-h-[92vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-3 border-b border-gray-100">
                 <div className="flex items-center gap-2">
                   <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
@@ -588,242 +747,273 @@ export default function SupplierManagement() {
                   )}
                 </div>
 
-                {/* Supplier / Farm & Organization */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                {/* Supplier / Farm Name */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-gray-700">
                       Supplier / Farm Name
                     </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Green Valley Farm"
-                      value={formData.supplier_farm}
-                      onChange={(e) => handleInputChange("supplier_farm", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
-                    />
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      {(formData.supplier_farm || "").length}/20
+                    </span>
                   </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                  <input
+                    type="text"
+                    maxLength={20}
+                    placeholder="e.g. Green Valley Farm"
+                    value={formData.supplier_farm}
+                    onChange={(e) => handleInputChange("supplier_farm", e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl text-sm outline-none transition ${
+                      fieldErrors.supplier_farm
+                        ? "border-rose-400 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                        : "border-gray-200 focus:ring-1 focus:ring-emerald-600"
+                    }`}
+                  />
+                  {fieldErrors.supplier_farm && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.supplier_farm}</p>
+                  )}
+                </div>
+
+                {/* Organization / Co-op */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-gray-700">
                       Organization / Co-op
                     </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Farmers Association"
-                      value={formData.organization}
-                      onChange={(e) => handleInputChange("organization", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
-                    />
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      {(formData.organization || "").length}/20
+                    </span>
                   </div>
+                  <input
+                    type="text"
+                    maxLength={20}
+                    placeholder="e.g. Farmers Association"
+                    value={formData.organization}
+                    onChange={(e) => handleInputChange("organization", e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl text-sm outline-none transition ${
+                      fieldErrors.organization
+                        ? "border-rose-400 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                        : "border-gray-200 focus:ring-1 focus:ring-emerald-600"
+                    }`}
+                  />
+                  {fieldErrors.organization && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.organization}</p>
+                  )}
                 </div>
 
-                {/* Contact Person & Contact Number */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                {/* Contact Person */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-gray-700">
                       Contact Person <span className="text-rose-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Juan Dela Cruz"
-                      value={formData.contact_person}
-                      onChange={(e) => handleInputChange("contact_person", e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-xl text-sm outline-none transition ${
-                        fieldErrors.contact_person
-                          ? "border-rose-400 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
-                          : "border-gray-200 focus:ring-1 focus:ring-emerald-600"
-                      }`}
-                    />
-                    {fieldErrors.contact_person && (
-                      <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.contact_person}</p>
-                    )}
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      {(formData.contact_person || "").length}/20
+                    </span>
                   </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
-                      Contact Number <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 09123456789"
-                      value={formData.contact_number}
-                      onChange={(e) => handleInputChange("contact_number", e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-xl text-sm outline-none transition ${
-                        fieldErrors.contact_number
-                          ? "border-rose-400 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
-                          : "border-gray-200 focus:ring-1 focus:ring-emerald-600"
-                      }`}
-                    />
-                    {fieldErrors.contact_number && (
-                      <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.contact_number}</p>
-                    )}
-                  </div>
+                  <input
+                    type="text"
+                    maxLength={20}
+                    required
+                    placeholder="e.g. Juan Dela Cruz"
+                    value={formData.contact_person}
+                    onChange={(e) => handleInputChange("contact_person", e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl text-sm outline-none transition ${
+                      fieldErrors.contact_person
+                        ? "border-rose-400 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                        : "border-gray-200 focus:ring-1 focus:ring-emerald-600"
+                    }`}
+                  />
+                  {fieldErrors.contact_person && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.contact_person}</p>
+                  )}
                 </div>
 
-                {/* Email Address & Status */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
-                      Email Address <span className="text-xs text-gray-400 font-normal">(optional)</span>
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="e.g. supplier@example.com"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
-                      Status
-                    </label>
+                {/* Contact Number */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Contact Number <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={12}
+                    required
+                    placeholder="e.g. 09123456789 or 639123456789"
+                    value={formData.contact_number}
+                    onChange={(e) => handleInputChange("contact_number", e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-xl text-sm outline-none transition ${
+                      fieldErrors.contact_number
+                        ? "border-rose-400 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                        : "border-gray-200 focus:ring-1 focus:ring-emerald-600"
+                    }`}
+                  />
+                  {fieldErrors.contact_number && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.contact_number}</p>
+                  )}
+                </div>
+
+                {/* Email Address */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Email Address <span className="text-xs text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="e.g. supplier@example.com"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
+                  />
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => handleInputChange("status", e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none bg-white text-gray-700"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+
+                {/* Province */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Province <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
                     <select
-                      value={formData.status}
-                      onChange={(e) => handleInputChange("status", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none bg-white text-gray-700"
+                      value={address.province}
+                      onChange={(e) => handleProvinceChange(e.target.value)}
+                      onFocus={() => {
+                        if ((!address.provinceOptions || address.provinceOptions.length === 0) && !address.loading.provinces) {
+                          address.reloadProvinces?.();
+                        }
+                      }}
+                      className={`w-full appearance-none pl-3 pr-8 py-2 border rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer ${
+                        fieldErrors.province
+                          ? "border-rose-400 focus:ring-rose-500 bg-rose-50/20"
+                          : "border-gray-200"
+                      }`}
                     >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
+                      <option value="">
+                        {address.loading.provinces
+                          ? "Loading Provinces..."
+                          : "Select Province"}
+                      </option>
+                      {address.provinceOptions.map((prov) => (
+                        <option key={prov} value={prov}>
+                          {prov}
+                        </option>
+                      ))}
                     </select>
+                    <ChevronDown size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
+                  {fieldErrors.province && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.province}</p>
+                  )}
+                  {address.errors.provinces && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium flex items-center gap-1">
+                      <span>{address.errors.provinces}</span>
+                      <button
+                        type="button"
+                        onClick={() => address.reloadProvinces?.()}
+                        className="underline font-bold text-emerald-700 ml-1 cursor-pointer"
+                      >
+                        Retry
+                      </button>
+                    </p>
+                  )}
                 </div>
 
-                {/* Province & City / Municipality */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
-                      Province <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={address.province}
-                        onChange={(e) => handleProvinceChange(e.target.value)}
-                        onFocus={() => {
-                          if ((!address.provinceOptions || address.provinceOptions.length === 0) && !address.loading.provinces) {
-                            address.reloadProvinces?.();
-                          }
-                        }}
-                        className={`w-full appearance-none pl-3 pr-8 py-2 border rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer ${
-                          fieldErrors.province
-                            ? "border-rose-400 focus:ring-rose-500 bg-rose-50/20"
-                            : "border-gray-200"
-                        }`}
-                      >
-                        <option value="">
-                          {address.loading.provinces
-                            ? "Loading Provinces..."
-                            : "Select Province"}
+                {/* City / Municipality */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    City / Municipality <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={address.municipality}
+                      onChange={(e) => handleMunicipalityChange(e.target.value)}
+                      disabled={!address.province || address.loading.municipalities}
+                      className={`w-full appearance-none pl-3 pr-8 py-2 border rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer disabled:bg-gray-50 disabled:text-gray-400 ${
+                        fieldErrors.municipality
+                          ? "border-rose-400 focus:ring-rose-500 bg-rose-50/20"
+                          : "border-gray-200"
+                      }`}
+                    >
+                      <option value="">
+                        {address.loading.municipalities
+                          ? "Loading Cities/Municipalities..."
+                          : !address.province
+                          ? "Select Province First"
+                          : "Select City / Municipality"}
+                      </option>
+                      {address.municipalityOptions.map((mun) => (
+                        <option key={mun} value={mun}>
+                          {mun}
                         </option>
-                        {address.provinceOptions.map((prov) => (
-                          <option key={prov} value={prov}>
-                            {prov}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div>
-                    {fieldErrors.province && (
-                      <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.province}</p>
-                    )}
-                    {address.errors.provinces && (
-                      <p className="text-[11px] text-rose-600 mt-1 font-medium flex items-center gap-1">
-                        <span>{address.errors.provinces}</span>
-                        <button
-                          type="button"
-                          onClick={() => address.reloadProvinces?.()}
-                          className="underline font-bold text-emerald-700 ml-1 cursor-pointer"
-                        >
-                          Retry
-                        </button>
-                      </p>
-                    )}
+                      ))}
+                    </select>
+                    <ChevronDown size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
-                      City / Municipality <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={address.municipality}
-                        onChange={(e) => handleMunicipalityChange(e.target.value)}
-                        disabled={!address.province || address.loading.municipalities}
-                        className={`w-full appearance-none pl-3 pr-8 py-2 border rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer disabled:bg-gray-50 disabled:text-gray-400 ${
-                          fieldErrors.municipality
-                            ? "border-rose-400 focus:ring-rose-500 bg-rose-50/20"
-                            : "border-gray-200"
-                        }`}
-                      >
-                        <option value="">
-                          {address.loading.municipalities
-                            ? "Loading Cities/Municipalities..."
-                            : !address.province
-                            ? "Select Province First"
-                            : "Select City / Municipality"}
-                        </option>
-                        {address.municipalityOptions.map((mun) => (
-                          <option key={mun} value={mun}>
-                            {mun}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div>
-                    {fieldErrors.municipality && (
-                      <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.municipality}</p>
-                    )}
-                    {address.errors.municipalities && (
-                      <p className="text-[11px] text-rose-600 mt-1 font-medium">{address.errors.municipalities}</p>
-                    )}
-                  </div>
+                  {fieldErrors.municipality && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{fieldErrors.municipality}</p>
+                  )}
+                  {address.errors.municipalities && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{address.errors.municipalities}</p>
+                  )}
                 </div>
 
-                {/* Barangay & Postal Code */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
-                      Barangay
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={address.barangay}
-                        onChange={(e) => handleBarangayChange(e.target.value)}
-                        disabled={!address.municipality || address.loading.barangays}
-                        className="w-full appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer disabled:bg-gray-50 disabled:text-gray-400"
-                      >
-                        <option value="">
-                          {address.loading.barangays
-                            ? "Loading Barangays..."
-                            : !address.municipality
-                            ? "Select Municipality First"
-                            : "Select Barangay"}
+                {/* Barangay */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Barangay
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={address.barangay}
+                      onChange={(e) => handleBarangayChange(e.target.value)}
+                      disabled={!address.municipality || address.loading.barangays}
+                      className="w-full appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer disabled:bg-gray-50 disabled:text-gray-400"
+                    >
+                      <option value="">
+                        {address.loading.barangays
+                          ? "Loading Barangays..."
+                          : !address.municipality
+                          ? "Select Municipality First"
+                          : "Select Barangay"}
+                      </option>
+                      {address.barangayOptions.map((brgy) => (
+                        <option key={brgy} value={brgy}>
+                          {brgy}
                         </option>
-                        {address.barangayOptions.map((brgy) => (
-                          <option key={brgy} value={brgy}>
-                            {brgy}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div>
-                    {address.errors.barangays && (
-                      <p className="text-[11px] text-rose-600 mt-1 font-medium">{address.errors.barangays}</p>
-                    )}
+                      ))}
+                    </select>
+                    <ChevronDown size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
+                  {address.errors.barangays && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{address.errors.barangays}</p>
+                  )}
+                </div>
 
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 block mb-1">
-                      Postal Code <span className="text-gray-400 font-normal">(auto-filled)</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={address.loading.postalCode ? "Loading..." : "e.g. 2300"}
-                      value={address.postalCode}
-                      onChange={(e) => address.updatePostalCode(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
-                    />
-                  </div>
+                {/* Postal Code */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Postal Code <span className="text-gray-400 font-normal">(auto-filled)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={address.loading.postalCode ? "Loading..." : "e.g. 2300"}
+                    value={address.postalCode}
+                    onChange={(e) => address.updatePostalCode(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-emerald-600 outline-none"
+                  />
                 </div>
 
                 {/* Street Address */}
@@ -847,16 +1037,16 @@ export default function SupplierManagement() {
                 <div className="flex gap-3 pt-3">
                   <button
                     type="button"
-                    disabled={submitting}
-                    onClick={handleCloseAddModal}
-                    className="flex-1 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+                    disabled={!canClearAdd || submitting}
+                    onClick={() => setShowClearConfirm(true)}
+                    className="flex-1 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Cancel
+                    Clear
                   </button>
                   <button
                     type="submit"
-                    disabled={submitting}
-                    className="flex-1 py-2.5 bg-[#0B5D1E] hover:bg-[#094d19] text-white rounded-xl text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                    disabled={!canSaveAdd}
+                    className="flex-1 py-2.5 bg-[#0B5D1E] hover:bg-[#094d19] text-white rounded-xl text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {submitting ? (
                       <>
@@ -870,6 +1060,7 @@ export default function SupplierManagement() {
                 </div>
               </form>
             </div>
+            )}
           </div>,
           document.body
         )}

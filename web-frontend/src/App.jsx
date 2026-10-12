@@ -182,6 +182,7 @@ import MillerReturns from "./Users/MillerAccounts/MillerProcurement/MillerReturn
 import MillerReceivingHistory from "./Users/MillerAccounts/MillerProcurement/MillerReceivingHistory";
 import MillerSuppliers from "./Users/MillerAccounts/MillerProcurement/MillerSuppliers";
 import MillerPaymentHistory from "./Users/MillerAccounts/MillerProcurement/MillerPaymentHistory";
+import MillerPaymentHistoryReport from "./Users/MillerAccounts/MillerProcurement/MillerPaymentHistoryReport";
 
 
 // ============================================================
@@ -762,6 +763,10 @@ function App() {
             path="/supplier-encoder/stock"
             element={<MillerEncoderStockManagement />}
           />
+          <Route
+            path="/supplier-encoder/stock-management"
+            element={<MillerEncoderStockManagement />}
+          />
 
           <Route
             path="/supplier-encoder/profile"
@@ -887,6 +892,11 @@ function App() {
           <Route
             path="/miller-procurement/payment-history"
             element={<MillerPaymentHistory />}
+          />
+
+          <Route
+            path="/miller-procurement/payment-history/report"
+            element={<MillerPaymentHistoryReport />}
           />
 
           <Route
