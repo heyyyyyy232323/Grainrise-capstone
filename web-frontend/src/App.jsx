@@ -85,6 +85,7 @@ import WarehousePaymentHistory from "./Users/WarehouseAccounts/WarehouseProcurem
 // ============================================================
 
 import WarehousePayables from "./Users/WarehouseAccounts/WarehouseFinance/WarehousePayables";
+import WarehouseExpenses from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseExpenses";
 import WarehouseTaxes from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseTaxes";
 import WarehouseReimburse from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseReimburse";
 import WarehouseFinancePaymentHistory from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseFinancePaymentHistory";
@@ -154,6 +155,7 @@ import MillerFinanceDashboard from "./Users/MillerAccounts/MillerFinance/MillerF
 import MillerFinancePaymentHistory from "./Users/MillerAccounts/MillerFinance/MillerFinancePaymentHistory";
 import MillerPayables from "./Users/MillerAccounts/MillerFinance/MillerPayables";
 import MillerReimburse from "./Users/MillerAccounts/MillerFinance/MillerReimburse";
+import MillerExpenses from "./Users/MillerAccounts/MillerFinance/MillerExpenses";
 import MillerTaxes from "./Users/MillerAccounts/MillerFinance/MillerTaxes";
 
 
@@ -542,8 +544,8 @@ function App() {
           />
 
           <Route
-            path="/warehouse-finance/taxes"
-            element={<WarehouseTaxes />}
+            path="/warehouse-finance/expenses"
+            element={<WarehouseExpenses />}
           />
 
           <Route
@@ -922,8 +924,8 @@ function App() {
           />
 
           <Route
-            path="/miller-finance/taxes"
-            element={<MillerTaxes />}
+            path="/miller-finance/expenses"
+            element={<MillerExpenses />}
           />
 
           <Route
