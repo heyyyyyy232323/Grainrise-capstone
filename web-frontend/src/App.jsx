@@ -264,7 +264,8 @@ import RetailerNewsUpdates from "./Users/RetailerAccounts/RetailerNewsUpdates";
 import RetailerNewsArticle from "./Users/RetailerAccounts/RetailerNewsArticle";
 import RetailerMobilePreviewPage from "./Users/RetailerAccounts/RetailerMobilePreviewPage";
 import RetailerWebMobileDashboard from "./Users/RetailerAccounts/RetailerWebMobile/RetailerWebMobileDashboard";
-import { StartupMobileApp } from "./Users/MobileAppView";
+import { StartupMobileApp, RetailerMobileRegistrationView } from "./Users/MobileAppView";
+import RetailerMobileLoginPage from "./Users/MobileAppView/RetailerMobile/RetailerMobileLoginPage";
 
 
 
@@ -317,6 +318,18 @@ function App() {
         <Route
           path="/retailer/mobile-preview"
           element={<RetailerMobilePreviewPage />}
+        />
+        <Route
+          path="/retailer/mobile-register"
+          element={<RetailerMobileRegistrationView />}
+        />
+        <Route
+          path="/retailer-mobile/register"
+          element={<RetailerMobileRegistrationView />}
+        />
+        <Route
+          path="/retailer/mobile-login"
+          element={<RetailerMobileLoginPage />}
         />
         <Route
           path="/startup/mobile-preview"

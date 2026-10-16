@@ -19,6 +19,7 @@ export { default as RetailerMobileSalesHistoryView } from "./RetailerMobile/Reta
 export { default as RetailerMobilePurchasesView } from "./RetailerMobile/RetailerMobilePurchasesView";
 export { default as RetailerMobileReturnsView } from "./RetailerMobile/RetailerMobileReturnsView";
 export { default as RetailerMobileMessagesView } from "./RetailerMobile/RetailerMobileMessagesView";
+export { default as RetailerMobileRegistrationView } from "./RetailerMobile/RetailerMobileRegistrationView";
 export { INITIAL_RETAILER_DATA } from "./RetailerMobile/RetailerMobileMockData";
 
 // Startup Mobile
