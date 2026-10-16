@@ -39,9 +39,9 @@ const SortByDropdown = ({ value, onChange, options = defaultOptions, placeholder
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center gap-2 border border-gray-200 bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto justify-center transition-colors cursor-pointer"
+        className="flex items-center gap-2 border border-gray-200 bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto justify-center transition-colors cursor-pointer whitespace-nowrap shrink-0"
       >
-        <span>{activeLabel}</span>
+        <span className="whitespace-nowrap">{activeLabel}</span>
         <ChevronDown
           size={16}
           className={`text-gray-500 transition-transform duration-200 ${open ? "rotate-180" : ""}`}

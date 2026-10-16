@@ -43,6 +43,16 @@ const MainPageLayout = ({ role = "warehouse_encoder" }) => {
         }
       } catch (err) {
         console.error("MainPageLayout first-login guard check error:", err);
+        if (err?.status === 401) {
+          try {
+            localStorage.removeItem("grainrise_token");
+            localStorage.removeItem("grainrise_user");
+            localStorage.removeItem("access_token");
+            sessionStorage.clear();
+          } catch {}
+          navigate("/login", { replace: true });
+          return;
+        }
       } finally {
         if (isMounted) {
           setIsCheckingGuard(false);
