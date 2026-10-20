@@ -1,709 +1,252 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Users, CheckCircle2, Loader2, UploadCloud, X,
-  ImageIcon, FileCheck, Mail, Clock, RefreshCw, AlertTriangle, ExternalLink,
-  Camera, Plus
+  ArrowLeft,
+  ArrowRight,
+  Handshake,
+  CheckCircle2,
+  Loader2,
+  UploadCloud,
+  FileText,
+  Trash2,
+  Edit3,
+  AlertCircle,
+  ShieldCheck,
+  Check,
+  X
 } from 'lucide-react';
-import LandingHeader from '../Components/Major-Components/LandingHeader';
 import LandingFooter from '../Components/Major-Components/LandingFooter';
 import shakehandsImg from '../assets/shakehands2.png';
-import RichTextEditor from '../Components/Minor-Components/RichTextEditor';
-import PolicyModal from '../Components/Minor-Components/PolicyModal';
-import AnimatedSection from './AnimatedSection';
 import './SupportPages.css';
 
-/* ─── Validation helpers ─── */
-const NAME_RE = /^[a-zA-Z\s\-']+$/;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const EMAIL_PARTIAL_RE = /^[^\s@]+@[^\s@]*$/;
-const ORG_RE = /^[a-zA-Z0-9\s&.,'\-]+$/;
-const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
-const ALLOWED_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
-const MAX_SOURCE_IMAGE_BYTES = 20 * 1024 * 1024;
-const IMAGE_UPLOAD_MAX_SIDE = 1280;
-const IMAGE_UPLOAD_JPEG_QUALITY = 0.76;
-const POLICY_VERSION = '1.0';
-const API_BASE = `${import.meta.env.VITE_API_BASE_URL}/api`;
+const API_BASE = `${import.meta.env.VITE_API_BASE_URL || ''}/api`;
+const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
 
-function validateName(v) {
-  if (!v.trim()) return 'Full legal name is required.';
-  if (!NAME_RE.test(v)) return 'Only letters, spaces, hyphens, and apostrophes are allowed.';
-  if (/\s{2,}/.test(v)) return 'Multiple consecutive spaces are not allowed.';
-  return '';
-}
-function validateEmail(v, isTouched) {
-  if (!v.trim()) return isTouched ? 'Email address is required.' : '';
-  if (!EMAIL_RE.test(v)) {
-    if (EMAIL_PARTIAL_RE.test(v)) return '';
-    return 'Please enter a valid email address.';
-  }
-  return '';
-}
-function validateOrg(v) {
-  if (!v.trim()) return 'Organization / Company is required.';
-  if (!ORG_RE.test(v)) return 'Invalid character detected.';
-  return '';
-}
-function validateRole(v) {
-  if (!v) return 'Please select your intended partner role.';
-  return '';
-}
-function validatePhone(v) {
-  if (!v) return 'Contact number is required.';
-  if (v.length > 0 && v[0] !== '9') return 'Number must start with 9.';
-  if (v.length < 10) return `${10 - v.length} more digit${10 - v.length !== 1 ? 's' : ''} needed.`;
-  return '';
-}
-function validateMessage(v) {
-  if (!v.trim()) return 'Message is required.';
-  if (v.trim().length < 20) return `At least 20 characters required (${v.trim().length}/20).`;
-  return '';
-}
-function validateImageFile(file) {
-  if (!file) return 'Please upload a valid business verification document.';
-  const ext = '.' + file.name.split('.').pop().toLowerCase();
-  if (!ALLOWED_MIME.includes(file.type) || !ALLOWED_EXT.includes(ext))
-    return 'Only JPG, PNG, and WEBP image files are allowed.';
-  if (file.size > MAX_FILE_BYTES)
-    return 'Document image size must not exceed 5 MB.';
-  return '';
-}
-function formatBytes(bytes) {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-}
-
-async function compressImageForUpload(file) {
-  if (!file) throw new Error('No image file provided.');
-  if (file.size > MAX_SOURCE_IMAGE_BYTES) {
-    throw new Error('Image is too large to process. Please choose an image smaller than 20 MB.');
-  }
-
-  let bitmap = null;
-  let objectUrl = null;
-  let imageEl = null;
-
-  try {
-    let width;
-    let height;
-    let drawSource;
-
-    if (typeof createImageBitmap === 'function') {
-      bitmap = await createImageBitmap(file);
-      width = bitmap.width;
-      height = bitmap.height;
-      drawSource = bitmap;
-    } else {
-      objectUrl = URL.createObjectURL(file);
-      imageEl = new Image();
-      await new Promise((resolve, reject) => {
-        imageEl.onload = resolve;
-        imageEl.onerror = () => reject(new Error('Unable to decode image.'));
-        imageEl.src = objectUrl;
-      });
-      width = imageEl.naturalWidth || imageEl.width;
-      height = imageEl.naturalHeight || imageEl.height;
-      drawSource = imageEl;
-    }
-
-    if (!width || !height) throw new Error('Unable to read image dimensions.');
-
-    const scale = Math.min(1, IMAGE_UPLOAD_MAX_SIDE / Math.max(width, height));
-    let targetWidth = Math.max(1, Math.round(width * scale));
-    let targetHeight = Math.max(1, Math.round(height * scale));
-
-    const encode = async (w, h, quality) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d', { alpha: false });
-      if (!ctx) throw new Error('Unable to prepare image for upload.');
-
-      // JPEG has no transparency; use white so PNG/WebP documents stay readable.
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, w, h);
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(drawSource, 0, 0, w, h);
-
-      const blob = await new Promise((resolve, reject) => {
-        canvas.toBlob(
-          (value) => value ? resolve(value) : reject(new Error('Image compression failed.')),
-          'image/jpeg',
-          quality,
-        );
-      });
-      canvas.width = 1;
-      canvas.height = 1;
-      return blob;
-    };
-
-    let quality = IMAGE_UPLOAD_JPEG_QUALITY;
-    let blob = await encode(targetWidth, targetHeight, quality);
-
-    // Keep stepping down only if a particularly detailed photo is still large.
-    while (blob.size > 1024 * 1024 && quality > 0.58) {
-      quality -= 0.06;
-      blob = await encode(targetWidth, targetHeight, quality);
-    }
-
-    // Final safeguard: shrink dimensions once more rather than sending a huge JPEG.
-    if (blob.size > 1024 * 1024) {
-      const extraScale = Math.min(1, 1024 / Math.max(targetWidth, targetHeight));
-      targetWidth = Math.max(1, Math.round(targetWidth * extraScale));
-      targetHeight = Math.max(1, Math.round(targetHeight * extraScale));
-      blob = await encode(targetWidth, targetHeight, Math.max(0.58, quality));
-    }
-
-    const originalBase = (file.name || 'document').replace(/\.[^.]+$/, '');
-    return new File([blob], `${originalBase}_optimized.jpg`, {
-      type: 'image/jpeg',
-      lastModified: Date.now(),
-    });
-  } finally {
-    if (bitmap?.close) bitmap.close();
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-  }
-}
-const FieldError = ({ msg }) =>
-  msg ? <p className="mt-1 text-[11px] text-red-500 leading-tight">{msg}</p> : null;
-
-function inputCls(hasError) {
-  return `w-full bg-white dark:bg-[#163321] border rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-800 dark:text-white outline-none focus:ring-2 transition-all
-    ${hasError
-      ? 'border-red-400 dark:border-red-500 focus:border-red-400 focus:ring-red-200/40'
-      : 'border-gray-300 dark:border-[#2d5c3c] focus:border-[#00580C] dark:focus:border-emerald-400 focus:ring-emerald-600/15'}`;
-}
+const ROLE_OPTIONS = [
+  { value: 'miller', label: 'Miller / Supplier' },
+  { value: 'warehouse', label: 'Warehouse Owner / Storage Manager' },
+  { value: 'retailer', label: 'Retailer / Rice Distributor' },
+];
 
 export default function PartnerWithUs() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const routeParams = useParams();
-  const fileInputRef = useRef(null);
 
-  /* ── View Modes: 'form' | 'awaiting_verification' | 'verified_success' | 'token_invalid' ── */
-  const isDirectVerify = typeof window !== 'undefined' && Boolean(window.location.pathname.includes('/verify-email') || new URLSearchParams(window.location.search).get('token'));
-  const [viewState, setViewState] = useState(isDirectVerify ? 'verifying' : 'form');
+  // Wizard state: 1, 2, 3, 4
+  const [currentStep, setCurrentStep] = useState(1);
 
-  /* ── Form state ── */
-  const [formData, setFormData] = useState({ name: '', email: '', organization: '', partnerRole: '', contactNumber: '', message: '' });
-  const [errors, setErrors] = useState({ name: '', email: '', organization: '', partnerRole: '', contactNumber: '', message: '' });
-  const [touched, setTouched] = useState({ name: false, email: false, organization: false, partnerRole: false, contactNumber: false, message: false });
-  const [submitAttempted, setSubmitAttempted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  // Form field state
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    contactNumber: '',
+    partnerRole: '',
+    organization: '',
+    message: '',
+    agreeTerms: false,
+  });
 
-  /* ── Verification state ── */
-  const [inquiryId, setInquiryId] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const [isResending, setIsResending] = useState(false);
-  const [resendMessage, setResendMessage] = useState('');
-
-  /* ── Policy Modal state ── */
-  const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
-  const verifyingRef = useRef(false);
-
-  /* ── Document states: government_issued_id & business_verification_document ── */
+  // File uploads
   const [govIdFile, setGovIdFile] = useState(null);
   const [bizDocFile, setBizDocFile] = useState(null);
-  const [govIdError, setGovIdError] = useState('');
-  const [bizDocError, setBizDocError] = useState('');
-  const [isGovDragging, setIsGovDragging] = useState(false);
-  const [isBizDragging, setIsBizDragging] = useState(false);
+
+  // Validation & feedback state
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: '' }
+
+  // File input refs
   const govIdInputRef = useRef(null);
   const bizDocInputRef = useRef(null);
 
-  /* ── Choice & Camera modal state & refs ── */
-  const [choiceModalOpen, setChoiceModalOpen] = useState(false);
-  const [choiceTarget, setChoiceTarget] = useState(null); // 'govId' | 'bizDoc'
-  const [cameraModalOpen, setCameraModalOpen] = useState(false);
-  const [cameraTarget, setCameraTarget] = useState(null); // 'govId' | 'bizDoc'
-  const [capturedImage, setCapturedImage] = useState(null);
-  const [cameraError, setCameraError] = useState('');
-  const [isStartingCamera, setIsStartingCamera] = useState(false);
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
-  const [mismatchModalOpen, setMismatchModalOpen] = useState(false);
-  const [uncertainModalOpen, setUncertainModalOpen] = useState(false);
-  const [availabilityChecking, setAvailabilityChecking] = useState({ name: false, email: false, organization: false });
-
-  /* -- Check for token in URL path or query parameter on mount/change -- calls real API -- */
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const queryToken = params.get('token');
-    const pathToken = routeParams?.token || (location.pathname.match(/\/verify-email\/([^/?#]+)/)?.[1]);
-    const tokenParam = queryToken || pathToken;
-
-    if (!tokenParam) {
-      if (viewState === 'verifying') setViewState('form');
-      return;
-    }
-    if (verifyingRef.current) return;
-    verifyingRef.current = true;
-    setViewState('verifying');
-
-    fetch(`${API_BASE}/partnership-inquiries/verify-email/${tokenParam}/`)
-      .then(async (res) => {
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && data.success) {
-          setViewState('verified_success');
-          try {
-            window.history.replaceState({}, document.title, '/partner-with-us');
-          } catch { }
-        } else {
-          setViewState('token_invalid');
-        }
-      })
-      .catch(() => {
-        setViewState('token_invalid');
-      });
-  }, [location.search, location.pathname, routeParams?.token]);
-
-  /* ── Cooldown timer for resend button ── */
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const timer = setInterval(() => {
-      setResendCooldown(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [resendCooldown]);
-
-  /* ── Validation dispatch ── */
-  const validate = useCallback((name, value) => {
-    switch (name) {
-      case 'name': return validateName(value);
-      case 'email': return validateEmail(value, touched.email);
-      case 'organization': return validateOrg(value);
-      case 'partnerRole': return validateRole(value);
-      case 'contactNumber': return validatePhone(value);
-      case 'message': return validateMessage(value);
-      default: return '';
-    }
-  }, [touched.email]);
-
-
-  /* ── Live Availability Check (Name, Email, Organization) ── */
-  const checkAvailability = async (field, value) => {
-    if (!value || !value.trim()) return;
-    if (field === 'name' && validateName(value)) return;
-    if (field === 'email' && validateEmail(value, true)) return;
-    if (field === 'organization' && validateOrg(value)) return;
-
-    setAvailabilityChecking(p => ({ ...p, [field]: true }));
-    try {
-      const qp = field === 'organization' ? 'organization' : field;
-      const res = await fetch(`${API_BASE}/partnership-inquiries/check-availability/?${qp}=${encodeURIComponent(value.trim())}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (field === 'name' && data.name_used) {
-          setErrors(p => ({ ...p, name: data.name_error || 'This name has already been registered.' }));
-        } else if (field === 'email' && data.email_used) {
-          setErrors(p => ({ ...p, email: data.email_error || 'This email address is already registered.' }));
-        } else if (field === 'organization' && data.organization_used) {
-          setErrors(p => ({ ...p, organization: data.organization_error || 'This company or organization name is already registered.' }));
-        }
-      }
-    } catch (err) {
-      console.warn('Availability check failed:', err);
-    } finally {
-      setAvailabilityChecking(p => ({ ...p, [field]: false }));
-    }
-  };
-
-  const isFormValid =
-    formData.name.trim() && !validateName(formData.name) &&
-    formData.email.trim() && !validateEmail(formData.email, true) &&
-    formData.organization.trim() && !validateOrg(formData.organization) &&
-    Boolean(formData.partnerRole) && !validateRole(formData.partnerRole) &&
-    formData.contactNumber && !validatePhone(formData.contactNumber) &&
-    formData.message.trim() && !validateMessage(formData.message) &&
-    Boolean(govIdFile) && !govIdError &&
-    Boolean(bizDocFile) && !bizDocError &&
-    agreedToTerms;
-
-  /* ── Single Document Processing (Government-Issued ID & Business Document) ── */
-  const processSingleFile = async (file, type) => {
-    if (!file) return;
-    const isGov = type === 'govId';
-    const setFile = isGov ? setGovIdFile : setBizDocFile;
-    const setError = isGov ? setGovIdError : setBizDocError;
-    const inputRef = isGov ? govIdInputRef : bizDocInputRef;
-
-    const ext = '.' + file.name.split('.').pop().toLowerCase();
-    const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.pdf'];
-    if (!allowed.includes(ext)) {
-      setError('Only JPG, PNG, WEBP, and PDF files are allowed.');
-      if (inputRef.current) inputRef.current.value = '';
-      return;
-    }
-
-    setError('');
-    const isPdf = ext === '.pdf';
-
-    if (isPdf) {
-      if (file.size > MAX_FILE_BYTES) {
-        setError(`File is too large (${formatBytes(file.size)}). PDF files must not exceed 5 MB.`);
-        if (inputRef.current) inputRef.current.value = '';
-        return;
-      }
-
-      setFile({
-        file,
-        preview: null,
-        name: file.name,
-        size: file.size,
-        originalSize: file.size,
-        optimized: false,
-        isPdf: true,
-      });
-      if (inputRef.current) inputRef.current.value = '';
-      return;
-    }
-
-    try {
-      // Force every image (camera or gallery/upload) through one predictable,
-      // Render-friendly format before it is attached to FormData.
-      const optimizedFile = await compressImageForUpload(file);
-
-      if (optimizedFile.size > MAX_FILE_BYTES) {
-        setError(`Optimized image is still too large (${formatBytes(optimizedFile.size)}). Please choose a smaller image.`);
-        if (inputRef.current) inputRef.current.value = '';
-        return;
-      }
-
-      const preview = URL.createObjectURL(optimizedFile);
-      setFile((previous) => {
-        if (previous?.preview?.startsWith?.('blob:')) {
-          URL.revokeObjectURL(previous.preview);
-        }
-        return {
-          file: optimizedFile,
-          preview,
-          name: optimizedFile.name,
-          size: optimizedFile.size,
-          originalSize: file.size,
-          optimized: true,
-          isPdf: false,
-        };
-      });
-    } catch (err) {
-      console.error('Image optimization failed:', err);
-      setError(err?.message || 'Failed to optimize image. Please try a different photo.');
-    } finally {
-      if (inputRef.current) inputRef.current.value = '';
-    }
-  };
-
-  const handleRemoveSingleFile = (type) => {
-    if (type === 'govId') {
-      if (govIdFile?.preview?.startsWith?.('blob:')) URL.revokeObjectURL(govIdFile.preview);
-      setGovIdFile(null);
-      if (submitAttempted) setGovIdError('Valid Government-Issued ID is required.');
-      else setGovIdError('');
-      if (govIdInputRef.current) govIdInputRef.current.value = '';
-    } else {
-      if (bizDocFile?.preview?.startsWith?.('blob:')) URL.revokeObjectURL(bizDocFile.preview);
-      setBizDocFile(null);
-      if (submitAttempted) setBizDocError('Valid Business Document is required.');
-      else setBizDocError('');
-      if (bizDocInputRef.current) bizDocInputRef.current.value = '';
-    }
-  };
-
-  /* ── Choice modal handlers ── */
-  const openChoiceModal = (target) => {
-    setChoiceTarget(target);
-    setChoiceModalOpen(true);
-  };
-
-  const closeChoiceModal = useCallback(() => {
-    setChoiceModalOpen(false);
-    setChoiceTarget(null);
-  }, []);
-
-  const handleSelectUpload = () => {
-    const target = choiceTarget;
-    closeChoiceModal();
+  // Show Toast helper
+  const showToast = (type, message) => {
+    setToast({ type, message });
     setTimeout(() => {
-      if (target === 'govId') {
-        govIdInputRef.current?.click();
-      } else if (target === 'bizDoc') {
-        bizDocInputRef.current?.click();
+      setToast(null);
+    }, 4500);
+  };
+
+  // Change handlers
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  // Contact number specific handler (only digits, max 10)
+  const handleContactChange = (e) => {
+    let val = e.target.value.replace(/\D/g, '');
+    if (val.startsWith('0')) {
+      val = val.substring(1);
+    }
+    if (val.length > 10) {
+      val = val.substring(0, 10);
+    }
+    setFormData((prev) => ({ ...prev, contactNumber: val }));
+    if (errors.contactNumber) {
+      setErrors((prev) => ({ ...prev, contactNumber: '' }));
+    }
+  };
+
+  // File validation
+  const validateUploadedFile = (file) => {
+    if (!file) return 'Please select a document.';
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return `Invalid format (.${ext}). Allowed: JPG, PNG, WEBP, PDF.`;
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      return `File exceeds 5MB limit (${(file.size / (1024 * 1024)).toFixed(1)}MB).`;
+    }
+    return '';
+  };
+
+  const handleGovIdChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const err = validateUploadedFile(file);
+      if (err) {
+        setErrors((prev) => ({ ...prev, govId: err }));
+        showToast('error', err);
+      } else {
+        setGovIdFile(file);
+        setErrors((prev) => ({ ...prev, govId: '' }));
       }
-    }, 80);
+    }
   };
 
-  const handleSelectCamera = () => {
-    const target = choiceTarget;
-    closeChoiceModal();
-    openCamera(target);
-  };
-
-  /* ── Camera stream and capture handlers ── */
-  const stopCameraStream = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => {
-        try {
-          track.stop();
-        } catch {}
-      });
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-  }, []);
-
-  const closeCameraModal = useCallback(() => {
-    stopCameraStream();
-    setCameraModalOpen(false);
-    setCapturedImage(null);
-    setCameraError('');
-    setCameraTarget(null);
-    setIsStartingCamera(false);
-  }, [stopCameraStream]);
-
-  const openCamera = async (target) => {
-    setCameraTarget(target);
-    setCapturedImage(null);
-    setCameraError('');
-    setIsStartingCamera(true);
-    setCameraModalOpen(true);
-
-    if (!navigator?.mediaDevices?.getUserMedia) {
-      setCameraError('Camera access is not supported by your browser or device. Please upload a file instead.');
-      setIsStartingCamera(false);
-      return;
-    }
-
-    try {
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-          audio: false,
-        });
-      } catch {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false,
-        });
+  const handleBizDocChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const err = validateUploadedFile(file);
+      if (err) {
+        setErrors((prev) => ({ ...prev, bizDoc: err }));
+        showToast('error', err);
+      } else {
+        setBizDocFile(file);
+        setErrors((prev) => ({ ...prev, bizDoc: '' }));
       }
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
-      }
-    } catch (err) {
-      console.error('Camera access error:', err);
-      let msg = 'Unable to access camera. Please check camera permissions in your browser or upload a file.';
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        msg = 'Camera permission was denied. Please allow camera access in your browser settings or upload a file instead.';
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        msg = 'No camera device was found on your device. Please upload a file instead.';
-      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-        msg = 'Camera is currently in use by another application. Please close it and try again, or upload a file.';
-      }
-      setCameraError(msg);
-    } finally {
-      setIsStartingCamera(false);
     }
   };
 
-  const handleCapturePhoto = () => {
-    if (!videoRef.current) return;
-    const video = videoRef.current;
-    const videoWidth = video.videoWidth || 1280;
-    const videoHeight = video.videoHeight || 720;
-    const scale = Math.min(1, IMAGE_UPLOAD_MAX_SIDE / Math.max(videoWidth, videoHeight));
-    const targetWidth = Math.max(1, Math.round(videoWidth * scale));
-    const targetHeight = Math.max(1, Math.round(videoHeight * scale));
-
-    const canvas = document.createElement('canvas');
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
-    const ctx = canvas.getContext('2d', { alpha: false });
-    if (!ctx) return;
-
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, targetWidth, targetHeight);
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
-    const dataUrl = canvas.toDataURL('image/jpeg', IMAGE_UPLOAD_JPEG_QUALITY);
-    canvas.width = 1;
-    canvas.height = 1;
-    setCapturedImage(dataUrl);
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
   };
 
-  const handleRetakePhoto = () => {
-    setCapturedImage(null);
-    if (videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-      videoRef.current.play().catch(() => {});
+  // Step Validation logic
+  const validateStep1 = () => {
+    const errs = {};
+    if (!formData.name.trim()) {
+      errs.name = 'Full legal name is required.';
+    } else if (!/^[a-zA-Z\s\-'.]+$/.test(formData.name.trim())) {
+      errs.name = 'Please enter a valid legal name (letters and spaces only).';
     }
-  };
 
-  const handleAcceptPhoto = () => {
-    if (!capturedImage || !cameraTarget) return;
-
-    try {
-      const arr = capturedImage.split(',');
-      const mimeMatch = arr[0].match(/:(.*?);/);
-      const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-      const bstr = atob(arr[1]);
-      let n = bstr.length;
-      const u8arr = new Uint8Array(n);
-      while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-      }
-      const filename = `${cameraTarget === 'govId' ? 'government_id' : 'business_document'}_${Date.now()}.jpg`;
-      const file = new File([u8arr], filename, { type: mime });
-
-      const target = cameraTarget;
-      closeCameraModal();
-      processSingleFile(file, target);
-    } catch (err) {
-      console.error('Error accepting captured photo:', err);
-      setCameraError('Failed to process captured image. Please try again or upload a file.');
+    if (!formData.email.trim()) {
+      errs.email = 'Email address is required.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      errs.email = 'Please enter a valid email address.';
     }
-  };
 
-  useEffect(() => {
-    if (cameraModalOpen && streamRef.current && videoRef.current && !capturedImage) {
-      videoRef.current.srcObject = streamRef.current;
-      videoRef.current.play().catch(() => {});
+    if (!formData.contactNumber) {
+      errs.contactNumber = 'Contact number is required.';
+    } else if (!formData.contactNumber.startsWith('9')) {
+      errs.contactNumber = 'Mobile number must start with 9.';
+    } else if (formData.contactNumber.length < 10) {
+      errs.contactNumber = `Please enter all 10 digits (9XXXXXXXXX).`;
     }
-  }, [cameraModalOpen, capturedImage, isStartingCamera]);
 
-  useEffect(() => {
-    return () => {
-      stopCameraStream();
-    };
-  }, [stopCameraStream]);
+    setErrors((prev) => ({ ...prev, ...errs }));
+    return Object.keys(errs).length === 0;
+  };
 
-  useEffect(() => {
-    if (!cameraModalOpen && !choiceModalOpen) return;
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        if (cameraModalOpen) closeCameraModal();
-        if (choiceModalOpen) closeChoiceModal();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [cameraModalOpen, choiceModalOpen, closeCameraModal, closeChoiceModal]);
-
-  /* ── Field handlers ── */
-  const handleNameChange = (e) => {
-    const filtered = e.target.value.replace(/[^a-zA-Z\s\-']/g, '').replace(/\s{2,}/g, ' ');
-    setFormData(p => ({ ...p, name: filtered }));
-    setErrors(p => ({ ...p, name: validateName(filtered) }));
-  };
-  const handleNamePaste = (e) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text/plain').replace(/[^a-zA-Z\s\-']/g, '').replace(/\s{2,}/g, ' ');
-    const el = e.target;
-    const next = formData.name.slice(0, el.selectionStart) + pasted + formData.name.slice(el.selectionEnd);
-    setFormData(p => ({ ...p, name: next }));
-    setErrors(p => ({ ...p, name: validateName(next) }));
-  };
-  const handleEmailChange = (e) => {
-    const v = e.target.value.replace(/\s/g, '');
-    setFormData(p => ({ ...p, email: v }));
-    setErrors(p => ({ ...p, email: validateEmail(v, touched.email) }));
-  };
-  const handleOrgChange = (e) => {
-    const filtered = e.target.value.replace(/[^a-zA-Z0-9\s&.,'\-]/g, '');
-    setFormData(p => ({ ...p, organization: filtered }));
-    setErrors(p => ({ ...p, organization: validateOrg(filtered) }));
-  };
-  const handleOrgPaste = (e) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text/plain').replace(/[^a-zA-Z0-9\s&.,'\-]/g, '');
-    const el = e.target;
-    const next = formData.organization.slice(0, el.selectionStart) + pasted + formData.organization.slice(el.selectionEnd);
-    setFormData(p => ({ ...p, organization: next }));
-    setErrors(p => ({ ...p, organization: validateOrg(next) }));
-  };
-  const handlePhoneChange = (e) => {
-    let v = e.target.value.replace(/\D/g, '');
-    if (v.length > 0 && v[0] !== '9') v = v.slice(1);
-    if (v.length > 10) v = v.slice(0, 10);
-    setFormData(p => ({ ...p, contactNumber: v }));
-    setErrors(p => ({ ...p, contactNumber: validatePhone(v) }));
-  };
-  const handlePhonePaste = (e) => {
-    e.preventDefault();
-    let pasted = e.clipboardData.getData('text/plain').replace(/\D/g, '');
-    if (pasted.startsWith('63')) pasted = pasted.slice(2);
-    if (pasted.startsWith('0')) pasted = pasted.slice(1);
-    if (pasted.length > 0 && pasted[0] !== '9') return;
-    pasted = pasted.slice(0, 10);
-    setFormData(p => ({ ...p, contactNumber: pasted }));
-    setErrors(p => ({ ...p, contactNumber: validatePhone(pasted) }));
-  };
-  const handleMessageChange = (html, text) => {
-    setFormData(p => ({ ...p, message: text }));
-    setErrors(p => ({ ...p, message: validateMessage(text) }));
-    setTouched(p => ({ ...p, message: true }));
-  };
-  const handleBlur = (field, value) => {
-    setTouched(p => ({ ...p, [field]: true }));
-    const err = validate(field, value);
-    setErrors(p => ({ ...p, [field]: err }));
-    if (!err && (field === 'name' || field === 'email' || field === 'organization')) {
-      checkAvailability(field, value);
+  const validateStep2 = () => {
+    const errs = {};
+    if (!formData.partnerRole) {
+      errs.partnerRole = 'Please select your intended partner role.';
     }
-  };
-
-  /* ── Checkbox / Agreement interaction ── */
-  const handleToggleTerms = (e) => {
-    e?.preventDefault?.();
-    if (agreedToTerms) {
-      setAgreedToTerms(false);
-    } else {
-      setIsPolicyModalOpen(true);
+    if (!formData.organization.trim()) {
+      errs.organization = 'Organization or company name is required.';
     }
+    if (!formData.message.trim()) {
+      errs.message = 'Partnership inquiry message is required.';
+    }
+
+    setErrors((prev) => ({ ...prev, ...errs }));
+    return Object.keys(errs).length === 0;
   };
 
-  /* ── Submit (Initiates Email Verification) — calls real backend API ── */
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitAttempted(true);
-    const newErrors = {
-      name: validateName(formData.name),
-      email: validateEmail(formData.email, true),
-      organization: validateOrg(formData.organization),
-      partnerRole: validateRole(formData.partnerRole),
-      contactNumber: validatePhone(formData.contactNumber),
-      message: validateMessage(formData.message),
-    };
+  const validateStep3 = () => {
+    const errs = {};
     if (!govIdFile) {
-      setGovIdError('Valid Government-Issued ID is required.');
+      errs.govId = 'Valid government-issued ID is required.';
     }
     if (!bizDocFile) {
-      setBizDocError('Valid Business Document is required.');
+      errs.bizDoc = 'Valid business verification document is required.';
     }
-    setErrors(newErrors);
-    setTouched({ name: true, email: true, organization: true, contactNumber: true, message: true });
 
-    if (
-      Object.values(newErrors).some(v => v) ||
-      !govIdFile || govIdError ||
-      !bizDocFile || bizDocError ||
-      !agreedToTerms
-    ) return;
+    setErrors((prev) => ({ ...prev, ...errs }));
+    return Object.keys(errs).length === 0;
+  };
+
+  const validateStep4 = () => {
+    const errs = {};
+    if (!formData.agreeTerms) {
+      errs.agreeTerms = 'You must agree to the Terms of Service & Privacy Policy.';
+    }
+    setErrors((prev) => ({ ...prev, ...errs }));
+    return Object.keys(errs).length === 0;
+  };
+
+  // Navigation between steps
+  const handleNext = () => {
+    if (currentStep === 1) {
+      if (!validateStep1()) {
+        showToast('error', 'Please complete all required fields correctly.');
+        return;
+      }
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      if (!validateStep2()) {
+        showToast('error', 'Please fill in all partnership details.');
+        return;
+      }
+      setCurrentStep(3);
+    } else if (currentStep === 3) {
+      if (!validateStep3()) {
+        showToast('error', 'Please upload both required verification documents.');
+        return;
+      }
+      setCurrentStep(4);
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep((prev) => prev - 1);
+    }
+  };
+
+  // Submit all collected data
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateStep4()) {
+      showToast('error', 'Please review and accept the agreement before submitting.');
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -713,13 +256,15 @@ export default function PartnerWithUs() {
       fd.append('email', formData.email.trim().toLowerCase());
       fd.append('organization_company', formData.organization.trim());
       fd.append('partner_role', formData.partnerRole);
-      const phoneToSend = formData.contactNumber.startsWith('0')
-        ? formData.contactNumber
-        : `+63${formData.contactNumber}`;
-      fd.append('contact_number', phoneToSend);
-      fd.append('message', formData.message);
-      fd.append('government_issued_id', govIdFile.file);
-      fd.append('business_verification_document', bizDocFile.file);
+      fd.append('contact_number', `+63${formData.contactNumber}`);
+      fd.append('message', formData.message.trim());
+
+      if (govIdFile) {
+        fd.append('government_issued_id', govIdFile);
+      }
+      if (bizDocFile) {
+        fd.append('business_verification_document', bizDocFile);
+      }
 
       const res = await fetch(`${API_BASE}/partnership-inquiries/`, {
         method: 'POST',
@@ -728,1134 +273,740 @@ export default function PartnerWithUs() {
 
       const data = await res.json().catch(() => ({}));
 
-      if (data.validation_status === 'MISMATCH' || data.error_code === 'NAME_MISMATCH' || data.code === 'NAME_ID_MISMATCH') {
-        setMismatchModalOpen(true);
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (data.validation_status === 'UNCERTAIN' || data.error_code === 'NAME_UNCERTAIN' || data.code === 'NAME_ID_UNCERTAIN') {
-        setUncertainModalOpen(true);
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (res.status === 201 && data.success) {
-        // Happy path: inquiry saved & verification email sent
-        setMismatchModalOpen(false);
-        setUncertainModalOpen(false);
-        setInquiryId(data.inquiry_id || '');
-        setViewState('awaiting_verification');
-        setResendCooldown(60);
-        setResendMessage('');
-      } else if (res.status === 503 && data.inquiry_id) {
-        // Inquiry saved but email send failed — still show awaiting screen
-        setMismatchModalOpen(false);
-        setUncertainModalOpen(false);
-        setInquiryId(data.inquiry_id);
-        setViewState('awaiting_verification');
-        setResendCooldown(0);
-        setResendMessage(data.detail || 'Verification email could not be sent. Please use Resend below.');
-      } else if (res.status === 400 && typeof data === 'object') {
-        // Field validation errors from backend — map to form errors
-        const backendErrors = {};
-        if (data.name) backendErrors.name = data.name;
-        if (data.email) backendErrors.email = data.email;
-        if (data.organization) backendErrors.organization = data.organization;
-        if (data.organization_company) backendErrors.organization = data.organization_company;
-        if (data.partner_role) backendErrors.partnerRole = data.partner_role;
-        if (data.contact_number) backendErrors.contactNumber = data.contact_number;
-        if (data.message) backendErrors.message = data.message;
-        if (data.government_issued_id) setGovIdError(data.government_issued_id);
-        if (data.business_verification_document) setBizDocError(data.business_verification_document);
-        setErrors(prev => ({ ...prev, ...backendErrors }));
+      if (res.ok || res.status === 201) {
+        setIsSuccessModalOpen(true);
+        showToast('success', 'Your partnership inquiry has been submitted successfully!');
       } else {
-        // Generic server error
-        setErrors(prev => ({ ...prev, name: data.detail || 'Server error. Please try again.' }));
+        if (data.title && data.detail) {
+          showToast('error', `${data.title}: ${data.detail}`);
+        } else if (data.name || data.email || data.organization || data.contact_number) {
+          const errMsg = data.name || data.email || data.organization || data.contact_number;
+          showToast('error', errMsg);
+        } else if (data.detail) {
+          showToast('error', data.detail);
+        } else {
+          showToast('error', 'Failed to submit partnership inquiry. Please try again.');
+        }
       }
     } catch {
-      setErrors(prev => ({ ...prev, name: 'Network error. Please check your connection.' }));
+      showToast('error', 'A network error occurred. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  /* ── Resend Verification Email — calls real backend API ── */
-  const handleResendVerification = async () => {
-    if (resendCooldown > 0 || isResending || !inquiryId) return;
-    setIsResending(true);
-    setResendMessage('');
-
-    try {
-      const res = await fetch(`${API_BASE}/partnership-inquiries/resend-verification/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inquiry_id: inquiryId }),
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok && data.success) {
-        setResendCooldown(60);
-        setResendMessage(data.message || `A new verification email has been sent to ${formData.email}.`);
-      } else if (res.status === 429) {
-        // Rate limit — apply cooldown from server if available
-        const retryAfter = data.retry_after || 60;
-        setResendCooldown(retryAfter);
-        setResendMessage(data.detail || 'Please wait before requesting another email.');
-      } else {
-        setResendMessage(data.detail || 'Could not send verification email. Please try again.');
-      }
-    } catch {
-      setResendMessage('Network error. Please check your connection and try again.');
-    } finally {
-      setIsResending(false);
-    }
-  };
-
-  /* ── Start a completely new inquiry (Reset) ── */
-  const handleStartNewInquiry = () => {
-    if (govIdFile?.preview?.startsWith?.('blob:')) URL.revokeObjectURL(govIdFile.preview);
-    if (bizDocFile?.preview?.startsWith?.('blob:')) URL.revokeObjectURL(bizDocFile.preview);
-    setFormData({ name: '', email: '', organization: '', partnerRole: '', contactNumber: '', message: '' });
-    setErrors({ name: '', email: '', organization: '', partnerRole: '', contactNumber: '', message: '' });
-    setTouched({ name: false, email: false, organization: false, partnerRole: false, contactNumber: false, message: false });
-    setSubmitAttempted(false);
-    setAgreedToTerms(false);
+  const handleResetForm = () => {
+    setFormData({
+      name: '',
+      email: '',
+      contactNumber: '',
+      partnerRole: '',
+      organization: '',
+      message: '',
+      agreeTerms: false,
+    });
     setGovIdFile(null);
     setBizDocFile(null);
-    setGovIdError('');
-    setBizDocError('');
-    if (govIdInputRef.current) govIdInputRef.current.value = '';
-    if (bizDocInputRef.current) bizDocInputRef.current.value = '';
-    if (govIdCameraRef.current) govIdCameraRef.current.value = '';
-    if (bizDocCameraRef.current) bizDocCameraRef.current.value = '';
-    setViewState('form');
-    navigate('/partner-with-us', { replace: true });
+    setErrors({});
+    setTouched({});
+    setCurrentStep(1);
+    setIsSuccessModalOpen(false);
   };
 
-  const phoneError = (touched.contactNumber || submitAttempted) && errors.contactNumber;
-  const msgCharCount = formData.message.replace(/\u00A0/g, ' ').trim().length;
+  const stepTitles = {
+    1: 'Your Details',
+    2: 'Partnership Details',
+    3: 'Verification Documents',
+    4: 'Review & Submit',
+  };
+
+  const stepSubtitles = {
+    1: 'Enter your basic personal and contact information.',
+    2: 'Tell us about your organization and partnership goals.',
+    3: 'Upload documents for legal and operational verification.',
+    4: 'Review your submission details before sending.',
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f0f7f2] dark:bg-[#07150d] text-gray-800 dark:text-gray-200 font-sans transition-colors">
-      <LandingHeader />
+    <div className="min-h-screen bg-[#F4FAF5] dark:bg-[#0D1712] flex flex-col justify-between font-sans selection:bg-emerald-200">
+      {/* ─── Floating Toast Notification ─── */}
+      {toast && (
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border backdrop-blur-md transition-all animate-bounce-short bg-white/95 dark:bg-[#142319]/95 text-gray-800 dark:text-gray-100 border-gray-200 dark:border-emerald-800">
+          {toast.type === 'success' ? (
+            <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
+          ) : (
+            <AlertCircle size={18} className="text-red-500 shrink-0" />
+          )}
+          <span className="text-xs sm:text-sm font-medium">{toast.message}</span>
+          <button
+            onClick={() => setToast(null)}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-white ml-1 cursor-pointer"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
-      <main className="flex-1 relative w-full px-4 sm:px-6 py-7 pb-16 support-page-root">
-        <div className="relative z-10 max-w-[1200px] mx-auto flex flex-col gap-5">
-          {/* Back Button */}
-          <AnimatedSection animation="fade-in" delay={40} className="w-fit">
+      <div>
+        {/* ─── Top Header Navigation ─── */}
+        <header className="w-full bg-[#F4FAF5] dark:bg-[#0D1712] border-b border-[#E2EBE5] dark:border-[#1E2E23]">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
             <button
               type="button"
-              className="inline-flex items-center gap-2 bg-transparent text-gray-600 dark:text-gray-300 text-xs sm:text-sm font-medium hover:text-[#00580C] dark:hover:text-emerald-400 px-1 py-1 rounded-md transition-colors cursor-pointer w-fit"
               onClick={() => navigate('/')}
-              aria-label="Back to GrainRise Home"
+              className="inline-flex items-center gap-2 text-xs sm:text-[13px] font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer"
             >
               <ArrowLeft size={16} strokeWidth={2} />
               <span>Back to GrainRise Home</span>
             </button>
-          </AnimatedSection>
 
-          {/* ════════ MAIN CONTENT CARD ════════ */}
-          <AnimatedSection
-            tag="section"
-            animation="fade-up"
-            delay={80}
-            className="bg-white dark:bg-[#0f2417] rounded-xl border border-[#e2ece5] dark:border-white/10 shadow-sm p-6 sm:p-9"
-          >
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white dark:bg-[#142319] border border-[#D5E5DA] dark:border-[#213728] shadow-[0_1px_2px_rgba(0,0,0,0.03)] text-[11.5px] font-semibold text-[#00580C] dark:text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-[#10B981]" />
+              <span>Partnership Inquiry</span>
+            </div>
+          </div>
+        </header>
 
-            {/* -- STATE 0: VERIFYING IN PROGRESS -- */}
-            {viewState === 'verifying' && (
-              <div className="w-full text-center py-14 px-4 sm:px-6 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
-                <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-[#00580C] dark:text-emerald-400 flex items-center justify-center mb-4 ring-8 ring-emerald-50/70 dark:ring-emerald-950/30">
-                  <Loader2 size={36} className="animate-spin text-[#00580C] dark:text-emerald-400" />
-                </div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#00580C] dark:text-emerald-400 mb-1">
-                  Verifying Email
-                </span>
-                <h2 className="font-['Outfit'] text-2xl sm:text-[26px] font-extrabold text-[#00580C] dark:text-emerald-400 mb-2">
-                  Confirming Your Partnership Inquiry...
-                </h2>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-[480px] leading-relaxed">
-                  Please wait a moment while we verify your email address.
-                </p>
+        {/* ─── Main Content Container ─── */}
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex flex-col gap-6">
+          {/* ─── Card 1: Top Hero Banner Card ─── */}
+          <div className="bg-white dark:bg-[#142319] rounded-2xl border border-[#E2EBE5] dark:border-[#203728] p-5 sm:p-7 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+            <div className="flex-1">
+              <div className="inline-block bg-[#E8F5E9] dark:bg-[#1B3B27] text-[#00580C] dark:text-emerald-400 border border-[#CDE7D4] dark:border-[#2A5239] text-[10px] sm:text-[10.5px] font-extrabold tracking-wider uppercase px-2 py-0.5 rounded mb-2">
+                PARTNERSHIP
               </div>
-            )}
+              <h1 className="text-2xl sm:text-[26px] font-bold text-gray-900 dark:text-white tracking-tight mb-1.5">
+                Partner With GrainRise
+              </h1>
+              <p className="text-xs sm:text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed max-w-2xl">
+                Interested in connecting your organization with the GrainRise supply chain network? Follow the 4 simple steps below to submit your partnership inquiry.
+              </p>
+            </div>
 
-            {/* ────── STATE 1: VERIFIED SUCCESS ────── */}
-            {viewState === 'verified_success' && (
-              <div className="w-full text-center py-10 px-4 sm:px-6 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
-                <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-[#00580C] dark:text-emerald-400 flex items-center justify-center mb-4 ring-8 ring-emerald-50/70 dark:ring-emerald-950/30">
-                  <CheckCircle2 size={38} strokeWidth={2.2} />
-                </div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#00580C] dark:text-emerald-400 mb-1">
-                  Verification Complete
-                </span>
-                <h2 className="font-['Outfit'] text-2xl sm:text-[26px] font-extrabold text-[#00580C] dark:text-emerald-400 mb-2">
-                  Email Verified Successfully!
-                </h2>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-[480px] leading-relaxed mb-6">
-                  Your partnership inquiry has been successfully submitted. Thank you for reaching out to us. Our operations team will review your credentials and connect with you shortly.
-                </p>
-                <div className="flex flex-wrap items-center justify-center gap-3">
-                  <button
-                    type="button"
-                    className="bg-[#00580C] hover:bg-[#014209] text-white rounded-lg px-5 py-2.5 text-xs sm:text-[12.5px] font-semibold transition-colors cursor-pointer"
-                    onClick={handleStartNewInquiry}
-                  >
-                    Submit Another Inquiry
-                  </button>
-                  <button
-                    type="button"
-                    className="border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg px-5 py-2.5 text-xs sm:text-[12.5px] font-semibold transition-colors cursor-pointer"
-                    onClick={() => navigate('/')}
-                  >
-                    Back to GrainRise Home
-                  </button>
-                </div>
-              </div>
-            )}
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#EAF5EE] dark:bg-[#1B3B27] flex items-center justify-center text-[#00580C] dark:text-emerald-400 shrink-0 self-start sm:self-center shadow-xs">
+              <Handshake size={28} strokeWidth={1.8} />
+            </div>
+          </div>
 
-            {/* ────── STATE 2: TOKEN INVALID / EXPIRED ────── */}
-            {viewState === 'token_invalid' && (
-              <div className="w-full text-center py-10 px-4 sm:px-6 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
-                <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center mb-4 ring-8 ring-red-50/70 dark:ring-red-950/30">
-                  <AlertTriangle size={36} strokeWidth={2.2} />
-                </div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mb-1">
-                  Verification Failed
-                </span>
-                <h2 className="font-['Outfit'] text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  Verification Link Invalid or Expired
-                </h2>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-[480px] leading-relaxed mb-6">
-                  This verification link is no longer valid. It may have already been used, or the 15-minute verification window has expired. Please request a new verification email.
-                </p>
-                <div className="flex flex-wrap items-center justify-center gap-3">
-                  <button
-                    type="button"
-                    className="bg-[#00580C] hover:bg-[#014209] text-white rounded-lg px-5 py-2.5 text-xs sm:text-[12.5px] font-semibold transition-colors cursor-pointer"
-                    onClick={() => {
-                      navigate('/partner-with-us', { replace: true });
-                      if (formData.email) {
-                        handleResendVerification();
-                        setViewState('awaiting_verification');
-                      } else {
-                        setViewState('form');
-                      }
-                    }}
-                  >
-                    Request New Verification Email
-                  </button>
-                  <button
-                    type="button"
-                    className="border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg px-5 py-2.5 text-xs sm:text-[12.5px] font-semibold transition-colors cursor-pointer"
-                    onClick={() => {
-                      navigate('/partner-with-us', { replace: true });
-                      setViewState('form');
-                    }}
-                  >
-                    Return to Inquiry Form
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ────── STATE 3: AWAITING EMAIL VERIFICATION ────── */}
-            {viewState === 'awaiting_verification' && (
-              <div className="w-full py-8 px-2 sm:px-6 flex flex-col items-center text-center animate-in fade-in duration-200">
-                <div className="relative w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-[#00580C] dark:text-emerald-400 flex items-center justify-center mb-4">
-                  <Mail size={32} strokeWidth={2} />
-                  <span className="absolute top-2 right-2 w-3 h-3 rounded-full bg-emerald-500 animate-ping" />
-                  <span className="absolute top-2 right-2 w-3 h-3 rounded-full bg-emerald-600" />
-                </div>
-
-                <h2 className="font-['Outfit'] text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  Please Verify Your Email Address
-                </h2>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-[520px] leading-relaxed mb-4">
-                  We sent a verification link to <strong className="text-gray-900 dark:text-white font-semibold">{formData.email}</strong>. Please check your inbox and click the link to complete your submission.
-                </p>
-
-                <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-3.5 py-1.5 rounded-full mb-6">
-                  <Clock size={12} className="text-[#00580C] dark:text-emerald-400" />
-                  <span>Verification link expires in 15 minutes · One-time use only</span>
-                </div>
-
-                {/* ── Verification Email Sent Notice ── */}
-                <div className="w-full max-w-[540px] bg-gray-50/70 dark:bg-white/[0.03] border border-emerald-200 dark:border-emerald-800 rounded-xl p-5 shadow-xs mb-6 text-left">
-                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-200/80 dark:border-white/10">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-[#00580C] text-white flex items-center justify-center font-bold text-xs">
-                        GR
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-gray-900 dark:text-white">GrainRise Operations</p>
-                        <p className="text-[10.5px] text-gray-400 dark:text-gray-500">noreply@grainrise.ph</p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/80 text-[#00580C] dark:text-emerald-400 font-bold px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                      Verification Email Sent
+          {/* ─── Card 2: 4-Step Form Card & Illustration Split ─── */}
+          <div className="bg-white dark:bg-[#142319] rounded-2xl border border-[#E2EBE5] dark:border-[#203728] p-6 sm:p-8 lg:p-9 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+              
+              {/* Form Section (Left Column) */}
+              <div className="lg:col-span-7 flex flex-col">
+                {/* Step Indicator Header (NO PROGRESS BAR) */}
+                <div className="mb-5 pb-3 border-b border-gray-100 dark:border-[#1E3324] flex items-baseline justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold tracking-wider uppercase text-[#00580C] dark:text-emerald-400">
+                      Step {currentStep} of 4
                     </span>
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mt-0.5 tracking-tight">
+                      {stepTitles[currentStep]}
+                    </h2>
                   </div>
-
-                  <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
-                    Hello <strong>{formData.name || 'Partner'}</strong>,<br />
-                    A verification link has been sent to your inbox at <strong>{formData.email}</strong>.
-                    Please open the email from GrainRise and click the <em>Verify Email Address</em> button to complete your submission.
-                  </p>
-
-                  <div className="text-center my-2">
-                    <p className="text-[10.5px] text-gray-400 dark:text-gray-500">
-                      Can&apos;t find the email? Check your spam or junk folder, or use the Resend button below.
-                    </p>
-                  </div>
+                  <span className="text-[11.5px] text-gray-400 dark:text-gray-500 hidden sm:inline-block">
+                    {stepSubtitles[currentStep]}
+                  </span>
                 </div>
 
-                {/* ── Resend & Edit Actions ── */}
-                <div className="flex flex-col items-center gap-3">
-                  {resendMessage && (
-                    <div className="flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-3.5 py-1.5 rounded-lg animate-in fade-in">
-                      <CheckCircle2 size={13} />
-                      <span>{resendMessage}</span>
+                {/* ── STEP 1: YOUR DETAILS ── */}
+                {currentStep === 1 && (
+                  <div className="flex flex-col gap-4">
+                    {/* Full Legal Name */}
+                    <div>
+                      <label
+                        htmlFor="name"
+                        className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1.5"
+                      >
+                        FULL LEGAL NAME <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="name"
+                        name="name"
+                        type="text"
+                        placeholder="Enter your full legal name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        className={`w-full px-3.5 py-2.5 rounded-lg border text-xs sm:text-sm text-gray-900 dark:text-white bg-white dark:bg-[#16271c] placeholder:text-gray-400 dark:placeholder:text-gray-500 transition outline-none ${
+                          errors.name
+                            ? 'border-red-400 ring-1 ring-red-300'
+                            : 'border-gray-200 dark:border-[#284232] focus:border-[#00580C] dark:focus:border-emerald-500 focus:ring-1 focus:ring-[#00580C]'
+                        }`}
+                      />
+                      {errors.name && <p className="mt-1 text-[11px] text-red-500">{errors.name}</p>}
                     </div>
-                  )}
 
-                  <div className="flex flex-wrap items-center justify-center gap-3">
-                    <button
-                      type="button"
-                      onClick={handleResendVerification}
-                      disabled={resendCooldown > 0 || isResending}
-                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/15 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      {isResending ? (
-                        <Loader2 size={13} className="animate-spin text-[#00580C]" />
+                    {/* Email Address */}
+                    <div>
+                      <label
+                        htmlFor="email"
+                        className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1.5"
+                      >
+                        EMAIL ADDRESS <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="Enter your email address"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        className={`w-full px-3.5 py-2.5 rounded-lg border text-xs sm:text-sm text-gray-900 dark:text-white bg-white dark:bg-[#16271c] placeholder:text-gray-400 dark:placeholder:text-gray-500 transition outline-none ${
+                          errors.email
+                            ? 'border-red-400 ring-1 ring-red-300'
+                            : 'border-gray-200 dark:border-[#284232] focus:border-[#00580C] dark:focus:border-emerald-500 focus:ring-1 focus:ring-[#00580C]'
+                        }`}
+                      />
+                      {errors.email && <p className="mt-1 text-[11px] text-red-500">{errors.email}</p>}
+                    </div>
+
+                    {/* Contact Number with +63 */}
+                    <div>
+                      <label
+                        htmlFor="contactNumber"
+                        className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1.5"
+                      >
+                        CONTACT NUMBER <span className="text-red-500">*</span>
+                      </label>
+                      <div
+                        className={`flex items-center rounded-lg border overflow-hidden transition ${
+                          errors.contactNumber
+                            ? 'border-red-400 ring-1 ring-red-300'
+                            : 'border-gray-200 dark:border-[#284232] focus-within:border-[#00580C] dark:focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-[#00580C]'
+                        }`}
+                      >
+                        <span className="px-3 py-2.5 bg-gray-50 dark:bg-[#1a3324] border-r border-gray-200 dark:border-[#284232] text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-300 select-none">
+                          +63
+                        </span>
+                        <input
+                          id="contactNumber"
+                          name="contactNumber"
+                          type="tel"
+                          placeholder="9XXXXXXXXX"
+                          value={formData.contactNumber}
+                          onChange={handleContactChange}
+                          className="flex-1 px-3.5 py-2.5 text-xs sm:text-sm text-gray-900 dark:text-white bg-white dark:bg-[#16271c] placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none"
+                        />
+                      </div>
+                      {errors.contactNumber ? (
+                        <p className="mt-1 text-[11px] text-red-500">{errors.contactNumber}</p>
                       ) : (
-                        <RefreshCw size={13} />
-                      )}
-                      <span>
-                        {resendCooldown > 0
-                          ? `Resend Verification Email (${resendCooldown}s)`
-                          : 'Resend Verification Email'}
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setViewState('form')}
-                      className="px-4 py-2 text-xs font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer"
-                    >
-                      Edit Form Details
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ────── STATE 4: THE INQUIRY FORM ────── */}
-            {viewState === 'form' && (
-              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-center gap-8 lg:gap-10">
-                <div className="flex flex-col">
-                  <div className="mb-6">
-                    <div className="inline-flex items-center bg-[#e8f5e9] dark:bg-[#1d3a29] text-[#00580C] dark:text-emerald-300 border border-[#bbf7d0] dark:border-emerald-800 rounded px-2 py-0.5 text-[10.5px] font-bold tracking-wider uppercase mb-2">
-                      Partnership
-                    </div>
-                    <h1 className="font-['Outfit'] text-2xl sm:text-[25px] font-extrabold text-[#00580C] dark:text-emerald-400 tracking-tight mb-1.5 leading-tight">
-                      Partner With GrainRise
-                    </h1>
-                    <p className="text-xs sm:text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed max-w-[620px]">
-                      Interested in connecting your organization with the GrainRise supply chain network? Send us your partnership details and our team will review your inquiry.
-                    </p>
-                  </div>
-
-                  <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
-
-                      {/* Full Legal Name */}
-                      <div className="flex flex-col">
-                        <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1 flex items-center gap-0.5" htmlFor="name">
-                          FULL LEGAL NAME <span className="text-red-500">*</span>
-                        </label>
-                        <p className="text-[10.5px] text-gray-500 dark:text-gray-400 mb-1.5 leading-tight">
-                          Enter your name exactly as shown on your government-issued ID.
+                        <p className="mt-1 text-[10.5px] text-gray-400 dark:text-gray-500">
+                          Format: 10 digits starting with 9 (e.g., 9123456789)
                         </p>
-                        <input
-                          id="name" name="name" type="text"
-                          className={inputCls((touched.name || submitAttempted) && errors.name)}
-                          placeholder="Enter your full legal name"
-                          value={formData.name}
-                          onChange={handleNameChange}
-                          onPaste={handleNamePaste}
-                          onBlur={() => handleBlur('name', formData.name)}
-                        />
-                        <FieldError msg={(touched.name || submitAttempted) ? errors.name : ''} />
-                      </div>
+                      )}
+                    </div>
 
-                      {/* Email */}
-<div className="flex flex-col pt-[10px]">
-  {/* spacer para kapantay ng FULL LEGAL NAME label */}
-  <div className="h-[17px] mb-1" aria-hidden="true" />
+                    {/* Navigation Buttons */}
+                    <div className="pt-3 flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={handleNext}
+                        className="px-6 py-2.5 rounded-lg bg-[#00580C] hover:bg-[#00470A] text-white text-xs sm:text-[13px] font-semibold transition shadow-xs hover:shadow cursor-pointer inline-flex items-center gap-2"
+                      >
+                        <span>Continue</span>
+                        <ArrowRight size={15} />
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-  <label
-    className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5 leading-tight"
-    htmlFor="email"
-  >
-    EMAIL ADDRESS <span className="text-red-500">*</span>
-  </label>
+                {/* ── STEP 2: PARTNERSHIP DETAILS ── */}
+                {currentStep === 2 && (
+                  <div className="flex flex-col gap-4">
+                    {/* Intended Partner Role */}
+                    <div>
+                      <label
+                        htmlFor="partnerRole"
+                        className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1.5"
+                      >
+                        INTENDED PARTNER ROLE <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        id="partnerRole"
+                        name="partnerRole"
+                        value={formData.partnerRole}
+                        onChange={handleInputChange}
+                        className={`w-full px-3.5 py-2.5 rounded-lg border text-xs sm:text-sm text-gray-900 dark:text-white bg-white dark:bg-[#16271c] transition outline-none cursor-pointer ${
+                          errors.partnerRole
+                            ? 'border-red-400 ring-1 ring-red-300'
+                            : 'border-gray-200 dark:border-[#284232] focus:border-[#00580C] dark:focus:border-emerald-500 focus:ring-1 focus:ring-[#00580C]'
+                        }`}
+                      >
+                        <option value="" disabled>
+                          Select your intended role...
+                        </option>
+                        {ROLE_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.partnerRole && (
+                        <p className="mt-1 text-[11px] text-red-500">{errors.partnerRole}</p>
+                      )}
+                    </div>
 
-  <input
-    id="email"
-    name="email"
-    type="email"
-    className={inputCls(
-      (touched.email || submitAttempted) && errors.email
-    )}
-    placeholder="Enter your email address"
-    value={formData.email}
-    onChange={handleEmailChange}
-    onBlur={() => {
-      setTouched(p => ({ ...p, email: true }));
+                    {/* Organization / Company Name */}
+                    <div>
+                      <label
+                        htmlFor="organization"
+                        className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1.5"
+                      >
+                        ORGANIZATION / COMPANY NAME <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="organization"
+                        name="organization"
+                        type="text"
+                        placeholder="Enter your organization or company name"
+                        value={formData.organization}
+                        onChange={handleInputChange}
+                        className={`w-full px-3.5 py-2.5 rounded-lg border text-xs sm:text-sm text-gray-900 dark:text-white bg-white dark:bg-[#16271c] placeholder:text-gray-400 dark:placeholder:text-gray-500 transition outline-none ${
+                          errors.organization
+                            ? 'border-red-400 ring-1 ring-red-300'
+                            : 'border-gray-200 dark:border-[#284232] focus:border-[#00580C] dark:focus:border-emerald-500 focus:ring-1 focus:ring-[#00580C]'
+                        }`}
+                      />
+                      {errors.organization && (
+                        <p className="mt-1 text-[11px] text-red-500">{errors.organization}</p>
+                      )}
+                    </div>
 
-      const err = validateEmail(formData.email, true);
-
-      setErrors(p => ({
-        ...p,
-        email: err,
-      }));
-
-      if (!err) {
-        checkAvailability('email', formData.email);
-      }
-    }}
-  />
-
-  <FieldError
-    msg={
-      (touched.email || submitAttempted)
-        ? errors.email
-        : ''
-    }
-  />
-</div>
-
-
-                      {/* Intended Partner Role Dropdown */}
-                      <div className="flex flex-col">
-                        <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5" htmlFor="partnerRole">
-                          INTENDED PARTNER ROLE <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <select
-                            id="partnerRole"
-                            name="partnerRole"
-                            value={formData.partnerRole}
-                            onChange={(e) => {
-                              const v = e.target.value;
-                              setFormData(p => ({ ...p, partnerRole: v }));
-                              setErrors(p => ({ ...p, partnerRole: validateRole(v) }));
-                            }}
-                            onBlur={() => handleBlur('partnerRole', formData.partnerRole)}
-                            className={`${inputCls((touched.partnerRole || submitAttempted) && errors.partnerRole)} cursor-pointer appearance-none pr-9`}
-                          >
-                            <option value="" disabled>Select your partner role...</option>
-                            <option value="miller">Miller</option>
-                            <option value="warehouse">Warehouse Owner </option>
-                            <option value="retailer">Retailer </option>
-                          </select>
-                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 dark:text-gray-500">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </div>
-                        </div>
-                        <FieldError msg={(touched.partnerRole || submitAttempted) ? errors.partnerRole : ''} />
-                      </div>
-
-                      {/* Contact Number */}
-                      <div className="flex flex-col">
-                        <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5" htmlFor="contactNumber">
-                          CONTACT NUMBER <span className="text-red-500">*</span>
-                        </label>
-                        <div className={`w-full flex items-center bg-white dark:bg-[#163321] border rounded-lg overflow-hidden transition-all
-                          ${phoneError
-                            ? 'border-red-400 dark:border-red-500 ring-2 ring-red-200/40'
-                            : 'border-gray-300 dark:border-[#2d5c3c] focus-within:border-[#00580C] dark:focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-600/15'}`}>
-                          <span className="px-3 text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400 select-none whitespace-nowrap">+63</span>
-                          <span className="w-px self-stretch bg-gray-300 dark:bg-[#2d5c3c]" />
-                          <input
-                            id="contactNumber" name="contactNumber" type="tel"
-                            inputMode="numeric" maxLength={10}
-                            className="flex-1 bg-transparent px-3 py-2 text-xs sm:text-sm text-gray-800 dark:text-white outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                            placeholder="9XXXXXXXXX"
-                            value={formData.contactNumber}
-                            onChange={handlePhoneChange}
-                            onPaste={handlePhonePaste}
-                            onBlur={() => handleBlur('contactNumber', formData.contactNumber)}
-                          />
-                        </div>
-                        <FieldError msg={phoneError || ''} />
-                      </div>
-                      {/* Organization */}
-                      <div className="flex flex-col sm:col-span-full">
-                        <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5" htmlFor="organization">
-                          ORGANIZATION / COMPANY <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          id="organization" name="organization" type="text"
-                          className={inputCls((touched.organization || submitAttempted) && errors.organization)}
-                          placeholder="Enter your organization or company name"
-                          value={formData.organization}
-                          onChange={handleOrgChange}
-                          onPaste={handleOrgPaste}
-                          onBlur={() => handleBlur('organization', formData.organization)}
-                        />
-                        <FieldError msg={(touched.organization || submitAttempted) ? errors.organization : ''} />
-                      </div>
-                      {/* Message */}
-                      <div className="flex flex-col col-span-full">
-                        <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5" htmlFor="message">
+                    {/* Partnership Inquiry / Message */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label
+                          htmlFor="message"
+                          className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider"
+                        >
                           PARTNERSHIP INQUIRY / MESSAGE <span className="text-red-500">*</span>
                         </label>
-                        <div className={`rounded-md border overflow-hidden transition
-                          ${(touched.message || submitAttempted) && errors.message
-                            ? 'border-red-400 dark:border-red-500 ring-2 ring-red-200/40'
-                            : 'border-gray-200'}`}>
-                          <RichTextEditor
-                            onChange={handleMessageChange}
-                            placeholder="Tell us about your organization and how you would like to partner with GrainRise."
-                            minHeight={160}
-                            maxLength={2000}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between mt-1">
-                          <FieldError msg={(touched.message || submitAttempted) ? errors.message : ''} />
-                          <span className={`text-[10px] ml-auto select-none ${msgCharCount >= 2000 ? 'text-red-400' : 'text-gray-400'}`}>
-                            {msgCharCount} / 2000
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* ── 1. Valid Government-Issued ID (Required single file) ── */}
-                      <div className="flex flex-col col-span-full">
-                        <div className="flex flex-col mb-1.5">
-                          <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase flex items-center gap-0.5">
-                            VALID GOVERNMENT-ISSUED ID <span className="text-red-500">*</span>
-                          </label>
-                          <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed mt-0.5">
-                            Upload a clear photo or scanned copy of your government-issued ID (e.g., Driver's License, Passport, UMID, PhilSys National ID, Postal ID, PRC ID).
-                          </p>
-                        </div>
-
-                        <input
-                          ref={govIdInputRef}
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp,application/pdf"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) processSingleFile(file, 'govId');
-                          }}
-                        />
-
-                        {govIdFile ? (
-                          <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/30">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="relative w-11 h-11 rounded-md overflow-hidden border border-emerald-200 dark:border-emerald-800 shrink-0 bg-white dark:bg-emerald-900/40 flex items-center justify-center">
-                                {govIdFile.isPdf ? (
-                                  <FileCheck size={20} className="text-[#00580C] dark:text-emerald-400" />
-                                ) : (
-                                  <img src={govIdFile.preview} alt={govIdFile.name} className="w-full h-full object-cover" />
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate" title={govIdFile.name}>
-                                  {govIdFile.name}
-                                </p>
-                                <p className="text-[10px] text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
-                                  <CheckCircle2 size={10} />
-                                  {formatBytes(govIdFile.size)} • Attached
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => openChoiceModal('govId')}
-                                className="px-2.5 py-1 text-xs font-semibold text-[#00580C] dark:text-emerald-400 bg-white dark:bg-[#163321] border border-emerald-200 dark:border-emerald-800 rounded-md hover:bg-emerald-50 transition-colors cursor-pointer"
-                              >
-                                Change
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveSingleFile('govId')}
-                                className="w-6 h-6 flex items-center justify-center rounded-full bg-white dark:bg-[#163321] border border-gray-200 dark:border-[#2d5c3c] text-gray-400 hover:text-red-500 hover:border-red-300 transition-colors cursor-pointer"
-                                aria-label="Remove government ID"
-                              >
-                                <X size={12} />
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div
-                            onClick={() => openChoiceModal('govId')}
-                            onDragOver={(e) => { e.preventDefault(); setIsGovDragging(true); }}
-                            onDragLeave={() => setIsGovDragging(false)}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              setIsGovDragging(false);
-                              const file = e.dataTransfer.files?.[0];
-                              if (file) processSingleFile(file, 'govId');
-                            }}
-                            className={`flex flex-col items-center justify-center gap-2 p-5 rounded-lg border-2 border-dashed cursor-pointer transition-all
-                              ${govIdError
-                                ? 'border-red-400 dark:border-red-500 bg-red-50/40 dark:bg-red-950/20 ring-2 ring-red-200/40'
-                                : isGovDragging
-                                  ? 'border-[#00580C] dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 scale-[1.01]'
-                                  : 'border-gray-300 dark:border-[#2d5c3c] hover:border-[#00580C] dark:hover:border-emerald-600 bg-white dark:bg-[#163321] hover:bg-emerald-50/30'}`}
-                          >
-                            <div className="w-9 h-9 rounded-full flex items-center justify-center bg-emerald-50 dark:bg-[#1e3d2a] text-[#00580C] dark:text-emerald-400">
-                              <UploadCloud size={18} />
-                            </div>
-                            <div className="text-center">
-                              <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">
-                                {isGovDragging ? 'Drop Government ID here' : 'Click to upload Government-Issued ID or drag & drop'}
-                              </p>
-                              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-                                Supported formats: JPG, PNG, WEBP, PDF • Maximum 5 MB
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                        {govIdError && (
-                          <p className="mt-1.5 text-[11px] text-red-500 leading-tight flex items-center gap-1 font-medium">
-                            <ImageIcon size={12} className="shrink-0" />
-                            {govIdError}
-                          </p>
-                        )}
-                        <div className="mt-2 mb-4 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[10.5px] font-medium leading-relaxed text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
-                          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-                          <span>Maximum file size: 5 MB per file. Image files are automatically resized and compressed before upload to reduce processing memory.</span>
-                        </div>
-                      </div>
-
-                      {/* ── 2. Valid Business Document (Required single file) ── */}
-                      <div className="flex flex-col col-span-full">
-                        <div className="flex flex-col mb-1.5">
-                          <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase flex items-center gap-0.5">
-                            VALID BUSINESS DOCUMENT <span className="text-red-500">*</span>
-                          </label>
-                          <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed mt-0.5">
-                            Upload a clear photo or scanned copy of your valid business document
-                            {formData.partnerRole === 'miller' && " (e.g., Milling License, BIR Form 2303, Mayor's / Business Permit, or DTI / SEC Registration)."}
-                            {formData.partnerRole === 'warehouse' && " (e.g., Warehouse Operating License, Mayor's Permit, DTI / SEC, or Fire Safety Certificate)."}
-                            {formData.partnerRole === 'retailer' && " (e.g., Barangay / Mayor's Business Permit, or DTI / SEC Registration)."}
-                            {!formData.partnerRole && " (e.g., BIR Form 2303, Mayor's / Business Permit, or DTI / SEC Registration)."}
-                          </p>
-                        </div>
-
-                        <input
-                          ref={bizDocInputRef}
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp,application/pdf"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) processSingleFile(file, 'bizDoc');
-                          }}
-                        />
-
-                        {bizDocFile ? (
-                          <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/30">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="relative w-11 h-11 rounded-md overflow-hidden border border-emerald-200 dark:border-emerald-800 shrink-0 bg-white dark:bg-emerald-900/40 flex items-center justify-center">
-                                {bizDocFile.isPdf ? (
-                                  <FileCheck size={20} className="text-[#00580C] dark:text-emerald-400" />
-                                ) : (
-                                  <img src={bizDocFile.preview} alt={bizDocFile.name} className="w-full h-full object-cover" />
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate" title={bizDocFile.name}>
-                                  {bizDocFile.name}
-                                </p>
-                                <p className="text-[10px] text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
-                                  <CheckCircle2 size={10} />
-                                  {formatBytes(bizDocFile.size)} • Attached
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => openChoiceModal('bizDoc')}
-                                className="px-2.5 py-1 text-xs font-semibold text-[#00580C] dark:text-emerald-400 bg-white dark:bg-[#163321] border border-emerald-200 dark:border-emerald-800 rounded-md hover:bg-emerald-50 transition-colors cursor-pointer"
-                              >
-                                Change
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveSingleFile('bizDoc')}
-                                className="w-6 h-6 flex items-center justify-center rounded-full bg-white dark:bg-[#163321] border border-gray-200 dark:border-[#2d5c3c] text-gray-400 hover:text-red-500 hover:border-red-300 transition-colors cursor-pointer"
-                                aria-label="Remove business document"
-                              >
-                                <X size={12} />
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div
-                            onClick={() => openChoiceModal('bizDoc')}
-                            onDragOver={(e) => { e.preventDefault(); setIsBizDragging(true); }}
-                            onDragLeave={() => setIsBizDragging(false)}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              setIsBizDragging(false);
-                              const file = e.dataTransfer.files?.[0];
-                              if (file) processSingleFile(file, 'bizDoc');
-                            }}
-                            className={`flex flex-col items-center justify-center gap-2 p-5 rounded-lg border-2 border-dashed cursor-pointer transition-all
-                              ${bizDocError
-                                ? 'border-red-400 dark:border-red-500 bg-red-50/40 dark:bg-red-950/20 ring-2 ring-red-200/40'
-                                : isBizDragging
-                                  ? 'border-[#00580C] dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 scale-[1.01]'
-                                  : 'border-gray-300 dark:border-[#2d5c3c] hover:border-[#00580C] dark:hover:border-emerald-600 bg-white dark:bg-[#163321] hover:bg-emerald-50/30'}`}
-                          >
-                            <div className="w-9 h-9 rounded-full flex items-center justify-center bg-emerald-50 dark:bg-[#1e3d2a] text-[#00580C] dark:text-emerald-400">
-                              <UploadCloud size={18} />
-                            </div>
-                            <div className="text-center">
-                              <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">
-                                {isBizDragging ? 'Drop Business Document here' : 'Click to upload Business Document or drag & drop'}
-                              </p>
-                              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-                                Supported formats: JPG, PNG, WEBP, PDF • Maximum 5 MB
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                        {bizDocError && (
-                          <p className="mt-1.5 text-[11px] text-red-500 leading-tight flex items-center gap-1 font-medium">
-                            <ImageIcon size={12} className="shrink-0" />
-                            {bizDocError}
-                          </p>
-                        )}
-                        <div className="mt-2 mb-4 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[10.5px] font-medium leading-relaxed text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
-                          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-                          <span>Maximum file size: 5 MB per file. Image files are automatically resized and compressed before upload to reduce processing memory.</span>
-                        </div>
-                      </div>
-
-                    </div>
-
-                    {/* ── Terms & Privacy Policy Agreement ── */}
-                    <div className="flex flex-col gap-1 pt-1 border-t border-gray-100 dark:border-white/10 mt-1">
-                      <div
-                        onClick={handleToggleTerms}
-                        className="flex items-start gap-2.5 select-none cursor-pointer group py-1 px-1 rounded-md transition-colors hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
-                      >
-                        <input
-                          id="termsCheckbox"
-                          type="checkbox"
-                          checked={agreedToTerms}
-                          readOnly
-                          className="mt-0.5 w-3.5 h-3.5 shrink-0 rounded border-gray-300 dark:border-[#2d5c3c] accent-[#00580C] cursor-pointer pointer-events-none"
-                        />
-                        <span className="text-[11.5px] text-gray-600 dark:text-gray-400 leading-relaxed cursor-pointer">
-                          I have read and agree to the{' '}
-                          <span className="text-[#00580C] dark:text-emerald-400 font-semibold group-hover:underline">
-                            Terms and Conditions and Privacy Policy
-                          </span>
-                          .
+                        <span className="text-[10px] text-gray-400">
+                          {formData.message.length}/2000
                         </span>
                       </div>
-                      {submitAttempted && !agreedToTerms && (
-                        <p className="text-[11px] text-red-500 leading-tight ml-6">
-                          Please agree to the Terms and Conditions and Privacy Policy before submitting.
-                        </p>
+                      <textarea
+                        id="message"
+                        name="message"
+                        rows={3}
+                        maxLength={2000}
+                        placeholder="Tell us about your organization and how you would like to partner with GrainRise."
+                        value={formData.message}
+                        onChange={handleInputChange}
+                        className={`w-full px-3.5 py-2.5 rounded-lg border text-xs sm:text-sm text-gray-900 dark:text-white bg-white dark:bg-[#16271c] placeholder:text-gray-400 dark:placeholder:text-gray-500 transition outline-none resize-none ${
+                          errors.message
+                            ? 'border-red-400 ring-1 ring-red-300'
+                            : 'border-gray-200 dark:border-[#284232] focus:border-[#00580C] dark:focus:border-emerald-500 focus:ring-1 focus:ring-[#00580C]'
+                        }`}
+                      />
+                      {errors.message && (
+                        <p className="mt-1 text-[11px] text-red-500">{errors.message}</p>
                       )}
                     </div>
 
-                    {/* Submit */}
-                    <div className="mt-1 flex flex-col items-start gap-2">
+                    {/* Navigation Buttons */}
+                    <div className="pt-3 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={handleBack}
+                        className="px-4 py-2.5 rounded-lg border border-gray-200 dark:border-[#284232] hover:bg-gray-50 dark:hover:bg-[#16271c] text-gray-700 dark:text-gray-300 text-xs sm:text-[13px] font-medium transition cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <ArrowLeft size={15} />
+                        <span>Back</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleNext}
+                        className="px-6 py-2.5 rounded-lg bg-[#00580C] hover:bg-[#00470A] text-white text-xs sm:text-[13px] font-semibold transition shadow-xs hover:shadow cursor-pointer inline-flex items-center gap-2"
+                      >
+                        <span>Continue</span>
+                        <ArrowRight size={15} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── STEP 3: VERIFICATION DOCUMENTS ── */}
+                {currentStep === 3 && (
+                  <div className="flex flex-col gap-4">
+                    {/* Document 1: Government-Issued ID */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">
+                        VALID GOVERNMENT-ISSUED ID <span className="text-red-500">*</span>
+                      </label>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-400 mb-2 leading-tight">
+                        Upload Driver's License, Passport, UMID, PhilSys ID, or PRC ID (JPG, PNG, WEBP, PDF up to 5MB).
+                      </p>
+
+                      <input
+                        ref={govIdInputRef}
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.webp,.pdf"
+                        onChange={handleGovIdChange}
+                        className="hidden"
+                      />
+
+                      {!govIdFile ? (
+                        <div
+                          onClick={() => govIdInputRef.current?.click()}
+                          className={`border-2 border-dashed rounded-xl p-3.5 text-center cursor-pointer transition hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 ${
+                            errors.govId
+                              ? 'border-red-400 bg-red-50/20'
+                              : 'border-gray-200 dark:border-[#284232]'
+                          }`}
+                        >
+                          <UploadCloud size={22} className="mx-auto text-emerald-600 dark:text-emerald-400 mb-1" />
+                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                            Click to upload government ID
+                          </span>
+                          <span className="block text-[10px] text-gray-400 mt-0.5">
+                            Max 5MB • Formats: JPG, PNG, WEBP, PDF
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20">
+                          <div className="flex items-center gap-2.5 overflow-hidden">
+                            <FileText size={20} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <div className="truncate">
+                              <p className="text-xs font-semibold text-gray-800 dark:text-white truncate">
+                                {govIdFile.name}
+                              </p>
+                              <p className="text-[10px] text-gray-400">
+                                {formatFileSize(govIdFile.size)} • Ready
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                            <button
+                              type="button"
+                              onClick={() => govIdInputRef.current?.click()}
+                              className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 hover:underline px-1.5 py-1 cursor-pointer"
+                            >
+                              Replace
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setGovIdFile(null)}
+                              className="text-gray-400 hover:text-red-500 p-1 cursor-pointer transition"
+                              title="Remove file"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {errors.govId && <p className="mt-1 text-[11px] text-red-500">{errors.govId}</p>}
+                    </div>
+
+                    {/* Document 2: Business Verification Document */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">
+                        VALID BUSINESS DOCUMENT <span className="text-red-500">*</span>
+                      </label>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-400 mb-2 leading-tight">
+                        Upload DTI / SEC Registration, Mayor's / Business Permit, or BIR Certificate (JPG, PNG, WEBP, PDF up to 5MB).
+                      </p>
+
+                      <input
+                        ref={bizDocInputRef}
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.webp,.pdf"
+                        onChange={handleBizDocChange}
+                        className="hidden"
+                      />
+
+                      {!bizDocFile ? (
+                        <div
+                          onClick={() => bizDocInputRef.current?.click()}
+                          className={`border-2 border-dashed rounded-xl p-3.5 text-center cursor-pointer transition hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 ${
+                            errors.bizDoc
+                              ? 'border-red-400 bg-red-50/20'
+                              : 'border-gray-200 dark:border-[#284232]'
+                          }`}
+                        >
+                          <UploadCloud size={22} className="mx-auto text-emerald-600 dark:text-emerald-400 mb-1" />
+                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                            Click to upload business document
+                          </span>
+                          <span className="block text-[10px] text-gray-400 mt-0.5">
+                            Max 5MB • Formats: JPG, PNG, WEBP, PDF
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20">
+                          <div className="flex items-center gap-2.5 overflow-hidden">
+                            <FileText size={20} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <div className="truncate">
+                              <p className="text-xs font-semibold text-gray-800 dark:text-white truncate">
+                                {bizDocFile.name}
+                              </p>
+                              <p className="text-[10px] text-gray-400">
+                                {formatFileSize(bizDocFile.size)} • Ready
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                            <button
+                              type="button"
+                              onClick={() => bizDocInputRef.current?.click()}
+                              className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 hover:underline px-1.5 py-1 cursor-pointer"
+                            >
+                              Replace
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setBizDocFile(null)}
+                              className="text-gray-400 hover:text-red-500 p-1 cursor-pointer transition"
+                              title="Remove file"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {errors.bizDoc && <p className="mt-1 text-[11px] text-red-500">{errors.bizDoc}</p>}
+                    </div>
+
+                    {/* Navigation Buttons */}
+                    <div className="pt-3 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={handleBack}
+                        className="px-4 py-2.5 rounded-lg border border-gray-200 dark:border-[#284232] hover:bg-gray-50 dark:hover:bg-[#16271c] text-gray-700 dark:text-gray-300 text-xs sm:text-[13px] font-medium transition cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <ArrowLeft size={15} />
+                        <span>Back</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleNext}
+                        className="px-6 py-2.5 rounded-lg bg-[#00580C] hover:bg-[#00470A] text-white text-xs sm:text-[13px] font-semibold transition shadow-xs hover:shadow cursor-pointer inline-flex items-center gap-2"
+                      >
+                        <span>Continue</span>
+                        <ArrowRight size={15} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── STEP 4: REVIEW & SUBMIT ── */}
+                {currentStep === 4 && (
+                  <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+                    {/* Summary Group 1: Your Details */}
+                    <div className="p-3.5 rounded-xl border border-gray-200 dark:border-[#284232] bg-gray-50/50 dark:bg-[#16271c]">
+                      <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-gray-200/60 dark:border-[#243c2c]">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                          1. Your Details
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(1)}
+                          className="text-[11px] font-semibold text-[#00580C] dark:text-emerald-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <Edit3 size={12} />
+                          <span>Edit</span>
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-gray-400 text-[10.5px] block">Full Legal Name:</span>
+                          <span className="font-semibold text-gray-800 dark:text-gray-100">{formData.name}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 text-[10.5px] block">Email Address:</span>
+                          <span className="font-semibold text-gray-800 dark:text-gray-100">{formData.email}</span>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <span className="text-gray-400 text-[10.5px] block">Contact Number:</span>
+                          <span className="font-semibold text-gray-800 dark:text-gray-100">+63 {formData.contactNumber}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Summary Group 2: Partnership Details */}
+                    <div className="p-3.5 rounded-xl border border-gray-200 dark:border-[#284232] bg-gray-50/50 dark:bg-[#16271c]">
+                      <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-gray-200/60 dark:border-[#243c2c]">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                          2. Partnership Details
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(2)}
+                          className="text-[11px] font-semibold text-[#00580C] dark:text-emerald-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <Edit3 size={12} />
+                          <span>Edit</span>
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-gray-400 text-[10.5px] block">Intended Role:</span>
+                          <span className="font-semibold text-gray-800 dark:text-gray-100 capitalize">
+                            {ROLE_OPTIONS.find((r) => r.value === formData.partnerRole)?.label || formData.partnerRole}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 text-[10.5px] block">Organization / Company:</span>
+                          <span className="font-semibold text-gray-800 dark:text-gray-100">{formData.organization}</span>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <span className="text-gray-400 text-[10.5px] block">Inquiry Message:</span>
+                          <p className="text-gray-700 dark:text-gray-200 italic line-clamp-2">
+                            "{formData.message}"
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Summary Group 3: Documents */}
+                    <div className="p-3.5 rounded-xl border border-gray-200 dark:border-[#284232] bg-gray-50/50 dark:bg-[#16271c]">
+                      <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-gray-200/60 dark:border-[#243c2c]">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                          3. Verification Documents
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(3)}
+                          className="text-[11px] font-semibold text-[#00580C] dark:text-emerald-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <Edit3 size={12} />
+                          <span>Edit</span>
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <div className="truncate">
+                            <span className="text-gray-400 text-[10.5px] block">Government ID:</span>
+                            <span className="font-semibold text-gray-800 dark:text-gray-100 truncate block">
+                              {govIdFile?.name || 'Not provided'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <FileText size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <div className="truncate">
+                            <span className="text-gray-400 text-[10.5px] block">Business Document:</span>
+                            <span className="font-semibold text-gray-800 dark:text-gray-100 truncate block">
+                              {bizDocFile?.name || 'Not provided'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Terms & Consent Checkbox */}
+                    <div className="pt-1">
+                      <label className="flex items-start gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="agreeTerms"
+                          checked={formData.agreeTerms}
+                          onChange={handleInputChange}
+                          className="mt-0.5 w-4 h-4 rounded text-[#00580C] focus:ring-[#00580C] cursor-pointer"
+                        />
+                        <span className="text-xs text-gray-600 dark:text-gray-300 leading-snug">
+                          I confirm that the information and documents provided are authentic, and I agree to GrainRise's{' '}
+                          <span className="text-[#00580C] dark:text-emerald-400 font-semibold underline">
+                            Terms of Service
+                          </span>{' '}
+                          and{' '}
+                          <span className="text-[#00580C] dark:text-emerald-400 font-semibold underline">
+                            Privacy Policy
+                          </span>.
+                        </span>
+                      </label>
+                      {errors.agreeTerms && (
+                        <p className="mt-1 text-[11px] text-red-500">{errors.agreeTerms}</p>
+                      )}
+                    </div>
+
+                    {/* Final Navigation Buttons */}
+                    <div className="pt-3 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={handleBack}
+                        disabled={isSubmitting}
+                        className="px-4 py-2.5 rounded-lg border border-gray-200 dark:border-[#284232] hover:bg-gray-50 dark:hover:bg-[#16271c] text-gray-700 dark:text-gray-300 text-xs sm:text-[13px] font-medium transition cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-60"
+                      >
+                        <ArrowLeft size={15} />
+                        <span>Back</span>
+                      </button>
+
                       <button
                         type="submit"
-                        disabled={isSubmitting || (!isFormValid && submitAttempted)}
-                        className="inline-flex items-center justify-center gap-2 bg-[#00580C] hover:bg-[#014209] text-white font-semibold text-xs sm:text-[12.5px] rounded-md px-5 py-2.5 shadow-sm transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                        disabled={isSubmitting}
+                        className="px-6 py-2.5 rounded-lg bg-[#00580C] hover:bg-[#00470A] text-white text-xs sm:text-[13px] font-semibold transition shadow-xs hover:shadow cursor-pointer inline-flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                       >
-                        {isSubmitting && <Loader2 size={14} className="animate-spin" />}
-                        <span>{isSubmitting ? 'Sending Verification Email...' : 'Submit Partnership Inquiry'}</span>
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Submitting Application...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Check size={16} />
+                            <span>Submit Partnership Inquiry</span>
+                          </>
+                        )}
                       </button>
-                      {submitAttempted && !isFormValid && (
-                        <p className="text-[11px] text-red-500">Please fix the highlighted fields before submitting.</p>
-                      )}
                     </div>
                   </form>
-                </div>
-
-                {/* Right Illustration */}
-                <AnimatedSection
-                  animation="zoom"
-                  delay={160}
-                  className="flex items-center justify-center p-2 order-first lg:order-last"
-                >
-                  <img
-                    src={shakehandsImg}
-                    alt="Partner With GrainRise"
-                    className="w-full max-w-[320px] lg:max-w-[420px] h-auto object-contain block"
-                  />
-                </AnimatedSection>
+                )}
               </div>
-            )}
 
-          </AnimatedSection>
+              {/* Illustration Section (Right Column) - Always visible and vertically balanced */}
+              <div className="lg:col-span-5 flex items-center justify-center p-2 lg:p-4">
+                <img
+                  src={shakehandsImg}
+                  alt="GrainRise Partnership"
+                  className="w-full max-w-[360px] sm:max-w-[400px] object-contain drop-shadow-sm select-none pointer-events-none transition-transform duration-300 hover:scale-[1.02]"
+                />
+              </div>
+
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* ─── Success Confirmation Modal ─── */}
+      {isSuccessModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="bg-white dark:bg-[#142319] rounded-2xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-gray-100 dark:border-[#203728] text-center flex flex-col items-center">
+            <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-4">
+              <CheckCircle2 size={34} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
+              Inquiry Submitted Successfully!
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+              Thank you, <strong className="text-gray-700 dark:text-gray-200">{formData.name || 'Partner'}</strong>. Your partnership inquiry and verification credentials have been forwarded to the GrainRise operations team. We will review your application and get in touch with you shortly.
+            </p>
+            <div className="flex items-center gap-3 w-full">
+              <button
+                type="button"
+                onClick={handleResetForm}
+                className="flex-1 py-2.5 px-4 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-[#1f3525] dark:hover:bg-[#274430] text-gray-700 dark:text-gray-200 text-xs sm:text-sm font-semibold transition cursor-pointer"
+              >
+                Submit Another
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="flex-1 py-2.5 px-4 rounded-lg bg-[#00580C] hover:bg-[#00470A] text-white text-xs sm:text-sm font-semibold transition cursor-pointer shadow-xs"
+              >
+                Return to Home
+              </button>
+            </div>
+          </div>
         </div>
-      </main>
+      )}
 
+      {/* ─── Footer ─── */}
       <LandingFooter />
-
-      {/* ── Policy Modal ── */}
-      <PolicyModal
-        isOpen={isPolicyModalOpen}
-        onClose={() => setIsPolicyModalOpen(false)}
-        onAgree={() => setAgreedToTerms(true)}
-      />
-
-      {/* ── Name Does Not Match ID Modal ── */}
-      {mismatchModalOpen && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div
-            className="bg-white dark:bg-[#0e2417] border border-gray-200 dark:border-[#204830] rounded-2xl shadow-2xl max-w-md w-full overflow-hidden p-6 animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                <AlertTriangle size={24} />
-              </div>
-              <h3 className="text-base font-bold text-gray-900 dark:text-white">
-                Name Does Not Match ID
-              </h3>
-            </div>
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-6">
-              The full legal name you entered does not match the name detected on your uploaded government-issued ID. Please enter your name exactly as shown on your ID or upload the correct document.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5">
-              <button
-                type="button"
-                className="w-full sm:w-auto px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/15 rounded-lg transition-colors cursor-pointer"
-                onClick={() => {
-                  setMismatchModalOpen(false);
-                  setTimeout(() => document.getElementById('name')?.focus(), 100);
-                }}
-              >
-                Review Name
-              </button>
-              <button
-                type="button"
-                className="w-full sm:w-auto px-4 py-2 text-xs font-semibold text-white bg-[#00580C] hover:bg-[#014209] rounded-lg transition-colors cursor-pointer"
-                onClick={() => {
-                  setMismatchModalOpen(false);
-                  handleRemoveSingleFile('govId');
-                  setTimeout(() => govIdInputRef.current?.click(), 100);
-                }}
-              >
-                Upload Different ID
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* ── We Could Not Verify the Name Modal ── */}
-      {uncertainModalOpen && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div
-            className="bg-white dark:bg-[#0e2417] border border-gray-200 dark:border-[#204830] rounded-2xl shadow-2xl max-w-md w-full overflow-hidden p-6 animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                <AlertTriangle size={24} />
-              </div>
-              <h3 className="text-base font-bold text-gray-900 dark:text-white">
-                We Could Not Verify the Name
-              </h3>
-            </div>
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-6">
-              We could not confidently verify that the name you entered matches the name on your uploaded ID. Please review your legal name or upload a clearer ID image.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5">
-              <button
-                type="button"
-                className="w-full sm:w-auto px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/15 rounded-lg transition-colors cursor-pointer"
-                onClick={() => {
-                  setUncertainModalOpen(false);
-                  setTimeout(() => document.getElementById('name')?.focus(), 100);
-                }}
-              >
-                Review Name
-              </button>
-              <button
-                type="button"
-                className="w-full sm:w-auto px-4 py-2 text-xs font-semibold text-white bg-[#00580C] hover:bg-[#014209] rounded-lg transition-colors cursor-pointer"
-                onClick={() => {
-                  setUncertainModalOpen(false);
-                  handleRemoveSingleFile('govId');
-                  setTimeout(() => govIdInputRef.current?.click(), 100);
-                }}
-              >
-                Upload Different ID
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* ── Choice Modal: Upload File vs Take Photo ── */}
-      {choiceModalOpen && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
-          role="dialog"
-          aria-modal="true"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) closeChoiceModal();
-          }}
-        >
-          <div
-            className="bg-white dark:bg-[#0e2417] border border-gray-200 dark:border-[#204830] rounded-2xl shadow-2xl max-w-md w-full overflow-hidden p-5 sm:p-6 animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100 dark:border-white/10">
-              <div>
-                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">
-                  {choiceTarget === 'govId' ? 'Government-Issued ID' : 'Valid Business Document'}
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  Select how you want to add this document
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeChoiceModal}
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
-                aria-label="Close selection modal"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* 2 Large Options */}
-            <div className="flex flex-col gap-3 my-2">
-              <button
-                type="button"
-                onClick={handleSelectUpload}
-                className="flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 dark:border-[#204830] hover:border-[#00580C] dark:hover:border-emerald-500 bg-gray-50/50 dark:bg-white/[0.03] hover:bg-emerald-50/40 dark:hover:bg-emerald-950/30 transition-all text-left group cursor-pointer"
-              >
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white dark:bg-[#163321] text-[#00580C] dark:text-emerald-400 border border-gray-200 dark:border-[#2d5c3c] shadow-xs group-hover:scale-105 transition-transform shrink-0">
-                  <UploadCloud size={24} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm sm:text-base font-bold text-gray-900 dark:text-white group-hover:text-[#00580C] dark:group-hover:text-emerald-400 transition-colors">
-                    Upload / Attach File
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                    Select a JPG, PNG, WEBP, or PDF file from your device
-                  </p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSelectCamera}
-                className="flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 dark:border-[#204830] hover:border-[#00580C] dark:hover:border-emerald-500 bg-gray-50/50 dark:bg-white/[0.03] hover:bg-emerald-50/40 dark:hover:bg-emerald-950/30 transition-all text-left group cursor-pointer"
-              >
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white dark:bg-[#163321] text-[#00580C] dark:text-emerald-400 border border-gray-200 dark:border-[#2d5c3c] shadow-xs group-hover:scale-105 transition-transform shrink-0">
-                  <Camera size={24} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm sm:text-base font-bold text-gray-900 dark:text-white group-hover:text-[#00580C] dark:group-hover:text-emerald-400 transition-colors">
-                    Open Camera
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                    Take a live photo directly using your camera
-                  </p>
-                </div>
-              </button>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-gray-100 dark:border-white/10 flex justify-end">
-              <button
-                type="button"
-                onClick={closeChoiceModal}
-                className="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* ── Live Camera Modal ── */}
-      {cameraModalOpen && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 md:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
-          role="dialog"
-          aria-modal="true"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) closeCameraModal();
-          }}
-        >
-          <div
-            className="bg-white dark:bg-[#0e2417] border border-gray-200 dark:border-[#204830] rounded-2xl sm:rounded-3xl shadow-2xl max-w-3xl lg:max-w-4xl w-full overflow-hidden p-4 sm:p-6 md:p-7 flex flex-col animate-in zoom-in-95 duration-200 max-h-[92vh]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 sm:pb-4 mb-3 sm:mb-4 border-b border-gray-100 dark:border-white/10 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-[#00580C] dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-200/60 dark:border-emerald-800/60 shadow-xs">
-                  <Camera size={22} className="sm:w-6 sm:h-6" />
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">
-                    {cameraTarget === 'govId' ? 'Capture Government-Issued ID' : 'Capture Business Document'}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                    Position your document clearly within the frame under good lighting
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={closeCameraModal}
-                className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-full bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-600 dark:text-gray-200 transition-colors cursor-pointer shrink-0"
-                aria-label="Close camera modal"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            {cameraError ? (
-              <div className="flex flex-col items-center text-center py-8 sm:py-12 px-3">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mb-4 border border-amber-200 dark:border-amber-800/50">
-                  <AlertTriangle size={32} />
-                </div>
-                <h3 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white mb-2">
-                  Camera Access Unavailable
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-md mb-6 leading-relaxed">
-                  {cameraError}
-                </p>
-                <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto justify-center">
-                  <button
-                    type="button"
-                    className="w-full sm:w-auto px-6 py-3 text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/15 rounded-xl transition-colors cursor-pointer"
-                    onClick={closeCameraModal}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="w-full sm:w-auto px-7 py-3 text-sm sm:text-base font-bold text-white bg-[#00580C] hover:bg-[#014209] rounded-xl shadow-md transition-colors cursor-pointer flex items-center justify-center gap-2"
-                    onClick={() => {
-                      const target = cameraTarget;
-                      closeCameraModal();
-                      setTimeout(() => {
-                        if (target === 'govId') govIdInputRef.current?.click();
-                        else if (target === 'bizDoc') bizDocInputRef.current?.click();
-                      }, 100);
-                    }}
-                  >
-                    <UploadCloud size={18} />
-                    <span>Upload File Instead</span>
-                  </button>
-                </div>
-              </div>
-            ) : isStartingCamera ? (
-              <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] max-h-[55vh] sm:max-h-[60vh] bg-black rounded-xl sm:rounded-2xl overflow-hidden flex flex-col items-center justify-center gap-3 text-white">
-                <Loader2 className="animate-spin text-emerald-400" size={40} />
-                <p className="text-sm sm:text-base text-gray-200 font-medium">Starting camera preview...</p>
-                <p className="text-xs text-gray-400">Please grant camera permission if prompted</p>
-              </div>
-            ) : capturedImage ? (
-              <div className="flex flex-col min-h-0 flex-1">
-                <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] max-h-[55vh] sm:max-h-[60vh] bg-black rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center border border-gray-200 dark:border-white/10 shadow-inner">
-                  <img
-                    src={capturedImage}
-                    alt="Captured document"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-4 sm:pt-5 mt-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={handleRetakePhoto}
-                    className="w-full sm:w-auto px-6 py-3 sm:px-7 sm:py-3.5 text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/15 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <RefreshCw size={18} />
-                    <span>Retake Photo</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleAcceptPhoto}
-                    className="w-full sm:w-auto px-7 py-3 sm:px-9 sm:py-3.5 text-sm sm:text-base font-bold text-white bg-[#00580C] hover:bg-[#014209] rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2.5 active:scale-98"
-                  >
-                    <CheckCircle2 size={20} />
-                    <span>Use Photo</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col min-h-0 flex-1">
-                <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] max-h-[55vh] sm:max-h-[60vh] bg-black rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center border border-gray-200 dark:border-white/10 shadow-inner">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-contain bg-black"
-                  />
-                  {/* Framing guideline overlay */}
-                  <div className="pointer-events-none absolute inset-4 sm:inset-8 border-2 border-dashed border-white/80 rounded-xl flex items-end justify-center pb-3">
-                    <span className="text-xs sm:text-sm text-white font-medium bg-black/65 px-4 py-1.5 rounded-full backdrop-blur-md shadow-md">
-                      Center document within frame
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-4 sm:pt-5 mt-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={closeCameraModal}
-                    className="w-full sm:w-auto px-6 py-3 sm:px-7 sm:py-3.5 text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/15 rounded-xl transition-colors cursor-pointer text-center"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCapturePhoto}
-                    className="w-full sm:w-auto px-7 py-3 sm:px-9 sm:py-3.5 text-sm sm:text-base font-bold text-white bg-[#00580C] hover:bg-[#014209] rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2.5 active:scale-98"
-                  >
-                    <Camera size={20} />
-                    <span>Capture Photo</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>,
-        document.body
-      )}
     </div>
   );
 }

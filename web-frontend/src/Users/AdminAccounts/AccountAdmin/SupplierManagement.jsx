@@ -565,179 +565,148 @@ const SupplierManagement = () => {
         {
           key: "miller",
           label: "Miller Name",
-          width: "20%",
+          width: "22%",
         },
-
         {
           key: "company",
           label: "Company Name",
-          width: "20%",
+          width: "22%",
         },
-
         {
           key: "email",
           label: "Email",
-          width: "20%",
+          width: "22%",
         },
-
         {
           key: "archiveReason",
           label: "Archive Reason",
-          width: "22%",
-
-          render: (row) =>
-            displayValue(
-              row?.archiveReason,
-              "No reason recorded"
-            ),
+          width: "20%",
+          render: (row) => (
+            <span className="text-[13px] text-slate-500">
+              {displayValue(row?.archiveReason, "No reason recorded")}
+            </span>
+          ),
         },
-
         {
           key: "action",
           label: "Action",
-          width: "18%",
-
-          cellClassName:
-            "text-center",
-
+          width: "14%",
           render: (row) => (
             <div className="flex items-center justify-center gap-2">
-              <CustomGreenButton
-                text="Restore"
-                className="px-3 py-1.5 text-[11px] rounded-lg"
-                onClick={() =>
-                  handleRestore(
-                    row
-                  )
-                }
-              />
-
-              <CustomRedButton
-                text="Delete"
-                className="px-4 py-1.5 text-[11px] rounded-lg"
-                onClick={() =>
-                  handleDelete(
-                    row
-                  )
-                }
-              />
+              <button
+                type="button"
+                className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 cursor-pointer"
+                onClick={() => handleRestore(row)}
+              >
+                Restore
+              </button>
+              <button
+                type="button"
+                className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-rose-600 transition hover:border-rose-300 hover:bg-rose-50 cursor-pointer"
+                onClick={() => handleDelete(row)}
+              >
+                Delete
+              </button>
             </div>
           ),
         },
       ];
     }
 
+    // ========================================================
+    // TO REVIEW
+    // ========================================================
+
+    if (activeTab === "to-review") {
+      return [
+        {
+          key: "miller",
+          label: "Miller Name",
+          width: "25%",
+        },
+        {
+          key: "company",
+          label: "Company Name",
+          width: "25%",
+        },
+        {
+          key: "email",
+          label: "Email",
+          width: "28%",
+        },
+        {
+          key: "contact",
+          label: "Contact",
+          width: "14%",
+        },
+        {
+          key: "action",
+          label: "Action",
+          width: "8%",
+          render: (row) => (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                className="whitespace-nowrap rounded-full border border-amber-300 bg-amber-50/60 px-3.5 py-1 text-xs font-medium text-amber-800 transition hover:bg-amber-100 cursor-pointer"
+                onClick={() => handleReview(row)}
+              >
+                Review
+              </button>
+            </div>
+          ),
+        },
+      ];
+    }
 
     // ========================================================
-    // TO REVIEW + ACTIVE
+    // ACTIVE
     // ========================================================
 
     return [
       {
         key: "miller",
         label: "Miller Name",
-        width: "24%",
+        width: "23%",
       },
-
       {
         key: "company",
         label: "Company Name",
-        width: "24%",
+        width: "23%",
       },
-
       {
         key: "email",
         label: "Email",
-        width: "24%",
+        width: "25%",
       },
-
       {
         key: "contact",
         label: "Contact",
-        width: "16%",
+        width: "14%",
       },
-
       {
         key: "action",
         label: "Action",
-        width: "20%",
-
-        cellClassName:
-          "text-center",
-
-        render: (row) => {
-          if (
-            activeTab ===
-            "to-review"
-          ) {
-            return (
-              <div className="flex justify-center">
-                <CustomAmberButton
-                  text="Review"
-                  className="px-3 py-1.5 text-[11px] rounded-lg"
-                  onClick={() =>
-                    handleReview(
-                      row
-                    )
-                  }
-                />
-              </div>
-            );
-          }
-
-
-          if (
-            activeTab ===
-            "active"
-          ) {
-            return (
-              <div className="flex items-center justify-center gap-2">
-                <button
-                  type="button"
-                  className="
-                    whitespace-nowrap
-                    rounded-lg
-                    border
-                    border-slate-300
-                    px-3
-                    py-1.5
-                    text-[11px]
-                    font-semibold
-                    text-slate-500
-                    transition
-                    hover:border-emerald-300
-                    hover:text-emerald-700
-                    cursor-pointer
-                  "
-                  onClick={() =>
-                    navigate(
-                      `/admin/millers/${row.id}`,
-                      {
-                        state: {
-                          miller: row,
-                        },
-                      }
-                    )
-                  }
-                >
-                  View Details
-                </button>
-
-                <CustomAmberButton
-                  text="Archive"
-                  className="whitespace-nowrap px-3 py-1.5 text-[11px] rounded-lg"
-                  onClick={() =>
-                    handleArchive(
-                      row
-                    )
-                  }
-                />
-              </div>
-            );
-          }
-
-          return null;
-        },
+        width: "15%",
+        render: (row) => (
+          <div className="flex items-center justify-center gap-1.5">
+            <button
+              type="button"
+              className="whitespace-nowrap rounded-full border border-slate-300 bg-white px-3.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50 cursor-pointer"
+              onClick={() =>
+                navigate(`/admin/millers/${row.id}`, { state: { miller: row } })
+              }
+            >
+              View Details
+            </button>
+            <button
+              type="button"
+              className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-amber-700 transition hover:border-amber-300 hover:bg-amber-50 cursor-pointer"
+              onClick={() => handleArchive(row)}
+            >
+              Archive
+            </button>
+          </div>
+        ),
       },
     ];
   }, [
@@ -1071,72 +1040,32 @@ const SupplierManagement = () => {
           SEARCH + SORT
       ===================================================== */}
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="w-full max-w-sm">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search
-                size={16}
-                className="text-gray-400"
-              />
-            </div>
-
-            <input
-              type="text"
-              value={
-                searchQuery
-              }
-              onChange={(event) => {
-                setSearchQuery(
-                  event.target.value
-                );
-
-                setCurrentPage(
-                  1
-                );
-              }}
-              placeholder="Search by Miller, company, or email"
-              className="
-                block
-                w-full
-                pl-10
-                pr-3
-                py-2
-                border
-                border-gray-200
-                rounded-lg
-                text-sm
-                focus:outline-none
-                focus:ring-1
-                focus:ring-emerald-500
-                focus:border-emerald-500
-                bg-white
-                placeholder-gray-400
-                text-gray-700
-              "
-            />
-          </div>
-        </div>
-
-        <div>
-          <SortByDropdown
-            options={
-              SORT_OPTIONS
-            }
-            value={
-              sortBy
-            }
-            onChange={(value) => {
-              setSortBy(
-                value
-              );
-
-              setCurrentPage(
-                1
-              );
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="relative w-full max-w-xs">
+          <Search
+            size={15}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(event) => {
+              setSearchQuery(event.target.value);
+              setCurrentPage(1);
             }}
+            placeholder="Search miller, company, or email"
+            className="h-9 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-700 placeholder-gray-400 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
           />
         </div>
+
+        <SortByDropdown
+          options={SORT_OPTIONS}
+          value={sortBy}
+          onChange={(value) => {
+            setSortBy(value);
+            setCurrentPage(1);
+          }}
+        />
       </div>
 
 
@@ -1166,37 +1095,22 @@ const SupplierManagement = () => {
 
       {
         isLoading ? (
-          <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-gray-200 bg-white">
+          <div className="flex min-h-[320px] items-center justify-center rounded-[14px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.06)]">
             <div className="text-center">
               <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-[#08511f]" />
-
-              <p className="text-sm font-semibold text-gray-700">
+              <p className="text-sm font-medium text-slate-600">
                 Loading Miller accounts...
               </p>
             </div>
           </div>
         ) : (
           <SectionedTableCard
-            columns={
-              columns
-            }
-            sections={
-              sections
-            }
-            currentPage={
-              safeCurrentPage
-            }
-            totalPages={
-              totalPages
-            }
-            onPageChange={(page) =>
-              setCurrentPage(
-                page
-              )
-            }
-            footerLabel={
-              `Showing ${firstVisible}-${lastVisible} of ${filteredRows.length} Millers`
-            }
+            columns={columns}
+            sections={sections}
+            currentPage={safeCurrentPage}
+            totalPages={totalPages}
+            onPageChange={(page) => setCurrentPage(page)}
+            footerLabel={`Showing ${firstVisible}–${lastVisible} of ${filteredRows.length} Miller${filteredRows.length !== 1 ? "s" : ""}`}
           />
         )
       }

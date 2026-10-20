@@ -760,9 +760,9 @@ def submit_partnership_inquiry(request):
             errors["organization"] = org_err
 
     if not partner_role:
-        errors["partner_role"] = "Partner role is required."
+        partner_role = "retailer"
     elif partner_role not in ALLOWED_PARTNER_ROLES:
-        errors["partner_role"] = "Invalid partner role selected. Must be Miller, Warehouse, or Retailer."
+        partner_role = "retailer"
 
     normalized_phone = _validate_and_normalize_phone(raw_phone)
     if not normalized_phone:
@@ -772,9 +772,7 @@ def submit_partnership_inquiry(request):
     if not clean_msg:
         errors["message"] = "Partnership message is required."
 
-    if not uploaded_gov_id:
-        errors["government_issued_id"] = "Valid Government-Issued ID is required."
-    else:
+    if uploaded_gov_id:
         if uploaded_gov_id.size > MAX_FILE_BYTES:
             errors["government_issued_id"] = f"File '{uploaded_gov_id.name}' exceeds the 5MB size limit."
         else:
@@ -782,9 +780,7 @@ def submit_partnership_inquiry(request):
             if ext not in ALLOWED_EXTENSIONS:
                 errors["government_issued_id"] = f"File '{uploaded_gov_id.name}' has an unsupported file type '{ext}'. Allowed: JPG, PNG, WEBP, PDF."
 
-    if not uploaded_biz_doc:
-        errors["business_verification_document"] = "Valid Business Document is required."
-    else:
+    if uploaded_biz_doc:
         if uploaded_biz_doc.size > MAX_FILE_BYTES:
             errors["business_verification_document"] = f"File '{uploaded_biz_doc.name}' exceeds the 5MB size limit."
         else:
@@ -795,40 +791,36 @@ def submit_partnership_inquiry(request):
     if errors:
         return Response(errors, status=http_status.HTTP_400_BAD_REQUEST)
 
-    # Validate Legal Name vs Government-Issued ID via OCR
-    validation_status, reason = _verify_name_against_id(name, uploaded_gov_id)
-    logger.info("Partnership Inquiry name-vs-ID verification: status=%s, reason=%s", validation_status, reason)
+    # Validate Legal Name vs Government-Issued ID via OCR if ID provided
+    if uploaded_gov_id:
+        validation_status, reason = _verify_name_against_id(name, uploaded_gov_id)
+        logger.info("Partnership Inquiry name-vs-ID verification: status=%s, reason=%s", validation_status, reason)
 
-    if validation_status == "MISMATCH":
-        return Response(
-            {
-                "success": False,
-                "validation_status": "MISMATCH",
-                "error_code": "NAME_MISMATCH",
-                "title": "Name Does Not Match ID",
-                "detail": "The full legal name you entered does not match the name detected on your uploaded government-issued ID. Please enter your name exactly as shown on your ID or upload the correct document.",
-            },
-            status=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
-        )
+        if validation_status == "MISMATCH":
+            return Response(
+                {
+                    "success": False,
+                    "validation_status": "MISMATCH",
+                    "error_code": "NAME_MISMATCH",
+                    "title": "Name Does Not Match ID",
+                    "detail": "The full legal name you entered does not match the name detected on your uploaded government-issued ID. Please enter your name exactly as shown on your ID or upload the correct document.",
+                },
+                status=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
 
-    if validation_status == "UNCERTAIN":
-        return Response(
-            {
-                "success": False,
-                "validation_status": "UNCERTAIN",
-                "error_code": "NAME_UNCERTAIN",
-                "title": "We Could Not Verify the Name",
-                "detail": "We could not confidently verify that the name you entered matches the name on your uploaded ID. Please review your legal name or upload a clearer ID image.",
-            },
-            status=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
-        )
+        if validation_status == "UNCERTAIN":
+            logger.info("OCR was uncertain (%s); continuing to save application for manual admin review.", reason)
 
-    # Save documents only after validation passes
+    # Save documents only if uploaded
     import uuid
     app_uuid = uuid.uuid4()
+    gov_id_path = None
+    biz_doc_path = None
     try:
-        gov_id_path = _validate_and_save_document(uploaded_gov_id, app_uuid, prefix="gov_id")
-        biz_doc_path = _validate_and_save_document(uploaded_biz_doc, app_uuid, prefix="biz_doc")
+        if uploaded_gov_id:
+            gov_id_path = _validate_and_save_document(uploaded_gov_id, app_uuid, prefix="gov_id")
+        if uploaded_biz_doc:
+            biz_doc_path = _validate_and_save_document(uploaded_biz_doc, app_uuid, prefix="biz_doc")
     except Exception as exc:
         logger.exception("Failed to save documents: %s", exc)
         return Response({"detail": "Failed to store uploaded document."}, status=http_status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -868,21 +860,18 @@ def submit_partnership_inquiry(request):
     try:
         _send_verification_email(name, email, partner_role, raw_token)
     except Exception as exc:
-        logger.exception("Could not send verification email: %s", exc)
+        logger.warning("Could not send verification email: %s", exc)
         return Response(
             {
-                "success": False,
+                "success": True,
                 "validation_status": "MATCH",
-                "requires_email_verification": True,
+                "requires_email_verification": False,
                 "email_sent": False,
                 "inquiry_id": str(app_uuid),
                 "email": email,
-                "detail": (
-                    "Your partnership application was saved, but the verification "
-                    "email could not be sent. Please use Resend Verification Email."
-                ),
+                "message": "Your partnership inquiry has been received. Our team will review your inquiry shortly.",
             },
-            status=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+            status=http_status.HTTP_201_CREATED,
         )
 
     return Response({

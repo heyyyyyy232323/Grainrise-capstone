@@ -239,6 +239,7 @@ import MillerManagerMessages from "./Users/MillerAccounts/MillerManager/MillerMa
 import AdminDashboard from "./Users/AdminAccounts/AccountAdmin/AdminDashboard";
 import SupplierManagement from "./Users/AdminAccounts/AccountAdmin/SupplierManagement";
 import MillerInfo from "./Users/AdminAccounts/AccountAdmin/MillerInfo";
+import AdminHelpCenter from "./Users/AdminAccounts/AccountAdmin/AdminHelpCenter";
 
 import WarehouseManagement from "./Users/AdminAccounts/AccountAdmin/WarehouseManagement";
 import WarehouseInfo from "./Users/AdminAccounts/AccountAdmin/WarehouseInfo";
@@ -1261,6 +1262,14 @@ function App() {
             />
 
           </Route>
+        </Route>
+
+        {/* Admin Help Center — rendered outside sidebar layout so it fills the page */}
+        <Route element={<AdminProtectedRoute />}>
+          <Route
+            path="/admin/help-center"
+            element={<AdminHelpCenter />}
+          />
         </Route>
 
       </Routes>

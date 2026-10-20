@@ -39,7 +39,7 @@ export const getUserNavbarMenuItems = (
     label: "Help Center",
 
     onClick: () => {
-      alert("Open Help Center");
+      navigate("/admin/help-center");
     },
   },
 

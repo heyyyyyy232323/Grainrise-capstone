@@ -121,7 +121,11 @@ export default function SectionedTableCard({
                     <tr>
                       <td
                         colSpan={columns.length}
-                        className="bg-white border-b border-slate-100 px-4 py-2 text-center text-[12px] font-semibold italic text-emerald-600"
+                        className={
+                          section.className ||
+                          section.headerClassName ||
+                          "bg-[#F0FDF4] border-y border-emerald-100/70 px-4 py-1.5 text-center text-[12px] font-semibold text-emerald-700"
+                        }
                       >
                         {section.label}
                       </td>

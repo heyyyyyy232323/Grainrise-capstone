@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Heart, MessageSquare, ArrowRight, Calendar, ChevronDown, X } from "lucide-react";
+import { Search, Heart, MessageSquare, ArrowRight, Calendar, ChevronDown, X, RefreshCw } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
+import useToast from "../../../Components/hooks/useToast";
+import Toast from "../../../Components/Minor-Components/Toast";
+import useFetchLatestNews from "../../../Components/hooks/NewsUpdates/useFetchLatestNews";
 
 export const WAREHOUSE_NEWS_DATA = [
   {
@@ -53,6 +56,40 @@ export const WAREHOUSE_NEWS_DATA = [
 
 export default function WarehouseManagerNewsUpdates() {
   const navigate = useNavigate();
+  const { toasts, showToast, removeToast } = useToast();
+  const [articles, setArticles] = useState(WAREHOUSE_NEWS_DATA);
+
+  // Fetch Latest News Hook
+  const { fetchLatestNews, isFetching } = useFetchLatestNews({
+    showToast,
+    onNewsFetched: (fetched) => {
+      if (fetched && fetched.length > 0) {
+        setArticles((prev) => {
+          const formatted = fetched.map((item, idx) => ({
+            id: item.news_id || item.id || `fetched-${idx}`,
+            category: (item.category || "Market Updates").toUpperCase(),
+            categoryColor: "bg-emerald-100 text-emerald-700",
+            date: item.published_at
+              ? new Date(item.published_at).toLocaleString()
+              : "Just now",
+            isoDate: item.published_at ? item.published_at.slice(0, 10) : "2026-08-20",
+            year: item.published_at
+              ? new Date(item.published_at).getFullYear().toString()
+              : "2026",
+            month: item.published_at
+              ? new Date(item.published_at).toLocaleString("default", { month: "long" })
+              : "August",
+            title: item.title,
+            description: item.description || item.snippet || item.content || "",
+            likes: item.likes_count || 0,
+            comments: item.comments_count || 0,
+            source: item.source_name || "GrainRise News",
+          }));
+          return [...formatted, ...prev.filter(p => !formatted.some(f => f.id === p.id))];
+        });
+      }
+    },
+  });
 
   // Filter States
   const [search, setSearch] = useState("");
@@ -100,7 +137,7 @@ export default function WarehouseManagerNewsUpdates() {
   };
 
   // Filter & Sort Logic
-  const filtered = WAREHOUSE_NEWS_DATA.filter((news) => {
+  const filtered = articles.filter((news) => {
     if (search.trim()) {
       const q = search.toLowerCase();
       if (!news.title.toLowerCase().includes(q) && !news.description.toLowerCase().includes(q)) {
@@ -129,15 +166,29 @@ export default function WarehouseManagerNewsUpdates() {
 
   return (
     <div className="space-y-6">
+      <Toast toasts={toasts} removeToast={removeToast} />
+
       {/* ── Page Header ─────────────────────────────────────────────────────── */}
-      <div className="space-y-1">
-        <Breadcrumbs items={[{ label: "Resources" }, { label: "News & Updates" }]} />
-        <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-bold tracking-[-0.03em] text-slate-900">
-          News &amp; Updates
-        </h2>
-        <p className="text-sm text-slate-500">
-          Stay informed with the latest agricultural news, market updates, advisories, and programs.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <Breadcrumbs items={[{ label: "Resources" }, { label: "News & Updates" }]} />
+          <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-bold tracking-[-0.03em] text-slate-900">
+            News &amp; Updates
+          </h2>
+          <p className="text-sm text-slate-500">
+            Stay informed with the latest agricultural news, market updates, advisories, and programs.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={fetchLatestNews}
+          disabled={isFetching}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#00580C] hover:bg-[#00470A] text-white text-xs sm:text-sm font-semibold rounded-lg shadow-xs hover:shadow transition cursor-pointer disabled:opacity-60 whitespace-nowrap self-start sm:self-center"
+        >
+          <RefreshCw size={15} className={isFetching ? "animate-spin" : ""} />
+          <span>{isFetching ? "Fetching..." : "Fetch Latest News"}</span>
+        </button>
       </div>
 
       {/* ── Search & Grouped Filter Toolbar ─────────────────────────────────── */}

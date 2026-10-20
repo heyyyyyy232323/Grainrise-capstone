@@ -36,7 +36,7 @@ import {
 
 // Images
 import mockup10 from './assets/10.png';
-import phoneMockup from './assets/phone4.png';
+import phoneMockup from './assets/phone6.png';
 import riceBgImg from './assets/ricee.jpg';
 import heroBgImg from './assets/greenery.jpg';
 import glassImg from './assets/glass.png';
