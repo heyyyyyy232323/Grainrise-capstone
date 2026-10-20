@@ -4,641 +4,525 @@ import {
   Calendar,
   ChevronDown,
   DollarSign,
-  AlertCircle,
+  AlertTriangle,
   Truck,
   RotateCcw,
   ArrowRight,
+  TrendingUp,
   CheckCircle2,
   RefreshCw,
   Clock,
+  PackageCheck,
   MessageSquare,
-  Package,
+  AlertCircle,
+  ExternalLink,
 } from "lucide-react";
+import Breadcrumbs from "../../Components/Minor-Components/Breadcrumbs";
 
 export default function RetailerDashboard() {
   const navigate = useNavigate();
-  const [timeRange, setTimeRange] = useState("Last 7 Days");
-
-  // Metric summaries matching Figma
-  const metrics = [
-    {
-      title: "SALES TODAY",
-      value: "₱67,500",
-      subtext: "Completed in-store sales today",
-      trendIcon: "↗",
-      icon: <DollarSign size={18} className="text-emerald-600" />,
-      bgIcon: "bg-emerald-50",
-      textColor: "text-emerald-600",
-    },
-    {
-      title: "LOW STOCK PRODUCTS",
-      value: "4",
-      subtext: "Products that may need restocking",
-      trendIcon: "⚠",
-      icon: <AlertCircle size={18} className="text-amber-500" />,
-      bgIcon: "bg-amber-50",
-      textColor: "text-amber-600",
-    },
-    {
-      title: "ACTIVE ORDERS",
-      value: "7",
-      subtext: "Warehouse orders in progress",
-      trendIcon: "⏱",
-      icon: <Truck size={18} className="text-cyan-600" />,
-      bgIcon: "bg-cyan-50",
-      textColor: "text-cyan-600",
-    },
-    {
-      title: "OPEN RETURNS & ISSUES",
-      value: "2",
-      subtext: "Requests awaiting resolution",
-      trendIcon: "⟳",
-      icon: <RotateCcw size={18} className="text-rose-500" />,
-      bgIcon: "bg-rose-50",
-      textColor: "text-rose-600",
-    },
-  ];
-
-  // Active orders list matching Figma
-  const activeOrders = [
-    {
-      orderNo: "ORD-2026-021",
-      warehouse: "Warehouse ABC",
-      product: "Dinorado",
-      quantity: "500 kg",
-      total: "₱31,500",
-      status: "Preparing for Delivery",
-      statusType: "preparing",
-    },
-    {
-      orderNo: "ORD-2026-019",
-      warehouse: "North Caloocan Warehouse",
-      product: "Jasmine Rice",
-      quantity: "300 kg",
-      total: "₱18,600",
-      status: "In Transit",
-      statusType: "in-transit",
-    },
-    {
-      orderNo: "ORD-2026-017",
-      warehouse: "Warehouse XYZ",
-      product: "Sinandomeng",
-      quantity: "250 kg",
-      total: "₱14,500",
-      status: "Processing",
-      statusType: "processing",
-    },
-  ];
-
-  // Stock attention items matching Figma
-  const stockAttention = [
-    {
-      name: "Dinorado Premium",
-      stock: "18 kg remaining",
-      status: "Low Stock",
-      statusType: "low",
-    },
-    {
-      name: "Sinandomeng Special",
-      stock: "9 kg remaining",
-      status: "Low Stock",
-      statusType: "low",
-    },
-    {
-      name: "Jasmine Fragrant Rice",
-      stock: "0 kg in warehouse",
-      status: "Out of Stock",
-      statusType: "out",
-    },
-  ];
-
-  // Pending actions items matching Figma
-  const pendingActions = [
-    {
-      type: "Low Stock",
-      typeColor: "bg-amber-100 text-amber-800",
-      ref: "WR-001",
-      details: "Dinorado · 18 kg remaining",
-      status: "Low Stock",
-      statusDot: "bg-amber-500",
-      statusText: "text-amber-700",
-      updated: "10 mins ago",
-      actionText: "View Inventory",
-      actionVariant: "default",
-      actionClick: () => navigate("/retailer/inventory"),
-    },
-    {
-      type: "Order",
-      typeColor: "bg-blue-100 text-blue-800",
-      ref: "ORD-2026-0021",
-      details: "Warehouse ABC · Dinorado - 500 kg",
-      status: "Preparing for Delivery",
-      statusDot: "bg-amber-500",
-      statusText: "text-amber-700",
-      updated: "25 mins ago",
-      actionText: "Track",
-      actionVariant: "green-outline",
-      actionClick: () => navigate("/retailer/order-tracking"),
-    },
-    {
-      type: "Return Issue",
-      typeColor: "bg-rose-100 text-rose-800",
-      ref: "RET-2026-0015",
-      details: "Damaged packaging - 100 kg",
-      status: "Under Review",
-      statusDot: "bg-rose-500",
-      statusText: "text-rose-700",
-      updated: "1 hr ago",
-      actionText: "View",
-      actionVariant: "default",
-      actionClick: () => navigate("/retailer/product-returns"),
-    },
-    {
-      type: "Message",
-      typeColor: "bg-teal-100 text-teal-800",
-      ref: "Warehouse ABC",
-      details: "New message regarding ORD-2026-0021",
-      status: "Unread",
-      statusDot: "bg-teal-500",
-      statusText: "text-teal-700",
-      updated: "2 hrs ago",
-      actionText: "Open",
-      actionVariant: "default",
-      actionClick: () => navigate("/retailer/messages"),
-    },
-  ];
-
-  // Recent activity logs matching Figma
-  const recentActivities = [
-    {
-      title: "Sale Completed",
-      desc: "Receipt POS-2026-0184 · Dinorado · ₱22,500",
-      time: "5 mins ago",
-      icon: <CheckCircle2 size={15} className="text-white" />,
-      bgIcon: "bg-emerald-600",
-      lineColor: "bg-emerald-500",
-    },
-    {
-      title: "Inventory Updated",
-      desc: "Dinorado stock reduced after completed POS transaction",
-      time: "8 mins ago",
-      icon: <RefreshCw size={14} className="text-white" />,
-      bgIcon: "bg-blue-600",
-      lineColor: "bg-blue-500",
-    },
-    {
-      title: "Order Status Updated",
-      desc: (
-        <span>
-          ORD-2026-0021 is now{" "}
-          <span className="inline-block px-2 py-0.5 text-[11px] font-semibold rounded bg-amber-100 text-amber-800">
-            Preparing for Delivery
-          </span>
-        </span>
-      ),
-      time: "32 mins ago",
-      icon: <Truck size={14} className="text-white" />,
-      bgIcon: "bg-amber-500",
-      lineColor: "bg-amber-500",
-    },
-    {
-      title: "Purchase Received",
-      desc: "500 kg Dinorado received from Warehouse ABC into local store",
-      time: "1 hr ago",
-      icon: <CheckCircle2 size={15} className="text-white" />,
-      bgIcon: "bg-teal-600",
-      lineColor: "bg-teal-500",
-    },
-    {
-      title: "Return Resolved",
-      desc: "RET-2026-0012 has been marked as resolved and credited to account",
-      time: "3 hrs ago",
-      icon: <CheckCircle2 size={15} className="text-white" />,
-      bgIcon: "bg-purple-600",
-      lineColor: "bg-purple-500",
-    },
-  ];
+  const [trendRange, setTrendRange] = useState("Last 7 Days");
 
   return (
     <div className="space-y-6 pb-12">
-      {/* ── Breadcrumbs & Top Header ────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* ── Breadcrumb & Top Header ────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-1.5 text-[13px] font-medium text-gray-500 mb-1">
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-1">
             <span>Main</span>
             <span>&gt;</span>
-            <span className="text-[#00580C] font-semibold">Dashboard</span>
+            <span className="text-[#107E44] font-semibold">Dashboard</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
             Dashboard
           </h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-            Last Updated: Today . 10:42 AM
+          <p className="text-xs text-gray-400 mt-0.5">
+            Last Updated: Today &middot; 10:42 AM
           </p>
         </div>
 
         {/* Date Selector Pill */}
-        <div className="inline-flex items-center gap-2 self-start sm:self-center bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-semibold text-gray-700 shadow-sm">
-          <Calendar size={14} className="text-gray-400" />
-          <span>July 19, 2026</span>
+        <div className="flex items-center gap-2 self-start md:self-auto bg-white border border-gray-200 shadow-2xs rounded-xl px-3.5 py-2 text-xs font-medium text-gray-700">
+          <Calendar size={14} className="text-gray-500" />
+          <span>July 15, 2026</span>
         </div>
       </div>
 
-      {/* ── 4 Summary Metric KPI Cards ───────────────────────────────────────── */}
+      {/* ── KPI Cards (4 in a row) ─────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {metrics.map((m, idx) => (
-          <div
-            key={idx}
-            className="bg-white border border-gray-200/90 rounded-xl p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="text-[11px] font-bold text-gray-400 tracking-wider uppercase">
-                  {m.title}
-                </span>
-                <div className="text-2xl font-extrabold text-gray-900 mt-1">
-                  {m.value}
-                </div>
-              </div>
-              <div
-                className={`w-8 h-8 rounded-full ${m.bgIcon} flex items-center justify-center shrink-0`}
-              >
-                {m.icon}
-              </div>
+        {/* Sales Today */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-2xs flex flex-col justify-between relative overflow-hidden">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
+                SALES TODAY
+              </p>
+              <h2 className="text-2xl font-extrabold text-gray-900 mt-1">
+                ₱67,500
+              </h2>
             </div>
-            <div className={`flex items-center gap-1.5 text-xs font-medium ${m.textColor} mt-3`}>
-              <span>{m.trendIcon}</span>
-              <span className="text-gray-600 text-[11.5px]">{m.subtext}</span>
+            <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <DollarSign size={18} strokeWidth={2.5} />
             </div>
           </div>
-        ))}
+          <div className="flex items-center gap-1.5 mt-4 text-[11px] text-gray-500">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span>Completed in-store sales today</span>
+          </div>
+        </div>
+
+        {/* Low Stock Products */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
+                LOW STOCK PRODUCTS
+              </p>
+              <h2 className="text-2xl font-extrabold text-gray-900 mt-1">4</h2>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center">
+              <AlertTriangle size={18} strokeWidth={2.2} />
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 mt-4 text-[11px] text-gray-500">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+            <span>Products that may need restock</span>
+          </div>
+        </div>
+
+        {/* Active Orders */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
+                ACTIVE ORDERS
+              </p>
+              <h2 className="text-2xl font-extrabold text-gray-900 mt-1">7</h2>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center">
+              <Truck size={18} strokeWidth={2.2} />
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 mt-4 text-[11px] text-gray-500">
+            <span className="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
+            <span>Warehouse orders in progress</span>
+          </div>
+        </div>
+
+        {/* Open Returns & Issues */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
+                OPEN RETURNS &amp; ISSUES
+              </p>
+              <h2 className="text-2xl font-extrabold text-gray-900 mt-1">2</h2>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center">
+              <RotateCcw size={18} strokeWidth={2.2} />
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 mt-4 text-[11px] text-gray-500">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+            <span>Requests awaiting resolution</span>
+          </div>
+        </div>
       </div>
 
-      {/* ── Sales Trend & Inventory Status (2 Columns) ───────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Sales Trend (2 cols) */}
-        <div className="lg:col-span-2 bg-white border border-gray-200/90 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+      {/* ── Row 2: Sales Trend (Left) & Inventory Status (Right) ──────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Sales Trend (approx 7 cols) */}
+        <div className="lg:col-span-8 bg-white rounded-2xl border border-gray-100 p-5 shadow-2xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-base font-bold text-gray-900">Sales Trend</h2>
-                <p className="text-xs text-gray-500">
+                <h3 className="font-bold text-gray-900 text-sm md:text-base">
+                  Sales Trend
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">
                   Track your retail sales performance over time.
                 </p>
               </div>
-              <button className="inline-flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-                <span>{timeRange}</span>
-                <ChevronDown size={14} className="text-gray-400" />
-              </button>
+              <div className="relative">
+                <button className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition cursor-pointer">
+                  <span>{trendRange}</span>
+                  <ChevronDown size={13} className="text-gray-400" />
+                </button>
+              </div>
             </div>
 
-            {/* Custom SVG Area Line Chart */}
-            <div className="relative w-full h-56 mt-2">
+            {/* Custom SVG Line Chart matching Figma */}
+            <div className="mt-6 w-full h-56 relative flex items-center">
               <svg
-                viewBox="0 0 600 200"
+                viewBox="0 0 650 200"
                 className="w-full h-full overflow-visible"
                 preserveAspectRatio="none"
               >
                 <defs>
-                  <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#16a34a" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#16a34a" stopOpacity="0.0" />
+                  <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#107E44" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="#107E44" stopOpacity="0.0" />
                   </linearGradient>
                 </defs>
 
-                {/* Y-axis gridlines & labels */}
-                <g className="text-[10px] fill-gray-400">
-                  <line x1="45" y1="20" x2="590" y2="20" stroke="#f3f4f6" strokeWidth="1" strokeDasharray="3 3" />
-                  <text x="35" y="24" textAnchor="end">₱80K</text>
+                {/* Horizontal Grid lines */}
+                {[170, 130, 90, 50, 15].map((y, idx) => (
+                  <line
+                    key={idx}
+                    x1="45"
+                    y1={y}
+                    x2="630"
+                    y2={y}
+                    stroke="#F1F5F9"
+                    strokeDasharray="4 4"
+                    strokeWidth="1"
+                  />
+                ))}
 
-                  <line x1="45" y1="60" x2="590" y2="60" stroke="#f3f4f6" strokeWidth="1" strokeDasharray="3 3" />
-                  <text x="35" y="64" textAnchor="end">₱60K</text>
+                {/* Y-Axis Labels */}
+                <text x="10" y="20" fill="#94A3B8" fontSize="10" fontWeight="500">₱10k</text>
+                <text x="10" y="55" fill="#94A3B8" fontSize="10" fontWeight="500">₱8k</text>
+                <text x="10" y="95" fill="#94A3B8" fontSize="10" fontWeight="500">₱6k</text>
+                <text x="10" y="135" fill="#94A3B8" fontSize="10" fontWeight="500">₱4k</text>
+                <text x="10" y="175" fill="#94A3B8" fontSize="10" fontWeight="500">₱0</text>
 
-                  <line x1="45" y1="100" x2="590" y2="100" stroke="#f3f4f6" strokeWidth="1" strokeDasharray="3 3" />
-                  <text x="35" y="104" textAnchor="end">₱40K</text>
-
-                  <line x1="45" y1="140" x2="590" y2="140" stroke="#f3f4f6" strokeWidth="1" strokeDasharray="3 3" />
-                  <text x="35" y="144" textAnchor="end">₱20K</text>
-
-                  <line x1="45" y1="180" x2="590" y2="180" stroke="#e5e7eb" strokeWidth="1" />
-                  <text x="35" y="184" textAnchor="end">₱0</text>
-                </g>
-
-                {/* Shaded Area Fill */}
+                {/* Area under curve */}
                 <path
-                  d="M 60 120 C 130 90, 160 115, 230 115 C 290 115, 330 85, 390 85 C 440 85, 490 50, 560 55 L 560 180 L 60 180 Z"
-                  fill="url(#salesGrad)"
+                  d="M 65 125 C 110 120, 130 90, 160 90 C 200 90, 230 110, 260 110 C 300 110, 330 65, 360 65 C 400 65, 430 75, 460 75 C 490 75, 530 40, 575 40 L 575 175 L 65 175 Z"
+                  fill="url(#trendGradient)"
                 />
 
-                {/* Green Trend Line */}
+                {/* Trend Stroke line */}
                 <path
-                  d="M 60 120 C 130 90, 160 115, 230 115 C 290 115, 330 85, 390 85 C 440 85, 490 50, 560 55"
+                  d="M 65 125 C 110 120, 130 90, 160 90 C 200 90, 230 110, 260 110 C 300 110, 330 65, 360 65 C 400 65, 430 75, 460 75 C 490 75, 530 40, 575 40"
                   fill="none"
-                  stroke="#00580C"
+                  stroke="#107E44"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                 />
 
-                {/* Data Points on Line */}
-                {[
-                  { cx: 60, cy: 120, label: "Mon" },
-                  { cx: 145, cy: 102, label: "Tue" },
-                  { cx: 230, cy: 115, label: "Wed" },
-                  { cx: 310, cy: 100, label: "Thu" },
-                  { cx: 390, cy: 85, label: "Fri" },
-                  { cx: 475, cy: 70, label: "Sat" },
-                  { cx: 560, cy: 55, label: "Sun", isCurrent: true },
-                ].map((pt, i) => (
-                  <g key={i}>
-                    <circle
-                      cx={pt.cx}
-                      cy={pt.cy}
-                      r="4"
-                      fill="#ffffff"
-                      stroke="#00580C"
-                      strokeWidth="2.5"
-                    />
-                    <text
-                      x={pt.cx}
-                      y="196"
-                      textAnchor="middle"
-                      className={`text-[11px] ${
-                        pt.isCurrent
-                          ? "fill-[#00580C] font-bold"
-                          : "fill-gray-500 font-medium"
-                      }`}
-                    >
-                      {pt.label}
-                    </text>
-                  </g>
-                ))}
+                {/* Circles on data points */}
+                <circle cx="65" cy="125" r="4" fill="#FFFFFF" stroke="#107E44" strokeWidth="2.5" />
+                <circle cx="160" cy="90" r="4" fill="#FFFFFF" stroke="#107E44" strokeWidth="2.5" />
+                <circle cx="260" cy="110" r="4" fill="#FFFFFF" stroke="#107E44" strokeWidth="2.5" />
+                <circle cx="360" cy="65" r="4" fill="#FFFFFF" stroke="#107E44" strokeWidth="2.5" />
+                <circle cx="460" cy="75" r="4" fill="#FFFFFF" stroke="#107E44" strokeWidth="2.5" />
+                <circle cx="575" cy="40" r="4.5" fill="#107E44" stroke="#FFFFFF" strokeWidth="2" />
 
-                {/* Tooltip Badge on Sunday */}
-                <g transform="translate(525, 12)">
-                  <rect
-                    width="70"
-                    height="24"
-                    rx="6"
-                    fill="#00580C"
-                  />
-                  <text
-                    x="35"
-                    y="16"
-                    textAnchor="middle"
-                    fill="#ffffff"
-                    fontSize="11"
-                    fontWeight="bold"
-                  >
-                    ₱67,500 ⌄
+                {/* Tooltip on last node */}
+                <g transform="translate(540, 10)">
+                  <rect width="68" height="22" rx="6" fill="#0C4E2B" />
+                  <text x="34" y="14" fill="#FFFFFF" fontSize="9" fontWeight="700" textAnchor="middle">
+                    ₱67,500 ▾
                   </text>
                 </g>
+
+                {/* X-Axis Labels */}
+                <text x="65" y="194" fill="#94A3B8" fontSize="10" fontWeight="500" textAnchor="middle">Mon</text>
+                <text x="160" y="194" fill="#94A3B8" fontSize="10" fontWeight="500" textAnchor="middle">Tue</text>
+                <text x="260" y="194" fill="#94A3B8" fontSize="10" fontWeight="500" textAnchor="middle">Wed</text>
+                <text x="360" y="194" fill="#94A3B8" fontSize="10" fontWeight="500" textAnchor="middle">Thu</text>
+                <text x="460" y="194" fill="#94A3B8" fontSize="10" fontWeight="500" textAnchor="middle">Fri</text>
+                <text x="520" y="194" fill="#94A3B8" fontSize="10" fontWeight="500" textAnchor="middle">Sat</text>
+                <text x="575" y="194" fill="#107E44" fontSize="10" fontWeight="700" textAnchor="middle">Sun</text>
               </svg>
             </div>
           </div>
 
-          <div className="flex justify-end pt-3 mt-3 border-t border-gray-100">
+          <div className="flex justify-end pt-3 border-t border-gray-50 mt-2">
             <button
               onClick={() => navigate("/retailer/sales-history")}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#00580C] hover:text-emerald-800 transition-colors cursor-pointer"
+              className="text-xs font-semibold text-[#107E44] hover:text-[#0C4E2B] flex items-center gap-1 cursor-pointer"
             >
-              <span>View Sales History</span>
-              <ArrowRight size={13} />
+              View Sales History &rarr;
             </button>
           </div>
         </div>
 
-        {/* Right: Inventory Status (1 col) */}
-        <div className="bg-white border border-gray-200/90 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+        {/* Inventory Status Donut Chart (approx 4 cols) */}
+        <div className="lg:col-span-4 bg-white rounded-2xl border border-gray-100 p-5 shadow-2xs flex flex-col justify-between">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Inventory Status</h2>
-            <p className="text-xs text-gray-500 mb-4">
+            <h3 className="font-bold text-gray-900 text-sm md:text-base">
+              Inventory Status
+            </h3>
+            <p className="text-xs text-gray-400 mt-0.5">
               Current availability of your retail products.
             </p>
 
             {/* Donut Chart */}
-            <div className="relative flex items-center justify-center my-4">
-              <svg width="160" height="160" viewBox="0 0 160 160" className="rotate-[-90deg]">
-                {/* Background Ring */}
+            <div className="py-6 flex flex-col items-center justify-center relative">
+              <svg width="150" height="150" viewBox="0 0 100 100" className="-rotate-90">
+                {/* Out of stock segment (Red ~9%) */}
                 <circle
-                  cx="80"
-                  cy="80"
-                  r="62"
+                  cx="50"
+                  cy="50"
+                  r="38"
                   fill="transparent"
-                  stroke="#f1f5f9"
-                  strokeWidth="16"
-                />
-                {/* In Stock Arc (75% -> 292 of 389.5) */}
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="62"
-                  fill="transparent"
-                  stroke="#16a34a"
-                  strokeWidth="16"
-                  strokeDasharray="292 390"
+                  stroke="#F43F5E"
+                  strokeWidth="11"
+                  strokeDasharray="238.76"
                   strokeDashoffset="0"
                 />
-                {/* Low Stock Arc (16% -> 62 of 390) */}
+                {/* Low stock segment (Amber ~16%) */}
                 <circle
-                  cx="80"
-                  cy="80"
-                  r="62"
+                  cx="50"
+                  cy="50"
+                  r="38"
                   fill="transparent"
-                  stroke="#f59e0b"
-                  strokeWidth="16"
-                  strokeDasharray="62 390"
-                  strokeDashoffset="-292"
+                  stroke="#F59E0B"
+                  strokeWidth="11"
+                  strokeDasharray="238.76"
+                  strokeDashoffset="21.5"
                 />
-                {/* Out of Stock Arc (9% -> 36 of 390) */}
+                {/* In stock segment (Emerald ~75%) */}
                 <circle
-                  cx="80"
-                  cy="80"
-                  r="62"
+                  cx="50"
+                  cy="50"
+                  r="38"
                   fill="transparent"
-                  stroke="#ef4444"
-                  strokeWidth="16"
-                  strokeDasharray="36 390"
-                  strokeDashoffset="-354"
+                  stroke="#107E44"
+                  strokeWidth="11"
+                  strokeDasharray="238.76"
+                  strokeDashoffset="60"
                 />
               </svg>
-
-              {/* Center Donut Text */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-3xl font-extrabold text-gray-900 tracking-tight leading-none">
-                  56
-                </span>
-                <span className="text-[9.5px] font-bold text-gray-400 tracking-wider uppercase mt-1">
+              {/* Inner Center Label */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                <span className="text-2xl font-black text-gray-900 leading-tight">56</span>
+                <span className="text-[9px] font-bold tracking-wider text-gray-400 uppercase">
                   TOTAL PRODUCTS
                 </span>
               </div>
             </div>
 
             {/* Legend */}
-            <div className="space-y-2 mt-4 px-2">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2 text-gray-700">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
-                  <span>In Stock</span>
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#107E44]"></span>
+                  <span className="text-gray-600">In Stock</span>
                 </div>
-                <span className="font-bold text-gray-900">42 (75%)</span>
+                <span className="font-semibold text-gray-900">42 (75%)</span>
               </div>
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2 text-gray-700">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                  <span>Low Stock</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                  <span className="text-gray-600">Low Stock</span>
                 </div>
-                <span className="font-bold text-gray-900">9 (16%)</span>
+                <span className="font-semibold text-gray-900">9 (16%)</span>
               </div>
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2 text-gray-700">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                  <span>Out of Stock</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                  <span className="text-gray-600">Out of Stock</span>
                 </div>
-                <span className="font-bold text-gray-900">5 (9%)</span>
+                <span className="font-semibold text-gray-900">5 (9%)</span>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end pt-3 mt-4 border-t border-gray-100">
+          <div className="flex justify-end pt-4 border-t border-gray-50 mt-4">
             <button
               onClick={() => navigate("/retailer/inventory")}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#00580C] hover:text-emerald-800 transition-colors cursor-pointer"
+              className="text-xs font-semibold text-[#107E44] hover:text-[#0C4E2B] flex items-center gap-1 cursor-pointer"
             >
-              <span>View Inventory</span>
-              <ArrowRight size={13} />
+              View Inventory &rarr;
             </button>
           </div>
         </div>
       </div>
 
-      {/* ── Active Orders & Stock Attention (2 Columns) ──────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Active Orders (2 cols) */}
-        <div className="lg:col-span-2 bg-white border border-gray-200/90 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+      {/* ── Row 3: Active Orders (Left) & Stock Attention (Right) ──────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Active Orders (8 cols) */}
+        <div className="lg:col-span-8 bg-white rounded-2xl border border-gray-100 p-5 shadow-2xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-start justify-between mb-4">
               <div>
-                <h2 className="text-base font-bold text-gray-900">Active Orders</h2>
-                <p className="text-xs text-gray-500">
+                <h3 className="font-bold text-gray-900 text-sm md:text-base">
+                  Active Orders
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">
                   Latest warehouse orders that are still being fulfilled.
                 </p>
               </div>
               <span className="text-xs text-gray-400 font-medium">3 of 7 shown</span>
             </div>
 
-            {/* Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-gray-100 text-[10.5px] font-bold text-gray-400 uppercase tracking-wider">
-                    <th className="pb-3 font-bold">ORDER NO.</th>
-                    <th className="pb-3 font-bold">WAREHOUSE</th>
-                    <th className="pb-3 font-bold">PRODUCT</th>
-                    <th className="pb-3 font-bold">QUANTITY</th>
-                    <th className="pb-3 font-bold">TOTAL</th>
-                    <th className="pb-3 font-bold">STATUS</th>
-                    <th className="pb-3 font-bold text-right">ACTION</th>
+              <table className="w-full text-xs text-left">
+                <thead className="text-[10px] font-bold text-gray-400 uppercase border-b border-gray-100">
+                  <tr>
+                    <th className="pb-3 font-semibold">ORDER NO.</th>
+                    <th className="pb-3 font-semibold">WAREHOUSE</th>
+                    <th className="pb-3 font-semibold">PRODUCT</th>
+                    <th className="pb-3 font-semibold">QUANTITY</th>
+                    <th className="pb-3 font-semibold">TOTAL</th>
+                    <th className="pb-3 font-semibold">STATUS</th>
+                    <th className="pb-3 font-semibold text-right">ACTION</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {activeOrders.map((ord, i) => (
-                    <tr key={i} className="hover:bg-gray-50/70 transition-colors">
-                      <td className="py-3.5 font-semibold text-gray-900">
-                        {ord.orderNo}
-                      </td>
-                      <td className="py-3.5 text-gray-600">{ord.warehouse}</td>
-                      <td className="py-3.5 text-gray-800 font-medium">
-                        {ord.product}
-                      </td>
-                      <td className="py-3.5 text-gray-600">{ord.quantity}</td>
-                      <td className="py-3.5 font-bold text-gray-900">{ord.total}</td>
-                      <td className="py-3.5">
-                        {ord.statusType === "preparing" && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                            {ord.status}
-                          </span>
-                        )}
-                        {ord.statusType === "in-transit" && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                            {ord.status}
-                          </span>
-                        )}
-                        {ord.statusType === "processing" && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-teal-50 text-teal-800 border border-teal-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
-                            {ord.status}
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3.5 text-right">
-                        <button
-                          onClick={() => navigate("/retailer/order-tracking")}
-                          className="text-[#00580C] hover:underline font-semibold text-xs cursor-pointer"
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-gray-50">
+                  {/* Order 1 */}
+                  <tr className="hover:bg-gray-50/60 transition-colors">
+                    <td className="py-3.5 font-medium text-gray-900">
+                      WR-<br className="sm:hidden"/>2026-021
+                    </td>
+                    <td className="py-3.5 text-gray-600">Warehouse ABC</td>
+                    <td className="py-3.5 font-medium text-gray-900">Dinorado</td>
+                    <td className="py-3.5 text-gray-600">500 kg</td>
+                    <td className="py-3.5 font-bold text-gray-900">₱21,500</td>
+                    <td className="py-3.5">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-600 border border-amber-200">
+                        Preparing for Delivery
+                      </span>
+                    </td>
+                    <td className="py-3.5 text-right">
+                      <button
+                        onClick={() => navigate("/retailer/order-tracking")}
+                        className="text-[#107E44] hover:underline font-semibold cursor-pointer"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+
+                  {/* Order 2 */}
+                  <tr className="hover:bg-gray-50/60 transition-colors">
+                    <td className="py-3.5 font-medium text-gray-900">
+                      WR-<br className="sm:hidden"/>2026-019
+                    </td>
+                    <td className="py-3.5 text-gray-600">North Caloocan Warehouse</td>
+                    <td className="py-3.5 font-medium text-gray-900">Jasmine Rice</td>
+                    <td className="py-3.5 text-gray-600">350 kg</td>
+                    <td className="py-3.5 font-bold text-gray-900">₱15,820</td>
+                    <td className="py-3.5">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-600 border border-blue-200">
+                        ● In Transit
+                      </span>
+                    </td>
+                    <td className="py-3.5 text-right">
+                      <button
+                        onClick={() => navigate("/retailer/order-tracking")}
+                        className="text-[#107E44] hover:underline font-semibold cursor-pointer"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+
+                  {/* Order 3 */}
+                  <tr className="hover:bg-gray-50/60 transition-colors">
+                    <td className="py-3.5 font-medium text-gray-900">
+                      WR-<br className="sm:hidden"/>2026-017
+                    </td>
+                    <td className="py-3.5 text-gray-600">Warehouse XYZ</td>
+                    <td className="py-3.5 font-medium text-gray-900">Sinandomeng</td>
+                    <td className="py-3.5 text-gray-600">250 kg</td>
+                    <td className="py-3.5 font-bold text-gray-900">₱14,500</td>
+                    <td className="py-3.5">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-200">
+                        ● Processing
+                      </span>
+                    </td>
+                    <td className="py-3.5 text-right">
+                      <button
+                        onClick={() => navigate("/retailer/order-tracking")}
+                        className="text-[#107E44] hover:underline font-semibold cursor-pointer"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          <div className="flex justify-end pt-3 mt-4 border-t border-gray-100">
+          <div className="flex justify-end pt-3 border-t border-gray-50 mt-2">
             <button
               onClick={() => navigate("/retailer/order-tracking")}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#00580C] hover:text-emerald-800 transition-colors cursor-pointer"
+              className="text-xs font-semibold text-[#107E44] hover:text-[#0C4E2B] flex items-center gap-1 cursor-pointer"
             >
-              <span>View Order Tracking</span>
-              <ArrowRight size={13} />
+              View Order Tracking &rarr;
             </button>
           </div>
         </div>
 
-        {/* Right: Stock Attention (1 col) */}
-        <div className="bg-white border border-gray-200/90 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+        {/* Stock Attention (4 cols) */}
+        <div className="lg:col-span-4 bg-white rounded-2xl border border-gray-100 p-5 shadow-2xs flex flex-col justify-between">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Stock Attention</h2>
-            <p className="text-xs text-gray-500 mb-4">
+            <h3 className="font-bold text-gray-900 text-sm md:text-base">
+              Stock Attention
+            </h3>
+            <p className="text-xs text-gray-400 mt-0.5">
               Products that may need to be replenished soon.
             </p>
 
-            <div className="divide-y divide-gray-100">
-              {stockAttention.map((item, i) => (
-                <div key={i} className="py-3.5 flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-xs font-bold text-gray-900">{item.name}</h3>
-                    <p className="text-[11.5px] text-gray-500 mt-0.5">{item.stock}</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
-                        item.statusType === "low"
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-rose-100 text-rose-800"
-                      }`}
-                    >
-                      {item.status}
-                    </span>
-                    <button
-                      onClick={() => navigate("/retailer/warehouse-marketplace")}
-                      className="text-xs font-semibold text-[#00580C] hover:underline cursor-pointer"
-                    >
-                      Find Stock &rarr;
-                    </button>
-                  </div>
+            <div className="mt-4 divide-y divide-gray-50 space-y-3">
+              {/* Item 1 */}
+              <div className="pt-2 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-gray-900">Dinorado Premium</p>
+                  <p className="text-[11px] text-gray-400">10 kg remaining</p>
                 </div>
-              ))}
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200">
+                    Low Stock
+                  </span>
+                  <button
+                    onClick={() => navigate("/retailer/warehouse-marketplace")}
+                    className="text-xs font-semibold text-[#107E44] hover:underline flex items-center cursor-pointer"
+                  >
+                    Find Stock &rarr;
+                  </button>
+                </div>
+              </div>
+
+              {/* Item 2 */}
+              <div className="pt-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-gray-900">Sinandomeng Special</p>
+                  <p className="text-[11px] text-gray-400">5 kg remaining</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200">
+                    Low Stock
+                  </span>
+                  <button
+                    onClick={() => navigate("/retailer/warehouse-marketplace")}
+                    className="text-xs font-semibold text-[#107E44] hover:underline flex items-center cursor-pointer"
+                  >
+                    Find Stock &rarr;
+                  </button>
+                </div>
+              </div>
+
+              {/* Item 3 */}
+              <div className="pt-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-gray-900">Jasmine Fragrant Rice</p>
+                  <p className="text-[11px] text-rose-500 font-medium">0 kg in warehouse</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200">
+                    Out of Stock
+                  </span>
+                  <button
+                    onClick={() => navigate("/retailer/warehouse-marketplace")}
+                    className="text-xs font-semibold text-[#107E44] hover:underline flex items-center cursor-pointer"
+                  >
+                    Find Stock &rarr;
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="mt-4 pt-2">
+          <div className="mt-5">
             <button
               onClick={() => navigate("/retailer/warehouse-marketplace")}
-              className="w-full py-2.5 px-4 bg-[#eaf7ed] hover:bg-[#dcf2e1] text-[#15803d] font-bold text-xs rounded-xl transition-colors text-center cursor-pointer"
+              className="w-full py-2 bg-emerald-50/80 hover:bg-emerald-100/80 text-[#107E44] border border-emerald-200 text-xs font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
             >
               Browse Warehouse Marketplace &rarr;
             </button>
@@ -646,114 +530,245 @@ export default function RetailerDashboard() {
         </div>
       </div>
 
-      {/* ── Pending Actions (Full Width Card) ─────────────────────────────────── */}
-      <div className="bg-white border border-gray-200/90 rounded-xl p-5 sm:p-6 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
+      {/* ── Row 4: Pending Actions (Full width) ───────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-2xs">
+        <div className="flex items-start justify-between mb-4">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Pending Actions</h2>
-            <p className="text-xs text-gray-500">
+            <h3 className="font-bold text-gray-900 text-sm md:text-base">
+              Pending Actions
+            </h3>
+            <p className="text-xs text-gray-400 mt-0.5">
               Items that may require your immediate review or follow-up.
             </p>
           </div>
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
             4 Attention Items
           </span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-gray-100 text-[10.5px] font-bold text-gray-400 uppercase tracking-wider">
-                <th className="pb-3 font-bold">TYPE</th>
-                <th className="pb-3 font-bold">REFERENCE</th>
-                <th className="pb-3 font-bold">DETAILS</th>
-                <th className="pb-3 font-bold">STATUS</th>
-                <th className="pb-3 font-bold">UPDATED</th>
-                <th className="pb-3 font-bold text-right">ACTION</th>
+          <table className="w-full text-xs text-left">
+            <thead className="text-[10px] font-bold text-gray-400 uppercase border-b border-gray-100">
+              <tr>
+                <th className="pb-3 font-semibold">TYPE</th>
+                <th className="pb-3 font-semibold">REFERENCE</th>
+                <th className="pb-3 font-semibold">DETAILS</th>
+                <th className="pb-3 font-semibold">STATUS</th>
+                <th className="pb-3 font-semibold">UPDATED</th>
+                <th className="pb-3 font-semibold text-right">ACTION</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {pendingActions.map((row, i) => (
-                <tr key={i} className="hover:bg-gray-50/70 transition-colors">
-                  <td className="py-3.5">
-                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${row.typeColor}`}>
-                      {row.type}
-                    </span>
-                  </td>
-                  <td className="py-3.5 font-semibold text-gray-900">{row.ref}</td>
-                  <td className="py-3.5 text-gray-600 font-medium">{row.details}</td>
-                  <td className="py-3.5">
-                    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${row.statusText}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${row.statusDot}`} />
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="py-3.5 text-gray-500">{row.updated}</td>
-                  <td className="py-3.5 text-right">
-                    {row.actionVariant === "green-outline" ? (
-                      <button
-                        onClick={row.actionClick}
-                        className="px-3 py-1 text-xs font-bold text-[#00580C] bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200 cursor-pointer"
-                      >
-                        {row.actionText}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={row.actionClick}
-                        className="px-3 py-1 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 rounded-lg transition-colors border border-gray-200 cursor-pointer"
-                      >
-                        {row.actionText}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+            <tbody className="divide-y divide-gray-50">
+              {/* Row 1 */}
+              <tr className="hover:bg-gray-50/60 transition-colors">
+                <td className="py-3.5">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                    Low Stock
+                  </span>
+                </td>
+                <td className="py-3.5 font-medium text-gray-900">WR-001</td>
+                <td className="py-3.5 text-gray-700">Dinorado - 10 kg remaining</td>
+                <td className="py-3.5">
+                  <span className="flex items-center gap-1.5 text-amber-600 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    Low Stock
+                  </span>
+                </td>
+                <td className="py-3.5 text-gray-400">10 mins ago</td>
+                <td className="py-3.5 text-right">
+                  <button
+                    onClick={() => navigate("/retailer/inventory")}
+                    className="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold cursor-pointer"
+                  >
+                    View Inventory
+                  </button>
+                </td>
+              </tr>
+
+              {/* Row 2 */}
+              <tr className="hover:bg-gray-50/60 transition-colors">
+                <td className="py-3.5">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                    Order
+                  </span>
+                </td>
+                <td className="py-3.5 font-medium text-gray-900">ORD-2026-0021</td>
+                <td className="py-3.5 text-gray-700">Warehouse ABC - Dinorado - 500 kg</td>
+                <td className="py-3.5">
+                  <span className="flex items-center gap-1.5 text-amber-600 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    Preparing for Delivery
+                  </span>
+                </td>
+                <td className="py-3.5 text-gray-400">25 mins ago</td>
+                <td className="py-3.5 text-right">
+                  <button
+                    onClick={() => navigate("/retailer/order-tracking")}
+                    className="px-3 py-1 rounded-lg border border-emerald-300 text-[#107E44] bg-emerald-50/50 hover:bg-emerald-50 font-semibold cursor-pointer"
+                  >
+                    Track
+                  </button>
+                </td>
+              </tr>
+
+              {/* Row 3 */}
+              <tr className="hover:bg-gray-50/60 transition-colors">
+                <td className="py-3.5">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                    Return Issue
+                  </span>
+                </td>
+                <td className="py-3.5 font-medium text-gray-900">RET-2026-0015</td>
+                <td className="py-3.5 text-gray-700">Damaged packaging - 100 kg</td>
+                <td className="py-3.5">
+                  <span className="flex items-center gap-1.5 text-rose-600 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    Under Review
+                  </span>
+                </td>
+                <td className="py-3.5 text-gray-400">1 hr ago</td>
+                <td className="py-3.5 text-right">
+                  <button
+                    onClick={() => navigate("/retailer/product-returns")}
+                    className="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold cursor-pointer"
+                  >
+                    View
+                  </button>
+                </td>
+              </tr>
+
+              {/* Row 4 */}
+              <tr className="hover:bg-gray-50/60 transition-colors">
+                <td className="py-3.5">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                    Message
+                  </span>
+                </td>
+                <td className="py-3.5 font-medium text-gray-900">Warehouse ABC</td>
+                <td className="py-3.5 text-gray-700">New message regarding ORD-2026-0021</td>
+                <td className="py-3.5">
+                  <span className="flex items-center gap-1.5 text-teal-600 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
+                    Unread
+                  </span>
+                </td>
+                <td className="py-3.5 text-gray-400">2 hrs ago</td>
+                <td className="py-3.5 text-right">
+                  <button
+                    onClick={() => navigate("/retailer/messages")}
+                    className="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold cursor-pointer"
+                  >
+                    Open
+                  </button>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* ── Recent Activity (Full Width Card) ─────────────────────────────────── */}
-      <div className="bg-white border border-gray-200/90 rounded-xl p-5 sm:p-6 shadow-xs">
-        <div className="flex items-center justify-between mb-5">
+      {/* ── Row 5: Recent Activity (Full width) ──────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-2xs">
+        <div className="flex items-start justify-between mb-4">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Recent Activity</h2>
-            <p className="text-xs text-gray-500">
+            <h3 className="font-bold text-gray-900 text-sm md:text-base">
+              Recent Activity
+            </h3>
+            <p className="text-xs text-gray-400 mt-0.5">
               Latest operational logs across POS, inventory, and fulfillment.
             </p>
           </div>
           <button
             onClick={() => navigate("/retailer/sales-history")}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-[#00580C] hover:text-emerald-800 transition-colors cursor-pointer"
+            className="text-xs font-semibold text-[#107E44] hover:text-[#0C4E2B] flex items-center gap-1 cursor-pointer"
           >
-            <span>View Activity History</span>
-            <ArrowRight size={13} />
+            View Activity History &rarr;
           </button>
         </div>
 
-        {/* Timeline Log */}
-        <div className="relative pl-6 space-y-6 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[1.5px] before:bg-gray-200">
-          {recentActivities.map((act, i) => (
-            <div key={i} className="relative flex items-start justify-between gap-4">
-              {/* Dot Icon on Line */}
-              <div
-                className={`absolute -left-6 top-0.5 w-6 h-6 rounded-full ${act.bgIcon} flex items-center justify-center ring-4 ring-white shadow-xs`}
-              >
-                {act.icon}
+        <div className="space-y-4 pt-1">
+          {/* Item 1 */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-[#107E44] text-white flex items-center justify-center shrink-0 mt-0.5">
+                <CheckCircle2 size={13} strokeWidth={2.5} />
               </div>
-
-              {/* Content */}
-              <div className="pl-3">
-                <h3 className="text-xs font-bold text-gray-900">{act.title}</h3>
-                <p className="text-xs text-gray-600 mt-0.5">{act.desc}</p>
+              <div>
+                <p className="text-xs font-bold text-gray-900">Sale Completed</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Receipt <strong className="text-gray-700">POS-2026-0184</strong> &middot; Dinorado &middot; ₱22,500
+                </p>
               </div>
-
-              {/* Time */}
-              <span className="text-[11.5px] font-medium text-gray-400 shrink-0">
-                {act.time}
-              </span>
             </div>
-          ))}
+            <span className="text-[11px] text-gray-400 whitespace-nowrap">5 mins ago</span>
+          </div>
+
+          {/* Item 2 */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                <RefreshCw size={12} strokeWidth={2.5} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-900">Inventory Updated</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Dinorado stock reduced after completed POS transaction
+                </p>
+              </div>
+            </div>
+            <span className="text-[11px] text-gray-400 whitespace-nowrap">8 mins ago</span>
+          </div>
+
+          {/* Item 3 */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+                <Truck size={12} strokeWidth={2.5} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-900">Order Status Updated</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  <strong className="text-gray-700">ORD-2026-0021</strong> is now{" "}
+                  <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                    Preparing for Delivery
+                  </span>
+                </p>
+              </div>
+            </div>
+            <span className="text-[11px] text-gray-400 whitespace-nowrap">32 mins ago</span>
+          </div>
+
+          {/* Item 4 */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-teal-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                <PackageCheck size={12} strokeWidth={2.5} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-900">Purchase Received</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  500 kg Dinorado received from Warehouse ABC into local store
+                </p>
+              </div>
+            </div>
+            <span className="text-[11px] text-gray-400 whitespace-nowrap">1 hr ago</span>
+          </div>
+
+          {/* Item 5 */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                <RotateCcw size={12} strokeWidth={2.5} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-900">Return Resolved</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  <strong className="text-gray-700">RET-2026-0012</strong> has been marked as resolved and credited to account
+                </p>
+              </div>
+            </div>
+            <span className="text-[11px] text-gray-400 whitespace-nowrap">3 hrs ago</span>
+          </div>
         </div>
       </div>
     </div>

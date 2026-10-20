@@ -209,46 +209,88 @@ const AdminNewsUpdates = () => {
           confirmState.kind ===
           "fetch"
         ) {
-          const response =
-            await fetchLatestNews();
-          await loadNewsSyncStatus();
+          try {
+            if (typeof navigator !== "undefined" && !navigator.onLine) {
+              showToast({
+                type: "error",
+                title: "Network Error",
+                message: "Cannot connect to the news API. Please check your network connection.",
+                duration: 5000,
+              });
+              setConfirmState(null);
+              return;
+            }
 
-          const syncResult =
-            response?.data?.sync_result;
-          const created =
-            Number(
-              syncResult?.articles_created || 0
-            );
-          const updated =
-            Number(
-              syncResult?.articles_updated || 0
-            );
+            const response =
+              await fetchLatestNews();
+            await loadNewsSyncStatus();
 
-          if (created > 0) {
-            refreshManageList();
-            await loadAdminArticles({
-              page: 1,
-              page_size: 12,
-            }).catch(() => {});
+            const syncResult =
+              response?.data?.sync_result;
+            const created =
+              Number(
+                syncResult?.articles_created || 0
+              );
+            const updated =
+              Number(
+                syncResult?.articles_updated || 0
+              );
+            const received =
+              Number(
+                syncResult?.articles_received || 0
+              );
 
-            showToast({
-              type: "success",
-              title: "News Updated",
-              message:
-                response?.message ||
-                `${created} new article(s) added. ${updated} existing article(s) updated.`,
-              duration: 4000,
-            });
-          } else {
-            showToast({
-              type: "warning",
-              title: "No New Articles",
-              message:
-                response?.message ||
-                `No new articles found. ${updated} existing article(s) updated.`,
-              duration: 5000,
-            });
+            if (created > 0 || updated > 0 || received > 0) {
+              refreshManageList();
+              await loadAdminArticles({
+                page: 1,
+                page_size: 12,
+              }).catch(() => {});
+
+              showToast({
+                type: "success",
+                title: "Success",
+                message: "Latest news fetched successfully.",
+                duration: 4000,
+              });
+            } else {
+              showToast({
+                type: "warning",
+                title: "No Data",
+                message: "No latest news is currently available.",
+                duration: 5000,
+              });
+            }
+          } catch (error) {
+            const isNetworkError =
+              (typeof navigator !== "undefined" && !navigator.onLine) ||
+              error?.name === "TypeError" ||
+              /network|connection|failed to fetch|offline|cors/i.test(
+                error?.message || ""
+              ) ||
+              error?.status === 502 ||
+              error?.status === 503 ||
+              error?.status === 504;
+
+            if (isNetworkError) {
+              showToast({
+                type: "error",
+                title: "Network Error",
+                message: "Cannot connect to the news API. Please check your network connection.",
+                duration: 5000,
+              });
+            } else {
+              showToast({
+                type: "error",
+                title: "Error",
+                message: "Failed to fetch the latest news. Please try again.",
+                duration: 5000,
+              });
+            }
           }
+
+          setConfirmState(null);
+          return;
         }
 
         else if (

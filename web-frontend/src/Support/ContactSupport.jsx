@@ -117,16 +117,11 @@ export default function ContactSupport() {
             <ArrowLeft size={16} />
             <span>Back to GrainRise Home</span>
           </button>
-          <div className="support-top-badge">
-            <span className="support-top-badge__dot" />
-            <span>Public Knowledge Base</span>
-          </div>
         </div>
 
         {/* Hero Card Banner */}
         <AnimatedSection className="support-hero-card" animation="fade-up">
           <div className="support-hero-content">
-            <span className="support-pill-tag">HELP & SUPPORT</span>
             <h1 className="support-hero-title">Contact Support</h1>
             <p className="support-hero-desc">
               Need additional help? Send your concern to the GrainRise Support Team and provide the details we need to assist you.

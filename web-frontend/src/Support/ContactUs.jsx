@@ -101,16 +101,11 @@ export default function ContactUs() {
             <ArrowLeft size={16} />
             <span>Back to GrainRise Home</span>
           </button>
-          <div className="support-top-badge">
-            <span className="support-top-badge__dot" />
-            <span>Public Inquiries & Information</span>
-          </div>
         </div>
 
         {/* Hero Card Banner */}
         <AnimatedSection className="support-hero-card" animation="fade-up">
           <div className="support-hero-content">
-            <span className="support-pill-tag">GET IN TOUCH</span>
             <h1 className="support-hero-title">Contact Us</h1>
             <p className="support-hero-desc">
               Have a question about GrainRise, want to learn more about the platform, or interested in working with us? We'd be glad to hear from you.
@@ -401,10 +396,6 @@ export default function ContactUs() {
         {/* Technical Help Desk Banner */}
         <div className="support-tech-banner">
           <div className="support-tech-banner__left">
-            <div className="support-tech-badge">
-              <ShieldCheck size={14} />
-              <span>TECHNICAL HELP DESK</span>
-            </div>
             <h3 className="support-tech-title">Looking for Technical Assistance?</h3>
             <p className="support-tech-desc">
               Contact Us is intended for general questions, partnerships, business inquiries, and feedback. If you are experiencing an account, registration, transaction, or technical issue, please use GrainRise Contact Support instead.

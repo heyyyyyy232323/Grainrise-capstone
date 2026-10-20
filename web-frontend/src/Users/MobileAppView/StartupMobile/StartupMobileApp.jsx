@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import StartupMobileSplashScreen from "./StartupMobileSplashScreen";
 import StartupMobileOnboardingView from "./StartupMobileOnboardingView";
 import StartupMobileLoginView from "./StartupMobileLoginView";
+import RetailerMobileRegistrationView from "../RetailerMobile/RetailerMobileRegistrationView";
 
 /**
  * StartupMobileApp
@@ -10,9 +11,10 @@ import StartupMobileLoginView from "./StartupMobileLoginView";
  * 1. Splash Screen
  * 2. 3-Step Onboarding View
  * 3. Mobile Login Screen
+ * 4. Retailer Registration Screen (Figma-matched)
  */
 export default function StartupMobileApp() {
-  const [currentScreen, setCurrentScreen] = useState("splash"); // 'splash' | 'onboarding' | 'login'
+  const [currentScreen, setCurrentScreen] = useState("splash"); // 'splash' | 'onboarding' | 'login' | 'register'
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [toastMessage, setToastMessage] = useState(null);
 
@@ -73,7 +75,18 @@ export default function StartupMobileApp() {
             showToast("Forgot password flow triggered");
           }}
           onRegister={() => {
-            showToast("Register flow triggered");
+            setCurrentScreen("register");
+          }}
+        />
+      )}
+
+      {currentScreen === "register" && (
+        <RetailerMobileRegistrationView
+          onBack={() => setCurrentScreen("login")}
+          onLoginClick={() => setCurrentScreen("login")}
+          onRegistrationComplete={() => {
+            showToast("Registration submitted successfully!");
+            setCurrentScreen("login");
           }}
         />
       )}

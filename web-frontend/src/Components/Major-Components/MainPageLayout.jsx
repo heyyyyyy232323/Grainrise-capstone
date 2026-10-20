@@ -120,7 +120,7 @@ const MainPageLayout = ({ role = "warehouse_encoder" }) => {
           user={user}
           role={userRole}
           onToggleSidebar={handleToggleSidebar}
-          menuItems={getUserNavbarMenuItems(userRole)}
+          menuItems={getUserNavbarMenuItems(navigate)}
         />
 
         {/* Scrollable Content Area - each page renders inside here */}

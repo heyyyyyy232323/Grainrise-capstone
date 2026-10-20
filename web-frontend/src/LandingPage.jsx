@@ -18,7 +18,6 @@ import {
   Tractor,
   ClipboardCheck,
   ClipboardList,
-  ShieldCheck,
   LogIn,
   UserPlus,
   Building2,
@@ -36,7 +35,7 @@ import {
 
 // Images
 import mockup10 from './assets/10.png';
-import phoneMockup from './assets/phone4.png';
+import phoneMockup from './assets/phone6.png';
 import riceBgImg from './assets/ricee.jpg';
 import heroBgImg from './assets/greenery.jpg';
 import glassImg from './assets/glass.png';
@@ -214,11 +213,6 @@ export default function LandingPage() {
 
         <div className="lp-hero__inner">
           <div className="lp-hero__content">
-            <div className="lp-hero__badge">
-              <ShieldCheck size={15} strokeWidth={2.2} />
-              <span>Centralized System Portal</span>
-            </div>
-
             <h1 className="lp-hero__headline">
               <span>GrainRise Supply Chain</span><br className="lp-hero__line-break" />
               <span>Portal</span>
@@ -267,7 +261,6 @@ export default function LandingPage() {
         
         {/* ── ECOSYSTEM (Fade Up Effect) ─── */}
         <AnimatedSection className="lp-ecosystem" id="ecosystem" animation="fade-up">
-          <div className="lp-ecosystem__badge">How it works</div>
           <h2 className="lp-section-headline lp-section-headline--center">
             Connected Supply Chain Ecosystem
           </h2>
@@ -360,9 +353,6 @@ export default function LandingPage() {
         <AnimatedSection className="lp-partner-cta" id="partner-cta" animation="fade-up">
           <div className="lp-partner-cta__card">
             <div className="lp-partner-cta__content">
-              <div className="lp-partner-cta__badge">
-                Centralized System Portal
-              </div>
               <h2 className="lp-partner-cta__headline">
                 Partner With GrainRise
               </h2>
@@ -433,7 +423,6 @@ export default function LandingPage() {
       <AnimatedSection className="lp-help" id="help" animation="scale">
         <div className="lp-help__inner">
           <div className="lp-help__left">
-            <div className="lp-help__badge">Operational Support</div>
             <h2 className="lp-help__headline">
               Need Help Accessing<br />
               GrainRise?

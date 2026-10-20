@@ -37,7 +37,6 @@ export default function FrequentlyAskedQuestions() {
   const faqSections = [
     {
       id: 'about',
-      tag: 'TOP INQUIRIES',
       title: 'Popular Questions',
       subtitle: 'Start with the questions GrainRise users commonly ask.',
       icon: null,
@@ -66,7 +65,6 @@ export default function FrequentlyAskedQuestions() {
     },
     {
       id: 'account',
-      tag: null,
       title: 'Account & Login',
       subtitle: null,
       icon: <Key size={18} className="faq-section-header-icon" />,
@@ -100,7 +98,6 @@ export default function FrequentlyAskedQuestions() {
     },
     {
       id: 'registration',
-      tag: null,
       title: 'Registration',
       subtitle: null,
       icon: <UserPlus size={18} className="faq-section-header-icon" />,
@@ -134,7 +131,6 @@ export default function FrequentlyAskedQuestions() {
     },
     {
       id: 'using',
-      tag: null,
       title: 'Using GrainRise',
       subtitle: null,
       icon: <LayoutGrid size={18} className="faq-section-header-icon" />,
@@ -163,7 +159,6 @@ export default function FrequentlyAskedQuestions() {
     },
     {
       id: 'transactions',
-      tag: null,
       title: 'Transactions',
       subtitle: null,
       icon: <Receipt size={18} className="faq-section-header-icon" />,
@@ -192,7 +187,6 @@ export default function FrequentlyAskedQuestions() {
     },
     {
       id: 'security',
-      tag: null,
       title: 'Security & Support',
       subtitle: null,
       icon: <ShieldCheck size={18} className="faq-section-header-icon" />,
@@ -253,15 +247,10 @@ export default function FrequentlyAskedQuestions() {
             <ArrowLeft size={16} />
             <span>Back to GrainRise Home</span>
           </button>
-          <div className="support-top-badge">
-            <span className="support-top-badge__dot" />
-            <span>Public Knowledge Base</span>
-          </div>
         </div>
 
         {/* Centered Hero Section */}
         <AnimatedSection className="faq-hero-centered" animation="fade-up">
-          <span className="support-pill-tag">HELP &amp; SUPPORT</span>
           <h1 className="faq-hero-title">Frequently Asked Questions</h1>
           <p className="faq-hero-desc">
             Find quick answers to common questions about GrainRise, account access,
@@ -317,8 +306,6 @@ export default function FrequentlyAskedQuestions() {
           <div className="faq-sections-container">
             {visibleSections.map((sec, idx) => (
               <AnimatedSection key={sec.id} tag="section" className="faq-group-section" animation="fade-up" delay={idx * 60}>
-                {sec.tag && <span className="support-pill-tag" style={{ marginBottom: '8px' }}>{sec.tag}</span>}
-                
                 <div className="faq-group-header">
                   {sec.icon && <div className="faq-group-header__icon">{sec.icon}</div>}
                   <div>

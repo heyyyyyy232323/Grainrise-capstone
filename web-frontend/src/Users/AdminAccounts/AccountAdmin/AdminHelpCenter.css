@@ -1,0 +1,481 @@
+/* ============================================================
+   ADMIN HELP CENTER
+   Matches Figma specifications exactly.
+   ============================================================ */
+
+/* ── Root ────────────────────────────────────────────────── */
+.ahc-root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #1a2e1a;
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+.ahc-header {
+  background: #ffffff;
+  border-bottom: 1.5px solid #d1d5db;
+  padding: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.ahc-header-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 12px 32px;
+  display: flex;
+  align-items: center;
+}
+
+.ahc-logo {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* ── Main ────────────────────────────────────────────────── */
+.ahc-main {
+  flex: 1;
+  padding: 32px 0 0;
+}
+
+.ahc-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 32px 48px;
+}
+
+/* ── Page Title ──────────────────────────────────────────── */
+.ahc-page-title-section {
+  margin-bottom: 20px;
+}
+
+.ahc-page-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px;
+  line-height: 1.2;
+}
+
+.ahc-page-subtitle {
+  font-size: 13.5px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Search Bar ──────────────────────────────────────────── */
+.ahc-search-wrapper {
+  position: relative;
+  margin-bottom: 32px;
+}
+
+.ahc-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.ahc-search-input {
+  width: 100%;
+  padding: 10px 16px 10px 40px;
+  font-size: 13.5px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #374151;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  box-sizing: border-box;
+}
+
+.ahc-search-input::placeholder {
+  color: #9ca3af;
+}
+
+.ahc-search-input:focus {
+  border-color: #059669;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+/* ── Section ─────────────────────────────────────────────── */
+.ahc-section {
+  margin-bottom: 36px;
+}
+
+.ahc-section-title {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 16px;
+}
+
+/* ── Help Topics Grid ────────────────────────────────────── */
+.ahc-topics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.ahc-topic-card {
+  background: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 20px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  cursor: default;
+}
+
+.ahc-topic-card:hover {
+  border-color: #10b981;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.1);
+}
+
+.ahc-topic-icon-wrap {
+  width: 36px;
+  height: 36px;
+  background: #ecfdf5;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.ahc-topic-icon {
+  color: #059669;
+}
+
+.ahc-topic-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 6px;
+  line-height: 1.3;
+}
+
+.ahc-topic-desc {
+  font-size: 11.5px;
+  color: #6b7280;
+  margin: 0 0 14px;
+  line-height: 1.55;
+  flex: 1;
+}
+
+.ahc-topic-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #059669;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  transition: color 0.15s;
+  font-family: inherit;
+}
+
+.ahc-topic-link:hover {
+  color: #047857;
+}
+
+.ahc-topic-link-arrow {
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* ── FAQ ─────────────────────────────────────────────────── */
+.ahc-faq-list {
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.ahc-faq-item {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.ahc-faq-item:last-child {
+  border-bottom: none;
+}
+
+.ahc-faq-question {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  text-align: left;
+  gap: 12px;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+.ahc-faq-question:hover {
+  background: #f9fafb;
+}
+
+.ahc-faq-item--open .ahc-faq-question {
+  background: #f0fdf4;
+}
+
+.ahc-faq-question-text {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #111827;
+  line-height: 1.4;
+}
+
+.ahc-faq-chevron {
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.ahc-faq-item--open .ahc-faq-chevron {
+  color: #059669;
+}
+
+.ahc-faq-answer {
+  padding: 0 20px 16px;
+  background: #f0fdf4;
+  border-top: 1px solid #d1fae5;
+}
+
+.ahc-faq-answer p {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.6;
+}
+
+/* ── Still Need Help Banner ──────────────────────────────── */
+.ahc-still-need-help {
+  background: #ecfdf5;
+  border: 1.5px solid #d1fae5;
+  border-radius: 10px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 8px;
+}
+
+.ahc-still-need-help-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ahc-still-need-help-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.ahc-still-need-help-desc {
+  font-size: 12.5px;
+  color: #4b5563;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.ahc-contact-support-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 20px;
+  background: #059669;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s, box-shadow 0.18s;
+}
+
+.ahc-contact-support-btn:hover {
+  background: #047857;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
+}
+
+.ahc-contact-support-icon {
+  flex-shrink: 0;
+}
+
+/* ── Page Footer (copyright bar) ─────────────────────────── */
+.ahc-page-footer {
+  background: #f9fafb;
+  border-top: 1.5px solid #e5e7eb;
+  padding: 12px 0;
+}
+
+.ahc-page-footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ahc-page-footer-copy {
+  font-size: 11.5px;
+  color: #6b7280;
+}
+
+.ahc-page-footer-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ahc-page-footer-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 11.5px;
+  color: #6b7280;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s;
+}
+
+.ahc-page-footer-link:hover {
+  color: #059669;
+}
+
+.ahc-page-footer-sep {
+  font-size: 11.5px;
+  color: #9ca3af;
+}
+
+.ahc-page-footer-dot {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.ahc-status-indicator {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  flex-shrink: 0;
+}
+
+.ahc-status-label {
+  font-size: 11.5px;
+  color: #6b7280;
+}
+
+/* ── Admin Brand Footer ───────────────────────────────────── */
+.ahc-brand-footer {
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  padding: 14px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.ahc-brand-footer-copy {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.ahc-brand-footer-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ahc-brand-footer-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 11px;
+  color: #9ca3af;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s;
+}
+
+.ahc-brand-footer-link:hover {
+  color: #059669;
+}
+
+.ahc-brand-footer-sep {
+  font-size: 11px;
+  color: #d1d5db;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .ahc-topics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .ahc-container {
+    padding: 0 16px 40px;
+  }
+
+  .ahc-header-inner {
+    padding: 12px 16px;
+  }
+
+  .ahc-topics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ahc-still-need-help {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ahc-page-footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 0 16px;
+  }
+
+  .ahc-brand-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px 16px;
+  }
+
+  .ahc-page-title {
+    font-size: 22px;
+  }
+}

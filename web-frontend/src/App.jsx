@@ -240,6 +240,7 @@ import MillerManagerMessages from "./Users/MillerAccounts/MillerManager/MillerMa
 import AdminDashboard from "./Users/AdminAccounts/AccountAdmin/AdminDashboard";
 import SupplierManagement from "./Users/AdminAccounts/AccountAdmin/SupplierManagement";
 import MillerInfo from "./Users/AdminAccounts/AccountAdmin/MillerInfo";
+import AdminHelpCenter from "./Users/AdminAccounts/AccountAdmin/AdminHelpCenter";
 
 import WarehouseManagement from "./Users/AdminAccounts/AccountAdmin/WarehouseManagement";
 import WarehouseInfo from "./Users/AdminAccounts/AccountAdmin/WarehouseInfo";
@@ -267,7 +268,8 @@ import RetailerNewsUpdates from "./Users/RetailerAccounts/RetailerNewsUpdates";
 import RetailerNewsArticle from "./Users/RetailerAccounts/RetailerNewsArticle";
 import RetailerMobilePreviewPage from "./Users/RetailerAccounts/RetailerMobilePreviewPage";
 import RetailerWebMobileDashboard from "./Users/RetailerAccounts/RetailerWebMobile/RetailerWebMobileDashboard";
-import { StartupMobileApp } from "./Users/MobileAppView";
+import { StartupMobileApp, RetailerMobileRegistrationView } from "./Users/MobileAppView";
+import RetailerMobileLoginPage from "./Users/MobileAppView/RetailerMobile/RetailerMobileLoginPage";
 
 
 
@@ -319,6 +321,18 @@ function App() {
         <Route
           path="/retailer/mobile-preview"
           element={<RetailerMobilePreviewPage />}
+        />
+        <Route
+          path="/retailer/mobile-register"
+          element={<RetailerMobileRegistrationView />}
+        />
+        <Route
+          path="/retailer-mobile/register"
+          element={<RetailerMobileRegistrationView />}
+        />
+        <Route
+          path="/retailer/mobile-login"
+          element={<RetailerMobileLoginPage />}
         />
         <Route
           path="/startup/mobile-preview"
@@ -1254,6 +1268,14 @@ function App() {
             />
 
           </Route>
+        </Route>
+
+        {/* Admin Help Center — rendered outside sidebar layout so it fills the page */}
+        <Route element={<AdminProtectedRoute />}>
+          <Route
+            path="/admin/help-center"
+            element={<AdminHelpCenter />}
+          />
         </Route>
 
       </Routes>

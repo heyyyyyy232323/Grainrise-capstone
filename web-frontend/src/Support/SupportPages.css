@@ -2209,10 +2209,10 @@ html:not(.light) .legal-page-root .legal-page-note a {
   flex-direction: column;
 }
 
-/* Role cards 2-column grid */
+/* Role cards 3-column grid */
 .rg-roles-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
 
