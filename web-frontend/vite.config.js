@@ -13,4 +13,9 @@ export default defineConfig({
       interval: 1000,
     },
   },
+  optimizeDeps: {
+    include: ['tesseract.js'],
+    exclude: ['@mediapipe/tasks-vision'],
+  },
+  assetsInclude: ['**/*.wasm'],
 })
