@@ -1,6 +1,35 @@
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import CustomGreenButton from "./CustomGreenButton";
 import defaultRiceImg from "../../assets/graintablee.jpg";
+
+const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
+
+function resolveProductImage(src) {
+  if (!src || typeof src !== "string") return defaultRiceImg;
+  const trimmed = src.trim();
+  if (!trimmed) return defaultRiceImg;
+  if (
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("data:") ||
+    trimmed.startsWith("blob:") ||
+    trimmed.startsWith("/src/") ||
+    trimmed.startsWith("/assets/")
+  ) {
+    return trimmed;
+  }
+  if (trimmed.startsWith("/media/")) {
+    return `${API_BASE}${trimmed}`;
+  }
+  if (trimmed.startsWith("media/")) {
+    return `${API_BASE}/${trimmed}`;
+  }
+  if (trimmed.startsWith("/")) {
+    return trimmed;
+  }
+  return `${API_BASE}/media/${trimmed}`;
+}
 
 export default function ProductCard({
   image = defaultRiceImg,
@@ -14,6 +43,12 @@ export default function ProductCard({
   currency = "₱",
   className = "",
 }) {
+  const [imgSrc, setImgSrc] = useState(() => resolveProductImage(image));
+
+  useEffect(() => {
+    setImgSrc(resolveProductImage(image));
+  }, [image]);
+
   const formattedPrice = typeof price === "number" ? price.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : price;
 
   return (
@@ -21,9 +56,12 @@ export default function ProductCard({
       className={`w-full max-w-[340px] overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-[0_8px_20px_rgba(15,23,42,0.06)] ${className}`}
     >
       <div className="h-[150px] w-full overflow-hidden bg-slate-100">
-        {image ? (
-          <img src={image} alt={name} className="h-full w-full object-cover" />
-        ) : null}
+        <img
+          src={imgSrc || defaultRiceImg}
+          alt={name}
+          onError={() => setImgSrc(defaultRiceImg)}
+          className="h-full w-full object-cover"
+        />
       </div>
 
       <div className="px-4 py-4">

@@ -153,6 +153,7 @@ import MillerEncoderStockManagement from "./Users/MillerAccounts/MillerEncoder/M
 
 import MillerFinanceDashboard from "./Users/MillerAccounts/MillerFinance/MillerFinanceDashboard";
 import MillerFinancePaymentHistory from "./Users/MillerAccounts/MillerFinance/MillerFinancePaymentHistory";
+import MillerFinanceReport from "./Users/MillerAccounts/MillerFinance/MillerFinanceReport";
 import MillerPayables from "./Users/MillerAccounts/MillerFinance/MillerPayables";
 import MillerReimburse from "./Users/MillerAccounts/MillerFinance/MillerReimburse";
 import MillerExpenses from "./Users/MillerAccounts/MillerFinance/MillerExpenses";
@@ -944,6 +945,11 @@ function App() {
           <Route
             path="/miller-finance/payment-history"
             element={<MillerFinancePaymentHistory />}
+          />
+
+          <Route
+            path="/miller-finance/payment-history/report"
+            element={<MillerFinanceReport />}
           />
 
           <Route

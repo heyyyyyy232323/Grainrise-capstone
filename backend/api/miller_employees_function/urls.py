@@ -13,5 +13,9 @@ urlpatterns = [
         "finance/",
         include("api.miller_employees_function.miller_finance.urls"),
     ),
+    path(
+        "sales/",
+        include("api.miller_employees_function.miller_sales.urls"),
+    ),
 ]
 

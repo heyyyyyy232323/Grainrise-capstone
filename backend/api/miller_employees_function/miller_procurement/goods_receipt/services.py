@@ -91,4 +91,23 @@ def request_to_pay(supplier_profile_id, receiving_id, requesting_employee_id=Non
 
     # Return refreshed receipt detail
     detail = get_goods_receipt_detail(supplier_profile_id, receiving_id)
+
+    # Notify Miller Finance that a payable is newly requested for payment
+    try:
+        from api.miller_employees_function.miller_finance.notifications.services import (
+            create_finance_notification,
+        )
+        batch_str = (detail.get("batch_no") if detail else None) or "N/A"
+        ref_str = (detail.get("receiving_reference_no") if detail else None) or reference_no or f"REC-{receiving_id}"
+        amt_val = float(detail.get("total_price") or 0.0) if detail else 0.0
+        create_finance_notification(
+            supplier_profile_id=supplier_profile_id,
+            title="New Payable Requested",
+            content=f"Payment requested for Batch {batch_str} (Receiving Ref: {ref_str}) in the amount of ₱ {amt_val:,.2f}.",
+            action_url="/miller-finance/payables",
+            deduplication_key=ref_str,
+        )
+    except Exception as notif_err:
+        logger.warning("Failed to notify finance of payable request for receiving_id=%s: %s", receiving_id, notif_err)
+
     return detail

@@ -507,4 +507,152 @@ def miller_finance_required(view_func):
     return wrapped_view
 
 
+# ============================================================
+# MILLER SALES GUARD DECORATOR
+# ============================================================
 
+def miller_sales_required(view_func):
+    """
+    Decorator requiring an authenticated Miller Employee with position in ('seller', 'sales').
+
+    Security rules:
+    - Never trust supplier_profile_id from frontend / request query / body.
+    - Resolves authoritative identity and branch scoping strictly from the DB.
+    - Requires DB employee status == 'active'.
+    - Requires DB employee position in ('seller', 'sales').
+    - Blocks Encoder, Procurement, Finance, Driver, Fulfillment, Branch Manager.
+
+    Attaches to request:
+    - request.grainrise_supplier_employee
+    - request.grainrise_supplier_employee_id
+    - request.grainrise_supplier_profile_id
+    - request.grainrise_owner_user_id
+    - request.grainrise_employee_position
+    """
+    @wraps(view_func)
+    def wrapped_view(request, *args, **kwargs):
+        payload = authorization_payload(request)
+        if not payload:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Authentication required. Please provide a valid Bearer token.",
+                },
+                status=401,
+            )
+
+        if (
+            payload.get("auth_source") != "grainrise"
+            or payload.get("role") != "supplier_employee"
+            or payload.get("account_type") != "supplier_employee"
+            or payload.get("organization_type") != "supplier"
+        ):
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Supplier employee authentication required. Please sign in again.",
+                },
+                status=401,
+            )
+
+        raw_emp_id = payload.get("sub")
+        try:
+            supplier_employee_id = int(raw_emp_id)
+        except (TypeError, ValueError):
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Invalid token subject identifier.",
+                },
+                status=401,
+            )
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    se.supplier_employee_id,
+                    se.supplier_profile_id,
+                    sp.user_id AS owner_user_id,
+                    se.position,
+                    se.status,
+                    se.first_name,
+                    se.middle_initial,
+                    se.last_name,
+                    se.suffix,
+                    se.email,
+                    sp.business_name,
+                    sp.street_address,
+                    sp.barangay,
+                    sp.municipality,
+                    sp.province,
+                    sp.official_contact_number
+                FROM supplier_employees se
+                INNER JOIN supplier_profiles sp
+                    ON sp.supplier_profile_id = se.supplier_profile_id
+                WHERE se.supplier_employee_id = %s
+                LIMIT 1
+                """,
+                [supplier_employee_id],
+            )
+            row = cursor.fetchone()
+
+        if not row:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Supplier employee account not found.",
+                },
+                status=401,
+            )
+
+        db_status = str(row[4] or "").strip().lower()
+        if db_status != "active":
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Supplier employee account is not active. Please contact your manager.",
+                },
+                status=403,
+            )
+
+        db_position = str(row[3] or "").strip().lower()
+        if db_position not in ("seller", "sales"):
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": f"Access denied. Sales position required (current position: {db_position}).",
+                },
+                status=403,
+            )
+
+        address_parts = [row[11], row[12], row[13], row[14]]
+        business_address = ", ".join(
+            str(p).strip() for p in address_parts if p and str(p).strip()
+        )
+
+        employee = {
+            "supplier_employee_id": row[0],
+            "supplier_profile_id": row[1],
+            "owner_user_id": row[2],
+            "position": db_position,
+            "status": db_status,
+            "first_name": row[5] or "",
+            "middle_initial": row[6] or "",
+            "last_name": row[7] or "",
+            "suffix": row[8] or "",
+            "email": row[9] or "",
+            "business_name": row[10] or "",
+            "business_address": business_address,
+            "business_contact": row[15] or "",
+        }
+
+        request.grainrise_supplier_employee = employee
+        request.grainrise_supplier_employee_id = employee["supplier_employee_id"]
+        request.grainrise_supplier_profile_id = employee["supplier_profile_id"]
+        request.grainrise_owner_user_id = employee["owner_user_id"]
+        request.grainrise_employee_position = employee["position"]
+
+        return view_func(request, *args, **kwargs)
+
+    return wrapped_view

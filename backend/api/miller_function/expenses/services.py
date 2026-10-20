@@ -277,8 +277,7 @@ def _notify_finance_employees_on_expense_created(
                 status
             ) VALUES (%s, 'finance', %s, %s, %s, NOW(), 'unseen')
         """
-        for _ in finance_employees:
-            cursor.execute(insert_sql, [branch_id, title, content, action_url])
+        cursor.execute(insert_sql, [branch_id, title, content, action_url])
     except Exception as exc:
         # Avoid rolling back main expense creation if notification table insert hits a transient issue
         import logging

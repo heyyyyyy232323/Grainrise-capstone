@@ -25,6 +25,8 @@ import useAdminNotifications from "../hooks/AccountAdmin/useAdminNotifications";
 import useFarmerNotifications from "../hooks/Farmer/UseFarmerNotifications";
 import useEncoderNotifications from "../hooks/MillerEncoder/useEncoderNotifications";
 import useProcurementNotifications from "../hooks/MillerProcurement/useProcurementNotifications";
+import useFinanceNotifications from "../hooks/MillerFinance/useFinanceNotifications";
+
 
 
 // ============================================================
@@ -303,6 +305,17 @@ const UserNavbar = ({
     (authenticatedUser?.role === "supplier_employee" &&
       authenticatedUser?.position === "procurement");
 
+  const isFinance =
+    propRole === "supplier_finance" ||
+    propRole === "miller_finance" ||
+    role === "supplier_finance" ||
+    role === "miller_finance" ||
+    (authenticatedUser?.account_type === "supplier_employee" &&
+      authenticatedUser?.position === "finance") ||
+    (authenticatedUser?.role === "supplier_employee" &&
+      authenticatedUser?.position === "finance");
+
+
 
   // =========================================================
   // ACTUAL LOGGED-IN USER DISPLAY
@@ -500,6 +513,44 @@ const UserNavbar = ({
 
 
   // =========================================================
+  // MILLER FINANCE NOTIFICATIONS
+  // =========================================================
+
+  const {
+    notifications:
+      financeNotifications,
+
+    unseenCount:
+      financeUnseenCount,
+
+    isLoading:
+      isLoadingFinanceNotifications,
+
+    isUpdating:
+      isUpdatingFinanceNotifications,
+
+    error:
+      financeNotificationError,
+
+    loadUnseenCount:
+      loadFinanceUnseenCount,
+
+    refreshNotifications:
+      refreshFinanceNotifications,
+
+    openNotification:
+      openFinanceNotification,
+
+    markAllAsRead:
+      markAllFinanceNotificationsAsRead,
+  } = useFinanceNotifications({
+    enabled:
+      isFinance,
+  });
+
+
+
+  // =========================================================
   // NAVBAR STATE
   // =========================================================
 
@@ -574,7 +625,8 @@ const UserNavbar = ({
         !isAdmin &&
         !isFarmer &&
         !isEncoder &&
-        !isProcurement
+        !isProcurement &&
+        !isFinance
       ) {
         return undefined;
       }
@@ -590,7 +642,9 @@ const UserNavbar = ({
                   ? loadFarmerUnreadCount
                   : isEncoder
                     ? loadEncoderUnseenCount
-                    : loadProcurementUnseenCount;
+                    : isProcurement
+                      ? loadProcurementUnseenCount
+                      : loadFinanceUnseenCount;
 
 
             refreshCount().catch(
@@ -614,10 +668,12 @@ const UserNavbar = ({
       isFarmer,
       isEncoder,
       isProcurement,
+      isFinance,
       loadUnreadCount,
       loadFarmerUnreadCount,
       loadEncoderUnseenCount,
       loadProcurementUnseenCount,
+      loadFinanceUnseenCount,
     ]
   );
 
@@ -868,14 +924,18 @@ const UserNavbar = ({
           ? encoderNotifications
           : isProcurement
             ? procurementNotifications
-            : notifications;
+            : isFinance
+              ? financeNotifications
+              : notifications;
 
 
   const usesDatabaseNotifications =
     isAdmin ||
     isFarmer ||
     isEncoder ||
-    isProcurement;
+    isProcurement ||
+    isFinance;
+
 
 
   const isLoadingDatabaseNotifications =
@@ -887,7 +947,9 @@ const UserNavbar = ({
           ? isLoadingEncoderNotifications
           : isProcurement
             ? isLoadingProcurementNotifications
-            : false;
+            : isFinance
+              ? isLoadingFinanceNotifications
+              : false;
 
 
   const isUpdatingDatabaseNotifications =
@@ -899,7 +961,9 @@ const UserNavbar = ({
           ? isUpdatingEncoderNotifications
           : isProcurement
             ? isUpdatingProcurementNotifications
-            : false;
+            : isFinance
+              ? isUpdatingFinanceNotifications
+              : false;
 
 
   const databaseNotificationError =
@@ -911,7 +975,10 @@ const UserNavbar = ({
           ? encoderNotificationError
           : isProcurement
             ? procurementNotificationError
-            : "";
+            : isFinance
+              ? financeNotificationError
+              : "";
+
 
 
   // =========================================================
@@ -936,10 +1003,13 @@ const UserNavbar = ({
           ? encoderUnseenCount
           : isProcurement
             ? procurementUnseenCount
-            : (
-                notificationCount ||
-                localUnreadCount
-              );
+            : isFinance
+              ? financeUnseenCount
+              : (
+                  notificationCount ||
+                  localUnreadCount
+                );
+
 
 
   // =========================================================
@@ -1013,8 +1083,21 @@ const UserNavbar = ({
             // Hook already stores error.
           }
         );
+        return;
+      }
+
+      if (
+        willOpen &&
+        isFinance
+      ) {
+        refreshFinanceNotifications().catch(
+          () => {
+            // Hook already stores error.
+          }
+        );
       }
     };
+
 
 
   // =========================================================
@@ -1081,6 +1164,24 @@ const UserNavbar = ({
 
         return;
       }
+
+      if (isFinance) {
+        if (
+          financeUnseenCount <= 0 ||
+          isUpdatingFinanceNotifications
+        ) {
+          return;
+        }
+
+        try {
+          await markAllFinanceNotificationsAsRead();
+        } catch {
+          // Error remains available from hook.
+        }
+
+        return;
+      }
+
 
 
       setNotifications(
@@ -1252,6 +1353,33 @@ const UserNavbar = ({
 
         return;
       }
+
+      if (isFinance) {
+        try {
+          const result =
+            await openFinanceNotification(
+              item
+            );
+
+          setNotificationOpen(
+            false
+          );
+
+          const targetPath =
+            result?.targetPath ||
+            item?.action_url ||
+            "/miller-finance/dashboard";
+
+          navigate(
+            targetPath
+          );
+        } catch {
+          // Error displayed inside notification panel.
+        }
+
+        return;
+      }
+
 
 
       item?.onView?.(

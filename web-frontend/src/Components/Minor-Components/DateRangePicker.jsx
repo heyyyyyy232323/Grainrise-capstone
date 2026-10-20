@@ -17,15 +17,26 @@ const DateRangePicker = ({ onDateChange }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const isInvalidRange = Boolean(startDate && endDate && endDate < startDate);
+
   const handleStartDateChange = (e) => {
-    setStartDate(e.target.value);
+    const nextStart = e.target.value;
+    setStartDate(nextStart);
+    if (nextStart && endDate && endDate < nextStart) {
+      setEndDate(nextStart);
+    }
   };
 
   const handleEndDateChange = (e) => {
-    setEndDate(e.target.value);
+    const nextEnd = e.target.value;
+    if (startDate && nextEnd && nextEnd < startDate) {
+      return;
+    }
+    setEndDate(nextEnd);
   };
 
   const handleApply = () => {
+    if (isInvalidRange) return;
     onDateChange({ startDate, endDate });
     setShowPicker(false);
   };
@@ -59,26 +70,33 @@ const DateRangePicker = ({ onDateChange }) => {
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Start Date
+                From Date
               </label>
               <input
                 type="date"
                 value={startDate}
+                max={endDate || undefined}
                 onChange={handleStartDateChange}
                 className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
-                End Date
+                To Date
               </label>
               <input
                 type="date"
                 value={endDate}
+                min={startDate || undefined}
                 onChange={handleEndDateChange}
                 className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
               />
             </div>
+            {isInvalidRange && (
+              <p className="text-[11px] text-red-600 font-medium">
+                To Date must be on or after From Date.
+              </p>
+            )}
             <div className="flex gap-2 pt-2">
               <button
                 type="button"
@@ -89,8 +107,9 @@ const DateRangePicker = ({ onDateChange }) => {
               </button>
               <button
                 type="button"
+                disabled={isInvalidRange}
                 onClick={handleApply}
-                className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-[#0B5D1E] hover:bg-[#084b18] rounded-lg transition-colors cursor-pointer"
+                className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-[#0B5D1E] hover:bg-[#084b18] disabled:opacity-50 rounded-lg transition-colors cursor-pointer"
               >
                 Apply
               </button>

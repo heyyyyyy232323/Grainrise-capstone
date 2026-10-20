@@ -31,6 +31,34 @@ const buildSmoothPath = (points) => {
   return path;
 };
 
+const getValidSegments = (points) => {
+  const segments = [];
+  let currentSegment = [];
+
+  for (const point of points) {
+    if (
+      point &&
+      point.value !== null &&
+      point.value !== undefined &&
+      point.y !== null &&
+      !point.isNull
+    ) {
+      currentSegment.push(point);
+    } else {
+      if (currentSegment.length > 0) {
+        segments.push(currentSegment);
+        currentSegment = [];
+      }
+    }
+  }
+
+  if (currentSegment.length > 0) {
+    segments.push(currentSegment);
+  }
+
+  return segments;
+};
+
 function ChartEmptyState({
   title = "No data available",
   description = "There isn't enough data to display this chart. Check back later or adjust your filters.",
@@ -68,10 +96,27 @@ function computeSeriesPoints(seriesData, chartMin, chartRange, paddingX, padding
       seriesData.length === 1
         ? 50
         : paddingX + (index / (seriesData.length - 1)) * (width - paddingX * 2);
-    const value = Math.max(Number(item.value) || 0, 0);
+
+    const isNull =
+      item.value === null ||
+      item.value === undefined ||
+      item.value === "" ||
+      !Number.isFinite(Number(item.value));
+
+    if (isNull) {
+      return {
+        ...item,
+        value: null,
+        x,
+        y: null,
+        isNull: true,
+      };
+    }
+
+    const value = Math.max(Number(item.value), 0);
     const normalized = clamp((value - chartMin) / chartRange, 0, 1);
     const y = paddingY + (1 - normalized) * (100 - paddingY * 2);
-    return { ...item, value, x, y };
+    return { ...item, value, x, y, isNull: false };
   });
 }
 
@@ -99,11 +144,18 @@ export default function RevenueExpenseTrendChart({
   const ticks = 4;
 
   const allValues = series.flatMap((serie) =>
-    (serie.data || []).map((item) => Math.max(Number(item.value) || 0, 0))
+    (serie.data || [])
+      .map((item) => item.value)
+      .filter((v) => v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v)))
+      .map((v) => Math.max(Number(v), 0))
   );
 
   const chartMax =
-    typeof maxValue === "number" && maxValue > 0 ? maxValue : Math.max(...allValues, 100);
+    typeof maxValue === "number" && maxValue > 0
+      ? maxValue
+      : allValues.length > 0
+      ? Math.max(...allValues, 100)
+      : 100;
   const chartMin = Math.max(minValue, 0);
   const chartRange = Math.max(chartMax - chartMin, 1);
 
@@ -112,7 +164,10 @@ export default function RevenueExpenseTrendChart({
     points: computeSeriesPoints(serie.data || [], chartMin, chartRange, paddingX, paddingY, width),
   }));
 
-  const xAxisLabels = seriesWithPoints[0]?.points ?? [];
+  const xAxisLabels =
+    seriesWithPoints.find((s) => (s.points || []).length > 0)?.points ??
+    seriesWithPoints[0]?.points ??
+    [];
 
   const ticksList = Array.from(
     { length: ticks + 1 },
@@ -195,49 +250,65 @@ export default function RevenueExpenseTrendChart({
               })}
 
               {seriesWithPoints.map((serie) => {
-                const linePath = buildSmoothPath(serie.points);
-                const areaPath =
-                  serie.points.length > 0
-                    ? `${linePath} L ${serie.points[serie.points.length - 1].x} 100 L ${serie.points[0].x} 100 Z`
-                    : "";
+                const segments = getValidSegments(serie.points);
                 return (
                   <g key={serie.key ?? serie.label}>
-                    {areaPath ? <path d={areaPath} fill={serie.fillColor} /> : null}
-                    {linePath ? (
-                      <path
-                        d={linePath}
-                        fill="none"
-                        stroke={serie.lineColor}
-                        strokeWidth={serie.strokeWidth ?? 1.2}
-                        strokeDasharray={serie.strokeDasharray || (serie.dashed ? "4,4" : undefined)}
-                        strokeLinejoin="round"
-                        strokeLinecap="round"
-                      />
-                    ) : null}
+                    {segments.map((seg, sIdx) => {
+                      if (seg.length < 2) return null;
+                      const linePath = buildSmoothPath(seg);
+                      const areaPath = `${linePath} L ${seg[seg.length - 1].x} 100 L ${seg[0].x} 100 Z`;
+                      return (
+                        <g key={sIdx}>
+                          {areaPath ? <path d={areaPath} fill={serie.fillColor} /> : null}
+                          {linePath ? (
+                            <path
+                              d={linePath}
+                              fill="none"
+                              stroke={serie.lineColor}
+                              strokeWidth={serie.strokeWidth ?? 1.2}
+                              strokeDasharray={
+                                serie.strokeDasharray || (serie.dashed ? "4,4" : undefined)
+                              }
+                              strokeLinejoin="round"
+                              strokeLinecap="round"
+                            />
+                          ) : null}
+                        </g>
+                      );
+                    })}
                   </g>
                 );
               })}
             </svg>
 
             {seriesWithPoints.map((serie) =>
-              serie.points.map((point) => (
-                <div
-                  key={`${serie.key ?? serie.label}-${point.label}`}
-                  className="group absolute -translate-x-1/2 -translate-y-1/2"
-                  style={{ left: `${point.x}%`, top: `${point.y}%` }}
-                >
+              serie.points
+                .filter(
+                  (point) =>
+                    point &&
+                    point.value !== null &&
+                    point.value !== undefined &&
+                    point.y !== null &&
+                    !point.isNull
+                )
+                .map((point) => (
                   <div
-                    className="pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border bg-white px-1.5 py-0.5 text-[11px] font-bold text-slate-600 opacity-0 shadow-sm transition group-hover:opacity-100"
-                    style={{ bottom: 12, borderColor: serie.lineColor }}
+                    key={`${serie.key ?? serie.label}-${point.label}`}
+                    className="group absolute -translate-x-1/2 -translate-y-1/2"
+                    style={{ left: `${point.x}%`, top: `${point.y}%` }}
                   >
-                    {formatAxisValue(point.value, valueFormatter)}
+                    <div
+                      className="pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border bg-white px-1.5 py-0.5 text-[11px] font-bold text-slate-600 opacity-0 shadow-sm transition group-hover:opacity-100"
+                      style={{ bottom: 12, borderColor: serie.lineColor }}
+                    >
+                      {formatAxisValue(point.value, valueFormatter)}
+                    </div>
+                    <div
+                      className="h-2.5 w-2.5 rounded-full bg-white"
+                      style={{ border: `2px solid ${serie.lineColor}` }}
+                    />
                   </div>
-                  <div
-                    className="h-2.5 w-2.5 rounded-full bg-white"
-                    style={{ border: `2px solid ${serie.lineColor}` }}
-                  />
-                </div>
-              ))
+                ))
             )}
 
             <div className="absolute left-0 right-0 bottom-0 flex items-end justify-between px-1">
