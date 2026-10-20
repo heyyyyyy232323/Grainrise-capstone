@@ -84,4 +84,39 @@ urlpatterns = [
             "api.miller_function.receiving_history.urls"
         ),
     ),
+
+    # ========================================================
+    # EXPENSES
+    # ========================================================
+
+    path(
+        "expenses/",
+        include(
+            "api.miller_function.expenses.urls"
+        ),
+    ),
+    path(
+        "expenses",
+        include(
+            "api.miller_function.expenses.urls"
+        ),
+    ),
+
+    # ========================================================
+    # ONLINE PAYMENT ACCOUNTS
+    # ========================================================
+
+    path(
+        "payment-accounts/",
+        include(
+            "api.miller_function.online_payment_accounts.urls"
+        ),
+    ),
+    path(
+        "payment-accounts",
+        include(
+            "api.miller_function.online_payment_accounts.urls"
+        ),
+    ),
 ]
+

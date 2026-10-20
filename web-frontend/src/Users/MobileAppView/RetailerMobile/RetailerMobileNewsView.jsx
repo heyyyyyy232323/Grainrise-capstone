@@ -8,8 +8,12 @@ import {
   ArrowRight,
   RotateCw,
   ChevronLeft,
+  RefreshCw,
 } from "lucide-react";
 import RetailerMobileArticleDetailView from "./RetailerMobileArticleDetailView";
+import useToast from "../../../Components/hooks/useToast";
+import Toast from "../../../Components/Minor-Components/Toast";
+import useFetchLatestNews from "../../../Components/hooks/NewsUpdates/useFetchLatestNews";
 
 const INITIAL_ARTICLES = [
   {

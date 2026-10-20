@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+
 import UserNavbar, { getUserNavbarMenuItems } from "./UserNavbar";
 import UserSidebar from "./UserSidebar";
 
@@ -8,6 +9,8 @@ const MillerProcurementLayout = () => {
   const [sidebarMinimized, setSidebarMinimized] = useState(false);
   const [userRole] = useState("miller_procurement");
   const location = useLocation();
+  const navigate = useNavigate();
+
 
   const handleToggleSidebar = () => {
     const isMobile = window.innerWidth < 768;
@@ -50,7 +53,8 @@ const MillerProcurementLayout = () => {
         <UserNavbar
           user={user}
           onToggleSidebar={handleToggleSidebar}
-          menuItems={getUserNavbarMenuItems(userRole)}
+          menuItems={getUserNavbarMenuItems(navigate)}
+
         />
 
         {/* Scrollable Content Area */}

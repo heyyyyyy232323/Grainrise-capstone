@@ -13,7 +13,7 @@ import adminBackgroundImage from "../assets/adminloginBG.png";
 import userBackgroundImage from "../assets/UserloginBG.png";
 
 import useApi from "../Components/hooks/useApi";
-import useAuth from "../Components/hooks/useAuth";
+import useAuth, { isEmployeeAccount, hasRequiredEmployeeFields } from "../Components/hooks/useAuth";
 
 const features = [
   "Real-time Inventory Monitoring",
@@ -199,6 +199,28 @@ const UserLogin = () => {
         response.user
       );
 
+      // Employees (supplier_employees, warehouse_employees):
+      // If all REQUIRED fields are complete, redirect directly to their assigned dashboard.
+      // NULLABLE fields are optional and must not trigger Complete Profile.
+      if (isEmployeeAccount(response.user)) {
+        if (hasRequiredEmployeeFields(response.user)) {
+          const destination = resolvePostLoginDashboard(response.user);
+
+          if (!destination) {
+            setLoginError("No valid dashboard route configured for your account role or position.");
+            return;
+          }
+
+          navigate(destination);
+          return;
+        }
+
+        navigate("/complete-profile");
+        return;
+      }
+
+      // Main accounts (users): STRICTLY PRESERVE existing required-field validation,
+      // mandatory password change, and Complete Profile redirects.
       if (response.user?.must_change_password || response.user?.profile_incomplete) {
         navigate("/complete-profile");
         return;

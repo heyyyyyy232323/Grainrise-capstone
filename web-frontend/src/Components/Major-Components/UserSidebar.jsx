@@ -1001,9 +1001,19 @@ export const getUserSidebarConfig = (role = "admin") => {
               path: "/miller-manager/order-approval",
             },
             {
+              label: "Expense Management",
+              icon: Receipt,
+              path: "/miller-manager/expenses",
+            },
+            {
               label: "Fare Fee Management",
               icon: SlidersHorizontal,
               path: "/miller-manager/pass-fee",
+            },
+            {
+              label: "Online Payment Accounts",
+              icon: CreditCard,
+              path: "/miller-manager/payment-accounts",
             },
           ],
         },

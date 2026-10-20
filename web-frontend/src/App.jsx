@@ -10,7 +10,7 @@ import CompleteProfile from "./Login/CompleteProfile";
 import DashboardPreview from "./DashboardPreview";
 
 import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout";
-import AdminProtectedRoute from "./Components/Major-Components/AdminProtectedRoute";
+import AdminProtectedRoute, { ProtectedRoute } from "./Components/Major-Components/AdminProtectedRoute";
 import ToastPreviewPage from "./Components/Modals/ToastPreviewPage";
 
 import FloatingChatbot from "./Components/Minor-Components/FloatingChatbot";
@@ -217,7 +217,9 @@ import MillerManagerDashboard from "./Users/MillerAccounts/MillerManager/MillerM
 import MillerSupplierManagement from "./Users/MillerAccounts/MillerManager/SupplierManagement";
 import MillerSupplierDetails from "./Users/MillerAccounts/MillerManager/SupplierDetails";
 import MillerOrderApproval from "./Users/MillerAccounts/MillerManager/MillerOrderApproval";
+import MillerExpenseManagement from "./Users/MillerAccounts/MillerManager/MillerExpenseManagement";
 import MillerPassFeeManagement from "./Users/MillerAccounts/MillerManager/MillerPassFeeManagement";
+import MillerOnlinePaymentAccounts from "./Users/MillerAccounts/MillerManager/MillerOnlinePaymentAccounts";
 import MillerPerformanceMonitoring from "./Users/MillerAccounts/MillerManager/MillerPerformanceMonitoring";
 import MillerManagerFulfillmentHistory from "./Users/MillerAccounts/MillerManager/MillerFulfillmentHistory";
 import MillerManagerSalesHistory from "./Users/MillerAccounts/MillerManager/MillerSalesHistory";
@@ -237,6 +239,7 @@ import MillerManagerMessages from "./Users/MillerAccounts/MillerManager/MillerMa
 import AdminDashboard from "./Users/AdminAccounts/AccountAdmin/AdminDashboard";
 import SupplierManagement from "./Users/AdminAccounts/AccountAdmin/SupplierManagement";
 import MillerInfo from "./Users/AdminAccounts/AccountAdmin/MillerInfo";
+import AdminHelpCenter from "./Users/AdminAccounts/AccountAdmin/AdminHelpCenter";
 
 import WarehouseManagement from "./Users/AdminAccounts/AccountAdmin/WarehouseManagement";
 import WarehouseInfo from "./Users/AdminAccounts/AccountAdmin/WarehouseInfo";
@@ -292,7 +295,6 @@ function App() {
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/change-password" element={<ChangePassword />} />
-        <Route path="/complete-profile" element={<CompleteProfile />} />
 
 
 
@@ -372,15 +374,22 @@ function App() {
 
 
         {/* ==================================================
-              DIRECT PROFILE FALLBACK
+              PROTECTED ACCOUNT MODULES (USER & EMPLOYEES)
           ================================================== */}
 
-        <Route element={<WarehouseEncoderLayout role="retailer" />}>
-          <Route
-            path="/account-profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+        <Route element={<ProtectedRoute />}>
+          <Route path="/complete-profile" element={<CompleteProfile />} />
+
+          {/* ==================================================
+                DIRECT PROFILE FALLBACK
+            ================================================== */}
+
+          <Route element={<WarehouseEncoderLayout role="retailer" />}>
+            <Route
+              path="/account-profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
         {/* ==================================================
@@ -1043,8 +1052,18 @@ function App() {
           />
 
           <Route
+            path="/miller-manager/expenses"
+            element={<MillerExpenseManagement />}
+          />
+
+          <Route
             path="/miller-manager/pass-fee"
             element={<MillerPassFeeManagement />}
+          />
+
+          <Route
+            path="/miller-manager/payment-accounts"
+            element={<MillerOnlinePaymentAccounts />}
           />
 
           <Route
@@ -1172,6 +1191,7 @@ function App() {
             element={<UserAccountProfile />}
           />
         </Route>
+      </Route>
 
 
 
@@ -1242,6 +1262,14 @@ function App() {
             />
 
           </Route>
+        </Route>
+
+        {/* Admin Help Center — rendered outside sidebar layout so it fills the page */}
+        <Route element={<AdminProtectedRoute />}>
+          <Route
+            path="/admin/help-center"
+            element={<AdminHelpCenter />}
+          />
         </Route>
 
       </Routes>
