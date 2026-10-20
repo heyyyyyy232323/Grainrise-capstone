@@ -61,7 +61,6 @@ export default function RegistrationGuide() {
   const roles = [
     {
       id: 'miller',
-      badge: 'Processing & Sourcing',
       icon: <Building2 size={20} />,
       title: 'Miller',
       bestFor: 'Rice millers and suppliers involved in processing, sourcing, and distribution.',
@@ -75,7 +74,6 @@ export default function RegistrationGuide() {
     },
     {
       id: 'warehouse',
-      badge: 'Storage & Fulfilment',
       icon: <Warehouse size={20} />,
       title: 'Warehouse Manager',
       bestFor: 'Organizations or managers responsible for rice storage and warehouse operations.',
@@ -89,7 +87,6 @@ export default function RegistrationGuide() {
     },
     {
       id: 'retailer',
-      badge: 'Commercial Reseller',
       icon: <ShoppingBag size={20} />,
       title: 'Retailer',
       bestFor: 'Rice retailers purchasing products for resale to customers.',
@@ -205,16 +202,11 @@ export default function RegistrationGuide() {
             <ArrowLeft size={16} />
             <span>Back to GrainRise Home</span>
           </button>
-          <div className="support-top-badge">
-            <span className="support-top-badge__dot" />
-            <span>Public Knowledge Base</span>
-          </div>
         </div>
 
         {/* Hero Card Banner */}
         <div className="support-hero-card">
           <div className="support-hero-content">
-            <span className="support-pill-tag">GETTING STARTED</span>
             <h1 className="support-hero-title">Registration Guide</h1>
             <p className="support-hero-desc">
               Learn how to create your GrainRise account, prepare the required information, and understand what happens after you submit your registration.
@@ -279,7 +271,6 @@ export default function RegistrationGuide() {
               <div key={role.id} className="rg-role-card">
                 <div className="rg-role-card__header">
                   <div className="rg-role-card__icon">{role.icon}</div>
-                  <div className="rg-role-badge">{role.badge}</div>
                 </div>
                 <h3 className="rg-role-card__title">{role.title}</h3>
                 <p className="rg-role-card__best">
@@ -453,6 +444,4 @@ export default function RegistrationGuide() {
     </div>
   );
 }
-
-
 

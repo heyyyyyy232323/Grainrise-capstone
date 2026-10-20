@@ -104,37 +104,22 @@ export default function LoginAssistance() {
 
   const accountStatuses = [
     {
-      badge: 'Under Review',
-      dotClass: 'status-dot--amber',
-      badgeClass: 'status-badge--amber',
       desc: 'Your registration has been submitted and is still being reviewed.',
       subtext: 'Pending Approval',
     },
     {
-      badge: 'Active',
-      dotClass: 'status-dot--green',
-      badgeClass: 'status-badge--green',
       desc: 'Your account is approved and available for normal GrainRise access.',
       subtext: 'Full Access',
     },
     {
-      badge: 'Inactive',
-      dotClass: 'status-dot--slate',
-      badgeClass: 'status-badge--slate',
       desc: 'Your account currently has restricted access.',
       subtext: 'Restricted',
     },
     {
-      badge: 'Deactivated',
-      dotClass: 'status-dot--red',
-      badgeClass: 'status-badge--red',
       desc: 'Your account access has been disabled.',
       subtext: 'Requires Resolution',
     },
     {
-      badge: 'Archived',
-      dotClass: 'status-dot--gray',
-      badgeClass: 'status-badge--gray',
       desc: 'The account is no longer available for regular system access.',
       subtext: 'Closed Account',
     },
@@ -150,16 +135,11 @@ export default function LoginAssistance() {
             <ArrowLeft size={16} />
             <span>Back to GrainRise Home</span>
           </button>
-          <div className="support-top-badge">
-            <span className="support-top-badge__dot" />
-            <span>Public Knowledge Base</span>
-          </div>
         </div>
 
         {/* Hero Card Banner */}
         <div className="la-hero-card">
           <div className="la-hero-content">
-            <span className="support-pill-tag">HELP &amp; SUPPORT</span>
             <h1 className="la-hero-title">Having Trouble Signing In?</h1>
             <p className="la-hero-desc">
               Get help recovering your GrainRise account and resolving common sign-in issues
@@ -189,10 +169,6 @@ export default function LoginAssistance() {
               <Shield className="la-hero-shield-bg" size={44} />
               <Sprout className="la-hero-sprout-icon" size={24} />
             </div>
-            <div className="la-hero-visual-badge">
-              <span className="la-hero-visual-dot" />
-              <span>Secure Verification System</span>
-            </div>
             <p className="la-hero-visual-sub">
               Certified National Agricultural Portal Protection
             </p>
@@ -221,9 +197,6 @@ export default function LoginAssistance() {
 
         {/* Section 2: Recover Your Account in a Few Steps */}
         <section className="support-section" style={{ textAlign: 'center', alignItems: 'center' }}>
-          <span className="support-pill-tag" style={{ margin: '0 auto 8px auto' }}>
-            PASSWORD RECOVERY
-          </span>
           <h2 className="support-section-title" style={{ textAlign: 'center' }}>
             Recover Your Account in a Few Steps
           </h2>
@@ -235,7 +208,7 @@ export default function LoginAssistance() {
             {recoverySteps.map((step, idx) => (
               <div key={idx} className="la-step-card">
                 <div className="la-step-header">
-                  <span className="la-step-num-badge">{step.stepNum}</span>
+                  <span>{step.stepNum}</span>
                   <span className="la-step-label">{step.stepLabel}</span>
                 </div>
                 <h3 className="la-step-title">{step.title}</h3>
@@ -290,12 +263,9 @@ export default function LoginAssistance() {
           <div className="la-status-grid">
             {accountStatuses.map((st, idx) => (
               <div key={idx} className="la-status-card">
-                <div className={`la-status-badge ${st.badgeClass}`}>
-                  <span className={`la-status-dot ${st.dotClass}`} />
-                  <span>{st.badge}</span>
-                </div>
-                <p className="la-status-desc">{st.desc}</p>
-                <div className="la-status-subtext">{st.subtext}</div>
+                <p className="la-status-desc">
+                  <strong>{st.subtext}</strong> - {st.desc}
+                </p>
               </div>
             ))}
           </div>
