@@ -347,6 +347,10 @@ def login(request):
                     "email"
                 ],
 
+                "contact_number": user.get(
+                    "contact_number"
+                ),
+
                 "username": user[
                     "username"
                 ],
@@ -554,6 +558,100 @@ def get_profile_status(request):
         return Response({"detail": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
     
     user_id = auth[0]
+    payload = auth[1] if len(auth) > 1 and isinstance(auth[1], dict) else {}
+
+    account_type = str(payload.get("account_type") or "").strip().lower()
+    jwt_role = str(payload.get("role") or "").strip().lower()
+    position = str(payload.get("position") or "").strip().lower()
+    org_type = str(payload.get("organization_type") or "").strip().lower()
+
+    is_employee = (
+        account_type in ("supplier_employee", "warehouse_employee")
+        or jwt_role in ("supplier_employee", "warehouse_employee")
+        or bool(position)
+    )
+
+    if is_employee:
+        is_warehouse = (
+            account_type == "warehouse_employee"
+            or jwt_role == "warehouse_employee"
+            or org_type == "warehouse"
+            or jwt_role.startswith("warehouse_")
+            or jwt_role == "branch_manager"
+        )
+        emp_table = "warehouse_employees" if is_warehouse else "supplier_employees"
+        id_col = "warehouse_employee_id" if is_warehouse else "supplier_employee_id"
+
+        with connection.cursor() as cursor:
+            cursor.execute(f"""
+                SELECT {id_col}, first_name, middle_initial, last_name, suffix, gender,
+                       province, municipality, postal_code, barangay, street_address,
+                       email, contact_number, username, position, status
+                FROM {emp_table}
+                WHERE {id_col} = %s
+            """, [user_id])
+            emp_row = cursor.fetchone()
+
+            if not emp_row:
+                fallback_table = "supplier_employees" if is_warehouse else "warehouse_employees"
+                fallback_id_col = "supplier_employee_id" if is_warehouse else "warehouse_employee_id"
+                cursor.execute(f"""
+                    SELECT {fallback_id_col}, first_name, middle_initial, last_name, suffix, gender,
+                           province, municipality, postal_code, barangay, street_address,
+                           email, contact_number, username, position, status
+                    FROM {fallback_table}
+                    WHERE {fallback_id_col} = %s
+                """, [user_id])
+                emp_row = cursor.fetchone()
+                if emp_row:
+                    emp_table = fallback_table
+
+        if not emp_row:
+            return Response({"detail": "Employee account not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Validate REQUIRED fields only for employees:
+        # first_name, last_name, email, contact_number, username, position
+        # Nullable fields (middle_initial, suffix, gender, province, municipality, postal_code, barangay, street_address) are optional
+        missing_fields = []
+        if not str(emp_row[1] or "").strip(): missing_fields.append("first_name")
+        if not str(emp_row[3] or "").strip(): missing_fields.append("last_name")
+        if not str(emp_row[11] or "").strip(): missing_fields.append("email")
+        if not str(emp_row[12] or "").strip(): missing_fields.append("contact_number")
+        if not str(emp_row[13] or "").strip(): missing_fields.append("username")
+        if not str(emp_row[14] or "").strip(): missing_fields.append("position")
+
+        profile_incomplete = len(missing_fields) > 0
+        resolved_account_type = "warehouse_employee" if emp_table == "warehouse_employees" else "supplier_employee"
+
+        return Response({
+            "user": {
+                "id": emp_row[0],
+                "first_name": emp_row[1],
+                "middle_initial": emp_row[2],
+                "last_name": emp_row[3],
+                "suffix": emp_row[4],
+                "gender": emp_row[5],
+                "province": emp_row[6],
+                "municipality": emp_row[7],
+                "postal_code": emp_row[8],
+                "barangay": emp_row[9],
+                "street_address": emp_row[10],
+                "email": emp_row[11],
+                "contact_number": emp_row[12],
+                "username": emp_row[13],
+                "role": jwt_role or resolved_account_type,
+                "account_type": resolved_account_type,
+                "position": emp_row[14],
+                "must_change_password": False,
+                "profile_incomplete": profile_incomplete,
+            },
+            "profile": {},
+            "documents": {},
+            "must_change_password": False,
+            "profile_incomplete": profile_incomplete,
+            "missing_fields": missing_fields,
+        })
+
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT user_id, first_name, middle_initial, last_name, suffix, gender,

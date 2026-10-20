@@ -421,9 +421,9 @@ export const getUserSidebarConfig = (role = "admin") => {
               path: "/warehouse-finance/payables",
             },
             {
-              label: "Taxes",
+              label: "Expenses",
               icon: Receipt,
-              path: "/warehouse-finance/taxes",
+              path: "/warehouse-finance/expenses",
             },
             {
               label: "Reimburse",
@@ -661,9 +661,9 @@ export const getUserSidebarConfig = (role = "admin") => {
               path: "/miller-finance/payables",
             },
             {
-              label: "Taxes",
+              label: "Expenses",
               icon: Receipt,
-              path: "/miller-finance/taxes",
+              path: "/miller-finance/expenses",
             },
             {
               label: "Reimburse",
@@ -1001,9 +1001,19 @@ export const getUserSidebarConfig = (role = "admin") => {
               path: "/miller-manager/order-approval",
             },
             {
+              label: "Expense Management",
+              icon: Receipt,
+              path: "/miller-manager/expenses",
+            },
+            {
               label: "Fare Fee Management",
               icon: SlidersHorizontal,
               path: "/miller-manager/pass-fee",
+            },
+            {
+              label: "Online Payment Accounts",
+              icon: CreditCard,
+              path: "/miller-manager/payment-accounts",
             },
           ],
         },

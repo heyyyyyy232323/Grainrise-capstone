@@ -10,7 +10,7 @@ import CompleteProfile from "./Login/CompleteProfile";
 import DashboardPreview from "./DashboardPreview";
 
 import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout";
-import AdminProtectedRoute from "./Components/Major-Components/AdminProtectedRoute";
+import AdminProtectedRoute, { ProtectedRoute } from "./Components/Major-Components/AdminProtectedRoute";
 import ToastPreviewPage from "./Components/Modals/ToastPreviewPage";
 
 import FloatingChatbot from "./Components/Minor-Components/FloatingChatbot";
@@ -85,6 +85,7 @@ import WarehousePaymentHistory from "./Users/WarehouseAccounts/WarehouseProcurem
 // ============================================================
 
 import WarehousePayables from "./Users/WarehouseAccounts/WarehouseFinance/WarehousePayables";
+import WarehouseExpenses from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseExpenses";
 import WarehouseTaxes from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseTaxes";
 import WarehouseReimburse from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseReimburse";
 import WarehouseFinancePaymentHistory from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseFinancePaymentHistory";
@@ -154,6 +155,7 @@ import MillerFinanceDashboard from "./Users/MillerAccounts/MillerFinance/MillerF
 import MillerFinancePaymentHistory from "./Users/MillerAccounts/MillerFinance/MillerFinancePaymentHistory";
 import MillerPayables from "./Users/MillerAccounts/MillerFinance/MillerPayables";
 import MillerReimburse from "./Users/MillerAccounts/MillerFinance/MillerReimburse";
+import MillerExpenses from "./Users/MillerAccounts/MillerFinance/MillerExpenses";
 import MillerTaxes from "./Users/MillerAccounts/MillerFinance/MillerTaxes";
 
 
@@ -215,7 +217,9 @@ import MillerManagerDashboard from "./Users/MillerAccounts/MillerManager/MillerM
 import MillerSupplierManagement from "./Users/MillerAccounts/MillerManager/SupplierManagement";
 import MillerSupplierDetails from "./Users/MillerAccounts/MillerManager/SupplierDetails";
 import MillerOrderApproval from "./Users/MillerAccounts/MillerManager/MillerOrderApproval";
+import MillerExpenseManagement from "./Users/MillerAccounts/MillerManager/MillerExpenseManagement";
 import MillerPassFeeManagement from "./Users/MillerAccounts/MillerManager/MillerPassFeeManagement";
+import MillerOnlinePaymentAccounts from "./Users/MillerAccounts/MillerManager/MillerOnlinePaymentAccounts";
 import MillerPerformanceMonitoring from "./Users/MillerAccounts/MillerManager/MillerPerformanceMonitoring";
 import MillerManagerFulfillmentHistory from "./Users/MillerAccounts/MillerManager/MillerFulfillmentHistory";
 import MillerManagerSalesHistory from "./Users/MillerAccounts/MillerManager/MillerSalesHistory";
@@ -290,7 +294,6 @@ function App() {
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/change-password" element={<ChangePassword />} />
-        <Route path="/complete-profile" element={<CompleteProfile />} />
 
 
 
@@ -370,15 +373,22 @@ function App() {
 
 
         {/* ==================================================
-              DIRECT PROFILE FALLBACK
+              PROTECTED ACCOUNT MODULES (USER & EMPLOYEES)
           ================================================== */}
 
-        <Route element={<WarehouseEncoderLayout role="retailer" />}>
-          <Route
-            path="/account-profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+        <Route element={<ProtectedRoute />}>
+          <Route path="/complete-profile" element={<CompleteProfile />} />
+
+          {/* ==================================================
+                DIRECT PROFILE FALLBACK
+            ================================================== */}
+
+          <Route element={<WarehouseEncoderLayout role="retailer" />}>
+            <Route
+              path="/account-profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
         {/* ==================================================
@@ -555,8 +565,8 @@ function App() {
           />
 
           <Route
-            path="/warehouse-finance/taxes"
-            element={<WarehouseTaxes />}
+            path="/warehouse-finance/expenses"
+            element={<WarehouseExpenses />}
           />
 
           <Route
@@ -935,8 +945,8 @@ function App() {
           />
 
           <Route
-            path="/miller-finance/taxes"
-            element={<MillerTaxes />}
+            path="/miller-finance/expenses"
+            element={<MillerExpenses />}
           />
 
           <Route
@@ -1041,8 +1051,18 @@ function App() {
           />
 
           <Route
+            path="/miller-manager/expenses"
+            element={<MillerExpenseManagement />}
+          />
+
+          <Route
             path="/miller-manager/pass-fee"
             element={<MillerPassFeeManagement />}
+          />
+
+          <Route
+            path="/miller-manager/payment-accounts"
+            element={<MillerOnlinePaymentAccounts />}
           />
 
           <Route
@@ -1170,6 +1190,7 @@ function App() {
             element={<UserAccountProfile />}
           />
         </Route>
+      </Route>
 
 
 

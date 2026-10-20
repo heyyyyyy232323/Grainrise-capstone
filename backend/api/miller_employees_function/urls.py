@@ -9,5 +9,9 @@ urlpatterns = [
         "procurement/",
         include("api.miller_employees_function.miller_procurement.urls"),
     ),
+    path(
+        "finance/",
+        include("api.miller_employees_function.miller_finance.urls"),
+    ),
 ]
 

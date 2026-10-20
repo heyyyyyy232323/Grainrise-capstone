@@ -203,6 +203,25 @@ const useApi = () => {
           error.data = payload;
 
 
+          if (response.status === 401) {
+            const isLoginEndpoint =
+              normalizedEndpoint.includes("/auth/login") ||
+              normalizedEndpoint.includes("/auth/admin/login");
+
+            if (!isLoginEndpoint) {
+              try {
+                localStorage.removeItem("grainrise_token");
+                localStorage.removeItem("grainrise_user");
+                localStorage.removeItem("access_token");
+                sessionStorage.clear();
+              } catch {}
+              window.dispatchEvent(
+                new Event("grainrise_unauthorized")
+              );
+            }
+          }
+
+
           if (throwOnError) {
             throw error;
           }
