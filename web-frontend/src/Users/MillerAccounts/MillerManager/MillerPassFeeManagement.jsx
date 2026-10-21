@@ -73,7 +73,7 @@ export default function MillerFareFeeManagement() {
       width: "22%",
       renderCell: (row) => (
         <div>
-          <p className="font-bold text-gray-900 text-xs">{row.rateName}</p>
+          <p className="text-[13px] font-medium text-slate-700">{row.rateName}</p>
           <p className="text-[10px] text-gray-400 font-medium leading-tight mt-0.5">{row.description}</p>
         </div>
       ),
@@ -82,19 +82,19 @@ export default function MillerFareFeeManagement() {
       key: "freeDistance",
       label: "Free Delivery Distance (km)",
       width: "18%",
-      renderCell: (row) => <span className="font-semibold text-gray-800">{row.freeDistance}</span>,
+      renderCell: (row) => <span className="text-[13px] font-medium text-slate-700">{row.freeDistance}</span>,
     },
     {
       key: "baseFee",
       label: "Base Fee",
       width: "12%",
-      renderCell: (row) => <span className="font-bold text-gray-900">{row.baseFee}</span>,
+      renderCell: (row) => <span className="text-[13px] font-medium text-slate-700">{row.baseFee}</span>,
     },
     {
       key: "additionalFee",
       label: "Additional Fee (₱/km)",
       width: "16%",
-      renderCell: (row) => <span className="font-semibold text-gray-800">{row.additionalFee}</span>,
+      renderCell: (row) => <span className="text-[13px] font-medium text-slate-700">{row.additionalFee}</span>,
     },
     {
       key: "status",
@@ -120,7 +120,7 @@ export default function MillerFareFeeManagement() {
       width: "14%",
       renderCell: (row) => (
         <div>
-          <p className="font-bold text-gray-800 text-xs">{row.lastUpdatedDate}</p>
+          <p className="text-[13px] font-medium text-slate-700">{row.lastUpdatedDate}</p>
           <p className="text-[10px] text-gray-400 font-medium">{row.lastUpdatedTime}</p>
         </div>
       ),

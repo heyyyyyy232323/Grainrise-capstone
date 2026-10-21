@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Search, Calendar, ChevronDown, X, PackageCheck, Eye } from "lucide-react";
+import { Search, Calendar, ChevronDown, X, PackageCheck } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 
@@ -130,26 +130,10 @@ export default function FulfillmentHistory() {
   const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
 
-  // 3. Slice current page records & format custom JSX actions
+  // 3. Slice current page records
   const tableSections = useMemo(() => {
     const pageItems = filteredAndSortedRecords.slice(startIndex, startIndex + itemsPerPage);
-
-    const formattedRows = pageItems.map((row) => ({
-      ...row,
-      action: (
-        <button
-          type="button"
-          onClick={() => setSelectedRecord(row)}
-          className="p-1.5 rounded-lg text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition inline-flex items-center gap-1 text-xs cursor-pointer font-medium"
-          title="View Details"
-        >
-          <Eye size={15} />
-          <span>View</span>
-        </button>
-      ),
-    }));
-
-    return [{ rows: formattedRows }];
+    return [{ rows: pageItems }];
   }, [filteredAndSortedRecords, startIndex, itemsPerPage]);
 
   return (
@@ -339,6 +323,8 @@ export default function FulfillmentHistory() {
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={setCurrentPage}
+        onViewDetails={setSelectedRecord}
+        viewDetailsLabel="View Details"
         footerLabel={`Showing ${totalCount === 0 ? 0 : startIndex + 1}-${Math.min(
           startIndex + itemsPerPage,
           totalCount

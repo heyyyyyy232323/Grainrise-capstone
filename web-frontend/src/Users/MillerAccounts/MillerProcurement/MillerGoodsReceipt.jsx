@@ -224,7 +224,7 @@ const MillerGoodsReceipt = () => {
       label: "Batch No.",
       width: "16%",
       render: (row) => (
-        <span className="text-[13px] font-normal text-slate-800">
+        <span className="text-[13px] font-medium text-slate-700">
           {row.batch_no || "Batch 2026 - 001"}
         </span>
       ),
@@ -234,7 +234,7 @@ const MillerGoodsReceipt = () => {
       label: "Supplier",
       width: "16%",
       render: (row) => (
-        <span className="text-[13px] font-normal text-slate-800">
+        <span className="text-[13px] font-medium text-slate-700">
           {row.supplier || "Supplier A"}
         </span>
       ),
@@ -244,7 +244,7 @@ const MillerGoodsReceipt = () => {
       label: "Variant",
       width: "14%",
       render: (row) => (
-        <span className="text-[13px] font-normal text-slate-800">
+        <span className="text-[13px] font-medium text-slate-700">
           {row.variant || row.product_name || "Dinorado"}
         </span>
       ),
@@ -254,7 +254,7 @@ const MillerGoodsReceipt = () => {
       label: "Stock Qty (kg)",
       width: "14%",
       render: (row) => (
-        <span className="text-[13px] font-normal text-slate-800">
+        <span className="text-[13px] font-medium text-slate-700">
           {formatStockQty(row)}
         </span>
       ),
@@ -264,7 +264,7 @@ const MillerGoodsReceipt = () => {
       label: "Unit Price",
       width: "12%",
       render: (row) => (
-        <span className="text-[13px] font-normal text-slate-800">
+        <span className="text-[13px] font-medium text-slate-700">
           {formatUnitPrice(row)}
         </span>
       ),
@@ -274,7 +274,7 @@ const MillerGoodsReceipt = () => {
       label: "Total Amount",
       width: "12%",
       render: (row) => (
-        <span className="text-[13px] font-normal text-slate-800">
+        <span className="text-[13px] font-medium text-slate-700">
           {formatTotalAmount(row)}
         </span>
       ),

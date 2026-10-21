@@ -609,7 +609,7 @@ const MillerSuppliers = () => {
 
   const canSave = hasFormChanged && isFormValid && !submitting;
 
-  // Table Columns (no Product Type column, no address under supplier, no bold styling on values)
+  // Table Columns (no Product Type column, no address under supplier)
   const columns = useMemo(
     () => [
       {
@@ -624,7 +624,7 @@ const MillerSuppliers = () => {
 
           return (
             <div>
-              <div className="font-normal text-slate-800">{primary}</div>
+              <div className="text-[13px] font-medium text-slate-700">{primary}</div>
               {sub && (
                 <div className="text-xs text-slate-400 truncate max-w-sm" title={sub}>
                   {sub}
@@ -639,7 +639,7 @@ const MillerSuppliers = () => {
         label: "Last Delivery",
         width: "20%",
         render: (row) => (
-          <span className="text-slate-600 font-normal">
+          <span className="text-[13px] font-medium text-slate-700">
             {row.latest_delivery_formatted || (row.latest_delivery ? formatDate(row.latest_delivery) : "—")}
           </span>
         ),
@@ -655,13 +655,13 @@ const MillerSuppliers = () => {
             return (
               <div className="flex items-center gap-1.5">
                 <Star size={14} className="fill-amber-400 text-amber-400 shrink-0" />
-                <span className="text-sm font-normal text-slate-700">
+                <span className="text-[13px] font-medium text-slate-700">
                   {Number(avg).toFixed(1)} <span className="text-xs text-slate-400">({count})</span>
                 </span>
               </div>
             );
           }
-          return <span className="text-xs text-slate-400 font-normal">N/A</span>;
+          return <span className="text-[13px] font-medium text-slate-400">N/A</span>;
         },
       },
       {
@@ -672,7 +672,7 @@ const MillerSuppliers = () => {
           const st = (row.status || "active").toLowerCase();
           const badgeStyle = statusStyleMap[st] || "bg-slate-100 text-slate-700 border border-slate-200";
           return (
-            <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-normal capitalize ${badgeStyle}`}>
+            <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${badgeStyle}`}>
               {row.status || "Active"}
             </span>
           );
@@ -683,17 +683,6 @@ const MillerSuppliers = () => {
         label: "Action",
         width: "15%",
         cellClassName: "text-center",
-        render: (row) => (
-          <div className="flex items-center justify-center">
-            <button
-              type="button"
-              onClick={() => handleOpenDetails(row)}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-normal text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
-            >
-              View Details
-            </button>
-          </div>
-        ),
       },
     ],
     []
@@ -797,6 +786,8 @@ const MillerSuppliers = () => {
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
+          onViewDetails={handleOpenDetails}
+          viewDetailsLabel="View Details"
           footerLabel={
             totalCount === 0
               ? "Showing 0 suppliers"

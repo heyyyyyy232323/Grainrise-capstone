@@ -1,10 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  Building2,
-  Users,
   CreditCard,
   Plus,
-  Eye,
   ShieldCheck,
   CheckCircle2,
   AlertCircle,
@@ -14,6 +11,7 @@ import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
 import Dropdown from "../../../Components/Minor-Components/Dropdown";
 import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
+import Tabs from "../../../Components/Minor-Components/Tabs";
 import Toast from "../../../Components/Minor-Components/Toast";
 import useToast from "../../../Components/hooks/useToast";
 import useApi from "../../../Components/hooks/useApi";
@@ -798,7 +796,7 @@ export default function MillerOnlinePaymentAccounts() {
       label: "Branch",
       render: (row) => (
         <div>
-          <span className="font-semibold text-gray-900 block">
+          <span className="text-[13px] font-medium text-slate-700 block">
             {row.branch_name || row.branch || "—"}
           </span>
           {row.branch_code && (
@@ -811,7 +809,7 @@ export default function MillerOnlinePaymentAccounts() {
       key: "account_name",
       label: "Account Name",
       render: (row) => (
-        <span className="font-medium text-gray-900">{row.account_name || "—"}</span>
+        <span className="text-[13px] font-medium text-slate-700">{row.account_name || "—"}</span>
       ),
     },
     {
@@ -820,7 +818,7 @@ export default function MillerOnlinePaymentAccounts() {
       render: (row) => {
         const accType = (row.account_type || row.type || "bank").toLowerCase();
         return (
-          <div className="flex items-center gap-1.5 capitalize text-xs text-gray-700">
+          <div className="flex items-center gap-1.5 capitalize text-[13px] font-medium text-slate-700">
             {accType === "gcash" ? (
               <span className="w-2 h-2 rounded-full bg-blue-500" />
             ) : (
@@ -880,19 +878,9 @@ export default function MillerOnlinePaymentAccounts() {
       },
     },
     {
-      key: "actions",
+      key: "action",
       label: "Action",
       align: "center",
-      render: (row) => (
-        <button
-          type="button"
-          onClick={() => handleViewBranchAccount(row)}
-          className="p-1.5 rounded-lg text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition inline-flex items-center gap-1 text-xs cursor-pointer font-medium"
-        >
-          <Eye size={15} />
-          <span>View</span>
-        </button>
-      ),
     },
   ];
 
@@ -901,14 +889,14 @@ export default function MillerOnlinePaymentAccounts() {
       key: "branch_name",
       label: "Branch",
       render: (row) => (
-        <span className="font-semibold text-gray-900">{row.branch_name || "—"}</span>
+        <span className="text-[13px] font-medium text-slate-700">{row.branch_name || "—"}</span>
       ),
     },
     {
       key: "employee_name",
       label: "Employee",
       render: (row) => (
-        <span className="font-semibold text-gray-900">{row.employee_name || "—"}</span>
+        <span className="text-[13px] font-medium text-slate-700">{row.employee_name || "—"}</span>
       ),
     },
     {
@@ -924,7 +912,7 @@ export default function MillerOnlinePaymentAccounts() {
       key: "account_name",
       label: "Account Name",
       render: (row) => (
-        <span className="font-medium text-gray-900">{row.account_name || "—"}</span>
+        <span className="text-[13px] font-medium text-slate-700">{row.account_name || "—"}</span>
       ),
     },
     {
@@ -973,19 +961,9 @@ export default function MillerOnlinePaymentAccounts() {
       },
     },
     {
-      key: "actions",
+      key: "action",
       label: "Action",
       align: "center",
-      render: (row) => (
-        <button
-          type="button"
-          onClick={() => handleViewEmployeeAccount(row)}
-          className="p-1.5 rounded-lg text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition inline-flex items-center gap-1 text-xs cursor-pointer font-medium"
-        >
-          <Eye size={15} />
-          <span>View</span>
-        </button>
-      ),
     },
   ];
 
@@ -1024,40 +1002,25 @@ export default function MillerOnlinePaymentAccounts() {
         </div>
       </div>
 
-      {/* Segmented Tabs & Actions Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200">
-        <div className="flex items-center gap-6 text-sm font-semibold">
-          <button
-            type="button"
-            onClick={() => setActiveTab("branch")}
-            className={`flex items-center gap-2 pb-3 transition relative cursor-pointer ${
-              activeTab === "branch"
-                ? "text-gray-900 border-b-2 border-emerald-700 font-bold"
-                : "text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            <Building2 size={16} />
-            <span>Branch Online Payment Accounts</span>
-            <span className="text-xs text-gray-400">({branchAccounts.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("employee")}
-            className={`flex items-center gap-2 pb-3 transition relative cursor-pointer ${
-              activeTab === "employee"
-                ? "text-gray-900 border-b-2 border-emerald-700 font-bold"
-                : "text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            <Users size={16} />
-            <span>Employee Online Payment Accounts</span>
-            <span className="text-xs text-gray-400">({employeeAccounts.length})</span>
-          </button>
-        </div>
+      {/* Tabs & Actions Header */}
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+        <Tabs
+          tabs={[
+            {
+              id: "branch",
+              label: `Branch Online Payment Accounts (${branchAccounts.length})`,
+            },
+            {
+              id: "employee",
+              label: `Employee Online Payment Accounts (${employeeAccounts.length})`,
+            },
+          ]}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
 
         {activeTab === "branch" && (
-          <div className="pb-2.5 flex items-center gap-2 shrink-0">
+          <div className="flex shrink-0 items-center gap-2 sm:pt-1">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 border border-gray-200 rounded-full text-xs font-semibold text-gray-700">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
               <span>{branchAccounts.length} accounts</span>
@@ -1072,7 +1035,7 @@ export default function MillerOnlinePaymentAccounts() {
           </div>
         )}
         {activeTab === "employee" && (
-          <div className="pb-2.5 flex items-center gap-2 shrink-0">
+          <div className="flex shrink-0 items-center gap-2 sm:pt-1">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 border border-gray-200 rounded-full text-xs font-semibold text-gray-700">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
               <span>{employeeAccounts.length} accounts</span>
@@ -1173,6 +1136,8 @@ export default function MillerOnlinePaymentAccounts() {
             currentPage={branchCurrentPage}
             totalPages={branchTotalPages}
             onPageChange={setBranchCurrentPage}
+            onViewDetails={handleViewBranchAccount}
+            viewDetailsLabel="View Details"
             footerLabel={
               branchAccounts.length > 0
                 ? `Showing ${(branchCurrentPage - 1) * itemsPerPage + 1}–${Math.min(
@@ -1290,6 +1255,8 @@ export default function MillerOnlinePaymentAccounts() {
             currentPage={employeeCurrentPage}
             totalPages={employeeTotalPages}
             onPageChange={setEmployeeCurrentPage}
+            onViewDetails={handleViewEmployeeAccount}
+            viewDetailsLabel="View Details"
             footerLabel={
               employeeAccounts.length > 0
                 ? `Showing ${(employeeCurrentPage - 1) * itemsPerPage + 1}–${Math.min(
@@ -1453,4 +1420,3 @@ export default function MillerOnlinePaymentAccounts() {
     </div>
   );
 }
-

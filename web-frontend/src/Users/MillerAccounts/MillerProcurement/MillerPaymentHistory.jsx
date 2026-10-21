@@ -34,18 +34,18 @@ const ITEMS_PER_PAGE = 10;
 
 function ModalDetailRow({ label, value, isAmount = false, isBadge = false, badgeStyle = "" }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-1.5 text-xs sm:text-sm">
-      <span className="text-slate-500 font-medium shrink-0">{label}:</span>
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] items-center gap-4 rounded-lg px-3 py-2 text-xs odd:bg-slate-50 sm:text-sm">
+      <span className="text-slate-500 font-normal">{label}</span>
       {isBadge ? (
-        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${badgeStyle}`}>
+        <span className={`justify-self-end rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeStyle}`}>
           {value || "—"}
         </span>
       ) : (
         <span
-          className={`text-right break-words max-w-[60%] ${
+          className={`break-words text-right ${
             isAmount
-              ? "font-extrabold text-[#0B5D1E] text-sm sm:text-base"
-              : "font-normal text-slate-800"
+              ? "text-sm font-semibold text-[#0B5D1E] sm:text-base"
+              : "font-medium text-slate-800"
           }`}
         >
           {value || "—"}
@@ -234,21 +234,21 @@ const MillerPaymentHistory = () => {
         key: "batch_no",
         label: "Batch No.",
         render: (row) => (
-          <span className="font-normal text-slate-800">{row.batch_no || "—"}</span>
+          <span className="text-[13px] font-medium text-slate-700">{row.batch_no || "—"}</span>
         ),
       },
       {
         key: "supplier",
         label: "Supplier",
         render: (row) => (
-          <span className="font-normal text-slate-700">{row.supplier || "—"}</span>
+          <span className="text-[13px] font-medium text-slate-700">{row.supplier || "—"}</span>
         ),
       },
       {
         key: "total",
         label: "Total Amount",
         render: (row) => (
-          <span className="font-normal text-slate-800">
+          <span className="text-[13px] font-medium text-slate-700">
             {row.total_amount || `₱ ${Number(row.total_price || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           </span>
         ),
@@ -275,7 +275,7 @@ const MillerPaymentHistory = () => {
         key: "date",
         label: "Requested Date",
         render: (row) => (
-          <span className="font-normal text-slate-600 text-xs">
+          <span className="text-[13px] font-medium text-slate-700">
             {row.requested_at_formatted || row.requested_date || row.received_date || "—"}
           </span>
         ),
@@ -284,17 +284,6 @@ const MillerPaymentHistory = () => {
         key: "action",
         label: "Action",
         cellClassName: "text-center",
-        render: (row) => (
-          <div className="flex items-center justify-center">
-            <button
-              type="button"
-              onClick={() => handleOpenDetails(row)}
-              className="rounded-lg border border-gray-300 px-3.5 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 hover:border-gray-400 cursor-pointer"
-            >
-              View Details
-            </button>
-          </div>
-        ),
       },
     ],
     [handleOpenDetails]
@@ -518,6 +507,8 @@ const MillerPaymentHistory = () => {
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={(page) => setCurrentPage(page)}
+          onViewDetails={handleOpenDetails}
+          viewDetailsLabel="View Details"
           footerLabel={
             totalRecords === 0
               ? "Showing 0 records"
@@ -539,7 +530,7 @@ const MillerPaymentHistory = () => {
             onClick={handleCloseDetailsModal}
           >
             <div
-              className="relative w-full max-w-md sm:max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-w-xl"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
@@ -564,7 +555,7 @@ const MillerPaymentHistory = () => {
               </div>
 
               {/* Modal Body */}
-              <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-75px)] space-y-4">
+              <div className="max-h-[calc(90vh-75px)] space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
                 {detailLoading ? (
                   <div className="flex flex-col items-center justify-center py-12 text-slate-400">
                     <Loader2 size={28} className="animate-spin text-emerald-600 mb-2" />
@@ -581,7 +572,7 @@ const MillerPaymentHistory = () => {
 
                     {/* ── SECTION 1 — INBOUND ORDER DETAILS ─────────────────── */}
                     <div className="space-y-1">
-                      <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+                      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                         Inbound Order Details
                       </div>
 
@@ -629,7 +620,7 @@ const MillerPaymentHistory = () => {
 
                   {/* ── SECTION 2 — RECEIVING DETAILS ─────────────────────── */}
                   <div className="space-y-1">
-                    <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                       Receiving Details
                     </div>
 
@@ -666,7 +657,7 @@ const MillerPaymentHistory = () => {
                     <>
                       <div className="border-t border-slate-100 pt-2" />
                       <div className="space-y-1">
-                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+                        <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                           Payment Details
                         </div>
 
