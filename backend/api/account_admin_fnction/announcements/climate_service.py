@@ -3,6 +3,7 @@ import math
 import os
 import shutil
 import tempfile
+import threading
 
 from datetime import (
     datetime,
@@ -10,6 +11,7 @@ from datetime import (
 )
 
 import cdsapi
+from django.core.cache import cache
 import numpy as np
 import xarray as xr
 
@@ -134,16 +136,71 @@ class ClimateInitializationDateUnavailableError(
     pass
 
 
+class ClimateQueueLimitExceededError(
+    ClimateServiceError
+):
+    """
+    Raised when Copernicus Climate Data Store rejects a request because
+    the queue limit has been reached and requests must be sequential.
+    """
+    pass
+
+
 class InvalidClimateAreaError(
     ClimateServiceError
 ):
     pass
 
 
+def _is_queue_limit_exceeded(
+    exc,
+):
+    if exc is None:
+        return False
+
+    error_parts = [
+        type(exc).__name__,
+        str(exc),
+        repr(exc),
+    ]
+
+    cause = getattr(exc, "__cause__", None) or getattr(exc, "__context__", None)
+    if cause is not None:
+        error_parts.extend([
+            type(cause).__name__,
+            str(cause),
+            repr(cause),
+        ])
+
+    for arg in getattr(exc, "args", ()):
+        error_parts.append(str(arg))
+
+    full_text = " ".join(error_parts).lower()
+
+    queue_markers = [
+        "maximum number queued requests",
+        "maximum number of queued requests",
+        "request data sequentially",
+        "queued requests for this dataset has been reached",
+        "queued requests for this dataset",
+        "queued requests",
+        "queue limit",
+        "too many requests",
+        "429",
+    ]
+
+    return any(marker in full_text for marker in queue_markers)
+
+
 def _is_initialization_date_unavailable(
     exc,
 ):
     if exc is None:
+        return False
+
+    # A queue limit or rate limiting error must NEVER be misclassified
+    # as an unavailable initialization date, which would trigger futile fallback requests.
+    if _is_queue_limit_exceeded(exc):
         return False
 
     error_parts = [
@@ -792,7 +849,17 @@ def build_six_month_request(
 
 # ============================================================
 # CDS DOWNLOAD
+#
+# Copernicus imposes strict concurrency/queue limits per account
+# on seasonal datasets: "Maximum number queued requests for this
+# dataset has been reached. Please configure your scripts to
+# request data sequentially."
+#
+# We enforce process-level serialization via _CDS_RETRIEVAL_LOCK.
 # ============================================================
+
+_CDS_RETRIEVAL_LOCK = threading.Lock()
+
 
 def _download_forecast(
     *,
@@ -815,17 +882,35 @@ def _download_forecast(
     )
 
     try:
+        with _CDS_RETRIEVAL_LOCK:
+            logger.info(
+                f"Acquired CDS retrieval lock for initialization date {req_year}-{req_month}."
+            )
+            result = client.retrieve(
+                CDS_DATASET,
+                request_payload,
+            )
 
-        result = client.retrieve(
-            CDS_DATASET,
-            request_payload,
-        )
-
-        result.download(
-            target_path
-        )
+            result.download(
+                target_path
+            )
 
     except Exception as exc:
+
+        if _is_queue_limit_exceeded(exc):
+            logger.warning(
+                (
+                    f"Copernicus CDS rejected request for {req_year}-{req_month} "
+                    f"due to dataset queue limit: {exc}. Halting immediately without retrying fallback dates."
+                )
+            )
+
+            raise ClimateQueueLimitExceededError(
+                (
+                    "The Copernicus Climate Data Store queue is temporarily busy processing other requests. "
+                    "Please wait a moment and click Retry."
+                )
+            ) from exc
 
         if _is_initialization_date_unavailable(exc):
             logger.warning(
@@ -1219,14 +1304,35 @@ def fetch_location_six_month_forecast(
         str(month or reference["month"]).strip()
     )
 
-    # Offset 0 = nominal month, -1 = 1 month back, -2 = 2 months back (strict maximum of 2 previous months)
-    candidate_offsets = [0, -1, -2]
-    max_attempts = len(candidate_offsets)
+    now = _current_utc()
+    cached_working_date = cache.get("grainrise:climate:latest_working_date")
 
-    candidate_dates = [
+    # Copernicus seasonal forecasts publish around the 13th of each month.
+    # Before day 13, the nominal current month is guaranteed not to exist yet on CDS.
+    if now.day < 13:
+        candidate_offsets = [-1, 0, -2]
+    else:
+        candidate_offsets = [0, -1, -2]
+
+    raw_candidates = [
         _add_months(nominal_year, nominal_month, offset)
         for offset in candidate_offsets
     ]
+
+    # Filter out dates known to be unavailable for this period
+    candidate_dates = [
+        d for d in raw_candidates
+        if not cache.get(f"grainrise:climate:unavailable:{d[0]}_{d[1]}")
+    ]
+    if not candidate_dates:
+        candidate_dates = raw_candidates
+
+    # If the latest working date is among candidates, try it first to eliminate retries
+    if cached_working_date and cached_working_date in candidate_dates:
+        candidate_dates.remove(cached_working_date)
+        candidate_dates.insert(0, cached_working_date)
+
+    max_attempts = len(candidate_dates)
 
     temp_directory = (
         tempfile.mkdtemp(
@@ -1303,6 +1409,9 @@ def fetch_location_six_month_forecast(
                 successful_year = cand_year
                 successful_month = cand_month
 
+                # Cache working date for future fast retrievals
+                cache.set("grainrise:climate:latest_working_date", (successful_year, successful_month), timeout=86400)
+
                 logger.info(
                     (
                         f"Successfully retrieved and processed Copernicus climate forecast "
@@ -1312,8 +1421,18 @@ def fetch_location_six_month_forecast(
                 )
                 break
 
+            except ClimateQueueLimitExceededError as exc:
+                logger.warning(
+                    (
+                        f"CDS queue limit reached on initialization date {cand_date_str}. "
+                        f"Immediately halting all fallback attempts."
+                    )
+                )
+                raise exc
+
             except ClimateInitializationDateUnavailableError as exc:
                 last_unavailable_error = exc
+                cache.set(f"grainrise:climate:unavailable:{cand_year}_{cand_month}", True, timeout=86400)
 
                 if dataset is not None:
                     try:

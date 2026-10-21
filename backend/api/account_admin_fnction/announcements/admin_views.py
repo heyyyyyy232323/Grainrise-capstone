@@ -1,8 +1,8 @@
+import hashlib
 import json
-
 import logging
-
 import os
+import threading
 
 from django.core.cache import cache
 
@@ -63,6 +63,8 @@ from .climate_service import (
     ClimateServiceError,
 
     ClimateDataUnavailableError,
+
+    ClimateQueueLimitExceededError,
 
     InvalidClimateAreaError,
 
@@ -163,31 +165,24 @@ def _success(
     )
 
 def _error(
-
     detail,
-
     *,
-
     status_code=status.HTTP_400_BAD_REQUEST,
-
+    error_code=None,
 ):
+    payload = {
+        "success": False,
+        "detail": str(
+            detail
+        ),
+    }
+
+    if error_code is not None:
+        payload["error_code"] = str(error_code)
 
     return Response(
-
-        {
-
-            "success": False,
-
-            "detail": str(
-
-                detail
-
-            ),
-
-        },
-
+        payload,
         status=status_code,
-
     )
 
 # ============================================================
@@ -1636,314 +1631,210 @@ def admin_reactivate_announcement(
 
 # ============================================================
 
+_IN_FLIGHT_FORECASTS = {}
+_IN_FLIGHT_FORECASTS_LOCK = threading.Lock()
+
+
 @api_view(
-
     [
-
         "POST",
-
     ]
-
 )
-
 def admin_climate_forecast(
-
     request,
-
 ):
-
     denied = (
-
         _require_admin_response(
-
             request
-
         )
-
     )
-
     if denied:
-
         return denied
 
     data = (
-
         _request_data(
-
             request
-
         )
-
     )
-
     location = data.get(
-
         "location"
-
     )
 
     if not location:
-
         return _error(
-
-            (
-
-                "Forecast location "
-
-                "is required."
-
-            )
-
+            "Forecast location is required."
         )
 
     try:
-
         # ----------------------------------------------------
-
         # RESOLVE PSGC LOCATION
-
         # ----------------------------------------------------
-
         resolved = (
-
             resolve_forecast_location(
-
                 location
-
             )
-
         )
-
         resolved_location = (
-
             resolved[
-
                 "location"
-
             ]
-
         )
-
         area = (
-
             resolved[
-
                 "area"
-
             ]
-
         )
 
         # ----------------------------------------------------
-
         # CURRENT INITIALIZATION KEY
-
-        #
-
-        # Climate service still controls the actual CDS
-
-        # initialization request.
-
-        #
-
-        # This key prevents repeated downloads for the same
-
-        # city in the same initialization month.
-
         # ----------------------------------------------------
-
         now = (
-
             timezone.now()
-
         )
-
         cache_key = (
-
             build_forecast_cache_key(
-
                 location=
-
                     resolved_location,
-
                 initialization_year=
-
                     now.year,
-
                 initialization_month=
-
                     now.month,
-
             )
-
         )
 
         # ----------------------------------------------------
-
-        # FORECAST CACHE
-
+        # 1. FAST CACHE CHECK
         # ----------------------------------------------------
-
         try:
-
             cached_forecast = (
-
                 cache.get(
-
                     cache_key
-
                 )
-
             )
-
         except Exception:
-
             logger.warning(
-
-                (
-
-                    "Climate forecast cache "
-
-                    "read failed."
-
-                ),
-
+                "Climate forecast cache read failed.",
                 exc_info=True,
-
             )
-
             cached_forecast = None
 
         if isinstance(
-
             cached_forecast,
-
             dict,
-
         ):
-
             return _success(
-
                 data=
-
                     cached_forecast,
-
                 message=
-
-                    (
-
-                        "Climate forecast "
-
-                        "loaded successfully."
-
-                    ),
-
+                    "Climate forecast loaded successfully.",
             )
 
         # ----------------------------------------------------
-
-        # COPERNICUS CDS
-
+        # 2. IN-FLIGHT DEDUPLICATION WITHIN PROCESS
+        # Prevent concurrent identical requests from submitting
+        # duplicate CDS retrieval jobs.
         # ----------------------------------------------------
+        wait_event = None
+        is_leader = False
 
-        forecast = (
+        with _IN_FLIGHT_FORECASTS_LOCK:
+            try:
+                cached = cache.get(cache_key)
+                if isinstance(cached, dict):
+                    return _success(
+                        data=cached,
+                        message="Climate forecast loaded successfully.",
+                    )
+            except Exception:
+                pass
 
-            fetch_location_six_month_forecast(
+            if cache_key in _IN_FLIGHT_FORECASTS:
+                wait_event = _IN_FLIGHT_FORECASTS[cache_key]
+            else:
+                wait_event = threading.Event()
+                _IN_FLIGHT_FORECASTS[cache_key] = wait_event
+                is_leader = True
 
-                location=
-
-                    resolved_location,
-
-                area=
-
-                    area,
-
-            )
-
-        )
-
-        # ----------------------------------------------------
-
-        # CACHE PROCESSED JSON ONLY
-
-        #
-
-        # No NetCDF is cached.
-
-        # ----------------------------------------------------
+        if not is_leader and wait_event is not None:
+            logger.info("Waiting for in-flight CDS forecast for %s...", cache_key)
+            wait_event.wait(timeout=120)
+            try:
+                cached = cache.get(cache_key)
+                if isinstance(cached, dict):
+                    return _success(
+                        data=cached,
+                        message="Climate forecast loaded successfully.",
+                    )
+            except Exception:
+                pass
 
         try:
-
-            cache.set(
-
-                cache_key,
-
-                forecast,
-
-                timeout=
-
-                    FORECAST_CACHE_SECONDS,
-
+            # ----------------------------------------------------
+            # 3. COPERNICUS CDS (LEADER RETRIEVAL)
+            # ----------------------------------------------------
+            forecast = (
+                fetch_location_six_month_forecast(
+                    location=
+                        resolved_location,
+                    area=
+                        area,
+                )
             )
 
-        except Exception:
+            # ----------------------------------------------------
+            # 4. CACHE PROCESSED JSON ONLY
+            # No NetCDF is cached.
+            # ----------------------------------------------------
+            try:
+                cache.set(
+                    cache_key,
+                    forecast,
+                    timeout=
+                        FORECAST_CACHE_SECONDS,
+                )
+            except Exception:
+                logger.warning(
+                    "Climate forecast cache write failed.",
+                    exc_info=True,
+                )
 
-            logger.warning(
-
-                (
-
-                    "Climate forecast cache "
-
-                    "write failed."
-
-                ),
-
-                exc_info=True,
-
+            return _success(
+                data=
+                    forecast,
+                message=
+                    "Climate forecast retrieved successfully.",
             )
 
-        return _success(
-
-            data=
-
-                forecast,
-
-            message=
-
-                (
-
-                    "Climate forecast "
-
-                    "retrieved successfully."
-
-                ),
-
-        )
+        finally:
+            if is_leader:
+                with _IN_FLIGHT_FORECASTS_LOCK:
+                    _IN_FLIGHT_FORECASTS.pop(cache_key, None)
+                    wait_event.set()
 
     except ClimateLocationNotFoundError as exc:
-
         return _error(
-
             exc,
-
             status_code=
-
                 status.HTTP_404_NOT_FOUND,
-
         )
 
     except (
-
         ClimateLocationError,
-
         InvalidClimateAreaError,
-
     ) as exc:
-
         return _error(
-
             exc
+        )
 
+    except ClimateQueueLimitExceededError as exc:
+        logger.warning(
+            "Copernicus CDS queue limit reached: %s",
+            exc,
+        )
+        return _error(
+            "The Copernicus Climate Data Store queue is temporarily busy processing other requests. Please wait a moment and click Retry.",
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            error_code="CDS_QUEUE_LIMIT_REACHED",
         )
 
     except ClimateDataUnavailableError as exc:
@@ -2046,18 +1937,23 @@ def admin_climate_forecast(
 
 # ============================================================
 
+_LAST_WORKING_AI_MODEL = "gemini-3.6-flash"
+
 def _generate_with_article_ai_provider(
     *,
     system_instruction,
     user_prompt,
 ):
-    import requests
+    global _LAST_WORKING_AI_MODEL
+    import json
+    import urllib.request
+    import urllib.error
 
     api_key = os.getenv("GRAINRISE_AI_API_KEY")
     endpoint = os.getenv("GRAINRISE_AI_ENDPOINT")
-    model = os.getenv("GRAINRISE_AI_MODEL", "gemini-2.5-flash")
+    model = os.getenv("GRAINRISE_AI_MODEL", "gemini-3.6-flash")
     fallback_models_str = os.getenv("GRAINRISE_AI_FALLBACK_MODELS", "")
-    timeout = int(os.getenv("GRAINRISE_AI_TIMEOUT_SECONDS", "60"))
+    timeout = min(int(os.getenv("GRAINRISE_AI_TIMEOUT_SECONDS", "60")), 15)
 
     if not api_key or not endpoint:
         raise AnnouncementAIError(
@@ -2065,12 +1961,20 @@ def _generate_with_article_ai_provider(
             "Please configure GRAINRISE_AI_API_KEY and GRAINRISE_AI_ENDPOINT."
         )
 
-    candidate_models = [model]
+    candidate_models = []
+    if _LAST_WORKING_AI_MODEL:
+        candidate_models.append(_LAST_WORKING_AI_MODEL)
+    if model and model not in candidate_models:
+        candidate_models.append(model)
     if fallback_models_str:
         for fb in fallback_models_str.split(","):
             fb = fb.strip()
             if fb and fb not in candidate_models:
                 candidate_models.append(fb)
+
+    for safe_model in ["gemini-3.6-flash", "gemini-3.5-flash"]:
+        if safe_model not in candidate_models:
+            candidate_models.append(safe_model)
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -2090,29 +1994,33 @@ def _generate_with_article_ai_provider(
         }
 
         try:
-            response = requests.post(
+            req = urllib.request.Request(
                 endpoint,
+                data=json.dumps(payload).encode("utf-8"),
                 headers=headers,
-                json=payload,
-                timeout=timeout,
+                method="POST",
             )
-
-            if response.status_code == 200:
-                result = response.json()
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                resp_bytes = response.read()
+                result = json.loads(resp_bytes.decode("utf-8", errors="replace"))
                 choices = result.get("choices", [])
                 if choices and "message" in choices[0]:
+                    _LAST_WORKING_AI_MODEL = candidate_model
+                    logger.info("AI generation succeeded with model %s", candidate_model)
                     return choices[0]["message"].get("content", "")
                 raise AnnouncementAIError("AI provider returned empty choices.")
 
+        except urllib.error.HTTPError as exc:
+            err_body = exc.read().decode("utf-8", errors="replace")
             logger.warning(
-                "AI provider model %s returned status %s: %s",
+                "AI provider model %s returned HTTP %s: %s",
                 candidate_model,
-                response.status_code,
-                response.text,
+                exc.code,
+                err_body[:200],
             )
-            last_error = f"Status {response.status_code}: {response.text}"
+            last_error = f"HTTP {exc.code}: {err_body[:200]}"
 
-        except requests.RequestException as exc:
+        except Exception as exc:
             logger.warning(
                 "AI provider model %s request failed: %s",
                 candidate_model,
@@ -2382,6 +2290,27 @@ def admin_generate_climate_article(
 
         )
 
+    # --------------------------------------------------------
+    # ARTICLE CACHE CHECK
+    # --------------------------------------------------------
+    loc_id = ""
+    if isinstance(location, dict):
+        loc_id = location.get("city_code") or location.get("display_name") or location.get("city") or ""
+    else:
+        loc_id = str(location or "")
+    forecast_hash = hashlib.md5(json.dumps(forecast, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:12]
+    article_cache_key = f"grainrise:article_ai:{loc_id}:{audience}:{range_months}:{forecast_hash}"
+
+    try:
+        cached_article = cache.get(article_cache_key)
+        if isinstance(cached_article, dict):
+            return _success(
+                data=cached_article,
+                message="Climate-informed article loaded successfully.",
+            )
+    except Exception:
+        pass
+
     try:
 
         # ----------------------------------------------------
@@ -2521,6 +2450,11 @@ def admin_generate_climate_article(
                 ],
 
         }
+
+        try:
+            cache.set(article_cache_key, response_data, timeout=3600)
+        except Exception:
+            pass
 
         return _success(
 

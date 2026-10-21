@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useRef,
   useState,
 } from "react";
 
@@ -61,6 +62,9 @@ const useAnnouncementClimate = () => {
     setGenerationError,
   ] = useState("");
 
+  const inFlightForecastRef = useRef(false);
+  const inFlightArticleRef = useRef(false);
+
 
   // =========================================================
   // FETCH CLIMATE FORECAST
@@ -78,6 +82,17 @@ const useAnnouncementClimate = () => {
           );
         }
 
+        if (inFlightForecastRef.current) {
+          return forecast;
+        }
+
+        const reqKey = location?.city_code || location?.display_name || location?.city;
+        const curKey = forecastLocation?.city_code || forecastLocation?.display_name || forecastLocation?.city;
+        if (forecast && reqKey && curKey && reqKey === curKey) {
+          return forecast;
+        }
+
+        inFlightForecastRef.current = true;
 
         setLoadingForecast(
           true
@@ -132,23 +147,27 @@ const useAnnouncementClimate = () => {
           );
 
 
-          return data;
-
         } catch (error) {
 
-          const message =
-            error?.message ||
-            "Unable to retrieve climate forecast.";
+          const isQueueLimit =
+            error?.status === 429 ||
+            error?.data?.error_code === "CDS_QUEUE_LIMIT_REACHED" ||
+            /queue/i.test(error?.message || "") ||
+            /sequentially/i.test(error?.message || "");
 
+          const message = isQueueLimit
+            ? (error?.data?.detail || error?.message || "The Copernicus Climate Data Store queue is temporarily busy processing other requests. Please wait a moment and click Retry.")
+            : (error?.message || "Unable to retrieve climate forecast.");
 
           setForecastError(
             message
           );
 
-
           throw error;
 
         } finally {
+
+          inFlightForecastRef.current = false;
 
           setLoadingForecast(
             false
@@ -159,6 +178,8 @@ const useAnnouncementClimate = () => {
       },
       [
         request,
+        forecast,
+        forecastLocation,
       ]
     );
 
@@ -177,6 +198,10 @@ const useAnnouncementClimate = () => {
         location:
           suppliedLocation,
       }) => {
+
+        if (inFlightArticleRef.current) {
+          return generatedArticle;
+        }
 
         const activeForecast =
           suppliedForecast ||
@@ -230,6 +255,8 @@ const useAnnouncementClimate = () => {
           );
         }
 
+
+        inFlightArticleRef.current = true;
 
         setGeneratingArticle(
           true
@@ -305,6 +332,8 @@ const useAnnouncementClimate = () => {
 
         } finally {
 
+          inFlightArticleRef.current = false;
+
           setGeneratingArticle(
             false
           );
@@ -316,6 +345,7 @@ const useAnnouncementClimate = () => {
         request,
         forecast,
         forecastLocation,
+        generatedArticle,
       ]
     );
 

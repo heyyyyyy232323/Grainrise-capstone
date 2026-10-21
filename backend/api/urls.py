@@ -111,6 +111,28 @@ urlpatterns = [
     ),
 
 
+    # ========================================================
+    # ACCOUNT ADMIN - ANNOUNCEMENTS
+    #
+    # FRONTEND ROUTES REMAIN:
+    #
+    # /api/announcements/admin/
+    # /api/announcements/admin/counts/
+    # /api/announcements/admin/drafts/
+    # /api/announcements/admin/climate/forecast/
+    # /api/announcements/admin/climate/generate-article/
+    #
+    # Backend implementation lives under:
+    #
+    # api/account_admin_fnction/announcements/
+    # ========================================================
+
+    path(
+        "announcements/",
+        include(
+            "api.account_admin_fnction.announcements.urls"
+        ),
+    ),
 
 
     # ========================================================
@@ -121,18 +143,6 @@ urlpatterns = [
         "miller/",
         include(
             "api.miller_function.urls"
-        ),
-    ),
-
-
-    # ========================================================
-    # MILLER EMPLOYEES (ENCODER, ETC.)
-    # ========================================================
-
-    path(
-        "miller-employees/",
-        include(
-            "api.miller_employees_function.urls"
         ),
     ),
 
@@ -240,6 +250,12 @@ urlpatterns = [
     ),
 
     path(
+        "partnership-inquiries/verify-id/",
+        partnership_inquiry.verify_partnership_id,
+        name="partnership-inquiry-verify-id",
+    ),
+
+    path(
         "partnership-inquiries/",
         partnership_inquiry.submit_partnership_inquiry,
         name="partnership-inquiry-submit",
@@ -308,3 +324,7 @@ urlpatterns = [
         ),
     ),
 ]
+
+
+
+

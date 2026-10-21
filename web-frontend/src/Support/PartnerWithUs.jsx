@@ -25,6 +25,64 @@ const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const POLICY_VERSION = '1.0';
 const API_BASE = `${import.meta.env.VITE_API_BASE_URL}/api`;
 
+/**
+ * Browser-side image compression to prevent Render OOM.
+ * Scales large phone photos (e.g. 12MP/48MP) to max dimension 1024px
+ * and compresses JPEG to 0.85 quality.
+ */
+async function compressImageForUpload(file, maxDimension = 1024, quality = 0.85) {
+  if (!file || !file.type || !file.type.startsWith('image/')) {
+    return file;
+  }
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width <= maxDimension && height <= maxDimension && file.size < 600 * 1024) {
+        return resolve(file);
+      }
+      if (width > height) {
+        if (width > maxDimension) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        }
+      } else {
+        if (height > maxDimension) {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (blob && blob.size < file.size) {
+            const compressed = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(compressed);
+          } else {
+            resolve(file);
+          }
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(file);
+    };
+    img.src = url;
+  });
+}
+
 function validateName(v) {
   if (!v.trim()) return 'Full legal name is required.';
   if (!NAME_RE.test(v)) return 'Only letters, spaces, hyphens, and apostrophes are allowed.';
@@ -124,8 +182,13 @@ export default function PartnerWithUs() {
   const [govIdFile, setGovIdFile] = useState(null);
   const [govIdPreview, setGovIdPreview] = useState('');
   const [govIdError, setGovIdError] = useState('');
+  const [govIdVerified, setGovIdVerified] = useState(false);
+  const [govIdVerifying, setGovIdVerifying] = useState(false);
+  const [govIdVerificationError, setGovIdVerificationError] = useState('');
   const govIdInputRef = useRef(null);
+  const govIdCameraInputRef = useRef(null);
   const videoRef = useRef(null);
+  const [sourceModalTarget, setSourceModalTarget] = useState('business'); // 'business' | 'govId'
   const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
@@ -241,11 +304,11 @@ export default function PartnerWithUs() {
     formData.contactNumber && !validatePhone(formData.contactNumber) &&
     formData.message.trim() && !validateMessage(formData.message) &&
     imageFiles.length > 0 && !imageError &&
-    govIdFile && !govIdError &&
+    govIdFile && govIdVerified && !govIdError &&
     agreedToTerms;
 
-    /* ── Multi-image Document processing ── */
-  const processImageFiles = (files) => {
+  /* ── Multi-image Document processing (with browser-side compression) ── */
+  const processImageFiles = async (files) => {
     if (!files || files.length === 0) return;
     setImageLoading(true);
     setImageError('');
@@ -262,47 +325,57 @@ export default function PartnerWithUs() {
       }
     }
 
-    let loaded = 0;
-    const newDocs = [];
-    fileList.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        newDocs.push({
-          id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-          file,
-          preview: e.target.result,
-          name: file.name,
-          size: file.size,
-        });
-        loaded++;
-        if (loaded === fileList.length) {
-          setImageFiles(prev => [...prev, ...newDocs]);
-          setImageLoading(false);
-          setImageError('');
-          if (fileInputRef.current) fileInputRef.current.value = '';
-          if (cameraInputRef.current) cameraInputRef.current.value = '';
-        }
-      };
-      reader.onerror = () => {
-        loaded++;
-        if (loaded === fileList.length) {
-          setImageLoading(false);
-          setImageError('Failed to read some document images.');
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    try {
+      const compressedFiles = await Promise.all(
+        fileList.map((f) => compressImageForUpload(f))
+      );
+
+      let loaded = 0;
+      const newDocs = [];
+      compressedFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          newDocs.push({
+            id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+            file,
+            preview: e.target.result,
+            name: file.name,
+            size: file.size,
+          });
+          loaded++;
+          if (loaded === compressedFiles.length) {
+            setImageFiles(prev => [...prev, ...newDocs]);
+            setImageLoading(false);
+            setImageError('');
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            if (cameraInputRef.current) cameraInputRef.current.value = '';
+          }
+        };
+        reader.onerror = () => {
+          loaded++;
+          if (loaded === compressedFiles.length) {
+            setImageLoading(false);
+            setImageError('Failed to read some document images.');
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    } catch (err) {
+      console.warn('Document processing error:', err);
+      setImageLoading(false);
+    }
   };
 
-  const processReplacementFile = (file, idx) => {
-    if (!file) return;
-    const err = validateImageFile(file);
+  const processReplacementFile = async (rawFile, idx) => {
+    if (!rawFile) return;
+    const err = validateImageFile(rawFile);
     if (err) {
       setImageError(err);
       showToast(err, 'error');
       return;
     }
     setImageError('');
+    const file = await compressImageForUpload(rawFile);
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -367,23 +440,34 @@ export default function PartnerWithUs() {
     if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
 
-  /* ── Open Document Source Modal ── */
-  const handleOpenSourceModal = () => {
+  /* ── Open Document Source Modal (Supports 'business' or 'govId') ── */
+  const handleOpenSourceModal = (target = 'business') => {
+    setSourceModalTarget(target);
     setIsSourceModalOpen(true);
   };
 
   /* ── Choose Upload File from Device ── */
   const handleChooseUpload = () => {
     setIsSourceModalOpen(false);
-    fileInputRef.current?.click();
+    if (sourceModalTarget === 'govId') {
+      govIdInputRef.current?.click();
+    } else {
+      fileInputRef.current?.click();
+    }
   };
 
-  /* ── Choose Take a Photo (Camera) ── */
-  const handleChooseCamera = () => {
+  /* ── Choose Take a Photo (Camera) with mobile WebView support ── */
+  const handleChooseCamera = (target) => {
+    const activeTarget = target || sourceModalTarget;
+    if (target) setSourceModalTarget(target);
     setIsSourceModalOpen(false);
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
     if (isMobile || !navigator.mediaDevices?.getUserMedia) {
-      cameraInputRef.current?.click();
+      if (activeTarget === 'govId') {
+        govIdCameraInputRef.current?.click();
+      } else {
+        cameraInputRef.current?.click();
+      }
     } else {
       setIsCameraModalOpen(true);
       setCameraError('');
@@ -427,10 +511,14 @@ export default function PartnerWithUs() {
       })
       .catch((err) => {
         console.warn('Webcam stream error:', err);
-        setCameraError('Unable to access webcam. Switching to file camera...');
+        setCameraError('Unable to access webcam. Switching to camera upload...');
         setTimeout(() => {
           setIsCameraModalOpen(false);
-          cameraInputRef.current?.click();
+          if (sourceModalTarget === 'govId') {
+            govIdCameraInputRef.current?.click();
+          } else {
+            cameraInputRef.current?.click();
+          }
         }, 1200);
       });
 
@@ -438,7 +526,7 @@ export default function PartnerWithUs() {
       isMounted = false;
       stopWebcamStream();
     };
-  }, [isCameraModalOpen]);
+  }, [isCameraModalOpen, sourceModalTarget]);
 
   /* ── Capture Frame from Live Webcam ── */
   const handleCaptureWebcam = () => {
@@ -453,8 +541,13 @@ export default function PartnerWithUs() {
 
     canvas.toBlob((blob) => {
       if (blob) {
-        const file = new File([blob], `document_capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
-        processImageFiles([file]);
+        const fileName = `${sourceModalTarget === 'govId' ? 'gov_id' : 'document'}_capture_${Date.now()}.jpg`;
+        const file = new File([blob], fileName, { type: 'image/jpeg' });
+        if (sourceModalTarget === 'govId') {
+          processGovIdFile(file);
+        } else {
+          processImageFiles([file]);
+        }
       }
       setIsCameraModalOpen(false);
       stopWebcamStream();
@@ -475,22 +568,87 @@ export default function PartnerWithUs() {
     if (file) processImageFiles([file]);
   };
 
-  /* ── Gov ID Upload Handlers ── */
-  const processGovIdFile = (file) => {
-    if (!file) return;
-    const ext = '.' + file.name.split('.').pop().toLowerCase();
+  /* ── Legal Name vs Government ID OCR Verification ── */
+  const verifyGovId = async (fileToVerify, nameToVerify) => {
+    if (!fileToVerify) {
+      setGovIdError('Please provide a government ID file.');
+      return false;
+    }
+    const targetName = (nameToVerify || formData.name || '').trim();
+    if (!targetName) {
+      setGovIdError('Please enter your full legal name first in Step 1.');
+      return false;
+    }
+
+    setGovIdVerifying(true);
+    setGovIdVerificationError('');
+
+    try {
+      const fd = new FormData();
+      fd.append('name', targetName);
+      fd.append('government_issued_id', fileToVerify);
+
+      const res = await fetch(`${API_BASE}/partnership-inquiries/verify-id/`, {
+        method: 'POST',
+        body: fd,
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.status === 'MATCH') {
+        setGovIdVerified(true);
+        setGovIdVerificationError('');
+        setGovIdError('');
+        showToast('Government ID verified successfully! Name matches.', 'success');
+        return true;
+      } else if (res.status === 422) {
+        setGovIdVerified(false);
+        const errMsg = data.detail || 'The full legal name does not match the name detected on your government-issued ID.';
+        setGovIdVerificationError(errMsg);
+        setGovIdError(errMsg);
+        showToast(errMsg, 'error');
+        return false;
+      } else {
+        setGovIdVerified(false);
+        const errMsg = data.detail || 'Unable to verify government ID. Please ensure the image is clear.';
+        setGovIdVerificationError(errMsg);
+        setGovIdError(errMsg);
+        showToast(errMsg, 'error');
+        return false;
+      }
+    } catch (err) {
+      console.warn('ID verification error:', err);
+      setGovIdVerified(false);
+      setGovIdVerificationError('Network error during ID verification. Please check your connection.');
+      showToast('Network error during ID verification.', 'error');
+      return false;
+    } finally {
+      setGovIdVerifying(false);
+    }
+  };
+
+  /* ── Gov ID Upload Handlers (with browser compression & auto-verify) ── */
+  const processGovIdFile = async (rawFile) => {
+    if (!rawFile) return;
+    const ext = '.' + rawFile.name.split('.').pop().toLowerCase();
     const allowedMime = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
     const allowedExt  = ['.jpg', '.jpeg', '.png', '.webp', '.pdf'];
-    if (!allowedMime.includes(file.type) && !allowedExt.includes(ext)) {
-      setGovIdError(`File '${file.name}' is not supported. Allowed formats: JPG, PNG, WEBP, PDF.`);
+    if (!allowedMime.includes(rawFile.type) && !allowedExt.includes(ext)) {
+      setGovIdError(`File '${rawFile.name}' is not supported. Allowed formats: JPG, PNG, WEBP, PDF.`);
       return;
     }
-    if (file.size > MAX_FILE_BYTES) {
-      setGovIdError(`File '${file.name}' exceeds the 5 MB size limit.`);
+    if (rawFile.size > MAX_FILE_BYTES) {
+      setGovIdError(`File '${rawFile.name}' exceeds the 5 MB size limit.`);
       return;
     }
     setGovIdError('');
+    setGovIdVerificationError('');
+    setGovIdVerified(false);
+
+    // Browser-side image compression to prevent Render OOM
+    const file = await compressImageForUpload(rawFile);
     setGovIdFile(file);
+
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = (e) => setGovIdPreview(e.target.result);
@@ -498,19 +656,26 @@ export default function PartnerWithUs() {
     } else {
       setGovIdPreview('');
     }
+
+    if (formData.name && formData.name.trim()) {
+      verifyGovId(file, formData.name.trim());
+    }
   };
+
   const handleGovIdChange = (e) => {
     const file = e.target.files?.[0];
     if (file) processGovIdFile(file);
   };
-
-
 
   /* ── Field handlers ── */
   const handleNameChange = (e) => {
     const filtered = e.target.value.replace(/[^a-zA-Z\s\-']/g, '').replace(/\s{2,}/g, ' ');
     setFormData(p => ({ ...p, name: filtered }));
     setErrors(p => ({ ...p, name: validateName(filtered) }));
+    if (govIdVerified) {
+      setGovIdVerified(false);
+      setGovIdVerificationError('Legal name was changed. Please re-verify with your government ID in Step 3.');
+    }
   };
   const handleNamePaste = (e) => {
     e.preventDefault();
@@ -519,6 +684,10 @@ export default function PartnerWithUs() {
     const next = formData.name.slice(0, el.selectionStart) + pasted + formData.name.slice(el.selectionEnd);
     setFormData(p => ({ ...p, name: next }));
     setErrors(p => ({ ...p, name: validateName(next) }));
+    if (govIdVerified) {
+      setGovIdVerified(false);
+      setGovIdVerificationError('Legal name was changed. Please re-verify with your government ID in Step 3.');
+    }
   };
   const handleEmailChange = (e) => {
     const v = e.target.value.replace(/\s/g, '');
@@ -630,12 +799,12 @@ export default function PartnerWithUs() {
     return true;
   };
 
-  const validateStep3 = () => {
+  const validateStep3 = async () => {
     let hasErr = false;
     if (!govIdFile) {
       setGovIdError('Please upload a valid government-issued ID.');
       hasErr = true;
-    } else if (govIdError) {
+    } else if (govIdError && !govIdVerified) {
       hasErr = true;
     }
 
@@ -650,16 +819,36 @@ export default function PartnerWithUs() {
       showToast('Please attach both required verification documents.', 'error');
       return false;
     }
+
+    if (govIdVerifying) {
+      showToast('Government ID verification is in progress. Please wait...', 'info');
+      return false;
+    }
+
+    if (!govIdVerified) {
+      if (govIdFile && formData.name.trim()) {
+        const ok = await verifyGovId(govIdFile, formData.name.trim());
+        if (!ok) {
+          showToast(govIdVerificationError || 'Government ID verification failed. Legal name must match ID.', 'error');
+          return false;
+        }
+      } else {
+        showToast(govIdVerificationError || 'Government ID verification required before proceeding.', 'error');
+        return false;
+      }
+    }
+
     return true;
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (currentStep === 1) {
       if (validateStep1()) setCurrentStep(2);
     } else if (currentStep === 2) {
       if (validateStep2()) setCurrentStep(3);
     } else if (currentStep === 3) {
-      if (validateStep3()) setCurrentStep(4);
+      const ok = await validateStep3();
+      if (ok) setCurrentStep(4);
     }
   };
 
@@ -699,10 +888,15 @@ export default function PartnerWithUs() {
     }
 
     // Validate Step 3
-    if (!govIdFile || govIdError) {
-      if (!govIdFile) setGovIdError('Please upload a valid government-issued ID.');
+    if (!govIdFile) {
+      setGovIdError('Please upload a valid government-issued ID.');
       setCurrentStep(3);
       showToast('Please upload your valid government-issued ID.', 'error');
+      return;
+    }
+    if (!govIdVerified) {
+      setCurrentStep(3);
+      showToast(govIdVerificationError || 'Please verify that your legal name matches your government ID before submitting.', 'error');
       return;
     }
     if (imageFiles.length === 0 || imageError) {
@@ -780,6 +974,8 @@ export default function PartnerWithUs() {
       } else if (res.status === 422 && typeof data === 'object') {
         const errMsg = data.detail || 'The full legal name does not match the name detected on your government-issued ID.';
         setGovIdError(errMsg);
+        setGovIdVerified(false);
+        setGovIdVerificationError(errMsg);
         setCurrentStep(3);
         showToast(errMsg, 'error');
       } else {
@@ -840,8 +1036,13 @@ export default function PartnerWithUs() {
     setGovIdFile(null);
     setGovIdPreview('');
     setGovIdError('');
+    setGovIdVerified(false);
+    setGovIdVerifying(false);
+    setGovIdVerificationError('');
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (govIdInputRef.current) govIdInputRef.current.value = '';
+    if (govIdCameraInputRef.current) govIdCameraInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
     setCurrentStep(1);
     setViewState('form');
     navigate('/partner-with-us', { replace: true });
@@ -1290,6 +1491,14 @@ export default function PartnerWithUs() {
                           onChange={handleGovIdChange}
                         />
                         <input
+                          ref={govIdCameraInputRef}
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          className="hidden"
+                          onChange={handleGovIdChange}
+                        />
+                        <input
                           ref={fileInputRef}
                           type="file"
                           multiple
@@ -1319,77 +1528,153 @@ export default function PartnerWithUs() {
                             </div>
 
                             {govIdFile ? (
-                              <div className="flex items-center gap-2.5 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800/80 bg-emerald-50/60 dark:bg-emerald-950/30">
-                                <div className="relative w-11 h-11 rounded-md overflow-hidden border border-emerald-200 dark:border-emerald-800 shrink-0 bg-black/5">
-                                  {govIdPreview ? (
-                                    <img src={govIdPreview} alt={govIdFile.name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-[10px] text-emerald-600 font-bold bg-white dark:bg-[#163321]">
-                                      PDF
+                              <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-2.5 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800/80 bg-emerald-50/60 dark:bg-emerald-950/30">
+                                  <div className="relative w-11 h-11 rounded-md overflow-hidden border border-emerald-200 dark:border-emerald-800 shrink-0 bg-black/5">
+                                    {govIdPreview ? (
+                                      <img src={govIdPreview} alt={govIdFile.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-[10px] text-emerald-600 font-bold bg-white dark:bg-[#163321]">
+                                        PDF
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate" title={govIdFile.name}>
+                                      {govIdFile.name}
+                                    </p>
+                                    <p className="text-[10px] text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
+                                      <CheckCircle2 size={10} /> {formatBytes(govIdFile.size)} • Attached
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenSourceModal('govId')}
+                                      className="px-2 py-1 text-[10.5px] font-semibold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-[#163321] hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded border border-emerald-200 dark:border-emerald-800 cursor-pointer transition-colors"
+                                      title="Replace government ID"
+                                    >
+                                      Replace
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setGovIdFile(null);
+                                        setGovIdPreview('');
+                                        setGovIdError('');
+                                        setGovIdVerified(false);
+                                        setGovIdVerifying(false);
+                                        setGovIdVerificationError('');
+                                        if (govIdInputRef.current) govIdInputRef.current.value = '';
+                                        if (govIdCameraInputRef.current) govIdCameraInputRef.current.value = '';
+                                      }}
+                                      className="w-6 h-6 flex items-center justify-center rounded-full bg-white dark:bg-[#163321] border border-gray-200 dark:border-[#2d5c3c] text-gray-400 hover:text-red-500 hover:border-red-300 transition-colors cursor-pointer"
+                                      title="Remove ID"
+                                      aria-label="Remove government ID"
+                                    >
+                                      <X size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* OCR Verification Status Indicator */}
+                                {govIdVerifying && (
+                                  <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-medium animate-in fade-in">
+                                    <Loader2 size={13} className="animate-spin text-blue-600 dark:text-blue-400 shrink-0" />
+                                    <span>Verifying Legal Name against Government ID...</span>
+                                  </div>
+                                )}
+
+                                {!govIdVerifying && govIdVerified && (
+                                  <div className="flex items-center gap-1.5 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold animate-in fade-in">
+                                    <CheckCircle2 size={13} className="text-[#00580C] dark:text-emerald-400 shrink-0" />
+                                    <span>Legal Name Verified • Matches ID ({formData.name || 'Matches ID'})</span>
+                                  </div>
+                                )}
+
+                                {!govIdVerifying && govIdVerificationError && (
+                                  <div className="flex flex-col gap-1.5 p-2.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs animate-in fade-in">
+                                    <div className="flex items-start gap-1.5 font-semibold">
+                                      <AlertTriangle size={13} className="text-red-600 shrink-0 mt-0.5" />
+                                      <span>ID Verification Unsuccessful</span>
                                     </div>
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate" title={govIdFile.name}>
-                                    {govIdFile.name}
+                                    <p className="text-[11px] leading-relaxed text-red-600 dark:text-red-400 pl-4">
+                                      {govIdVerificationError}
+                                    </p>
+                                    <div className="pl-4 pt-1 flex items-center gap-2">
+                                      <button
+                                        type="button"
+                                        disabled={govIdVerifying}
+                                        onClick={() => verifyGovId(govIdFile, formData.name)}
+                                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-red-700 dark:text-red-300 bg-white dark:bg-[#1a1012] border border-red-300 dark:border-red-700 rounded hover:bg-red-50 dark:hover:bg-red-950/50 cursor-pointer"
+                                      >
+                                        <RefreshCw size={11} className={govIdVerifying ? 'animate-spin' : ''} />
+                                        <span>Retry Verification</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenSourceModal('govId')}
+                                        className="text-[11px] text-red-600 dark:text-red-400 hover:underline cursor-pointer"
+                                      >
+                                        Upload different ID
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex flex-col gap-1.5">
+                                <div
+                                  onClick={() => handleOpenSourceModal('govId')}
+                                  onDragOver={(e) => e.preventDefault()}
+                                  onDrop={(e) => {
+                                    e.preventDefault();
+                                    const f = e.dataTransfer.files?.[0];
+                                    if (f) processGovIdFile(f);
+                                  }}
+                                  className={`flex flex-col items-center justify-center gap-1.5 p-4 rounded-lg border-2 border-dashed cursor-pointer transition-all ${
+                                    ((submitAttempted && !govIdFile) || govIdError)
+                                      ? 'border-red-400 dark:border-red-500 bg-red-50/40 dark:bg-red-950/20'
+                                      : 'border-gray-300 dark:border-[#2d5c3c] hover:border-[#00580C] dark:hover:border-emerald-600 bg-white dark:bg-[#163321] hover:bg-emerald-50/30'
+                                  }`}
+                                >
+                                  <div className="w-8 h-8 rounded-full flex items-center justify-center bg-emerald-50 dark:bg-[#1e3d2a] text-[#00580C] dark:text-emerald-400">
+                                    <UploadCloud size={16} />
+                                  </div>
+                                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 text-center">
+                                    Click to attach Government ID or drop file
                                   </p>
-                                  <p className="text-[10px] text-emerald-700 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
-                                    <CheckCircle2 size={10} /> {formatBytes(govIdFile.size)} • Attached
+                                  <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center">
+                                    JPG, PNG, WEBP, PDF • Max 5 MB
                                   </p>
                                 </div>
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <button
-                                    type="button"
-                                    onClick={() => govIdInputRef.current?.click()}
-                                    className="px-2 py-1 text-[10.5px] font-semibold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-[#163321] hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded border border-emerald-200 dark:border-emerald-800 cursor-pointer transition-colors"
-                                    title="Replace government ID"
-                                  >
-                                    Replace
-                                  </button>
+
+                                {/* Both options explicitly available */}
+                                <div className="flex items-center justify-between pt-0.5">
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      setGovIdFile(null);
-                                      setGovIdPreview('');
-                                      setGovIdError('');
-                                      if (govIdInputRef.current) govIdInputRef.current.value = '';
+                                      setSourceModalTarget('govId');
+                                      govIdInputRef.current?.click();
                                     }}
-                                    className="w-6 h-6 flex items-center justify-center rounded-full bg-white dark:bg-[#163321] border border-gray-200 dark:border-[#2d5c3c] text-gray-400 hover:text-red-500 hover:border-red-300 transition-colors cursor-pointer"
-                                    title="Remove ID"
-                                    aria-label="Remove government ID"
+                                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#00580C] dark:text-emerald-400 hover:underline cursor-pointer"
                                   >
-                                    <X size={12} />
+                                    <UploadCloud size={12} />
+                                    <span>Upload file</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleChooseCamera('govId')}
+                                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300 hover:underline cursor-pointer"
+                                  >
+                                    <Camera size={12} />
+                                    <span>Take photo</span>
                                   </button>
                                 </div>
                               </div>
-                            ) : (
-                              <div
-                                onClick={() => govIdInputRef.current?.click()}
-                                onDragOver={(e) => e.preventDefault()}
-                                onDrop={(e) => {
-                                  e.preventDefault();
-                                  const f = e.dataTransfer.files?.[0];
-                                  if (f) processGovIdFile(f);
-                                }}
-                                className={`flex flex-col items-center justify-center gap-1.5 p-4 rounded-lg border-2 border-dashed cursor-pointer transition-all ${
-                                  ((submitAttempted && !govIdFile) || govIdError)
-                                    ? 'border-red-400 dark:border-red-500 bg-red-50/40 dark:bg-red-950/20'
-                                    : 'border-gray-300 dark:border-[#2d5c3c] hover:border-[#00580C] dark:hover:border-emerald-600 bg-white dark:bg-[#163321] hover:bg-emerald-50/30'
-                                }`}
-                              >
-                                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-emerald-50 dark:bg-[#1e3d2a] text-[#00580C] dark:text-emerald-400">
-                                  <UploadCloud size={16} />
-                                </div>
-                                <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 text-center">
-                                  Click to upload Government ID or drop file
-                                </p>
-                                <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center">
-                                  JPG, PNG, WEBP, PDF • Max 5 MB
-                                </p>
-                              </div>
                             )}
 
-                            {((submitAttempted && !govIdFile) || govIdError) && (
+                            {((submitAttempted && !govIdFile) || (govIdError && !govIdVerified && !govIdVerificationError)) && (
                               <p className="mt-1 text-[11px] text-red-500 flex items-center gap-1 font-medium">
                                 <ImageIcon size={12} className="shrink-0" />
                                 {govIdError || 'Please upload a valid government-issued ID.'}
@@ -1750,10 +2035,12 @@ export default function PartnerWithUs() {
             <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-[#1d3d29] mb-4">
               <div>
                 <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
-                  Attach Business Document
+                  {sourceModalTarget === 'govId' ? 'Attach Government-Issued ID' : 'Attach Business Document'}
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  Choose how you would like to provide your credential
+                  {sourceModalTarget === 'govId'
+                    ? 'Choose how you would like to provide your valid ID'
+                    : 'Choose how you would like to provide your credential'}
                 </p>
               </div>
               <button
@@ -1787,7 +2074,7 @@ export default function PartnerWithUs() {
               {/* Option 2: Take Photo */}
               <button
                 type="button"
-                onClick={handleChooseCamera}
+                onClick={() => handleChooseCamera()}
                 className="flex flex-col items-center justify-center text-center p-5 rounded-xl border-2 border-gray-200 dark:border-[#244f35] bg-gray-50/70 dark:bg-[#153422] hover:border-[#00580C] dark:hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-[#184029] transition-all group cursor-pointer"
               >
                 <div className="w-12 h-12 rounded-full bg-white dark:bg-[#0e2417] shadow-sm flex items-center justify-center text-[#00580C] dark:text-emerald-400 mb-2.5 group-hover:scale-110 transition-transform">
@@ -1832,10 +2119,12 @@ export default function PartnerWithUs() {
               <div>
                 <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <Camera size={18} className="text-[#00580C] dark:text-emerald-400" />
-                  Capture Document Photo
+                  {sourceModalTarget === 'govId' ? 'Capture Government ID Photo' : 'Capture Document Photo'}
                 </h3>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  Position your document clearly within the camera frame
+                  {sourceModalTarget === 'govId'
+                    ? 'Position your ID clearly within the frame ensuring text is legible'
+                    : 'Position your document clearly within the camera frame'}
                 </p>
               </div>
               <button

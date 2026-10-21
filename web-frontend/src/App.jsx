@@ -1263,6 +1263,16 @@ function App() {
             />
 
             <Route
+              path="/admin/announcements/manage"
+              element={<Announcements initialTab="management" />}
+            />
+
+            <Route
+              path="/admin/announcements/management"
+              element={<Announcements initialTab="management" />}
+            />
+
+            <Route
               path="/admin/profile"
               element={<UserAccountProfile />}
             />

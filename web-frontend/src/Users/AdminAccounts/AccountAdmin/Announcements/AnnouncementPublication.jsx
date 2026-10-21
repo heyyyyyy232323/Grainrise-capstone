@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -53,6 +54,7 @@ const AnnouncementPublication = () => {
   const {
     forecast: climateForecast,
     loadingForecast,
+    forecastError,
     fetchClimateForecast,
     generatingArticle,
     generateClimateArticle,
@@ -60,6 +62,33 @@ const AnnouncementPublication = () => {
 
   const { saveAdminDraft, publishAdminAnnouncement, loadAdminDrafts } = useAnnouncementAdmin();
   const { toasts, showToast, removeToast } = useToast();
+
+  useEffect(() => {
+    const handleEditEvent = (event) => {
+      const item = event?.detail;
+      if (!item) return;
+      const derivedText =
+        item.content_text ??
+        (item.content
+          ? item.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+          : "");
+      setForm({
+        announcementId: item.announcement_id ?? item.id ?? null,
+        title: item.title ?? "",
+        audience: item.audience ?? "",
+        content: item.content ?? "",
+        contentText: derivedText,
+        imageFile: null,
+        imagePreview: item.image_url ?? "",
+        existingImageUrl: item.image_url ?? "",
+      });
+    };
+
+    window.addEventListener("grainrise:edit-announcement", handleEditEvent);
+    return () => {
+      window.removeEventListener("grainrise:edit-announcement", handleEditEvent);
+    };
+  }, []);
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -77,14 +106,17 @@ const AnnouncementPublication = () => {
       event.target.value = "";
       return;
     }
-    const preview = URL.createObjectURL(file);
-    if (form.imagePreview?.startsWith("blob:")) URL.revokeObjectURL(form.imagePreview);
-    setForm((current) => ({
-      ...current,
-      imageFile: file,
-      imagePreview: preview,
-      existingImageUrl: "",
-    }));
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result;
+      setForm((current) => ({
+        ...current,
+        imageFile: file,
+        imagePreview: dataUrl,
+        existingImageUrl: dataUrl,
+      }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const removeImage = () => {
@@ -100,12 +132,17 @@ const AnnouncementPublication = () => {
 
   const handleUseDraft = (draft) => {
     if (!draft) return;
+    const derivedText =
+      draft.content_text ??
+      (draft.content
+        ? draft.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+        : "");
     setForm({
-      announcementId: draft.announcement_id ?? null,
+      announcementId: draft.announcement_id ?? draft.id ?? null,
       title: draft.title ?? "",
       audience: draft.audience ?? "",
       content: draft.content ?? "",
-      contentText: draft.content_text ?? "",
+      contentText: derivedText,
       imageFile: null,
       imagePreview: draft.image_url ?? "",
       existingImageUrl: draft.image_url ?? "",
@@ -181,13 +218,19 @@ const AnnouncementPublication = () => {
   const handleSaveDraft = async () => {
     try {
       setSaving(true);
-      await saveAdminDraft({
+      const saved = await saveAdminDraft({
         announcementId: form.announcementId,
         title: form.title,
         audience: form.audience,
         content: form.content,
         imageUrl: form.existingImageUrl || "",
       });
+      if (saved?.announcement_id) {
+        setForm((current) => ({
+          ...current,
+          announcementId: saved.announcement_id,
+        }));
+      }
       setShowSaveDraftModal(false);
       showToast({
         type: "success",
@@ -233,12 +276,20 @@ const AnnouncementPublication = () => {
     }
   };
 
+  const plainTextContent =
+    form.contentText.trim() ||
+    (form.content ? form.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() : "");
+
   const hasFormContent = Boolean(
-    form.title.trim() || form.audience || form.contentText.trim() || form.imageFile || form.existingImageUrl
+    form.title.trim() ||
+    form.audience ||
+    plainTextContent ||
+    form.imageFile ||
+    form.existingImageUrl
   );
 
   const canPublish = Boolean(
-    form.title.trim() && form.audience && form.contentText.trim()
+    form.title.trim() && form.audience && plainTextContent
   );
 
   return (
@@ -411,26 +462,38 @@ const AnnouncementPublication = () => {
       </section>
 
       {/* BOTTOM ACTIONS */}
-      <div className="flex items-center justify-end gap-3 pb-8">
+      <div className="flex flex-col gap-3 pb-8 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
-          id="save-draft-btn"
-          onClick={() => setShowSaveDraftModal(true)}
+          id="clear-announcement-btn"
+          onClick={() => setShowClearModal(true)}
           disabled={!hasFormContent || saving}
-          className="h-10 rounded-lg border border-gray-200 bg-white px-6 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-10 rounded-lg border border-gray-300 bg-white px-5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Save Draft
+          Clear
         </button>
 
-        <button
-          type="button"
-          id="publish-announcement-btn"
-          onClick={() => setShowPublishModal(true)}
-          disabled={!canPublish || saving}
-          className="h-10 rounded-lg bg-[#005928] px-6 text-sm font-medium text-white shadow-sm transition hover:bg-[#004720] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Publish Announcement
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            id="save-draft-btn"
+            onClick={() => setShowSaveDraftModal(true)}
+            disabled={!hasFormContent || saving}
+            className="h-10 rounded-lg border border-gray-200 bg-white px-6 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Save Draft
+          </button>
+
+          <button
+            type="button"
+            id="publish-announcement-btn"
+            onClick={() => setShowPublishModal(true)}
+            disabled={!canPublish || saving}
+            className="h-10 rounded-lg bg-[#005928] px-6 text-sm font-medium text-white shadow-sm transition hover:bg-[#004720] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Publish Announcement
+          </button>
+        </div>
       </div>
 
       {/* MODALS */}
@@ -448,6 +511,7 @@ const AnnouncementPublication = () => {
         forecast={climateForecast}
         loading={loadingForecast}
         generating={generatingArticle}
+        forecastError={forecastError}
         audience={form.audience}
         onAudienceChange={(value) => updateField("audience", value)}
         onConfirmLocation={handleConfirmLocation}

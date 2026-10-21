@@ -15,6 +15,7 @@ from django.utils import timezone
 
 from django.conf import settings
 from django.db import connection, transaction
+from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
 from django.utils.html import escape
 from rest_framework import status as http_status
@@ -207,7 +208,26 @@ def _prepare_image_for_id_ocr(image, ImageOps, ImageEnhance, ImageFilter):
     return processed
 
 
+def _get_uploaded_file_hash(uploaded_file):
+    try:
+        uploaded_file.seek(0)
+        hasher = hashlib.sha256()
+        for chunk in uploaded_file.chunks():
+            hasher.update(chunk)
+        uploaded_file.seek(0)
+        return hasher.hexdigest()
+    except Exception:
+        return None
+
+
 def _extract_text_from_id_file(uploaded_file):
+    file_hash = _get_uploaded_file_hash(uploaded_file)
+    if file_hash:
+        cached_text = cache.get(f"grainrise:id_ocr:{file_hash}")
+        if cached_text is not None:
+            logger.info("OCR cache hit for file hash %s (%d chars)", file_hash[:12], len(cached_text))
+            return cached_text
+
     (
         pymupdf,
         ocr_engine,
@@ -320,6 +340,10 @@ def _extract_text_from_id_file(uploaded_file):
 
     final_text = "\n".join(results)
     logger.info("OCR extracted %d characters", len(final_text))
+
+    if file_hash and final_text:
+        cache.set(f"grainrise:id_ocr:{file_hash}", final_text, timeout=1800)
+
     return final_text
 
 def _clean_name_string(s):
@@ -350,7 +374,7 @@ def _verify_name_against_id(legal_name, uploaded_id_file):
     alpha_chars = re.findall(r"[a-z]", ocr_clean)
     if len(alpha_chars) < 25:
         logger.info("OCR returned fewer than 25 alpha characters (%d)", len(alpha_chars))
-        return "UNCERTAIN", "Image too blurry or insufficient text."
+        return "UNCERTAIN", "The ID image is too blurry, unreadable, or missing text. Please provide a clear, well-lit photo of your government-issued ID."
 
     has_id_context = any(k in ocr_clean for k in ID_KEYWORDS)
 
@@ -381,12 +405,15 @@ def _verify_name_against_id(legal_name, uploaded_id_file):
 
     significant_words = [w for w in core_words if len(w) > 1]
     if significant_words and len(matched_words) >= len(significant_words) * 0.75:
-        return "MATCH", "Name verified."
+        return "MATCH", "Name verified successfully against government ID."
 
     if has_id_context and len(matched_words) == 0:
-        return "MISMATCH", "Valid ID detected but legal name was not found."
+        return "MISMATCH", "Valid government ID detected, but the legal name was not found on the document."
 
-    return "UNCERTAIN", "Could not confidently verify that the name matches."
+    if significant_words and len(matched_words) < len(significant_words) * 0.5:
+        return "MISMATCH", "The legal name does not match the name printed on your government ID."
+
+    return "UNCERTAIN", "Could not confidently verify that the name matches your ID. Please ensure your legal name matches the ID exactly or upload a clearer photo."
 
 def _send_verification_email(name, email, role, raw_token):
     frontend_base = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
@@ -491,86 +518,76 @@ GrainRise Team"""
     # Production path for Render Free:
     # Gmail API uses HTTPS (443), so it does not rely on SMTP ports 465/587.
     if gmail_client_id and gmail_client_secret and gmail_refresh_token:
-        sender_email = (
-            os.getenv("GMAIL_SENDER_EMAIL")
-            or getattr(settings, "EMAIL_HOST_USER", "")
-            or getattr(settings, "DEFAULT_FROM_EMAIL", "")
-            or ""
-        ).strip()
+        try:
+            sender_email = (
+                os.getenv("GMAIL_SENDER_EMAIL")
+                or getattr(settings, "EMAIL_HOST_USER", "")
+                or getattr(settings, "DEFAULT_FROM_EMAIL", "")
+                or ""
+            ).strip()
 
-        if not sender_email:
-            raise RuntimeError(
-                "GMAIL_SENDER_EMAIL is not configured and no email fallback is available."
+            if not sender_email:
+                raise RuntimeError(
+                    "GMAIL_SENDER_EMAIL is not configured and no email fallback is available."
+                )
+
+            # 1) Exchange the long-lived refresh token for a short-lived access token.
+            token_body = urllib.parse.urlencode(
+                {
+                    "client_id": gmail_client_id,
+                    "client_secret": gmail_client_secret,
+                    "refresh_token": gmail_refresh_token,
+                    "grant_type": "refresh_token",
+                }
+            ).encode("utf-8")
+
+            token_request = urllib.request.Request(
+                "https://oauth2.googleapis.com/token",
+                data=token_body,
+                method="POST",
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Accept": "application/json",
+                },
             )
 
-        # 1) Exchange the long-lived refresh token for a short-lived access token.
-        token_body = urllib.parse.urlencode(
-            {
-                "client_id": gmail_client_id,
-                "client_secret": gmail_client_secret,
-                "refresh_token": gmail_refresh_token,
-                "grant_type": "refresh_token",
-            }
-        ).encode("utf-8")
-
-        token_request = urllib.request.Request(
-            "https://oauth2.googleapis.com/token",
-            data=token_body,
-            method="POST",
-            headers={
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Accept": "application/json",
-            },
-        )
-
-        try:
             with urllib.request.urlopen(token_request, timeout=20) as response:
                 token_payload = json.loads(
                     response.read().decode("utf-8", errors="replace")
                 )
-        except urllib.error.HTTPError as exc:
-            error_body = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(
-                f"Gmail OAuth token request failed with HTTP {exc.code}: {error_body}"
-            ) from exc
-        except urllib.error.URLError as exc:
-            raise RuntimeError(
-                f"Gmail OAuth network error: {getattr(exc, 'reason', exc)}"
-            ) from exc
 
-        access_token = str(token_payload.get("access_token") or "").strip()
-        if not access_token:
-            raise RuntimeError(
-                f"Gmail OAuth response did not include an access token: {token_payload}"
+            access_token = str(token_payload.get("access_token") or "").strip()
+            if not access_token:
+                raise RuntimeError(
+                    f"Gmail OAuth response did not include an access token: {token_payload}"
+                )
+
+            # 2) Build the same multipart text + HTML email as a raw RFC 2822 message.
+            msg = EmailMultiAlternatives(
+                subject,
+                text_content,
+                sender_email,
+                [email],
+            )
+            msg.attach_alternative(html_content, "text/html")
+
+            mime_message = msg.message()
+            raw_message = base64.urlsafe_b64encode(
+                mime_message.as_bytes()
+            ).decode("ascii")
+
+            send_payload = json.dumps({"raw": raw_message}).encode("utf-8")
+            send_request = urllib.request.Request(
+                "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                data=send_payload,
+                method="POST",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
             )
 
-        # 2) Build the same multipart text + HTML email as a raw RFC 2822 message.
-        msg = EmailMultiAlternatives(
-            subject,
-            text_content,
-            sender_email,
-            [email],
-        )
-        msg.attach_alternative(html_content, "text/html")
-
-        mime_message = msg.message()
-        raw_message = base64.urlsafe_b64encode(
-            mime_message.as_bytes()
-        ).decode("ascii")
-
-        send_payload = json.dumps({"raw": raw_message}).encode("utf-8")
-        send_request = urllib.request.Request(
-            "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
-            data=send_payload,
-            method="POST",
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            },
-        )
-
-        try:
             with urllib.request.urlopen(send_request, timeout=30) as response:
                 response_body = response.read().decode("utf-8", errors="replace")
                 if response.status not in (200, 201):
@@ -584,20 +601,16 @@ GrainRise Team"""
                 )
                 return True
 
-        except urllib.error.HTTPError as exc:
-            error_body = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(
-                f"Gmail API send failed with HTTP {exc.code}: {error_body}"
-            ) from exc
-        except urllib.error.URLError as exc:
-            raise RuntimeError(
-                f"Gmail API network error: {getattr(exc, 'reason', exc)}"
-            ) from exc
+        except Exception as exc:
+            logger.warning(
+                "Gmail API delivery failed (%s); falling back to Django email backend.",
+                exc,
+            )
 
-    # Local development fallback:
-    # if Gmail API credentials are not configured, retain the existing SMTP path.
+    # Local development / standard fallback:
+    # Retain the existing Django SMTP email backend.
     logger.info(
-        "Gmail API credentials are not configured; falling back to Django email backend."
+        "Sending verification email via Django email backend."
     )
     msg = EmailMultiAlternatives(
         subject,
@@ -607,6 +620,7 @@ GrainRise Team"""
     )
     msg.attach_alternative(html_content, "text/html")
     msg.send(fail_silently=False)
+    logger.info("Verification email sent via Django email backend to %s", email)
     return True
 
 
@@ -716,6 +730,95 @@ def check_partnership_availability(request):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @parser_classes([MultiPartParser, FormParser])
+def verify_partnership_id(request):
+    """
+    POST /api/partnership-inquiries/verify-id/
+    Lightweight endpoint verifying Legal Name against uploaded Government ID.
+    Reuses cached OCR text if the file was previously processed.
+    """
+    name = (request.data.get("name") or "").strip()
+    uploaded_gov_id = request.FILES.get("government_issued_id")
+
+    if not name:
+        return Response(
+            {
+                "success": False,
+                "status": "MISMATCH",
+                "detail": "Full legal name is required before verifying your ID.",
+            },
+            status=http_status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not uploaded_gov_id:
+        return Response(
+            {
+                "success": False,
+                "status": "UNCERTAIN",
+                "detail": "A government-issued ID file is required for verification.",
+            },
+            status=http_status.HTTP_400_BAD_REQUEST,
+        )
+
+    if uploaded_gov_id.size > MAX_FILE_BYTES:
+        return Response(
+            {
+                "success": False,
+                "status": "UNCERTAIN",
+                "detail": "Government ID file exceeds the 5 MB limit.",
+            },
+            status=http_status.HTTP_400_BAD_REQUEST,
+        )
+
+    _, ext = os.path.splitext((uploaded_gov_id.name or "").lower())
+    if ext not in ALLOWED_EXTENSIONS:
+        return Response(
+            {
+                "success": False,
+                "status": "UNCERTAIN",
+                "detail": f"File type '{ext}' is not supported. Allowed: JPG, PNG, WEBP, PDF.",
+            },
+            status=http_status.HTTP_400_BAD_REQUEST,
+        )
+
+    validation_status, reason = _verify_name_against_id(name, uploaded_gov_id)
+    logger.info("Standalone ID verification: status=%s, reason=%s", validation_status, reason)
+
+    if validation_status == "MATCH":
+        return Response(
+            {
+                "success": True,
+                "status": "MATCH",
+                "message": reason or "Government ID verified successfully. Your name matches the submitted ID.",
+            },
+            status=http_status.HTTP_200_OK,
+        )
+    elif validation_status == "MISMATCH":
+        return Response(
+            {
+                "success": False,
+                "status": "MISMATCH",
+                "error_code": "NAME_MISMATCH",
+                "title": "Name Does Not Match ID",
+                "detail": reason or "The legal name entered does not match the name printed on the government-issued ID.",
+            },
+            status=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
+    else:
+        return Response(
+            {
+                "success": False,
+                "status": "UNCERTAIN",
+                "error_code": "ID_VERIFICATION_UNCERTAIN",
+                "title": "ID Verification Inconclusive",
+                "detail": reason or "Could not clearly read your name from the submitted ID. Please upload a clearer photo.",
+            },
+            status=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@parser_classes([MultiPartParser, FormParser])
 def submit_partnership_inquiry(request):
     """
     POST /api/partnership-inquiries/
@@ -772,44 +875,54 @@ def submit_partnership_inquiry(request):
     if not clean_msg:
         errors["message"] = "Partnership message is required."
 
-    if uploaded_gov_id:
-        if uploaded_gov_id.size > MAX_FILE_BYTES:
-            errors["government_issued_id"] = f"File '{uploaded_gov_id.name}' exceeds the 5MB size limit."
-        else:
-            _, ext = os.path.splitext((uploaded_gov_id.name or "").lower())
-            if ext not in ALLOWED_EXTENSIONS:
-                errors["government_issued_id"] = f"File '{uploaded_gov_id.name}' has an unsupported file type '{ext}'. Allowed: JPG, PNG, WEBP, PDF."
+    if not uploaded_gov_id:
+        errors["government_issued_id"] = "A valid government-issued ID is required."
+    elif uploaded_gov_id.size > MAX_FILE_BYTES:
+        errors["government_issued_id"] = f"File '{uploaded_gov_id.name}' exceeds the 5MB size limit."
+    else:
+        _, ext = os.path.splitext((uploaded_gov_id.name or "").lower())
+        if ext not in ALLOWED_EXTENSIONS:
+            errors["government_issued_id"] = f"File '{uploaded_gov_id.name}' has an unsupported file type '{ext}'. Allowed: JPG, PNG, WEBP, PDF."
 
-    if uploaded_biz_doc:
-        if uploaded_biz_doc.size > MAX_FILE_BYTES:
-            errors["business_verification_document"] = f"File '{uploaded_biz_doc.name}' exceeds the 5MB size limit."
-        else:
-            _, ext = os.path.splitext((uploaded_biz_doc.name or "").lower())
-            if ext not in ALLOWED_EXTENSIONS:
-                errors["business_verification_document"] = f"File '{uploaded_biz_doc.name}' has an unsupported file type '{ext}'. Allowed: JPG, PNG, WEBP, PDF."
+    if not uploaded_biz_doc:
+        errors["business_verification_document"] = "A valid business verification document is required."
+    elif uploaded_biz_doc.size > MAX_FILE_BYTES:
+        errors["business_verification_document"] = f"File '{uploaded_biz_doc.name}' exceeds the 5MB size limit."
+    else:
+        _, ext = os.path.splitext((uploaded_biz_doc.name or "").lower())
+        if ext not in ALLOWED_EXTENSIONS:
+            errors["business_verification_document"] = f"File '{uploaded_biz_doc.name}' has an unsupported file type '{ext}'. Allowed: JPG, PNG, WEBP, PDF."
 
     if errors:
         return Response(errors, status=http_status.HTTP_400_BAD_REQUEST)
 
-    # Validate Legal Name vs Government-Issued ID via OCR if ID provided
-    if uploaded_gov_id:
-        validation_status, reason = _verify_name_against_id(name, uploaded_gov_id)
-        logger.info("Partnership Inquiry name-vs-ID verification: status=%s, reason=%s", validation_status, reason)
+    # Validate Legal Name vs Government-Issued ID via OCR
+    validation_status, reason = _verify_name_against_id(name, uploaded_gov_id)
+    logger.info("Partnership Inquiry name-vs-ID verification: status=%s, reason=%s", validation_status, reason)
 
-        if validation_status == "MISMATCH":
-            return Response(
-                {
-                    "success": False,
-                    "validation_status": "MISMATCH",
-                    "error_code": "NAME_MISMATCH",
-                    "title": "Name Does Not Match ID",
-                    "detail": "The full legal name you entered does not match the name detected on your uploaded government-issued ID. Please enter your name exactly as shown on your ID or upload the correct document.",
-                },
-                status=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
-            )
+    if validation_status == "MISMATCH":
+        return Response(
+            {
+                "success": False,
+                "validation_status": "MISMATCH",
+                "error_code": "NAME_MISMATCH",
+                "title": "Name Does Not Match ID",
+                "detail": reason or "The full legal name you entered does not match the name detected on your uploaded government-issued ID. Please enter your name exactly as shown on your ID or upload the correct document.",
+            },
+            status=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
 
-        if validation_status == "UNCERTAIN":
-            logger.info("OCR was uncertain (%s); continuing to save application for manual admin review.", reason)
+    if validation_status != "MATCH":
+        return Response(
+            {
+                "success": False,
+                "validation_status": "UNCERTAIN",
+                "error_code": "ID_VERIFICATION_FAILED",
+                "title": "ID Verification Inconclusive",
+                "detail": reason or "Unable to clearly read your name from the submitted ID. Please ensure the image is clear, readable, and not blurry, or upload a different government ID.",
+            },
+            status=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
 
     # Save documents only if uploaded
     import uuid
@@ -863,15 +976,18 @@ def submit_partnership_inquiry(request):
         logger.warning("Could not send verification email: %s", exc)
         return Response(
             {
-                "success": True,
+                "success": False,
                 "validation_status": "MATCH",
-                "requires_email_verification": False,
+                "requires_email_verification": True,
                 "email_sent": False,
                 "inquiry_id": str(app_uuid),
                 "email": email,
-                "message": "Your partnership inquiry has been received. Our team will review your inquiry shortly.",
+                "detail": (
+                    "Your partnership application was saved, but the verification "
+                    "email could not be delivered immediately. Please click Resend Verification below."
+                ),
             },
-            status=http_status.HTTP_201_CREATED,
+            status=http_status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
     return Response({
