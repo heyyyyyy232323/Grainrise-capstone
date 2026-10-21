@@ -146,6 +146,15 @@ urlpatterns = [
         ),
     ),
 
+    # MILLER EMPLOYEE FUNCTIONS
+
+    path(
+        "miller-employees/",
+        include(
+            "api.miller_employees_function.urls"
+        ),
+    ),
+
 
     # ========================================================
     # CENTRALIZED NEWS & UPDATES
@@ -324,7 +333,6 @@ urlpatterns = [
         ),
     ),
 ]
-
 
 
 
