@@ -183,7 +183,7 @@ export default function SectionedTableCard({
                               <button
                                 type="button"
                                 onClick={() => onViewDetails?.(row)}
-                                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
+                                className="rounded-md border border-slate-300 px-2.5 py-1 text-[11px] font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
                               >
                                 {row.actionLabel || viewDetailsLabel}
                               </button>

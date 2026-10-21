@@ -231,7 +231,7 @@ const MillerReceivingHistory = () => {
       label: "Batch No.",
       width: "22%",
       render: (row) => (
-        <span className="text-[13px] font-normal text-slate-800">
+        <span className="text-[13px] font-medium text-slate-700">
           {row.batch_no || "Batch 2026 - 001"}
         </span>
       ),
@@ -241,7 +241,7 @@ const MillerReceivingHistory = () => {
       label: "Supplier",
       width: "20%",
       render: (row) => (
-        <span className="text-[13px] font-normal text-slate-800">
+        <span className="text-[13px] font-medium text-slate-700">
           {row.supplier || "Supplier A"}
         </span>
       ),
@@ -251,7 +251,7 @@ const MillerReceivingHistory = () => {
       label: "Variant",
       width: "18%",
       render: (row) => (
-        <span className="text-[13px] font-normal text-slate-800">
+        <span className="text-[13px] font-medium text-slate-700">
           {row.variant || row.product_name || "Dinorado"}
         </span>
       ),
@@ -261,7 +261,7 @@ const MillerReceivingHistory = () => {
       label: "Received Qty (kg)",
       width: "18%",
       render: (row) => (
-        <span className="text-[13px] font-normal text-slate-800">
+        <span className="text-[13px] font-medium text-slate-700">
           {formatQuantityKg(row)}
         </span>
       ),
@@ -270,6 +270,7 @@ const MillerReceivingHistory = () => {
       key: "qcStatus",
       label: "QC Status",
       width: "12%",
+      headerClassName: "text-center",
       cellClassName: "text-center",
       render: (row) => {
         const qc = determineQcStatus(row);
@@ -294,19 +295,8 @@ const MillerReceivingHistory = () => {
     {
       key: "action",
       label: "Action",
-      width: "10%",
+      width: "12%",
       cellClassName: "text-center",
-      render: (row) => (
-        <div className="flex items-center justify-center">
-          <button
-            type="button"
-            onClick={() => handleOpenDetails(row)}
-            className="rounded-full border border-slate-300 bg-white px-3.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50 cursor-pointer shadow-none"
-          >
-            View Details
-          </button>
-        </div>
-      ),
     },
   ];
 
@@ -393,6 +383,8 @@ const MillerReceivingHistory = () => {
         currentPage={currentSafePage}
         totalPages={totalPages}
         onPageChange={(page) => setCurrentPage(page)}
+        onViewDetails={handleOpenDetails}
+        viewDetailsLabel="View Details"
         footerLabel={`Showing ${startEntry}–${endEntry} of ${totalItems} receiving records`}
         isEmpty={!loading && filteredRecords.length === 0}
         emptyStateTitle="No receiving records found"

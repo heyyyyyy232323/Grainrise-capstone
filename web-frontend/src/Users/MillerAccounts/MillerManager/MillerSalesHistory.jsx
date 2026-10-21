@@ -29,15 +29,6 @@ const IN_STORE_COLUMNS = [
     width: "12%",
     headerClassName: "text-center",
     cellClassName: "text-center",
-    renderCell: (row) => (
-      <button
-        type="button"
-        onClick={() => row.onView?.(row)}
-        className="rounded-full border border-slate-200 bg-white px-3.5 py-1 text-xs font-medium text-gray-700 transition hover:bg-slate-50 cursor-pointer"
-      >
-        View Details
-      </button>
-    ),
   },
 ];
 
@@ -94,15 +85,6 @@ const ONLINE_COLUMNS = [
     width: "8%",
     headerClassName: "text-center",
     cellClassName: "text-center",
-    renderCell: (row) => (
-      <button
-        type="button"
-        onClick={() => row.onView?.(row)}
-        className="rounded-full border border-slate-200 bg-white px-3.5 py-1 text-xs font-medium text-gray-700 transition hover:bg-slate-50 cursor-pointer"
-      >
-        View Details
-      </button>
-    ),
   },
 ];
 
@@ -357,6 +339,8 @@ export default function MillerSalesHistory() {
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={setCurrentPage}
+        onViewDetails={setSelectedTransaction}
+        viewDetailsLabel="View Details"
         footerLabel={`Showing sales records — Page ${currentPage} of ${totalPages}`}
       />
 

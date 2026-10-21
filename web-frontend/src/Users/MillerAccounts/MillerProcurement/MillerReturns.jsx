@@ -211,12 +211,32 @@ const MillerReturns = () => {
 
   // Table Columns
   const columns = [
-    { key: "batchNo", label: "Batch No.", render: (row) => row.batch_no || "—" },
-    { key: "supplier", label: "Supplier", render: (row) => row.supplier || "—" },
+    {
+      key: "batchNo",
+      label: "Batch No.",
+      render: (row) => (
+        <span className="text-[13px] font-medium text-slate-700">
+          {row.batch_no || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "supplier",
+      label: "Supplier",
+      render: (row) => (
+        <span className="text-[13px] font-medium text-slate-700">
+          {row.supplier || "—"}
+        </span>
+      ),
+    },
     {
       key: "qty",
       label: "Quantity",
-      render: (row) => row.quantity || `${row.quantity_kg} kg`,
+      render: (row) => (
+        <span className="text-[13px] font-medium text-slate-700">
+          {row.quantity || `${row.quantity_kg} kg`}
+        </span>
+      ),
     },
     {
       key: "status",

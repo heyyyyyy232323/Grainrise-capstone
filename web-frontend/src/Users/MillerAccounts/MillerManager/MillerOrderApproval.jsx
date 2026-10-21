@@ -5,7 +5,6 @@ import {
   ChevronDown,
   X,
   Check,
-  Eye,
   Calendar,
   XCircle,
   Edit3,
@@ -781,17 +780,6 @@ export default function MillerOrderApproval() {
       width: "14%",
       headerClassName: "text-center",
       cellClassName: "text-center",
-      render: (row) => (
-        <button
-          type="button"
-          onClick={() => handleOpenModal(row)}
-          className="p-1.5 rounded-lg text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition inline-flex items-center gap-1 text-xs cursor-pointer font-medium"
-          title="View Details"
-        >
-          <Eye size={15} />
-          <span>View</span>
-        </button>
-      ),
     },
   ];
 
@@ -997,6 +985,8 @@ export default function MillerOrderApproval() {
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={setCurrentPage}
+        onViewDetails={handleOpenModal}
+        viewDetailsLabel="View Details"
         footerLabel={
           orders.length > 0
             ? `Showing ${(currentPage - 1) * itemsPerPage + 1}–${Math.min(

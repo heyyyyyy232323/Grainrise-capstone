@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  Eye,
   Plus,
 } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
@@ -176,7 +175,7 @@ export default function MillerExpenseManagement() {
       width: "20%",
       render: (row) => (
         <div>
-          <span className="font-semibold text-slate-800 text-xs sm:text-sm block">
+          <span className="text-[13px] font-medium text-slate-700 block">
             {row.branch_name}
           </span>
           <span className="text-[10px] text-slate-400 font-mono">
@@ -201,7 +200,7 @@ export default function MillerExpenseManagement() {
       width: "26%",
       render: (row) => (
         <p
-          className="text-xs text-slate-600 line-clamp-2 max-w-xs break-words"
+          className="text-[13px] font-medium text-slate-700 line-clamp-2 max-w-xs break-words"
           title={row.description}
         >
           {row.description}
@@ -213,7 +212,7 @@ export default function MillerExpenseManagement() {
       label: "Price",
       width: "15%",
       render: (row) => (
-        <span className="font-bold text-[#0B5D1E] text-xs sm:text-sm">
+        <span className="text-[13px] font-medium text-slate-700">
           {row.price}
         </span>
       ),
@@ -226,7 +225,7 @@ export default function MillerExpenseManagement() {
         const isPaid = row.status === "paid";
         return (
           <div className="space-y-1">
-            <span className="text-xs text-slate-700 font-medium block">
+            <span className="text-[13px] font-medium text-slate-700 block">
               {row.deadline_formatted || row.deadline}
             </span>
             <span
@@ -248,17 +247,6 @@ export default function MillerExpenseManagement() {
       width: "8%",
       headerClassName: "text-center",
       cellClassName: "text-center",
-      render: (row) => (
-        <button
-          type="button"
-          onClick={() => handleOpenView(row)}
-          className="p-1.5 rounded-lg text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition inline-flex items-center gap-1 text-xs cursor-pointer font-medium"
-          title="View Details"
-        >
-          <Eye size={15} />
-          <span>View</span>
-        </button>
-      ),
     },
   ];
 
@@ -380,6 +368,8 @@ export default function MillerExpenseManagement() {
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={setCurrentPage}
+        onViewDetails={handleOpenView}
+        viewDetailsLabel="View Details"
         footerLabel={
           expenses.length > 0
             ? `Showing ${(currentPage - 1) * itemsPerPage + 1}–${Math.min(

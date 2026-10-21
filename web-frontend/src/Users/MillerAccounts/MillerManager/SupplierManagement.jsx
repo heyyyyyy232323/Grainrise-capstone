@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Truck, X, CheckCircle2, AlertCircle, ChevronDown, Star, Eye } from "lucide-react";
+import { Search, Plus, Truck, X, CheckCircle2, AlertCircle, ChevronDown, Star } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import useApi from "../../../Components/hooks/useApi";
@@ -403,7 +403,7 @@ export default function SupplierManagement() {
         width: "24%",
         render: (row) => (
           <div>
-            <div className="font-semibold text-slate-900">
+            <div className="text-[13px] font-medium text-slate-700">
               {row.supplier_farm || "Independent Supplier"}
             </div>
             {row.address && (
@@ -419,7 +419,7 @@ export default function SupplierManagement() {
         label: "Organization",
         width: "18%",
         render: (row) => (
-          <span className="text-slate-600 font-medium">
+          <span className="text-[13px] font-medium text-slate-700">
             {row.organization || "Independent"}
           </span>
         ),
@@ -430,7 +430,7 @@ export default function SupplierManagement() {
         width: "22%",
         render: (row) => (
           <div>
-            <div className="font-medium text-slate-900">{row.contact_person}</div>
+            <div className="text-[13px] font-medium text-slate-700">{row.contact_person}</div>
             <div className="text-xs text-slate-400">
               {row.contact_number}
               {row.email && ` • ${row.email}`}
@@ -493,17 +493,6 @@ export default function SupplierManagement() {
         width: "10%",
         headerClassName: "text-center",
         cellClassName: "text-center",
-        render: (row) => (
-          <button
-            type="button"
-            onClick={() => navigate(`/miller-manager/suppliers/${row.farmer_contact_id || row.id}`)}
-            className="p-1.5 rounded-lg text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition inline-flex items-center gap-1 text-xs cursor-pointer font-medium"
-            title="View Details"
-          >
-            <Eye size={15} />
-            <span>View</span>
-          </button>
-        ),
       },
     ],
     [navigate]
@@ -642,6 +631,10 @@ export default function SupplierManagement() {
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
+          onViewDetails={(row) =>
+            navigate(`/miller-manager/suppliers/${row.farmer_contact_id || row.id}`)
+          }
+          viewDetailsLabel="View Details"
           footerLabel={
             totalCount === 0
               ? "Showing 0 suppliers"

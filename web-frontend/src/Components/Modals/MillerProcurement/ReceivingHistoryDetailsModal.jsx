@@ -25,18 +25,20 @@ function resolvePhotoUrl(raw) {
 // ─── Modal Detail Row (Matches Miller Order Approval Details modal) ───────────
 function ModalDetailRow({ label, value, isBadge = false, badgeStyle = "", children }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-1.5 text-xs sm:text-sm">
-      <span className="text-slate-500 font-medium shrink-0">{label}:</span>
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] items-center gap-4 rounded-lg px-3 py-2 text-xs sm:text-sm even:bg-slate-50/70">
+      <span className="text-slate-500 font-medium">{label}</span>
       {children ? (
-        <div className="text-right">{children}</div>
+        <div className="min-w-0 text-right">{children}</div>
       ) : isBadge ? (
-        <span
-          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold capitalize ${badgeStyle}`}
-        >
-          {value}
-        </span>
+        <div className="text-right">
+          <span
+            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${badgeStyle}`}
+          >
+            {value}
+          </span>
+        </div>
       ) : (
-        <span className="font-semibold text-slate-800 text-right break-words max-w-[60%]">
+        <span className="min-w-0 break-words text-right font-medium text-slate-700">
           {value || "—"}
         </span>
       )}
@@ -105,16 +107,16 @@ export default function ReceivingHistoryDetailsModal({
   return createPortal(
     <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
       <div
-        className="relative w-full max-w-md sm:max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-w-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header (Matches Order Approval Details modal header, X exit only) */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6">
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+            <h2 className="text-base font-semibold tracking-tight text-slate-900 sm:text-lg">
               {detail?.batch_no || "Receiving Details"}
             </h2>
-            <p className="text-xs text-slate-500 font-medium">
+            <p className="mt-0.5 text-xs text-slate-500">
               Receiving Reference: {detail?.receiving_reference_no || "—"}
             </p>
           </div>
@@ -132,7 +134,7 @@ export default function ReceivingHistoryDetailsModal({
         </div>
 
         {/* Modal Body */}
-        <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-75px)] space-y-4">
+        <div className="max-h-[calc(90vh-75px)] space-y-5 overflow-y-auto px-4 py-4 sm:px-6">
           {isLoading && !detail ? (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400">
               <Loader2 size={32} className="animate-spin text-emerald-600 mb-2" />
@@ -144,7 +146,7 @@ export default function ReceivingHistoryDetailsModal({
             <>
               {/* ── SECTION 1 — INBOUND ORDER DETAILS ──────────────────────── */}
               <div className="space-y-1">
-                <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                   Inbound Order Details
                 </div>
 
@@ -192,7 +194,7 @@ export default function ReceivingHistoryDetailsModal({
 
               {/* ── SECTION 2 — RECEIVING DETAILS ──────────────────────────── */}
               <div className="space-y-1">
-                <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                   Receiving Details
                 </div>
 
@@ -259,18 +261,18 @@ export default function ReceivingHistoryDetailsModal({
                           />
                         ))}
                       </div>
-                      <span className="text-xs font-semibold text-slate-700">
+                      <span className="text-xs font-medium text-slate-700">
                         {ratingNum} / 5
                       </span>
                     </div>
                   ) : (
-                    <span className="font-semibold text-slate-400 text-xs">—</span>
+                    <span className="text-xs font-medium text-slate-400">—</span>
                   )}
                 </ModalDetailRow>
 
                 {/* Centered Proof of Receiving Photo (Large & Centered) */}
                 <div className="flex flex-col items-center justify-center pt-3 pb-1">
-                  <span className="text-slate-500 font-medium text-xs mb-2">
+                  <span className="mb-2 text-xs font-medium text-slate-500">
                     Proof of Receiving Photo
                   </span>
                   {resolvedReceivingPhotoUrl && !receivingPhotoError ? (
@@ -287,7 +289,7 @@ export default function ReceivingHistoryDetailsModal({
                   ) : (
                     <div className="h-36 w-full sm:w-80 shrink-0 rounded-xl border border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-slate-300">
                       <ImageIcon size={28} />
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mt-1">
+                      <span className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                         IMG
                       </span>
                     </div>
@@ -302,4 +304,3 @@ export default function ReceivingHistoryDetailsModal({
     document.body
   );
 }
-

@@ -244,7 +244,7 @@ const AnnouncementPublication = () => {
   return (
     <>
       {/* PAGE HEADER */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-6 flex flex-col gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Create Announcement</h1>
           <p className="mt-1 text-sm text-gray-500">
@@ -252,7 +252,7 @@ const AnnouncementPublication = () => {
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <button
             type="button"
             id="use-existing-draft-btn"

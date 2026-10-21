@@ -71,12 +71,42 @@ const getStatusBadgeClass = (status) => {
 
 // ─── Table Configuration ──────────────────────────────────────────────────────
 const COLUMNS = [
-  { key: "batchId",     label: "Batch ID" },
-  { key: "variant",     label: "Variant" },
-  { key: "stockQty",    label: "Stock Qty (kg)" },
-  { key: "supplier",    label: "Supplier" },
+  {
+    key: "batchId",
+    label: "Batch ID",
+    render: (row) => (
+      <span className="text-[13px] font-medium text-slate-700">{row.batchId || "—"}</span>
+    ),
+  },
+  {
+    key: "variant",
+    label: "Variant",
+    render: (row) => (
+      <span className="text-[13px] font-medium text-slate-700">{row.variant || "—"}</span>
+    ),
+  },
+  {
+    key: "stockQty",
+    label: "Stock Qty (kg)",
+    render: (row) => (
+      <span className="text-[13px] font-medium text-slate-700">{row.stockQty || "—"}</span>
+    ),
+  },
+  {
+    key: "supplier",
+    label: "Supplier",
+    render: (row) => (
+      <span className="text-[13px] font-medium text-slate-700">{row.supplier || "—"}</span>
+    ),
+  },
   { key: "status",      label: "Status" },
-  { key: "action",      label: "Action" },
+  {
+    key: "action",
+    label: "Action",
+    width: "14%",
+    headerClassName: "text-center",
+    cellClassName: "text-center",
+  },
 ];
 
 const SORT_OPTIONS = [

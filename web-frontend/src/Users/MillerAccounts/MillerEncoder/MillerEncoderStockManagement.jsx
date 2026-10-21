@@ -740,14 +740,14 @@ export default function MillerEncoderStockManagement() {
                       className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70 transition-colors"
                     >
                       {/* Product Code */}
-                      <td className="whitespace-nowrap px-4 py-3 pl-6 text-[13px] font-semibold text-slate-700">
+                      <td className="whitespace-nowrap px-4 py-3 pl-6 text-[13px] font-medium text-slate-700">
                         {product.product_code || "—"}
                       </td>
 
                       {/* Variant Column */}
                       <td className="px-4 py-3">
                         <div className="flex flex-col items-start">
-                          <span className="text-[13px] font-semibold text-slate-800">
+                          <span className="text-[13px] font-medium text-slate-700">
                             {product.product_name || "—"}
                           </span>
                           <span className="text-[11px] text-slate-400">
@@ -757,7 +757,7 @@ export default function MillerEncoderStockManagement() {
 
                           {/* For Archive tab: Stock Quantity & Dot inside Variant */}
                           {activeTab === "archive" && (
-                            <span className="inline-flex items-center gap-1.5 text-[12px] text-slate-600 mt-1">
+                            <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-700 mt-1">
                               <StockDot level={stockLevel} />
                               {formatQty(product.stock_quantity)}
                             </span>
@@ -768,7 +768,7 @@ export default function MillerEncoderStockManagement() {
                       {/* Stock Qty (Standard tabs only) */}
                       {activeTab !== "archive" && (
                         <td className="whitespace-nowrap px-4 py-3">
-                          <span className="inline-flex items-center gap-2 text-[13px] text-slate-700">
+                          <span className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700">
                             <StockDot level={stockLevel} />
                             {formatQty(product.stock_quantity)}
                           </span>
@@ -777,8 +777,8 @@ export default function MillerEncoderStockManagement() {
 
                       {/* Supplier (Standard tabs only) */}
                       {activeTab !== "archive" && (
-                        <td className="px-4 py-3 text-[13px] text-slate-600 whitespace-nowrap">
-                          <span className="font-medium">
+                        <td className="px-4 py-3 text-[13px] font-medium text-slate-700 whitespace-nowrap">
+                          <span>
                             {product.supplier_display_name || "—"}
                           </span>
                         </td>
@@ -786,7 +786,7 @@ export default function MillerEncoderStockManagement() {
 
                       {/* Archive Reason (Archive tab only) */}
                       {activeTab === "archive" && (
-                        <td className="px-4 py-3 text-[12px] text-slate-600">
+                        <td className="px-4 py-3 text-[13px] font-medium text-slate-700">
                           <p className="line-clamp-2 max-w-sm">
                             {product.archive_reason || "No reason specified."}
                           </p>

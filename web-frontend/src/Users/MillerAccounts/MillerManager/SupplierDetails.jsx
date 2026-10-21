@@ -12,7 +12,6 @@ import {
   Pencil,
   Package,
   Clock,
-  Eye,
   CheckCircle2,
   AlertCircle,
   X,
@@ -620,7 +619,7 @@ export default function SupplierDetails() {
         label: "Batch No.",
         width: "28%",
         render: (row) => (
-          <span className="text-slate-800">{row.batch_no}</span>
+          <span className="text-[13px] font-medium text-slate-700">{row.batch_no || "—"}</span>
         ),
       },
       {
@@ -628,7 +627,7 @@ export default function SupplierDetails() {
         label: "Product Name",
         width: "36%",
         render: (row) => (
-          <span className="text-slate-800">{row.product_name}</span>
+          <span className="text-[13px] font-medium text-slate-700">{row.product_name || "—"}</span>
         ),
       },
       {
@@ -636,7 +635,7 @@ export default function SupplierDetails() {
         label: "Ordered Quantity",
         width: "22%",
         render: (row) => (
-          <span className="text-slate-600">
+          <span className="text-[13px] font-medium text-slate-700">
             {row.ordered_quantity != null ? `${Number(row.ordered_quantity).toLocaleString()} kg` : "—"}
           </span>
         ),
@@ -647,17 +646,6 @@ export default function SupplierDetails() {
         width: "14%",
         headerClassName: "text-center",
         cellClassName: "text-center",
-        render: (row) => (
-          <button
-            type="button"
-            onClick={() => setSelectedActiveOrder(row)}
-            className="p-1.5 rounded-lg text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition inline-flex items-center gap-1 text-xs cursor-pointer font-medium"
-            title="View Details"
-          >
-            <Eye size={15} />
-            <span>View</span>
-          </button>
-        ),
       },
     ],
     []
@@ -670,7 +658,7 @@ export default function SupplierDetails() {
         label: "Receiving Reference No.",
         width: "28%",
         render: (row) => (
-          <span className="text-slate-800">{row.receiving_reference_no}</span>
+          <span className="text-[13px] font-medium text-slate-700">{row.receiving_reference_no || "—"}</span>
         ),
       },
       {
@@ -678,7 +666,7 @@ export default function SupplierDetails() {
         label: "Product Name",
         width: "36%",
         render: (row) => (
-          <span className="text-slate-800">{row.product_name}</span>
+          <span className="text-[13px] font-medium text-slate-700">{row.product_name || "—"}</span>
         ),
       },
       {
@@ -686,7 +674,7 @@ export default function SupplierDetails() {
         label: "Received Date",
         width: "22%",
         render: (row) => (
-          <span className="text-slate-600">
+          <span className="text-[13px] font-medium text-slate-700">
             {formatDate(row.received_date || row.received_at)}
           </span>
         ),
@@ -697,17 +685,6 @@ export default function SupplierDetails() {
         width: "14%",
         headerClassName: "text-center",
         cellClassName: "text-center",
-        render: (row) => (
-          <button
-            type="button"
-            onClick={() => handleOpenHistoryDetails(row)}
-            className="p-1.5 rounded-lg text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition inline-flex items-center gap-1 text-xs cursor-pointer font-medium"
-            title="View Details"
-          >
-            <Eye size={15} />
-            <span>View</span>
-          </button>
-        ),
       },
     ],
     []
@@ -928,6 +905,8 @@ export default function SupplierDetails() {
               currentPage={activePage}
               totalPages={totalActivePages}
               onPageChange={setActivePage}
+              onViewDetails={setSelectedActiveOrder}
+              viewDetailsLabel="View Details"
               footerLabel={
                 totalActiveCount === 0
                   ? "Showing 0 orders"
@@ -998,6 +977,8 @@ export default function SupplierDetails() {
               currentPage={historyPage}
               totalPages={totalHistoryPages}
               onPageChange={setHistoryPage}
+              onViewDetails={handleOpenHistoryDetails}
+              viewDetailsLabel="View Details"
               footerLabel={
                 totalHistoryCount === 0
                   ? "Showing 0 records"
