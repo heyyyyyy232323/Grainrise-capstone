@@ -14,6 +14,28 @@ const INITIAL_MESSAGES = [
 
 const QUICK_REPLIES = ["How do I register?", "Track my order", "Contact support"];
 
+const CHATBOT_PUBLIC_PATHS = new Set([
+  "/",
+  "/contact-us",
+  "/contact",
+  "/partner-with-us",
+  "/contact-support",
+  "/support",
+  "/login-assistance",
+  "/recover-access",
+  "/faqs",
+  "/faq",
+  "/help",
+  "/registration-guide",
+  "/register-guide",
+  "/guide",
+  "/privacy-policy",
+  "/privacy",
+  "/terms-policies",
+  "/terms-and-policies",
+  "/terms",
+]);
+
 export default function FloatingChatbot() {
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
@@ -67,12 +89,11 @@ export default function FloatingChatbot() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
   };
 
-  const isMobileRoute =
-    pathname.includes("mobile") ||
-    pathname.includes("startup") ||
-    pathname.startsWith("/retailer/mobile");
+  const isPartnerVerificationRoute = pathname.startsWith("/partner-with-us/verify-email");
+  const isPublicLandingRoute =
+    CHATBOT_PUBLIC_PATHS.has(pathname) || isPartnerVerificationRoute;
 
-  if (isMobileRoute) return null;
+  if (!isPublicLandingRoute) return null;
 
   return (
     <div style={{ position: "fixed", bottom: 28, right: 28, zIndex: 9999 }}>
