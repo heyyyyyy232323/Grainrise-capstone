@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Toast from "../../../Components/Modals/Toast";
 import StartupMobileSplashScreen from "./StartupMobileSplashScreen";
 import StartupMobileOnboardingView from "./StartupMobileOnboardingView";
 import StartupMobileLoginView from "./StartupMobileLoginView";
@@ -37,9 +38,14 @@ export default function StartupMobileApp() {
     <div className="relative w-full min-h-screen bg-white text-gray-900 select-none overflow-hidden font-sans">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-gray-900/90 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg backdrop-blur-sm animate-fade-in">
-          {toastMessage}
-        </div>
+        <Toast
+          isOpen
+          type="success"
+          message={toastMessage}
+          duration={3000}
+          onClose={() => setToastMessage(null)}
+          position="top-center"
+        />
       )}
 
       {/* Screen Render */}

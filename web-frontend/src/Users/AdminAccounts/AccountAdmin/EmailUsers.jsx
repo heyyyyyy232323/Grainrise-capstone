@@ -16,7 +16,7 @@ import {
 
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import RichTextEditor from "../../../Components/Minor-Components/RichTextEditor";
-import Toast from "../../../Components/Minor-Components/Toast";
+import Toast from "../../../Components/Modals/Toast";
 
 import SentEmailDetailsModal from "../../../Components/Modals/SentEmailDetailsModal";
 

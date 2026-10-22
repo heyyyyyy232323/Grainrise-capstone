@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 
 import AnnouncementTable from "../../../../Components/Major-Components/AnnouncementTable";
-import Toast from "../../../../Components/Minor-Components/Toast";
+import Toast from "../../../../Components/Modals/Toast";
 
 import ViewAnnouncementModal from "../../../../Components/Modals/AdminModals/ViewAnnouncementModal";
 import ArchiveAnnouncementModal from "../../../../Components/Modals/AdminModals/ArchiveAnnouncementModal";

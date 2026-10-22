@@ -18,7 +18,7 @@ import CustomGreenButton from "../Components/Minor-Components/CustomGreenButton"
 import CustomWhiteButton from "../Components/Minor-Components/CustomWhiteButton";
 import Dropdown from "../Components/Minor-Components/Dropdown";
 import Footer from "../Components/Minor-Components/CustomFooter";
-import Toast from "../Components/Minor-Components/Toast";
+import Toast from "../Components/Modals/Toast";
 
 import useToast from "../Components/hooks/useToast";
 import useFormValidation from "../Components/hooks/useFormValidation";

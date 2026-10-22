@@ -7,7 +7,7 @@ import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
 import Dropdown from "../../../Components/Minor-Components/Dropdown";
 import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
-import Toast from "../../../Components/Minor-Components/Toast";
+import Toast from "../../../Components/Modals/Toast";
 import useToast from "../../../Components/hooks/useToast";
 import useApi from "../../../Components/hooks/useApi";
 import AddExpenseModal from "../../../Components/Modals/MillerManager/AddExpenseModal";

@@ -285,4 +285,26 @@ export const ToastNotification = ({
   );
 };
 
-export default ToastNotification;
+const ToastCollection = ({ toasts = [], removeToast }) => (
+  <div className="fixed top-1 right-5 z-9999 flex flex-col gap-2 pointer-events-none">
+    {toasts.map((toast) => (
+      <ToastNotification
+        key={toast.id}
+        type={toast.type}
+        title={toast.title}
+        message={toast.message}
+        onClose={() => removeToast?.(toast.id)}
+      />
+    ))}
+  </div>
+);
+
+const Toast = (props) => {
+  if (Array.isArray(props.toasts)) {
+    return <ToastCollection {...props} />;
+  }
+
+  return <ToastNotification {...props} />;
+};
+
+export default Toast;
