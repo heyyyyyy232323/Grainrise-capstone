@@ -286,6 +286,7 @@ import RetailerNewsUpdates from "./Users/RetailerAccounts/RetailerNewsUpdates";
 import RetailerNewsArticle from "./Users/RetailerAccounts/RetailerNewsArticle";
 import RetailerMobilePreviewPage from "./Users/RetailerAccounts/RetailerMobilePreviewPage";
 import WarehouseDriverMobilePreviewPage from "./Users/WarehouseAccounts/WarehouseDriver/WarehouseDriverMobilePreviewPage";
+import MillerDriverMobilePreviewPage from "./Users/MillerAccounts/MillerDriver/MillerDriverMobilePreviewPage";
 import RetailerWebMobileDashboard from "./Users/RetailerAccounts/RetailerWebMobile/RetailerWebMobileDashboard";
 import { StartupMobileApp, RetailerMobileRegistrationView } from "./Users/MobileAppView";
 import RetailerMobileLoginPage from "./Users/MobileAppView/RetailerMobile/RetailerMobileLoginPage";
@@ -330,6 +331,14 @@ function App() {
         <Route
           path="/mobile-preview/warehouse-driver"
           element={<WarehouseDriverMobilePreviewPage />}
+        />
+        <Route
+          path="/miller-driver/mobile-preview"
+          element={<MillerDriverMobilePreviewPage />}
+        />
+        <Route
+          path="/mobile-preview/miller-driver"
+          element={<MillerDriverMobilePreviewPage />}
         />
         <Route
           path="/retailer/mobile-register"
