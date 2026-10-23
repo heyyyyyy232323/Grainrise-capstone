@@ -170,6 +170,7 @@ import MillerFulfillmentHistory from "./Users/MillerAccounts/MillerLogistics/Mil
 import MillerProductReturns from "./Users/MillerAccounts/MillerLogistics/MillerProductReturns";
 import MillerReimbursement from "./Users/MillerAccounts/MillerLogistics/MillerReimbursement";
 import MillerReimbursementHistory from "./Users/MillerAccounts/MillerLogistics/MillerReimbursementHistory";
+import MillerLogisticsOnlinePaymentAccounts from "./Users/MillerAccounts/MillerLogistics/MillerLogisticsOnlinePaymentAccounts";
 
 
 // ============================================================
@@ -872,6 +873,11 @@ function App() {
             <Route
               path="/miller-logistics/fulfillment-history"
               element={<MillerFulfillmentHistory />}
+            />
+
+            <Route
+              path="/miller-logistics/payment-accounts"
+              element={<MillerLogisticsOnlinePaymentAccounts />}
             />
 
             <Route
