@@ -7,11 +7,10 @@ import AdminLogin from "./Login/AdminLogin";
 import ForgotPassword from "./Login/ForgotPassword";
 import ChangePassword from "./Login/ChangePassword";
 import CompleteProfile from "./Login/CompleteProfile";
-import DashboardPreview from "./DashboardPreview";
 
 import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout";
 import AdminProtectedRoute, { ProtectedRoute } from "./Components/Major-Components/AdminProtectedRoute";
-import ToastPreviewPage from "./Components/Modals/ToastPreviewPage";
+
 
 import FloatingChatbot from "./Components/Minor-Components/FloatingChatbot";
 import GlobalLoadingScreen from "./Components/Minor-Components/GlobalLoadingScreen.jsx";
@@ -232,6 +231,25 @@ import MillerManagerNewsUpdates from "./Users/MillerAccounts/MillerManager/Mille
 import MillerManagerNewsArticle from "./Users/MillerAccounts/MillerManager/MillerManagerNewsArticle";
 import MillerManagerMessages from "./Users/MillerAccounts/MillerManager/MillerManagerMessages";
 
+// ============================================================
+// MILLER BRANCH MANAGER
+// ============================================================
+
+import MillerBranchManagerDashboard from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerDashboard";
+import MillerBranchSupplierManagement from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerSupplierManagement";
+import MillerBranchSupplierDetails from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerSupplierDetails";
+import MillerBranchOrderApproval from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerOrderApproval";
+import MillerBranchExpenseManagement from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerExpenseManagement";
+import MillerBranchOnlinePaymentAccounts from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerOnlinePaymentAccounts";
+import MillerBranchPerformanceMonitoring from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerPerformanceMonitoring";
+import MillerBranchFulfillmentHistory from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerFulfillmentHistory";
+import MillerBranchSalesHistory from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerSalesHistory";
+import MillerBranchProcurementReceivingHistory from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerProcurementReceivingHistory";
+import MillerBranchFinanceManagementHistory from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerFinanceManagementHistory";
+import MillerBranchManagerNewsUpdates from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerNewsUpdates";
+import MillerBranchManagerNewsArticle from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerNewsArticle";
+import MillerBranchManagerMessages from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerMessages";
+
 
 // ============================================================
 // ADMIN
@@ -301,24 +319,6 @@ function App() {
 
 
 
-        <Route
-          path="/dashboard-preview"
-          element={<DashboardPreview />}
-        />
-
-        <Route
-          path="/toast-preview"
-          element={<ToastPreviewPage />}
-        />
-
-        <Route
-          path="/toasts"
-          element={<ToastPreviewPage />}
-        />
-        <Route
-          path="/mobile-preview"
-          element={<RetailerMobilePreviewPage />}
-        />
         <Route
           path="/retailer/mobile-preview"
           element={<RetailerMobilePreviewPage />}
@@ -402,811 +402,898 @@ function App() {
           </Route>
 
 
-        {/* ==================================================
+          {/* ==================================================
               WAREHOUSE ENCODER
           ================================================== */}
 
-        <Route element={<WarehouseEncoderLayout role="warehouse_encoder" />}>
-          <Route
-            path="/warehouse-encoder/dashboard"
-            element={<WarehouseEncoderDashboard />}
-          />
+          <Route element={<WarehouseEncoderLayout role="warehouse_encoder" />}>
+            <Route
+              path="/warehouse-encoder/dashboard"
+              element={<WarehouseEncoderDashboard />}
+            />
 
-          <Route
-            path="/warehouse-encoder/orders"
-            element={<WarehouseEncoderOrderHistory />}
-          />
+            <Route
+              path="/warehouse-encoder/orders"
+              element={<WarehouseEncoderOrderHistory />}
+            />
 
-          <Route
-            path="/warehouse-encoder/stock"
-            element={<WarehouseEncoderStock />}
-          />
+            <Route
+              path="/warehouse-encoder/stock"
+              element={<WarehouseEncoderStock />}
+            />
 
-          <Route
-            path="/warehouse-encoder/requests"
-            element={<WarehouseEncoderRequests />}
-          />
+            <Route
+              path="/warehouse-encoder/requests"
+              element={<WarehouseEncoderRequests />}
+            />
 
-          <Route
-            path="/warehouse-encoder/profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+            <Route
+              path="/warehouse-encoder/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
-        {/* ==================================================
+          {/* ==================================================
               WAREHOUSE SALES
           ================================================== */}
 
-        <Route element={<WarehouseEncoderLayout role="warehouse_sales" />}>
-          <Route
-            path="/warehouse-sales/dashboard"
-            element={<WarehouseSalesDashboard />}
-          />
+          <Route element={<WarehouseEncoderLayout role="warehouse_sales" />}>
+            <Route
+              path="/warehouse-sales/dashboard"
+              element={<WarehouseSalesDashboard />}
+            />
 
-          <Route
-            path="/warehouse-sales/point-of-sale"
-            element={<WarehousePOS />}
-          />
+            <Route
+              path="/warehouse-sales/point-of-sale"
+              element={<WarehousePOS />}
+            />
 
-          <Route
-            path="/warehouse-sales/sales-history"
-            element={<WarehouseSalesHistory />}
-          />
+            <Route
+              path="/warehouse-sales/sales-history"
+              element={<WarehouseSalesHistory />}
+            />
 
-          <Route
-            path="/warehouse-sales/online-orders"
-            element={<WarehouseOnlineOrders />}
-          />
+            <Route
+              path="/warehouse-sales/online-orders"
+              element={<WarehouseOnlineOrders />}
+            />
 
-          <Route
-            path="/warehouse-sales/profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+            <Route
+              path="/warehouse-sales/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
-        {/* ==================================================
+          {/* ==================================================
               WAREHOUSE LOGISTICS
           ================================================== */}
 
-        <Route element={<WarehouseEncoderLayout role="warehouse_logistics" />}>
-          <Route
-            path="/warehouse-logistics/dashboard"
-            element={<WarehouseLogisticsDashboard />}
-          />
+          <Route element={<WarehouseEncoderLayout role="warehouse_logistics" />}>
+            <Route
+              path="/warehouse-logistics/dashboard"
+              element={<WarehouseLogisticsDashboard />}
+            />
 
-          <Route
-            path="/warehouse-logistics/delivery-management"
-            element={<DeliveryManagement />}
-          />
+            <Route
+              path="/warehouse-logistics/delivery-management"
+              element={<DeliveryManagement />}
+            />
 
-          <Route
-            path="/warehouse-logistics/product-returns"
-            element={<ProductReturns />}
-          />
+            <Route
+              path="/warehouse-logistics/product-returns"
+              element={<ProductReturns />}
+            />
 
-          <Route
-            path="/warehouse-logistics/reimbursement"
-            element={<Reimbursement />}
-          />
+            <Route
+              path="/warehouse-logistics/reimbursement"
+              element={<Reimbursement />}
+            />
 
-          <Route
-            path="/warehouse-logistics/reimbursement-history"
-            element={<ReimbursementHistory />}
-          />
+            <Route
+              path="/warehouse-logistics/reimbursement-history"
+              element={<ReimbursementHistory />}
+            />
 
-          <Route
-            path="/warehouse-logistics/assigned-history"
-            element={<AssignedHistory />}
-          />
+            <Route
+              path="/warehouse-logistics/assigned-history"
+              element={<AssignedHistory />}
+            />
 
-          <Route
-            path="/warehouse-logistics/fulfillment-history"
-            element={<FulfillmentHistory />}
-          />
+            <Route
+              path="/warehouse-logistics/fulfillment-history"
+              element={<FulfillmentHistory />}
+            />
 
-          <Route
-            path="/warehouse-logistics/profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+            <Route
+              path="/warehouse-logistics/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
-        {/* ==================================================
+          {/* ==================================================
               WAREHOUSE PROCUREMENT
           ================================================== */}
 
-        <Route element={<WarehouseProcurementLayout />}>
-          <Route
-            path="/warehouse-procurement/dashboard"
-            element={<WarehouseProcurementDashboard />}
-          />
+          <Route element={<WarehouseProcurementLayout />}>
+            <Route
+              path="/warehouse-procurement/dashboard"
+              element={<WarehouseProcurementDashboard />}
+            />
 
-          <Route
-            path="/warehouse-procurement/receiving-orders"
-            element={<WarehouseReceivingOrders />}
-          />
+            <Route
+              path="/warehouse-procurement/receiving-orders"
+              element={<WarehouseReceivingOrders />}
+            />
 
-          <Route
-            path="/warehouse-procurement/goods-receipt"
-            element={<WarehouseGoodsReceipt />}
-          />
+            <Route
+              path="/warehouse-procurement/goods-receipt"
+              element={<WarehouseGoodsReceipt />}
+            />
 
-          <Route
-            path="/warehouse-procurement/returns"
-            element={<WarehouseReturns />}
-          />
+            <Route
+              path="/warehouse-procurement/returns"
+              element={<WarehouseReturns />}
+            />
 
-          <Route
-            path="/warehouse-procurement/receiving-history"
-            element={<WarehouseReceivingHistory />}
-          />
+            <Route
+              path="/warehouse-procurement/receiving-history"
+              element={<WarehouseReceivingHistory />}
+            />
 
-          <Route
-            path="/warehouse-procurement/suppliers"
-            element={<WarehouseSuppliers />}
-          />
+            <Route
+              path="/warehouse-procurement/suppliers"
+              element={<WarehouseSuppliers />}
+            />
 
-          <Route
-            path="/warehouse-procurement/payment-history"
-            element={<WarehousePaymentHistory />}
-          />
+            <Route
+              path="/warehouse-procurement/payment-history"
+              element={<WarehousePaymentHistory />}
+            />
 
-          <Route
-            path="/warehouse-procurement/profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+            <Route
+              path="/warehouse-procurement/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
-        {/* ==================================================
+          {/* ==================================================
               WAREHOUSE FINANCE
           ================================================== */}
 
-        <Route element={<WarehouseEncoderLayout role="warehouse_finance" />}>
-          <Route
-            path="/warehouse-finance/dashboard"
-            element={<WarehouseFinanceDashboard />}
-          />
+          <Route element={<WarehouseEncoderLayout role="warehouse_finance" />}>
+            <Route
+              path="/warehouse-finance/dashboard"
+              element={<WarehouseFinanceDashboard />}
+            />
 
-          <Route
-            path="/warehouse-finance/payables"
-            element={<WarehousePayables />}
-          />
+            <Route
+              path="/warehouse-finance/payables"
+              element={<WarehousePayables />}
+            />
 
-          <Route
-            path="/warehouse-finance/expenses"
-            element={<WarehouseExpenses />}
-          />
+            <Route
+              path="/warehouse-finance/expenses"
+              element={<WarehouseExpenses />}
+            />
 
-          <Route
-            path="/warehouse-finance/reimburse"
-            element={<WarehouseReimburse />}
-          />
+            <Route
+              path="/warehouse-finance/reimburse"
+              element={<WarehouseReimburse />}
+            />
 
-          <Route
-            path="/warehouse-finance/payment-history"
-            element={<WarehouseFinancePaymentHistory />}
-          />
+            <Route
+              path="/warehouse-finance/payment-history"
+              element={<WarehouseFinancePaymentHistory />}
+            />
 
-          <Route
-            path="/warehouse-finance/profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+            <Route
+              path="/warehouse-finance/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
-        {/* ==================================================
+          {/* ==================================================
               WAREHOUSE MANAGER
           ================================================== */}
 
-        <Route element={<WarehouseEncoderLayout role="warehouse_manager" />}>
-          <Route
-            path="/warehouse-manager/dashboard"
-            element={<WarehouseManagerDashboard />}
-          />
+          <Route element={<WarehouseEncoderLayout role="warehouse_manager" />}>
+            <Route
+              path="/warehouse-manager/dashboard"
+              element={<WarehouseManagerDashboard />}
+            />
 
-          <Route
-            path="/warehouse-manager/branches"
-            element={<BranchManagement />}
-          />
+            <Route
+              path="/warehouse-manager/branches"
+              element={<BranchManagement />}
+            />
 
-          <Route
-            path="/warehouse-manager/branches/:branchId/employees"
-            element={<EmployeeManagement />}
-          />
+            <Route
+              path="/warehouse-manager/branches/:branchId/employees"
+              element={<EmployeeManagement />}
+            />
 
-          <Route
-            path="/warehouse-manager/order-approval"
-            element={<OrderApproval />}
-          />
+            <Route
+              path="/warehouse-manager/order-approval"
+              element={<OrderApproval />}
+            />
 
-          <Route
-            path="/warehouse-manager/performance"
-            element={<PerformanceMonitoring />}
-          />
+            <Route
+              path="/warehouse-manager/performance"
+              element={<PerformanceMonitoring />}
+            />
 
-          <Route
-            path="/warehouse-manager/fulfillment-history"
-            element={<WarehouseManagerFulfillmentHistory />}
-          />
+            <Route
+              path="/warehouse-manager/fulfillment-history"
+              element={<WarehouseManagerFulfillmentHistory />}
+            />
 
-          <Route
-            path="/warehouse-manager/sales-history"
-            element={<WarehouseManagerSalesHistory />}
-          />
+            <Route
+              path="/warehouse-manager/sales-history"
+              element={<WarehouseManagerSalesHistory />}
+            />
 
-          <Route
-            path="/warehouse-manager/procurement-history"
-            element={<ProcurementReceivingHistory />}
-          />
+            <Route
+              path="/warehouse-manager/procurement-history"
+              element={<ProcurementReceivingHistory />}
+            />
 
-          <Route
-            path="/warehouse-manager/finance-history"
-            element={<FinanceManagementHistory />}
-          />
+            <Route
+              path="/warehouse-manager/finance-history"
+              element={<FinanceManagementHistory />}
+            />
 
-          <Route
-            path="/warehouse-manager/news-updates"
-            element={<WarehouseManagerNewsUpdates />}
-          />
+            <Route
+              path="/warehouse-manager/news-updates"
+              element={<WarehouseManagerNewsUpdates />}
+            />
 
-          <Route
-            path="/warehouse-manager/news-updates/:id"
-            element={<WarehouseManagerNewsArticle />}
-          />
+            <Route
+              path="/warehouse-manager/news-updates/:id"
+              element={<WarehouseManagerNewsArticle />}
+            />
 
-          <Route
-            path="/warehouse-manager/messages"
-            element={<WarehouseManagerMessages />}
-          />
+            <Route
+              path="/warehouse-manager/messages"
+              element={<WarehouseManagerMessages />}
+            />
 
-          <Route
-            path="/warehouse-manager/profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+            <Route
+              path="/warehouse-manager/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
-        {/* ==================================================
+          {/* ==================================================
               BRANCH MANAGER
           ================================================== */}
 
-        <Route element={<WarehouseEncoderLayout role="branch_manager" />}>
-          <Route
-            path="/branch-manager/dashboard"
-            element={<BranchManagerDashboard />}
-          />
+          <Route element={<WarehouseEncoderLayout role="branch_manager" />}>
+            <Route
+              path="/branch-manager/dashboard"
+              element={<BranchManagerDashboard />}
+            />
 
-          <Route
-            path="/branch-manager/order-approval"
-            element={<BranchManagerOrderApproval />}
-          />
+            <Route
+              path="/branch-manager/order-approval"
+              element={<BranchManagerOrderApproval />}
+            />
 
-          <Route
-            path="/branch-manager/performance"
-            element={<BranchManagerPerformanceMonitoring />}
-          />
+            <Route
+              path="/branch-manager/performance"
+              element={<BranchManagerPerformanceMonitoring />}
+            />
 
-          <Route
-            path="/branch-manager/fulfillment-history"
-            element={<BranchManagerFulfillmentHistory />}
-          />
+            <Route
+              path="/branch-manager/fulfillment-history"
+              element={<BranchManagerFulfillmentHistory />}
+            />
 
-          <Route
-            path="/branch-manager/sales-history"
-            element={<BranchManagerSalesHistory />}
-          />
+            <Route
+              path="/branch-manager/sales-history"
+              element={<BranchManagerSalesHistory />}
+            />
 
-          <Route
-            path="/branch-manager/procurement-history"
-            element={<BranchManagerProcurementReceivingHistory />}
-          />
+            <Route
+              path="/branch-manager/procurement-history"
+              element={<BranchManagerProcurementReceivingHistory />}
+            />
 
-          <Route
-            path="/branch-manager/finance-history"
-            element={<BranchManagerFinanceManagementHistory />}
-          />
+            <Route
+              path="/branch-manager/finance-history"
+              element={<BranchManagerFinanceManagementHistory />}
+            />
 
-          <Route
-            path="/branch-manager/news-updates"
-            element={<BranchManagerNewsUpdates />}
-          />
+            <Route
+              path="/branch-manager/news-updates"
+              element={<BranchManagerNewsUpdates />}
+            />
 
-          <Route
-            path="/branch-manager/news-updates/:id"
-            element={<BranchManagerNewsArticle />}
-          />
+            <Route
+              path="/branch-manager/news-updates/:id"
+              element={<BranchManagerNewsArticle />}
+            />
 
-          <Route
-            path="/branch-manager/profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+            <Route
+              path="/branch-manager/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
-        {/* ==================================================
+          {/* ==================================================
               WAREHOUSE DRIVER
           ================================================== */}
 
-        <Route element={<WarehouseEncoderLayout role="warehouse_driver" />}>
-          <Route
-            path="/warehouse-driver/dashboard"
-            element={<WarehouseDriverDashboard />}
-          />
+          <Route element={<WarehouseEncoderLayout role="warehouse_driver" />}>
+            <Route
+              path="/warehouse-driver/dashboard"
+              element={<WarehouseDriverDashboard />}
+            />
 
-          <Route
-            path="/warehouse-driver/my-duties"
-            element={<DriverMyDuties />}
-          />
+            <Route
+              path="/warehouse-driver/my-duties"
+              element={<DriverMyDuties />}
+            />
 
-          <Route
-            path="/warehouse-driver/messages"
-            element={<DriverMessages />}
-          />
+            <Route
+              path="/warehouse-driver/messages"
+              element={<DriverMessages />}
+            />
 
-          <Route
-            path="/warehouse-driver/payment-submission"
-            element={<DriverPaymentSubmission />}
-          />
+            <Route
+              path="/warehouse-driver/payment-submission"
+              element={<DriverPaymentSubmission />}
+            />
 
-          <Route
-            path="/warehouse-driver/reimbursement"
-            element={<DriverReimbursement />}
-          />
+            <Route
+              path="/warehouse-driver/reimbursement"
+              element={<DriverReimbursement />}
+            />
 
-          <Route
-            path="/warehouse-driver/assigned-history"
-            element={<DriverAssignedHistory />}
-          />
+            <Route
+              path="/warehouse-driver/assigned-history"
+              element={<DriverAssignedHistory />}
+            />
 
-          <Route
-            path="/warehouse-driver/reimbursement-history"
-            element={<DriverReimbursementHistory />}
-          />
+            <Route
+              path="/warehouse-driver/reimbursement-history"
+              element={<DriverReimbursementHistory />}
+            />
 
-          <Route
-            path="/warehouse-driver/profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+            <Route
+              path="/warehouse-driver/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
-        {/* ==================================================
+          {/* ==================================================
               SUPPLIER ENCODER
           ================================================== */}
 
-        <Route element={<WarehouseEncoderLayout role="supplier_encoder" />}>
-          <Route
-            path="/supplier-encoder/dashboard"
-            element={<MillerEncoderDashboard />}
-          />
+          <Route element={<WarehouseEncoderLayout role="supplier_encoder" />}>
+            <Route
+              path="/supplier-encoder/dashboard"
+              element={<MillerEncoderDashboard />}
+            />
 
-          <Route
-            path="/supplier-encoder/orders"
-            element={<MillerEncoderOrderHistory />}
-          />
+            <Route
+              path="/supplier-encoder/orders"
+              element={<MillerEncoderOrderHistory />}
+            />
 
-          <Route
-            path="/supplier-encoder/requests"
-            element={<MillerEncoderRequestOrders />}
-          />
+            <Route
+              path="/supplier-encoder/requests"
+              element={<MillerEncoderRequestOrders />}
+            />
 
-          <Route
-            path="/supplier-encoder/stock"
-            element={<MillerEncoderStockManagement />}
-          />
-          <Route
-            path="/supplier-encoder/stock-management"
-            element={<MillerEncoderStockManagement />}
-          />
+            <Route
+              path="/supplier-encoder/stock"
+              element={<MillerEncoderStockManagement />}
+            />
+            <Route
+              path="/supplier-encoder/stock-management"
+              element={<MillerEncoderStockManagement />}
+            />
 
-          <Route
-            path="/supplier-encoder/profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+            <Route
+              path="/supplier-encoder/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
-        {/* ==================================================
+          {/* ==================================================
               MILLER SALES
           ================================================== */}
 
-        <Route element={<WarehouseEncoderLayout role="miller_sales" />}>
-          <Route
-            path="/miller-sales/dashboard"
-            element={<MillerSalesDashboard />}
-          />
+          <Route element={<WarehouseEncoderLayout role="miller_sales" />}>
+            <Route
+              path="/miller-sales/dashboard"
+              element={<MillerSalesDashboard />}
+            />
 
-          <Route
-            path="/miller-sales/point-of-sale"
-            element={<MillerPOS />}
-          />
+            <Route
+              path="/miller-sales/point-of-sale"
+              element={<MillerPOS />}
+            />
 
-          <Route
-            path="/miller-sales/sales-history"
-            element={<MillerSalesHistory />}
-          />
+            <Route
+              path="/miller-sales/sales-history"
+              element={<MillerSalesHistory />}
+            />
 
-          <Route
-            path="/miller-sales/online-orders"
-            element={<MillerOnlineOrders />}
-          />
+            <Route
+              path="/miller-sales/online-orders"
+              element={<MillerOnlineOrders />}
+            />
 
-          <Route
-            path="/miller-sales/profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+            <Route
+              path="/miller-sales/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
-        {/* ==================================================
+          {/* ==================================================
               MILLER LOGISTICS
           ================================================== */}
 
-        <Route element={<WarehouseEncoderLayout role="miller_logistics" />}>
-          <Route
-            path="/miller-logistics/dashboard"
-            element={<MillerLogisticsDashboard />}
-          />
+          <Route element={<WarehouseEncoderLayout role="miller_logistics" />}>
+            <Route
+              path="/miller-logistics/dashboard"
+              element={<MillerLogisticsDashboard />}
+            />
 
-          <Route
-            path="/miller-logistics/delivery-management"
-            element={<MillerDeliveryManagement />}
-          />
+            <Route
+              path="/miller-logistics/delivery-management"
+              element={<MillerDeliveryManagement />}
+            />
 
-          <Route
-            path="/miller-logistics/product-returns"
-            element={<MillerProductReturns />}
-          />
+            <Route
+              path="/miller-logistics/product-returns"
+              element={<MillerProductReturns />}
+            />
 
-          <Route
-            path="/miller-logistics/reimbursement"
-            element={<MillerReimbursement />}
-          />
+            <Route
+              path="/miller-logistics/reimbursement"
+              element={<MillerReimbursement />}
+            />
 
-          <Route
-            path="/miller-logistics/reimbursement-history"
-            element={<MillerReimbursementHistory />}
-          />
+            <Route
+              path="/miller-logistics/reimbursement-history"
+              element={<MillerReimbursementHistory />}
+            />
 
-          <Route
-            path="/miller-logistics/assigned-history"
-            element={<MillerAssignedHistory />}
-          />
+            <Route
+              path="/miller-logistics/assigned-history"
+              element={<MillerAssignedHistory />}
+            />
 
-          <Route
-            path="/miller-logistics/fulfillment-history"
-            element={<MillerFulfillmentHistory />}
-          />
+            <Route
+              path="/miller-logistics/fulfillment-history"
+              element={<MillerFulfillmentHistory />}
+            />
 
-          <Route
-            path="/miller-logistics/profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+            <Route
+              path="/miller-logistics/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
-        {/* ==================================================
+          {/* ==================================================
               MILLER PROCUREMENT
           ================================================== */}
 
-        <Route element={<MillerProcurementLayout />}>
-          <Route
-            path="/miller-procurement/dashboard"
-            element={<MillerProcurementDashboard />}
-          />
+          <Route element={<MillerProcurementLayout />}>
+            <Route
+              path="/miller-procurement/dashboard"
+              element={<MillerProcurementDashboard />}
+            />
 
-          <Route
-            path="/miller-procurement/receiving-orders"
-            element={<MillerReceivingOrders />}
-          />
+            <Route
+              path="/miller-procurement/receiving-orders"
+              element={<MillerReceivingOrders />}
+            />
 
-          <Route
-            path="/miller-procurement/goods-receipt"
-            element={<MillerGoodsReceipt />}
-          />
+            <Route
+              path="/miller-procurement/goods-receipt"
+              element={<MillerGoodsReceipt />}
+            />
 
-          <Route
-            path="/miller-procurement/returns"
-            element={<MillerReturns />}
-          />
+            <Route
+              path="/miller-procurement/returns"
+              element={<MillerReturns />}
+            />
 
-          <Route
-            path="/miller-procurement/receiving-history"
-            element={<MillerReceivingHistory />}
-          />
+            <Route
+              path="/miller-procurement/receiving-history"
+              element={<MillerReceivingHistory />}
+            />
 
-          <Route
-            path="/miller-procurement/suppliers"
-            element={<MillerSuppliers />}
-          />
+            <Route
+              path="/miller-procurement/suppliers"
+              element={<MillerSuppliers />}
+            />
 
-          <Route
-            path="/miller-procurement/payment-history"
-            element={<MillerPaymentHistory />}
-          />
+            <Route
+              path="/miller-procurement/payment-history"
+              element={<MillerPaymentHistory />}
+            />
 
-          <Route
-            path="/miller-procurement/payment-history/report"
-            element={<MillerPaymentHistoryReport />}
-          />
+            <Route
+              path="/miller-procurement/payment-history/report"
+              element={<MillerPaymentHistoryReport />}
+            />
 
-          <Route
-            path="/miller-procurement/profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+            <Route
+              path="/miller-procurement/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
-        {/* ==================================================
+          {/* ==================================================
               MILLER FINANCE
           ================================================== */}
 
-        <Route element={<WarehouseEncoderLayout role="miller_finance" />}>
-          <Route
-            path="/miller-finance/dashboard"
-            element={<MillerFinanceDashboard />}
-          />
+          <Route element={<WarehouseEncoderLayout role="miller_finance" />}>
+            <Route
+              path="/miller-finance/dashboard"
+              element={<MillerFinanceDashboard />}
+            />
 
-          <Route
-            path="/miller-finance/payables"
-            element={<MillerPayables />}
-          />
+            <Route
+              path="/miller-finance/payables"
+              element={<MillerPayables />}
+            />
 
-          <Route
-            path="/miller-finance/expenses"
-            element={<MillerExpenses />}
-          />
+            <Route
+              path="/miller-finance/expenses"
+              element={<MillerExpenses />}
+            />
 
-          <Route
-            path="/miller-finance/reimburse"
-            element={<MillerReimburse />}
-          />
+            <Route
+              path="/miller-finance/reimburse"
+              element={<MillerReimburse />}
+            />
 
-          <Route
-            path="/miller-finance/payment-history"
-            element={<MillerFinancePaymentHistory />}
-          />
+            <Route
+              path="/miller-finance/payment-history"
+              element={<MillerFinancePaymentHistory />}
+            />
 
-          <Route
-            path="/miller-finance/payment-history/report"
-            element={<MillerFinanceReport />}
-          />
+            <Route
+              path="/miller-finance/payment-history/report"
+              element={<MillerFinanceReport />}
+            />
 
-          <Route
-            path="/miller-finance/profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+            <Route
+              path="/miller-finance/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
-        {/* ==================================================
+          {/* ==================================================
               MILLER DRIVER
           ================================================== */}
 
-        <Route element={<WarehouseEncoderLayout role="miller_driver" />}>
-          <Route
-            path="/miller-driver/dashboard"
-            element={<MillerDriverDashboard />}
-          />
+          <Route element={<WarehouseEncoderLayout role="miller_driver" />}>
+            <Route
+              path="/miller-driver/dashboard"
+              element={<MillerDriverDashboard />}
+            />
 
-          <Route
-            path="/miller-driver/my-duties"
-            element={<MillerDriverMyDuties />}
-          />
+            <Route
+              path="/miller-driver/my-duties"
+              element={<MillerDriverMyDuties />}
+            />
 
-          <Route
-            path="/miller-driver/messages"
-            element={<MillerDriverMessages />}
-          />
+            <Route
+              path="/miller-driver/messages"
+              element={<MillerDriverMessages />}
+            />
 
-          <Route
-            path="/miller-driver/payment-submission"
-            element={<MillerDriverPaymentSubmission />}
-          />
+            <Route
+              path="/miller-driver/payment-submission"
+              element={<MillerDriverPaymentSubmission />}
+            />
 
-          <Route
-            path="/miller-driver/reimbursement"
-            element={<MillerDriverReimbursement />}
-          />
+            <Route
+              path="/miller-driver/reimbursement"
+              element={<MillerDriverReimbursement />}
+            />
 
-          <Route
-            path="/miller-driver/assigned-history"
-            element={<MillerDriverAssignedHistory />}
-          />
+            <Route
+              path="/miller-driver/assigned-history"
+              element={<MillerDriverAssignedHistory />}
+            />
 
-          <Route
-            path="/miller-driver/reimbursement-history"
-            element={<MillerDriverReimbursementHistory />}
-          />
+            <Route
+              path="/miller-driver/reimbursement-history"
+              element={<MillerDriverReimbursementHistory />}
+            />
 
-          <Route
-            path="/miller-driver/profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+            <Route
+              path="/miller-driver/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
 
-        {/* ==================================================
+          {/* ==================================================
               MILLER MANAGER
           ================================================== */}
 
-        <Route element={<WarehouseEncoderLayout role="miller_manager" />}>
-          <Route
-            path="/miller-manager/dashboard"
-            element={<MillerManagerDashboard />}
-          />
+          <Route element={<WarehouseEncoderLayout role="miller_manager" />}>
+            <Route
+              path="/miller-manager/dashboard"
+              element={<MillerManagerDashboard />}
+            />
 
 
-          <Route
-            path="/miller-manager/branches"
-            element={<MillerBranchManagement />}
-          />
+            <Route
+              path="/miller-manager/branches"
+              element={<MillerBranchManagement />}
+            />
 
-          <Route
-            path="/miller-manager/branches/:branchId/employees"
-            element={<MillerEmployeeManagement />}
-          />
+            <Route
+              path="/miller-manager/branches/:branchId/employees"
+              element={<MillerEmployeeManagement />}
+            />
 
-          <Route
-            path="/miller-manager/suppliers"
-            element={<MillerSupplierManagement />}
-          />
+            <Route
+              path="/miller-manager/suppliers"
+              element={<MillerSupplierManagement />}
+            />
 
-          <Route
-            path="/miller-manager/suppliers/:supplierId"
-            element={<MillerSupplierDetails />}
-          />
+            <Route
+              path="/miller-manager/suppliers/:supplierId"
+              element={<MillerSupplierDetails />}
+            />
 
-          <Route
-            path="/miller-manager/order-approval"
-            element={<MillerOrderApproval />}
-          />
+            <Route
+              path="/miller-manager/order-approval"
+              element={<MillerOrderApproval />}
+            />
 
-          <Route
-            path="/miller-manager/expenses"
-            element={<MillerExpenseManagement />}
-          />
+            <Route
+              path="/miller-manager/expenses"
+              element={<MillerExpenseManagement />}
+            />
 
-          <Route
-            path="/miller-manager/pass-fee"
-            element={<MillerPassFeeManagement />}
-          />
+            <Route
+              path="/miller-manager/pass-fee"
+              element={<MillerPassFeeManagement />}
+            />
 
-          <Route
-            path="/miller-manager/payment-accounts"
-            element={<MillerOnlinePaymentAccounts />}
-          />
+            <Route
+              path="/miller-manager/payment-accounts"
+              element={<MillerOnlinePaymentAccounts />}
+            />
 
-          <Route
-            path="/miller-manager/performance"
-            element={<MillerPerformanceMonitoring />}
-          />
+            <Route
+              path="/miller-manager/performance"
+              element={<MillerPerformanceMonitoring />}
+            />
 
-          <Route
-            path="/miller-manager/fulfillment-history"
-            element={<MillerManagerFulfillmentHistory />}
-          />
+            <Route
+              path="/miller-manager/fulfillment-history"
+              element={<MillerManagerFulfillmentHistory />}
+            />
 
-          <Route
-            path="/miller-manager/sales-history"
-            element={<MillerManagerSalesHistory />}
-          />
+            <Route
+              path="/miller-manager/sales-history"
+              element={<MillerManagerSalesHistory />}
+            />
 
-          <Route
-            path="/miller-manager/procurement-history"
-            element={<MillerProcurementReceivingHistory />}
-          />
+            <Route
+              path="/miller-manager/procurement-history"
+              element={<MillerProcurementReceivingHistory />}
+            />
 
-          <Route
-            path="/miller-manager/finance-history"
-            element={<MillerFinanceManagementHistory />}
-          />
+            <Route
+              path="/miller-manager/finance-history"
+              element={<MillerFinanceManagementHistory />}
+            />
 
-          <Route
-            path="/miller-manager/messages"
-            element={<MillerManagerMessages />}
-          />
+            <Route
+              path="/miller-manager/messages"
+              element={<MillerManagerMessages />}
+            />
 
-          <Route
-            path="/miller-manager/news-updates"
-            element={<MillerManagerNewsUpdates />}
-          />
+            <Route
+              path="/miller-manager/news-updates"
+              element={<MillerManagerNewsUpdates />}
+            />
 
-          <Route
-            path="/miller-manager/news-updates/:id"
-            element={<MillerManagerNewsArticle />}
-          />
+            <Route
+              path="/miller-manager/news-updates/:id"
+              element={<MillerManagerNewsArticle />}
+            />
 
-          <Route
-            path="/miller-manager/profile"
-            element={<UserAccountProfile />}
-          />
-        </Route>
+            <Route
+              path="/miller-manager/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
 
 
-        {/* ==================================================
+          {/* ==================================================
               RETAILER — WEB DESKTOP ROUTES (with sidebar layout)
           ================================================== */}
 
-        {/* Standalone fullscreen — Figma mobile app view */}
-        <Route
-          path="/retailer/mobile-preview"
-          element={<RetailerMobilePreviewPage />}
-        />
+          {/* ==================================================
+              MILLER BRANCH MANAGER
+          ================================================== */}
 
-        {/* Standalone fullscreen — Web responsive mobile view (for phone browsers) */}
-        <Route
-          path="/retailer/web-mobile"
-          element={<RetailerWebMobileDashboard />}
-        />
+          <Route element={<WarehouseEncoderLayout role="miller_branch_manager" />}>
+            <Route
+              path="/miller-branch-manager/dashboard"
+              element={<MillerBranchManagerDashboard />}
+            />
 
-        {/* All web desktop pages inside WarehouseEncoderLayout (sidebar + navbar) */}
-        <Route element={<WarehouseEncoderLayout role="retailer" />}>
+            <Route
+              path="/miller-branch-manager/suppliers"
+              element={<MillerBranchSupplierManagement />}
+            />
+
+            <Route
+              path="/miller-branch-manager/suppliers/:supplierId"
+              element={<MillerBranchSupplierDetails />}
+            />
+
+            <Route
+              path="/miller-branch-manager/order-approval"
+              element={<MillerBranchOrderApproval />}
+            />
+
+            <Route
+              path="/miller-branch-manager/expenses"
+              element={<MillerBranchExpenseManagement />}
+            />
+
+            <Route
+              path="/miller-branch-manager/payment-accounts"
+              element={<MillerBranchOnlinePaymentAccounts />}
+            />
+
+            <Route
+              path="/miller-branch-manager/performance"
+              element={<MillerBranchPerformanceMonitoring />}
+            />
+
+            <Route
+              path="/miller-branch-manager/performance-monitoring"
+              element={<MillerBranchPerformanceMonitoring />}
+            />
+
+            <Route
+              path="/miller-branch-manager/fulfillment-history"
+              element={<MillerBranchFulfillmentHistory />}
+            />
+
+            <Route
+              path="/miller-branch-manager/sales-history"
+              element={<MillerBranchSalesHistory />}
+            />
+
+            <Route
+              path="/miller-branch-manager/procurement-history"
+              element={<MillerBranchProcurementReceivingHistory />}
+            />
+
+            <Route
+              path="/miller-branch-manager/finance-history"
+              element={<MillerBranchFinanceManagementHistory />}
+            />
+
+            <Route
+              path="/miller-branch-manager/messages"
+              element={<MillerBranchManagerMessages />}
+            />
+
+            <Route
+              path="/miller-branch-manager/news-updates"
+              element={<MillerBranchManagerNewsUpdates />}
+            />
+
+            <Route
+              path="/miller-branch-manager/news-updates/:id"
+              element={<MillerBranchManagerNewsArticle />}
+            />
+
+            <Route
+              path="/miller-branch-manager/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
+
+
+          {/* Standalone fullscreen — Figma mobile app view */}
           <Route
-            path="/retailer/dashboard"
-            element={<RetailerDashboard />}
+            path="/retailer/mobile-preview"
+            element={<RetailerMobilePreviewPage />}
           />
 
+          {/* Standalone fullscreen — Web responsive mobile view (for phone browsers) */}
           <Route
-            path="/retailer/point-of-sale"
-            element={<RetailerPointOfSale />}
+            path="/retailer/web-mobile"
+            element={<RetailerWebMobileDashboard />}
           />
 
-          <Route
-            path="/retailer/sales-history"
-            element={<RetailerSalesHistory />}
-          />
+          {/* All web desktop pages inside WarehouseEncoderLayout (sidebar + navbar) */}
+          <Route element={<WarehouseEncoderLayout role="retailer" />}>
+            <Route
+              path="/retailer/dashboard"
+              element={<RetailerDashboard />}
+            />
 
-          <Route
-            path="/retailer/inventory"
-            element={<RetailerInventory />}
-          />
+            <Route
+              path="/retailer/point-of-sale"
+              element={<RetailerPointOfSale />}
+            />
 
-          <Route
-            path="/retailer/warehouse-marketplace"
-            element={<RetailerMarketplace />}
-          />
+            <Route
+              path="/retailer/sales-history"
+              element={<RetailerSalesHistory />}
+            />
 
-          <Route
-            path="/retailer/order-tracking"
-            element={<RetailerOrderTracking />}
-          />
+            <Route
+              path="/retailer/inventory"
+              element={<RetailerInventory />}
+            />
 
-          <Route
-            path="/retailer/product-returns"
-            element={<RetailerProductReturns />}
-          />
+            <Route
+              path="/retailer/warehouse-marketplace"
+              element={<RetailerMarketplace />}
+            />
 
-          <Route
-            path="/retailer/my-purchases"
-            element={<RetailerMyPurchases />}
-          />
+            <Route
+              path="/retailer/order-tracking"
+              element={<RetailerOrderTracking />}
+            />
 
-          <Route
-            path="/retailer/messages"
-            element={<RetailerMessages />}
-          />
+            <Route
+              path="/retailer/product-returns"
+              element={<RetailerProductReturns />}
+            />
 
-          <Route
-            path="/retailer/news-updates"
-            element={<RetailerNewsUpdates />}
-          />
+            <Route
+              path="/retailer/my-purchases"
+              element={<RetailerMyPurchases />}
+            />
 
-          <Route
-            path="/retailer/news-updates/:id"
-            element={<RetailerNewsArticle />}
-          />
+            <Route
+              path="/retailer/messages"
+              element={<RetailerMessages />}
+            />
 
-          <Route
-            path="/retailer/profile"
-            element={<UserAccountProfile />}
-          />
+            <Route
+              path="/retailer/news-updates"
+              element={<RetailerNewsUpdates />}
+            />
+
+            <Route
+              path="/retailer/news-updates/:id"
+              element={<RetailerNewsArticle />}
+            />
+
+            <Route
+              path="/retailer/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
         </Route>
-      </Route>
 
 
 

@@ -1,3 +1,4 @@
+import Toast from "../../../Components/Modals/Toast";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Receipt, Clock, Calendar, ChevronDown, Search, CheckCircle2 } from "lucide-react";
@@ -327,9 +328,13 @@ export default function MillerSalesHistory() {
 
       {/* ── Toast Alert ────────────────────────────────────────────────────── */}
       {toastMsg && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
-          <CheckCircle2 size={16} /> {toastMsg}
-        </div>
+        <Toast
+          isOpen
+          type="success"
+          message={toastMsg}
+          duration={3000}
+          onClose={() => setToastMsg("")}
+        />
       )}
 
       {/* ── Transactions Table ──────────────────────────────────────────────── */}

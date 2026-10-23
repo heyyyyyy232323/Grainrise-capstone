@@ -18,7 +18,7 @@ import {
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import Tabs from "../../../Components/Minor-Components/Tabs";
-import Toast from "../../../Components/Minor-Components/Toast";
+import Toast from "../../../Components/Modals/Toast";
 
 import ArchiveAccountModal from "../../../Components/Modals/ArchiveAccountModal";
 import AccountActionConfirmModal from "../../../Components/Modals/AccountActionConfirmModal";
