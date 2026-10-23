@@ -67,6 +67,21 @@ export default function MillerEncoderDashboard() {
     loadData();
   }, [loadData]);
 
+  // Clean error message preventing raw HTML from rendering in UI
+  const displayError = useMemo(() => {
+    if (!error) return null;
+    if (
+      typeof error === "string" &&
+      (error.trim().startsWith("<") ||
+        error.toLowerCase().includes("<!doctype") ||
+        error.toLowerCase().includes("<html") ||
+        error.toLowerCase().includes("<body"))
+    ) {
+      return "Failed to load dashboard data. Please try again.";
+    }
+    return typeof error === "string" ? error : "Failed to load dashboard data.";
+  }, [error]);
+
   // Current date & time for header
   const now = useMemo(() => new Date(), []);
   const formattedDate = useMemo(
@@ -198,11 +213,11 @@ export default function MillerEncoderDashboard() {
       </div>
 
       {/* ── Error Banner if Fetch Fails ──────────────────────────────────────── */}
-      {error && (
+      {displayError && (
         <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
           <div className="flex items-center gap-2">
             <AlertCircle size={18} className="shrink-0 text-rose-500" />
-            <span>{error}</span>
+            <span>{displayError}</span>
           </div>
           <button
             type="button"

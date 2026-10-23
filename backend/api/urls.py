@@ -157,6 +157,18 @@ urlpatterns = [
 
 
     # ========================================================
+    # MILLER EMPLOYEE FUNCTIONS (ENCODER, PROCUREMENT, FINANCE, SALES)
+    # ========================================================
+
+    path(
+        "miller-employees/",
+        include(
+            "api.miller_employees_function.urls"
+        ),
+    ),
+
+
+    # ========================================================
     # CENTRALIZED NEWS & UPDATES
     # ========================================================
 

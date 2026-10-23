@@ -20,8 +20,17 @@ export default function useEncoderDashboard() {
       const data = res?.data !== undefined ? res.data : res;
       return data || null;
     } catch (err) {
-      const msg =
+      let msg =
         err?.data?.message || err?.message || "Failed to load dashboard data.";
+      if (
+        typeof msg === "string" &&
+        (msg.trim().startsWith("<") ||
+          msg.toLowerCase().includes("<!doctype") ||
+          msg.toLowerCase().includes("<html") ||
+          msg.toLowerCase().includes("<body"))
+      ) {
+        msg = "Failed to load dashboard data. Please try again.";
+      }
       setError(msg);
       throw err;
     } finally {

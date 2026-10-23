@@ -21,6 +21,15 @@ const extractErrorMessage = (payload, fallbackMessage) => {
   }
 
   if (typeof payload === "string") {
+    const trimmed = payload.trim();
+    if (
+      trimmed.startsWith("<") ||
+      trimmed.toLowerCase().includes("<!doctype") ||
+      trimmed.toLowerCase().includes("<html") ||
+      trimmed.toLowerCase().includes("<body")
+    ) {
+      return fallbackMessage;
+    }
     return payload;
   }
 
