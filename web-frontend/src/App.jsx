@@ -231,6 +231,8 @@ import MillerEmployeeManagement from "./Users/MillerAccounts/MillerManager/Emplo
 import MillerManagerNewsUpdates from "./Users/MillerAccounts/MillerManager/MillerManagerNewsUpdates";
 import MillerManagerNewsArticle from "./Users/MillerAccounts/MillerManager/MillerManagerNewsArticle";
 import MillerManagerMessages from "./Users/MillerAccounts/MillerManager/MillerManagerMessages";
+import MillerVehicleManagement from "./Users/MillerAccounts/MillerManager/MillerVehicleManagement";
+
 
 
 // ============================================================
@@ -1073,9 +1075,15 @@ function App() {
           />
 
           <Route
+            path="/miller-manager/vehicle-management"
+            element={<MillerVehicleManagement />}
+          />
+
+          <Route
             path="/miller-manager/performance"
             element={<MillerPerformanceMonitoring />}
           />
+
 
           <Route
             path="/miller-manager/fulfillment-history"

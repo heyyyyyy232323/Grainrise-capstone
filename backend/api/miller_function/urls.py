@@ -118,5 +118,23 @@ urlpatterns = [
             "api.miller_function.online_payment_accounts.urls"
         ),
     ),
+
+    # ========================================================
+    # VEHICLE MANAGEMENT
+    # ========================================================
+
+    path(
+        "vehicles/",
+        include(
+            "api.miller_function.vehicle_management.urls"
+        ),
+    ),
+    path(
+        "vehicles",
+        include(
+            "api.miller_function.vehicle_management.urls"
+        ),
+    ),
 ]
+
 

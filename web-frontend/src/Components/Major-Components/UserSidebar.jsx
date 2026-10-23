@@ -2,6 +2,7 @@ import React from "react";
 import {
   LayoutDashboard,
   Truck,
+  Car,
   Warehouse,
   Store,
   Users,
@@ -1014,6 +1015,11 @@ export const getUserSidebarConfig = (role = "admin") => {
               label: "Online Payment Accounts",
               icon: CreditCard,
               path: "/miller-manager/payment-accounts",
+            },
+            {
+              label: "Vehicle Management",
+              icon: Car,
+              path: "/miller-manager/vehicle-management",
             },
           ],
         },
