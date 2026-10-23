@@ -11,14 +11,25 @@ from django.views.decorators.http import require_GET, require_POST
 from api.miller_employees_function.employee_auth import miller_sales_required
 
 from .selectors import (
+    get_miller_online_order_detail,
     get_pos_checkout_receipt,
+    get_sales_dashboard_data,
     get_seller_and_branch_context,
+    list_in_store_sales,
+    list_miller_online_orders,
+    list_online_sales,
     list_pos_payment_accounts,
     list_pos_products,
 )
 from .services import (
+    InsufficientStockError,
+    OnlineOrderError,
+    OnlineOrderNotFoundError,
+    OnlineOrderStateError,
     POSValidationError,
+    approve_miller_online_order,
     check_duplicate_pos_payment_reference,
+    decline_miller_online_order,
     normalize_reference_no,
     process_pos_checkout,
 )
@@ -211,4 +222,205 @@ def pos_receipt_detail_view(request, reference_no: str):
     if not receipt:
         return JsonResponse({"detail": "Sales receipt not found."}, status=404)
     return JsonResponse({"receipt": receipt}, status=200)
+
+
+# ============================================================
+# MILLER SALES ONLINE ORDERS VIEWS
+# ============================================================
+
+@csrf_exempt
+@require_GET
+@miller_sales_required
+def online_orders_list_view(request):
+    """
+    GET /api/miller-employees/sales/online-orders/
+    Fetch actual miller_online_customer orders for the authenticated Miller branch.
+    Supports query parameters:
+    - search: string
+    - start_date: YYYY-MM-DD
+    - end_date: YYYY-MM-DD
+    - status: string (e.g. 'pending', 'all')
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    search = request.GET.get("search")
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+    status_filter = request.GET.get("status")
+
+    data = list_miller_online_orders(
+        supplier_profile_id=supplier_profile_id,
+        search=search,
+        start_date=start_date,
+        end_date=end_date,
+        status_filter=status_filter,
+    )
+    return JsonResponse(data, status=200)
+
+
+@csrf_exempt
+@require_GET
+@miller_sales_required
+def online_order_detail_view(request, order_id: int):
+    """
+    GET /api/miller-employees/sales/online-orders/<order_id>/
+    Fetch single online order detail for the authenticated Miller branch.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    detail = get_miller_online_order_detail(supplier_profile_id, order_id)
+    if not detail:
+        return JsonResponse({"detail": "Online order not found."}, status=404)
+    return JsonResponse({"order": detail}, status=200)
+
+
+@csrf_exempt
+@require_POST
+@miller_sales_required
+def online_order_approve_view(request, order_id: int):
+    """
+    POST /api/miller-employees/sales/online-orders/<order_id>/approve/
+    Validate stock in kilograms, atomically deduct stock, and update status to 'Forwarded to Logistics'.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    supplier_employee_id = request.grainrise_supplier_employee_id
+
+    try:
+        result = approve_miller_online_order(
+            supplier_profile_id=supplier_profile_id,
+            online_order_id=order_id,
+            supplier_employee_id=supplier_employee_id,
+        )
+    except OnlineOrderError as exc:
+        return JsonResponse({"detail": exc.message, "code": exc.code}, status=exc.status_code)
+    except Exception as exc:
+        return JsonResponse(
+            {"detail": f"An unexpected error occurred while approving the order: {str(exc)}", "code": "server_error"},
+            status=500,
+        )
+
+    return JsonResponse(
+        {
+            "message": "Order approved and forwarded to logistics successfully.",
+            "order": result,
+        },
+        status=200,
+    )
+
+
+@csrf_exempt
+@require_POST
+@miller_sales_required
+def online_order_decline_view(request, order_id: int):
+    """
+    POST /api/miller-employees/sales/online-orders/<order_id>/decline/
+    Require reason, update status to 'Declined', and save message addressed to buyer in messages table.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    supplier_employee_id = request.grainrise_supplier_employee_id
+    sender_user_id = getattr(request, "grainrise_owner_user_id", None)
+
+    try:
+        body = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except Exception:
+        body = {}
+
+    reason = body.get("reason") or request.POST.get("reason")
+
+    try:
+        result = decline_miller_online_order(
+            supplier_profile_id=supplier_profile_id,
+            online_order_id=order_id,
+            decline_reason=reason,
+            sender_user_id=sender_user_id,
+            supplier_employee_id=supplier_employee_id,
+        )
+    except OnlineOrderError as exc:
+        return JsonResponse({"detail": exc.message, "code": exc.code}, status=exc.status_code)
+    except Exception as exc:
+        return JsonResponse(
+            {"detail": f"An unexpected error occurred while declining the order: {str(exc)}", "code": "server_error"},
+            status=500,
+        )
+
+    return JsonResponse(
+        {
+            "message": "Order has been declined successfully.",
+            "order": result,
+        },
+        status=200,
+    )
+
+
+# ============================================================
+# MILLER SALES HISTORY VIEWS
+# ============================================================
+
+@csrf_exempt
+@require_GET
+@miller_sales_required
+def in_store_sales_history_view(request):
+    """
+    GET /api/miller-employees/sales/history/in-store/
+    Returns completed in-store sales transactions for the authenticated Miller branch.
+    Supports query parameters: search, start_date, end_date, sort_by.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    search = request.GET.get("search", "").strip() or None
+    start_date = request.GET.get("start_date", "").strip() or None
+    end_date = request.GET.get("end_date", "").strip() or None
+    sort_by = request.GET.get("sort_by", "date-desc").strip()
+
+    sales = list_in_store_sales(
+        supplier_profile_id=supplier_profile_id,
+        search=search,
+        start_date=start_date,
+        end_date=end_date,
+        sort_by=sort_by,
+    )
+    return JsonResponse({"sales": sales, "total_count": len(sales)}, status=200)
+
+
+@csrf_exempt
+@require_GET
+@miller_sales_required
+def online_sales_history_view(request):
+    """
+    GET /api/miller-employees/sales/history/online/
+    Returns online sales transactions for the authenticated Miller branch.
+    Supports query parameters: search, start_date, end_date, sort_by.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    search = request.GET.get("search", "").strip() or None
+    start_date = request.GET.get("start_date", "").strip() or None
+    end_date = request.GET.get("end_date", "").strip() or None
+    sort_by = request.GET.get("sort_by", "date-desc").strip()
+
+    sales = list_online_sales(
+        supplier_profile_id=supplier_profile_id,
+        search=search,
+        start_date=start_date,
+        end_date=end_date,
+        sort_by=sort_by,
+    )
+    return JsonResponse({"sales": sales, "total_count": len(sales)}, status=200)
+
+
+@csrf_exempt
+@require_GET
+@miller_sales_required
+def sales_dashboard_view(request):
+    """
+    GET /api/miller-employees/sales/dashboard/
+    Returns live sales dashboard data for the authenticated Miller branch:
+    - KPIs (Today's Sales, Month Sales, Potential Sales, Pending Online Orders)
+    - Sales Trend (Week and Month series)
+    - Sales Distribution (In-Store vs Online)
+    - Recent Activities
+    - Top Selling Products
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    data = get_sales_dashboard_data(supplier_profile_id)
+    return JsonResponse(data, status=200)
+
+
+
 

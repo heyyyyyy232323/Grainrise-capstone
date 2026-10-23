@@ -831,6 +831,16 @@ function App() {
               path="/miller-sales/profile"
               element={<UserAccountProfile />}
             />
+
+            {/* Fallback alias routes to guarantee zero white-screen */}
+            <Route
+              path="/miller-sales/history"
+              element={<Navigate to="/miller-sales/sales-history" replace />}
+            />
+            <Route
+              path="/miller-sales/pos"
+              element={<Navigate to="/miller-sales/point-of-sale" replace />}
+            />
           </Route>
 
 

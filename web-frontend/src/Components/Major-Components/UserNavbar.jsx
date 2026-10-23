@@ -26,6 +26,7 @@ import useFarmerNotifications from "../hooks/Farmer/UseFarmerNotifications";
 import useEncoderNotifications from "../hooks/MillerEncoder/useEncoderNotifications";
 import useProcurementNotifications from "../hooks/MillerProcurement/useProcurementNotifications";
 import useFinanceNotifications from "../hooks/MillerFinance/useFinanceNotifications";
+import useSalesNotifications from "../hooks/MillerSales/useSalesNotifications";
 
 
 
@@ -315,6 +316,20 @@ const UserNavbar = ({
     (authenticatedUser?.role === "supplier_employee" &&
       authenticatedUser?.position === "finance");
 
+  const isSales =
+    propRole === "supplier_sales" ||
+    propRole === "miller_sales" ||
+    propRole === "warehouse_sales" ||
+    role === "supplier_sales" ||
+    role === "miller_sales" ||
+    role === "warehouse_sales" ||
+    (authenticatedUser?.account_type === "supplier_employee" &&
+      (authenticatedUser?.position === "sales" ||
+        authenticatedUser?.position === "seller")) ||
+    (authenticatedUser?.role === "supplier_employee" &&
+      (authenticatedUser?.position === "sales" ||
+        authenticatedUser?.position === "seller"));
+
 
 
   // =========================================================
@@ -549,6 +564,43 @@ const UserNavbar = ({
   });
 
 
+  // =========================================================
+  // MILLER SALES NOTIFICATIONS
+  // =========================================================
+
+  const {
+    notifications:
+      salesNotifications,
+
+    unseenCount:
+      salesUnseenCount,
+
+    isLoading:
+      isLoadingSalesNotifications,
+
+    isUpdating:
+      isUpdatingSalesNotifications,
+
+    error:
+      salesNotificationError,
+
+    loadUnseenCount:
+      loadSalesUnseenCount,
+
+    refreshNotifications:
+      refreshSalesNotifications,
+
+    openNotification:
+      openSalesNotification,
+
+    markAllAsRead:
+      markAllSalesNotificationsAsRead,
+  } = useSalesNotifications({
+    enabled:
+      isSales,
+  });
+
+
 
   // =========================================================
   // NAVBAR STATE
@@ -626,7 +678,8 @@ const UserNavbar = ({
         !isFarmer &&
         !isEncoder &&
         !isProcurement &&
-        !isFinance
+        !isFinance &&
+        !isSales
       ) {
         return undefined;
       }
@@ -644,7 +697,9 @@ const UserNavbar = ({
                     ? loadEncoderUnseenCount
                     : isProcurement
                       ? loadProcurementUnseenCount
-                      : loadFinanceUnseenCount;
+                      : isFinance
+                        ? loadFinanceUnseenCount
+                        : loadSalesUnseenCount;
 
 
             refreshCount().catch(
@@ -669,11 +724,13 @@ const UserNavbar = ({
       isEncoder,
       isProcurement,
       isFinance,
+      isSales,
       loadUnreadCount,
       loadFarmerUnreadCount,
       loadEncoderUnseenCount,
       loadProcurementUnseenCount,
       loadFinanceUnseenCount,
+      loadSalesUnseenCount,
     ]
   );
 
@@ -926,7 +983,9 @@ const UserNavbar = ({
             ? procurementNotifications
             : isFinance
               ? financeNotifications
-              : notifications;
+              : isSales
+                ? salesNotifications
+                : notifications;
 
 
   const usesDatabaseNotifications =
@@ -934,7 +993,8 @@ const UserNavbar = ({
     isFarmer ||
     isEncoder ||
     isProcurement ||
-    isFinance;
+    isFinance ||
+    isSales;
 
 
 
@@ -949,7 +1009,9 @@ const UserNavbar = ({
             ? isLoadingProcurementNotifications
             : isFinance
               ? isLoadingFinanceNotifications
-              : false;
+              : isSales
+                ? isLoadingSalesNotifications
+                : false;
 
 
   const isUpdatingDatabaseNotifications =
@@ -963,7 +1025,9 @@ const UserNavbar = ({
             ? isUpdatingProcurementNotifications
             : isFinance
               ? isUpdatingFinanceNotifications
-              : false;
+              : isSales
+                ? isUpdatingSalesNotifications
+                : false;
 
 
   const databaseNotificationError =
@@ -977,7 +1041,9 @@ const UserNavbar = ({
             ? procurementNotificationError
             : isFinance
               ? financeNotificationError
-              : "";
+              : isSales
+                ? salesNotificationError
+                : "";
 
 
 
@@ -1005,10 +1071,12 @@ const UserNavbar = ({
             ? procurementUnseenCount
             : isFinance
               ? financeUnseenCount
-              : (
-                  notificationCount ||
-                  localUnreadCount
-                );
+              : isSales
+                ? salesUnseenCount
+                : (
+                    notificationCount ||
+                    localUnreadCount
+                  );
 
 
 
@@ -1095,6 +1163,18 @@ const UserNavbar = ({
             // Hook already stores error.
           }
         );
+        return;
+      }
+
+      if (
+        willOpen &&
+        isSales
+      ) {
+        refreshSalesNotifications().catch(
+          () => {
+            // Hook already stores error.
+          }
+        );
       }
     };
 
@@ -1175,6 +1255,23 @@ const UserNavbar = ({
 
         try {
           await markAllFinanceNotificationsAsRead();
+        } catch {
+          // Error remains available from hook.
+        }
+
+        return;
+      }
+
+      if (isSales) {
+        if (
+          salesUnseenCount <= 0 ||
+          isUpdatingSalesNotifications
+        ) {
+          return;
+        }
+
+        try {
+          await markAllSalesNotificationsAsRead();
         } catch {
           // Error remains available from hook.
         }
@@ -1369,6 +1466,32 @@ const UserNavbar = ({
             result?.targetPath ||
             item?.action_url ||
             "/miller-finance/dashboard";
+
+          navigate(
+            targetPath
+          );
+        } catch {
+          // Error displayed inside notification panel.
+        }
+
+        return;
+      }
+
+      if (isSales) {
+        try {
+          const result =
+            await openSalesNotification(
+              item
+            );
+
+          setNotificationOpen(
+            false
+          );
+
+          const targetPath =
+            result?.targetPath ||
+            item?.action_url ||
+            "/miller-sales/dashboard";
 
           navigate(
             targetPath

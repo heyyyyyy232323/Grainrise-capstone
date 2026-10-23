@@ -633,3 +633,319 @@ def process_pos_checkout(
         raise POSValidationError("Checkout succeeded, but receipt retrieval failed.", status_code=500)
 
     return receipt_data
+
+
+# ============================================================
+# MILLER SALES ONLINE ORDERS SERVICES
+# ============================================================
+
+class OnlineOrderError(Exception):
+    def __init__(self, message: str, code: str = "order_error", status_code: int = 400):
+        super().__init__(message)
+        self.message = message
+        self.code = code
+        self.status_code = status_code
+
+
+class OnlineOrderNotFoundError(OnlineOrderError):
+    def __init__(self, message: str = "Online order not found."):
+        super().__init__(message, code="order_not_found", status_code=404)
+
+
+class OnlineOrderStateError(OnlineOrderError):
+    def __init__(self, message: str):
+        super().__init__(message, code="invalid_order_state", status_code=400)
+
+
+class InsufficientStockError(OnlineOrderError):
+    def __init__(self, message: str):
+        super().__init__(message, code="insufficient_stock", status_code=400)
+
+
+def approve_miller_online_order(
+    supplier_profile_id: int,
+    online_order_id: int,
+    supplier_employee_id: int = None,
+) -> dict:
+    """
+    Approve order:
+    1. Validates order status is 'Ordered' (or 'pending').
+    2. Validates sufficient miller_products.stock_quantity in kilograms.
+    3. Atomically deducts ordered_quantity in kilograms from miller_products.stock_quantity.
+    4. Updates miller_online_customer.status to 'Forwarded to Logistics'.
+    5. Prevents repeated stock deduction.
+    """
+    with transaction.atomic():
+        with connection.cursor() as cursor:
+            # 1. Lock and read order
+            cursor.execute(
+                """
+                SELECT
+                    online_order_id,
+                    supplier_profile_id,
+                    miller_product_id,
+                    ordered_quantity,
+                    status,
+                    batch_no
+                FROM miller_online_customer
+                WHERE online_order_id = %s AND supplier_profile_id = %s
+                FOR UPDATE
+                """,
+                [online_order_id, supplier_profile_id],
+            )
+            order_row = cursor.fetchone()
+            if not order_row:
+                raise OnlineOrderNotFoundError("Order not found or does not belong to this branch.")
+
+            current_status = str(order_row[4] or "").strip()
+            if current_status.lower() != "ordered" and current_status.lower() != "pending":
+                raise OnlineOrderStateError(
+                    f"Order #{online_order_id} has status '{current_status}' and cannot be approved. "
+                    "Only pending orders can be approved."
+                )
+
+            product_id = int(order_row[2])
+            ordered_quantity = Decimal(str(order_row[3] or "0.00"))
+            batch_no = order_row[5] or f"ORDER-{online_order_id}"
+
+            # 2. Lock and check product stock
+            cursor.execute(
+                """
+                SELECT product_id, product_name, stock_quantity, status
+                FROM miller_products
+                WHERE product_id = %s AND supplier_profile_id = %s
+                FOR UPDATE
+                """,
+                [product_id, supplier_profile_id],
+            )
+            prod_row = cursor.fetchone()
+            if not prod_row:
+                raise OnlineOrderError(
+                    f"Associated product #{product_id} not found in inventory.",
+                    code="product_not_found",
+                    status_code=404,
+                )
+
+            product_name = prod_row[1] or "Product"
+            stock_qty = Decimal(str(prod_row[2] or "0.00"))
+
+            if stock_qty < ordered_quantity:
+                raise InsufficientStockError(
+                    f"Insufficient stock for '{product_name}'. "
+                    f"Available: {stock_qty:,.2f} kg, Required: {ordered_quantity:,.2f} kg."
+                )
+
+            # 3. Deduct stock quantity in kilograms atomically
+            cursor.execute(
+                """
+                UPDATE miller_products
+                SET stock_quantity = stock_quantity - %s
+                WHERE product_id = %s AND supplier_profile_id = %s AND stock_quantity >= %s
+                """,
+                [ordered_quantity, product_id, supplier_profile_id, ordered_quantity],
+            )
+            if cursor.rowcount == 0:
+                raise InsufficientStockError(
+                    f"Stock deduction failed for '{product_name}'. Available stock may have changed."
+                )
+
+            # 4. Update order status to 'Forwarded to Logistics'
+            cursor.execute(
+                """
+                UPDATE miller_online_customer
+                SET status = 'Forwarded to Logistics',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE online_order_id = %s AND supplier_profile_id = %s
+                """,
+                [online_order_id, supplier_profile_id],
+            )
+
+    try:
+        from .notifications.services import create_sales_notification
+        qty_fmt = f"{int(ordered_quantity):,}" if ordered_quantity % 1 == 0 else f"{ordered_quantity:,.2f}"
+        create_sales_notification(
+            supplier_profile_id=supplier_profile_id,
+            title="Order Approved",
+            content=f"Online order {batch_no} for {product_name} ({qty_fmt} kg) has been approved and forwarded to logistics.",
+            action_url="/miller-sales/online-orders",
+        )
+    except Exception:
+        pass
+
+    return {
+        "online_order_id": online_order_id,
+        "batch_no": batch_no,
+        "status": "Forwarded to Logistics",
+        "deducted_quantity": float(ordered_quantity),
+        "remaining_stock": float(stock_qty - ordered_quantity),
+    }
+
+
+def decline_miller_online_order(
+    supplier_profile_id: int,
+    online_order_id: int,
+    decline_reason: str,
+    sender_user_id: int = None,
+    supplier_employee_id: int = None,
+) -> dict:
+    """
+    Decline order:
+    1. Validates non-empty decline reason.
+    2. Validates order status is 'Ordered' (or 'pending').
+    3. Updates order status to 'Declined'.
+    4. Saves message addressed to the appropriate buyer using the approved messages schema.
+    """
+    reason = str(decline_reason or "").strip()
+    if not reason:
+        raise OnlineOrderError("Decline reason is required.", code="missing_reason", status_code=400)
+
+    with transaction.atomic():
+        with connection.cursor() as cursor:
+            # 1. Lock and read order + buyer info
+            cursor.execute(
+                """
+                SELECT
+                    moc.online_order_id,
+                    moc.supplier_profile_id,
+                    moc.miller_product_id,
+                    moc.user_buyer_id,
+                    moc.warehouse_buyer_id,
+                    moc.ordered_quantity,
+                    moc.status,
+                    moc.batch_no,
+                    mp.product_name,
+                    wp.user_id AS warehouse_user_id,
+                    moc.created_at,
+                    sp.user_id AS supplier_owner_user_id
+                FROM miller_online_customer moc
+                LEFT JOIN miller_products mp ON moc.miller_product_id = mp.product_id
+                LEFT JOIN warehouse_profiles wp ON moc.warehouse_buyer_id = wp.warehouse_profile_id
+                LEFT JOIN supplier_profiles sp ON moc.supplier_profile_id = sp.supplier_profile_id
+                WHERE moc.online_order_id = %s AND moc.supplier_profile_id = %s
+                FOR UPDATE
+                """,
+                [online_order_id, supplier_profile_id],
+            )
+            order_row = cursor.fetchone()
+            if not order_row:
+                raise OnlineOrderNotFoundError("Order not found or does not belong to this branch.")
+
+            current_status = str(order_row[6] or "").strip()
+            if current_status.lower() != "ordered" and current_status.lower() != "pending":
+                raise OnlineOrderStateError(
+                    f"Order #{online_order_id} has status '{current_status}' and cannot be declined. "
+                    "Only pending orders can be declined."
+                )
+
+            batch_no = order_row[7] or f"ORDER-{online_order_id}"
+            product_name = order_row[8] or "Product"
+            user_buyer_id = order_row[3]
+            warehouse_buyer_id = order_row[4]
+            warehouse_user_id = order_row[9]
+            order_created_at = order_row[10]
+            supplier_owner_user_id = order_row[11]
+
+            # Format quantity (e.g. 10 or 10.50)
+            ordered_qty = Decimal(str(order_row[5] or "0.00"))
+            if ordered_qty % 1 == 0:
+                qty_str = f"{int(ordered_qty):,}"
+            else:
+                qty_str = f"{ordered_qty:,.2f}"
+
+            # Format order date from actual created_at
+            if hasattr(order_created_at, "strftime"):
+                order_date_str = order_created_at.strftime("%B %d, %Y")
+            else:
+                order_date_str = str(order_created_at or "")[:10]
+
+            # 2. Update order status to 'Declined'
+            cursor.execute(
+                """
+                UPDATE miller_online_customer
+                SET status = 'Declined',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE online_order_id = %s AND supplier_profile_id = %s
+                """,
+                [online_order_id, supplier_profile_id],
+            )
+
+            # 3. Resolve sender and buyer recipient for messages schema
+            effective_sender_user_id = sender_user_id or (int(supplier_owner_user_id) if supplier_owner_user_id is not None else None)
+
+            if user_buyer_id:
+                # Retailer buyer
+                receiver_user_id = int(user_buyer_id)
+                receiver_warehouse_profile_id = None
+            elif warehouse_buyer_id:
+                # Warehouse buyer
+                receiver_user_id = int(warehouse_user_id) if warehouse_user_id else None
+                receiver_warehouse_profile_id = int(warehouse_buyer_id)
+            else:
+                receiver_user_id = None
+                receiver_warehouse_profile_id = None
+
+            # Required message format:
+            # "Your order [Batch No.] for [Product Name] ([Quantity] kg), placed on [Order Date], was declined for the following reason: [Reason]."
+            message_content = (
+                f"Your order {batch_no} for {product_name} ({qty_str} kg), placed on {order_date_str}, "
+                f"was declined for the following reason: {reason}."
+            )
+
+            # 4. Check for duplicate decline message to prevent repeat insertions
+            cursor.execute(
+                """
+                SELECT message_id FROM messages
+                WHERE message_content LIKE %s
+                  AND ((receiver_user_id = %s AND receiver_user_id IS NOT NULL)
+                       OR (receiver_warehouse_profile_id = %s AND receiver_warehouse_profile_id IS NOT NULL))
+                LIMIT 1
+                """,
+                [f"Your order {batch_no}%", receiver_user_id, receiver_warehouse_profile_id],
+            )
+            existing_msg = cursor.fetchone()
+
+            if not existing_msg:
+                # Insert into messages table using the approved schema
+                cursor.execute(
+                    """
+                    INSERT INTO messages (
+                        sender_supplier_profile_id,
+                        receiver_supplier_profile_id,
+                        sender_user_id,
+                        receiver_user_id,
+                        sender_warehouse_profile_id,
+                        receiver_warehouse_profile_id,
+                        message_content,
+                        message_attachment,
+                        created_at
+                    ) VALUES (
+                        %s, NULL, %s, %s, NULL, %s, %s, NULL, CURRENT_TIMESTAMP
+                    )
+                    """,
+                    [
+                        supplier_profile_id,
+                        effective_sender_user_id,
+                        receiver_user_id,
+                        receiver_warehouse_profile_id,
+                        message_content,
+                    ],
+                )
+
+    try:
+        from .notifications.services import create_sales_notification
+        create_sales_notification(
+            supplier_profile_id=supplier_profile_id,
+            title="Order Declined",
+            content=f"Online order {batch_no} for {product_name} was declined.",
+            action_url="/miller-sales/online-orders",
+        )
+    except Exception:
+        pass
+
+    return {
+        "online_order_id": online_order_id,
+        "batch_no": batch_no,
+        "status": "Declined",
+        "decline_reason": reason,
+    }
+

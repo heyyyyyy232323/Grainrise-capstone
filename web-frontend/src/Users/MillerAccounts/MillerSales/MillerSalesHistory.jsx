@@ -1,9 +1,13 @@
-import { useState, useMemo, useRef, useEffect } from "react";
-import { Search, Calendar, ChevronDown, X } from "lucide-react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { Search, Calendar, ChevronDown, X, Loader2 } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import Tabs from "../../../Components/Minor-Components/Tabs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
-import SalesHistoryDetailsModal from "../../../Components/Modals/SalesHistoryDetailsModal";
+import MillerSalesHistoryDetailsModal from "../../../Components/Modals/MillerSales/MillerSalesHistoryDetailsModal";
+import POSSalesReceiptModal from "../../../Components/Modals/MillerSales/POSSalesReceiptModal";
+import Toast from "../../../Components/Modals/Toast";
+import useToast from "../../../Components/hooks/useToast";
+import useApi from "../../../Components/hooks/useApi";
 
 const TABS = [
   { id: "in-store", label: "In-Store Transactions" },
@@ -17,6 +21,8 @@ const SORT_OPTIONS = [
   { value: "qty-desc",    label: "Quantity / Price (High to Low)" },
   { value: "qty-asc",     label: "Quantity / Price (Low to High)" },
 ];
+
+const ITEMS_PER_PAGE = 10;
 
 // ─── Column Definitions ────────────────────────────────────────────────────────
 const IN_STORE_COLUMNS = [
@@ -37,73 +43,35 @@ const ONLINE_COLUMNS = [
   { key: "action",         label: "Action",          width: "12%", headerClassName: "text-center", cellClassName: "text-center" },
 ];
 
-// ─── Static Data ───────────────────────────────────────────────────────────────
-const IN_STORE_SECTIONS = [
-  {
-    label: "Today",
-    rows: [
-      { id: "t1", transactionId: "TXN-2026-101", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱25,000.00", change: "₱2,500.00", paymentMethod: "Cash", status: "Paid" },
-      { id: "t2", transactionId: "TXN-2026-102", time: "11:45 AM", variant: "Sinandomeng", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱22,500.00", change: "₱0.00", paymentMethod: "Gcash", status: "Paid" },
-      { id: "t3", transactionId: "TXN-2026-103", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱20,000.00", change: "₱0.00", paymentMethod: "Cash", status: "Pending" },
-    ],
-  },
-  {
-    label: "Yesterday",
-    rows: [
-      { id: "y1", transactionId: "TXN-2026-104", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱22,500.00", change: "₱0.00", paymentMethod: "Cash", status: "Paid" },
-      { id: "y2", transactionId: "TXN-2026-105", time: "11:45 AM", variant: "Sinandomeng", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱25,000.00", change: "₱2,500.00", paymentMethod: "Cash", status: "Paid" },
-      { id: "y3", transactionId: "TXN-2026-106", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱22,500.00", change: "₱0.00", paymentMethod: "Bank Transfer", status: "Paid" },
-      { id: "y4", transactionId: "TXN-2026-107", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱18,000.00", change: "₱0.00", paymentMethod: "Cash", status: "Pending" },
-    ],
-  },
-  {
-    label: "July 18, 2026",
-    rows: [
-      { id: "j1", transactionId: "TXN-2026-108", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱22,500.00", change: "₱0.00", paymentMethod: "Cash", status: "Paid" },
-      { id: "j2", transactionId: "TXN-2026-109", time: "11:45 AM", variant: "Dinorado", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱25,000.00", change: "₱2,500.00", paymentMethod: "Cash", status: "Paid" },
-      { id: "j3", transactionId: "TXN-2026-110", time: "11:45 AM", variant: "Sinandomeng", quantity: "480 kg", totalPayment: "₱22,500.00", totalAmount: "₱22,500.00", amountPaid: "₱20,000.00", change: "₱0.00", paymentMethod: "Gcash", status: "Pending" },
-    ],
-  },
-];
-
-const ONLINE_SECTIONS = [
-  {
-    label: "Today",
-    rows: [
-      { id: "o1", batchNo: "Batch 2026-001", retailer: "Retailer A", variant: "Dinorado", totalPrice: "₱1,500", paymentStatus: "Paid", deliveryStatus: "Completed" },
-      { id: "o2", batchNo: "Batch 2026-001", retailer: "Retailer A", variant: "Dinorado", totalPrice: "₱1,500", paymentStatus: "Pending", deliveryStatus: "Preparing" },
-      { id: "o3", batchNo: "Batch 2026-001", retailer: "Retailer A", variant: "Dinorado", totalPrice: "₱1,500", paymentStatus: "Failed", deliveryStatus: "Cancelled" },
-    ],
-  },
-  {
-    label: "Yesterday",
-    rows: [
-      { id: "o4", batchNo: "Batch 2026-001", retailer: "Retailer A", variant: "Dinorado", totalPrice: "₱1,500", paymentStatus: "Paid", deliveryStatus: "Ready for Pickup" },
-      { id: "o5", batchNo: "Batch 2026-001", retailer: "Retailer A", variant: "Dinorado", totalPrice: "₱1,500", paymentStatus: "Pending", deliveryStatus: "Preparing" },
-      { id: "o6", batchNo: "Batch 2026-001", retailer: "Retailer A", variant: "Dinorado", totalPrice: "₱1,500", paymentStatus: "Pending", deliveryStatus: "Preparing" },
-      { id: "o7", batchNo: "Batch 2026-001", retailer: "Retailer A", variant: "Dinorado", totalPrice: "₱1,500", paymentStatus: "Paid", deliveryStatus: "Completed" },
-    ],
-  },
-  {
-    label: "July 18, 2026",
-    rows: [
-      { id: "o8", batchNo: "Batch 2026-001", retailer: "Retailer A", variant: "Dinorado", totalPrice: "₱1,500", paymentStatus: "Paid", deliveryStatus: "Completed" },
-    ],
-  },
-];
-
 // ─── Status Badge Helpers ─────────────────────────────────────────────────────
 const PAYMENT_STATUS_STYLES = {
-  Paid:    "bg-emerald-100 text-emerald-700",
-  Pending: "bg-amber-100 text-amber-700",
-  Failed:  "bg-rose-100 text-rose-700",
+  Paid:                  "bg-emerald-100 text-emerald-700",
+  paid:                  "bg-emerald-100 text-emerald-700",
+  Pending:               "bg-amber-100 text-amber-700",
+  pending:               "bg-amber-100 text-amber-700",
+  "Submitted to Driver": "bg-blue-100 text-blue-700",
+  "submitted to driver": "bg-blue-100 text-blue-700",
+  Failed:                "bg-rose-100 text-rose-700",
+  failed:                "bg-rose-100 text-rose-700",
 };
 
 const DELIVERY_STATUS_STYLES = {
-  Completed:        "bg-emerald-100 text-emerald-700",
-  Preparing:        "bg-amber-100 text-amber-700",
-  Cancelled:        "bg-rose-100 text-rose-700",
-  "Ready for Pickup": "bg-blue-100 text-blue-700",
+  Completed:                "bg-emerald-100 text-emerald-700",
+  completed:                "bg-emerald-100 text-emerald-700",
+  "Forwarded to Logistics": "bg-blue-100 text-blue-700",
+  "forwarded to logistics": "bg-blue-100 text-blue-700",
+  Preparing:                "bg-amber-100 text-amber-700",
+  preparing:                "bg-amber-100 text-amber-700",
+  Cancelled:                "bg-rose-100 text-rose-700",
+  cancelled:                "bg-rose-100 text-rose-700",
+  Declined:                 "bg-rose-100 text-rose-700",
+  declined:                 "bg-rose-100 text-rose-700",
+  Ordered:                  "bg-amber-100 text-amber-700",
+  ordered:                  "bg-amber-100 text-amber-700",
+  Delivered:                "bg-emerald-100 text-emerald-700",
+  delivered:                "bg-emerald-100 text-emerald-700",
+  "Ready for Pickup":       "bg-blue-100 text-blue-700",
+  "ready for pickup":       "bg-blue-100 text-blue-700",
 };
 
 function StatusBadge({ status, styleMap }) {
@@ -116,25 +84,43 @@ function StatusBadge({ status, styleMap }) {
   );
 }
 
+function getLocalDateString(d) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 const MillerSalesHistory = () => {
-  const [activeTab,      setActiveTab]      = useState("in-store");
-  const [searchQuery,    setSearchQuery]    = useState("");
-  const [dateRange,      setDateRange]      = useState({ startDate: "", endDate: "" });
-  const [tempDateRange,  setTempDateRange]  = useState({ startDate: "", endDate: "" });
-  const [sortBy,         setSortBy]         = useState("date-desc");
-  const [currentPage,    setCurrentPage]    = useState(1);
-  const [isModalOpen,    setIsModalOpen]    = useState(false);
-  const [selectedSale,    setSelectedSale]   = useState(null);
+  const { request } = useApi();
+  const { toasts, showToast, removeToast } = useToast();
+
+  const [activeTab, setActiveTab] = useState("in-store");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
+  const [tempDateRange, setTempDateRange] = useState({ startDate: "", endDate: "" });
+  const [dateError, setDateError] = useState("");
+  const [sortBy, setSortBy] = useState("date-desc");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Live Records State
+  const [inStoreSales, setInStoreSales] = useState([]);
+  const [onlineSales, setOnlineSales] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Modals State
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedSale, setSelectedSale] = useState(null);
+
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [isReceiptLoading, setIsReceiptLoading] = useState(false);
 
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showSortDrop,   setShowSortDrop]   = useState(false);
+  const [showSortDrop, setShowSortDrop] = useState(false);
 
   const dateRef = useRef(null);
   const sortRef = useRef(null);
 
-  const TOTAL_PAGES = 26;
-
-  // Click outside listener
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dateRef.current && !dateRef.current.contains(e.target)) {
@@ -148,7 +134,65 @@ const MillerSalesHistory = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch sales records based on active tab
+  const fetchSales = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (activeTab === "in-store") {
+        const payload = await request("/miller-employees/sales/history/in-store/");
+        const fetched = Array.isArray(payload?.sales) ? payload.sales : [];
+        setInStoreSales(fetched);
+      } else {
+        const payload = await request("/miller-employees/sales/history/online/");
+        const fetched = Array.isArray(payload?.sales) ? payload.sales : [];
+        setOnlineSales(fetched);
+      }
+    } catch (err) {
+      console.error("Failed to load sales history:", err);
+      showToast({
+        type: "error",
+        message: err?.message || "Failed to load sales transactions.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [activeTab, request, showToast]);
+
+  useEffect(() => {
+    fetchSales();
+  }, [fetchSales]);
+
+  // Date Range Pickers Handlers
+  const handleStartDateChange = (val) => {
+    setTempDateRange((prev) => {
+      const next = { ...prev, startDate: val };
+      if (next.startDate && next.endDate && next.endDate < next.startDate) {
+        setDateError("End date must not precede start date.");
+      } else {
+        setDateError("");
+      }
+      return next;
+    });
+  };
+
+  const handleEndDateChange = (val) => {
+    setTempDateRange((prev) => {
+      const next = { ...prev, endDate: val };
+      if (next.startDate && next.endDate && next.endDate < next.startDate) {
+        setDateError("End date must not precede start date.");
+      } else {
+        setDateError("");
+      }
+      return next;
+    });
+  };
+
   const handleDateApply = () => {
+    if (tempDateRange.startDate && tempDateRange.endDate && tempDateRange.endDate < tempDateRange.startDate) {
+      setDateError("End date must not precede start date.");
+      return;
+    }
+    setDateError("");
     setDateRange(tempDateRange);
     setCurrentPage(1);
     setShowDatePicker(false);
@@ -157,75 +201,184 @@ const MillerSalesHistory = () => {
   const handleDateReset = () => {
     setTempDateRange({ startDate: "", endDate: "" });
     setDateRange({ startDate: "", endDate: "" });
+    setDateError("");
     setCurrentPage(1);
     setShowDatePicker(false);
   };
 
   const isOnline = activeTab === "online";
-  const columns  = isOnline ? ONLINE_COLUMNS : IN_STORE_COLUMNS;
-  const sections = isOnline ? ONLINE_SECTIONS : IN_STORE_SECTIONS;
+  const columns = isOnline ? ONLINE_COLUMNS : IN_STORE_COLUMNS;
+  const rawList = isOnline ? onlineSales : inStoreSales;
 
-  const filteredSections = useMemo(() => {
-    return sections
-      .map((section) => ({
-        ...section,
-        rows: section.rows
-          .map((row) => {
-            if (isOnline) {
-              return {
-                ...row,
-                paymentStatus: (
-                  <StatusBadge status={row.paymentStatus} styleMap={PAYMENT_STATUS_STYLES} />
-                ),
-                deliveryStatus: (
-                  <StatusBadge status={row.deliveryStatus} styleMap={DELIVERY_STATUS_STYLES} />
-                ),
-                _rawPaymentStatus: row.paymentStatus,
-                _rawDeliveryStatus: row.deliveryStatus,
-              };
-            }
-            return row;
-          })
-          .filter((row) => {
-            if (!searchQuery.trim()) return true;
-            const q = searchQuery.toLowerCase();
-            if (isOnline) {
-              return (
-                row.batchNo.toLowerCase().includes(q) ||
-                row.retailer.toLowerCase().includes(q) ||
-                row.variant.toLowerCase().includes(q) ||
-                row.totalPrice.toLowerCase().includes(q) ||
-                (row._rawPaymentStatus && row._rawPaymentStatus.toLowerCase().includes(q)) ||
-                (row._rawDeliveryStatus && row._rawDeliveryStatus.toLowerCase().includes(q))
-              );
-            }
-            return (
-              row.variant.toLowerCase().includes(q) ||
-              row.quantity.toLowerCase().includes(q) ||
-              row.totalPayment.toLowerCase().includes(q) ||
-              row.time.toLowerCase().includes(q)
-            );
-          })
-          .sort((a, b) => {
-            if (sortBy === "variant-asc") return a.variant.localeCompare(b.variant);
-            if (sortBy === "qty-desc") {
-              const numA = parseFloat((isOnline ? a.totalPrice : a.quantity).replace(/[^0-9.]/g, ""));
-              const numB = parseFloat((isOnline ? b.totalPrice : b.quantity).replace(/[^0-9.]/g, ""));
-              return numB - numA;
-            }
-            if (sortBy === "qty-asc") {
-              const numA = parseFloat((isOnline ? a.totalPrice : a.quantity).replace(/[^0-9.]/g, ""));
-              const numB = parseFloat((isOnline ? b.totalPrice : b.quantity).replace(/[^0-9.]/g, ""));
-              return numA - numB;
-            }
-            return 0;
-          }),
-      }))
-      .filter((section) => section.rows.length > 0);
-  }, [sections, searchQuery, sortBy, isOnline]);
+  // Filter and Sort Raw Records
+  const filteredRows = useMemo(() => {
+    return rawList
+      .filter((row) => {
+        // Date range filter
+        if (dateRange.startDate || dateRange.endDate) {
+          const rowDate = (row.date || "").split("T")[0];
+          if (rowDate) {
+            if (dateRange.startDate && rowDate < dateRange.startDate) return false;
+            if (dateRange.endDate && rowDate > dateRange.endDate) return false;
+          }
+        }
+
+        // Search query filter
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        if (isOnline) {
+          return (
+            (row.batchNo && row.batchNo.toLowerCase().includes(q)) ||
+            (row.retailer && row.retailer.toLowerCase().includes(q)) ||
+            (row.variant && row.variant.toLowerCase().includes(q)) ||
+            (row.totalPrice && row.totalPrice.toLowerCase().includes(q)) ||
+            (row.paymentStatus && row.paymentStatus.toLowerCase().includes(q)) ||
+            (row.deliveryStatus && row.deliveryStatus.toLowerCase().includes(q))
+          );
+        }
+        return (
+          (row.transactionId && row.transactionId.toLowerCase().includes(q)) ||
+          (row.referenceNo && row.referenceNo.toLowerCase().includes(q)) ||
+          (row.variant && row.variant.toLowerCase().includes(q)) ||
+          (row.quantity && row.quantity.toLowerCase().includes(q)) ||
+          (row.totalPayment && row.totalPayment.toLowerCase().includes(q)) ||
+          (row.paymentMethod && row.paymentMethod.toLowerCase().includes(q)) ||
+          (row.time && row.time.toLowerCase().includes(q))
+        );
+      })
+      .sort((a, b) => {
+        if (sortBy === "date-desc") {
+          return (b.sortTimestamp || 0) - (a.sortTimestamp || 0);
+        }
+        if (sortBy === "date-asc") {
+          return (a.sortTimestamp || 0) - (b.sortTimestamp || 0);
+        }
+        if (sortBy === "variant-asc") {
+          return (a.variant || "").localeCompare(b.variant || "");
+        }
+        if (sortBy === "qty-desc") {
+          const numA = isOnline
+            ? (a.totalPriceNum ?? parseFloat((a.totalPrice || "0").replace(/[^0-9.]/g, "")))
+            : (a.quantityNum ?? parseFloat((a.quantity || "0").replace(/[^0-9.]/g, "")));
+          const numB = isOnline
+            ? (b.totalPriceNum ?? parseFloat((b.totalPrice || "0").replace(/[^0-9.]/g, "")))
+            : (b.quantityNum ?? parseFloat((b.quantity || "0").replace(/[^0-9.]/g, "")));
+          return numB - numA;
+        }
+        if (sortBy === "qty-asc") {
+          const numA = isOnline
+            ? (a.totalPriceNum ?? parseFloat((a.totalPrice || "0").replace(/[^0-9.]/g, "")))
+            : (a.quantityNum ?? parseFloat((a.quantity || "0").replace(/[^0-9.]/g, "")));
+          const numB = isOnline
+            ? (b.totalPriceNum ?? parseFloat((b.totalPrice || "0").replace(/[^0-9.]/g, "")))
+            : (b.quantityNum ?? parseFloat((b.quantity || "0").replace(/[^0-9.]/g, "")));
+          return numA - numB;
+        }
+        return 0;
+      });
+  }, [rawList, searchQuery, dateRange, sortBy, isOnline]);
+
+  // Pagination calculation
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
+  const paginatedRows = useMemo(() => {
+    return filteredRows.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredRows, startIndex]);
+
+  // Group paginated rows into sections with date labels (Today, Yesterday, Date)
+  const sections = useMemo(() => {
+    if (paginatedRows.length === 0) return [];
+
+    const today = new Date();
+    const todayStr = getLocalDateString(today);
+
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    const yesterdayStr = getLocalDateString(yesterday);
+
+    const groups = new Map();
+
+    for (const r of paginatedRows) {
+      const rowDateStr = (r.date || "").split("T")[0];
+      let label = r.dateFormatted || rowDateStr || "Transactions";
+      if (rowDateStr === todayStr) {
+        label = "Today";
+      } else if (rowDateStr === yesterdayStr) {
+        label = "Yesterday";
+      }
+
+      // Format row badges if online
+      const processedRow = isOnline
+        ? {
+            ...r,
+            paymentStatus: (
+              <StatusBadge status={r.paymentStatus} styleMap={PAYMENT_STATUS_STYLES} />
+            ),
+            deliveryStatus: (
+              <StatusBadge status={r.deliveryStatus} styleMap={DELIVERY_STATUS_STYLES} />
+            ),
+            _rawPaymentStatus: r.paymentStatus,
+            _rawDeliveryStatus: r.deliveryStatus,
+          }
+        : r;
+
+      if (!groups.has(label)) {
+        groups.set(label, []);
+      }
+      groups.get(label).push(processedRow);
+    }
+
+    const result = [];
+    for (const [label, rows] of groups.entries()) {
+      result.push({ label, rows });
+    }
+    return result;
+  }, [paginatedRows, isOnline]);
+
+  // Get Receipt Action Handler for In-Store Transactions
+  const handleGetReceipt = async (referenceNo) => {
+    const cleanRef = (referenceNo || "").trim();
+    if (!cleanRef) {
+      showToast({ type: "error", message: "Transaction reference number is missing." });
+      return;
+    }
+
+    setIsReceiptLoading(true);
+    try {
+      const payload = await request(`/miller-employees/sales/pos/receipt/${encodeURIComponent(cleanRef)}/`);
+      const receipt = payload?.receipt;
+      if (!receipt) {
+        throw new Error("Sales receipt data could not be retrieved.");
+      }
+      setSelectedReceipt(receipt);
+      setIsReceiptModalOpen(true);
+    } catch (err) {
+      console.error("Failed to load receipt:", err);
+      showToast({
+        type: "error",
+        message: err?.message || "Failed to load checkout receipt.",
+      });
+    } finally {
+      setIsReceiptLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-5">
+      {/* ── Toast Notifications ────────────────────────────────────────────── */}
+      <div className="fixed top-4 right-4 z-[9999] space-y-2 pointer-events-none">
+        {toasts.map((toast) => (
+          <div key={toast.id} className="pointer-events-auto">
+            <Toast
+              type={toast.type}
+              message={toast.message}
+              onClose={() => removeToast(toast.id)}
+            />
+          </div>
+        ))}
+      </div>
+
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="space-y-1">
         <Breadcrumbs
@@ -283,7 +436,7 @@ const MillerSalesHistory = () => {
 
         {/* Filter and Sort Dropdowns */}
         <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center">
-          {/* Date Range Dropdown */}
+          {/* Date Range Dropdown with Strict To >= From Validation */}
           <div className="relative w-full sm:w-auto" ref={dateRef}>
             <button
               type="button"
@@ -309,7 +462,8 @@ const MillerSalesHistory = () => {
                     <input
                       type="date"
                       value={tempDateRange.startDate}
-                      onChange={(e) => setTempDateRange((prev) => ({ ...prev, startDate: e.target.value }))}
+                      max={tempDateRange.endDate || undefined}
+                      onChange={(e) => handleStartDateChange(e.target.value)}
                       className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
                     />
                   </div>
@@ -320,10 +474,18 @@ const MillerSalesHistory = () => {
                     <input
                       type="date"
                       value={tempDateRange.endDate}
-                      onChange={(e) => setTempDateRange((prev) => ({ ...prev, endDate: e.target.value }))}
+                      min={tempDateRange.startDate || undefined}
+                      onChange={(e) => handleEndDateChange(e.target.value)}
                       className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
                     />
                   </div>
+
+                  {dateError && (
+                    <p className="text-[11px] text-rose-600 font-medium">
+                      {dateError}
+                    </p>
+                  )}
+
                   <div className="flex gap-2 pt-2">
                     <button
                       type="button"
@@ -335,7 +497,8 @@ const MillerSalesHistory = () => {
                     <button
                       type="button"
                       onClick={handleDateApply}
-                      className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-[#0B5D1E] hover:bg-[#084b18] rounded transition-colors cursor-pointer"
+                      disabled={Boolean(dateError)}
+                      className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-[#0B5D1E] hover:bg-[#084b18] rounded transition-colors cursor-pointer disabled:opacity-50"
                     >
                       Apply
                     </button>
@@ -390,26 +553,47 @@ const MillerSalesHistory = () => {
       {/* ── Transactions Table ──────────────────────────────────────────────── */}
       <SectionedTableCard
         columns={columns}
-        sections={filteredSections}
-        currentPage={currentPage}
-        totalPages={TOTAL_PAGES}
+        sections={sections}
+        currentPage={safePage}
+        totalPages={totalPages}
         onPageChange={setCurrentPage}
         onViewDetails={(row) => {
           setSelectedSale(row);
-          setIsModalOpen(true);
+          setIsDetailsModalOpen(true);
         }}
         viewDetailsLabel="View Details"
-        footerLabel={`Showing transactions — Page ${currentPage} of ${TOTAL_PAGES}`}
+        emptyStateTitle={
+          isOnline ? "No online transactions found" : "No in-store transactions found"
+        }
+        emptyStateDescription={
+          loading
+            ? "Please wait while we fetch sales transactions from the database."
+            : "No matching sales records were found. Try adjusting your search or filters."
+        }
+        footerLabel={`Showing transactions — Page ${safePage} of ${totalPages}`}
       />
 
-      <SalesHistoryDetailsModal
-        isOpen={isModalOpen}
+      {/* ── View Details Modal (Matching Order Approval Modal Design) ────────── */}
+      <MillerSalesHistoryDetailsModal
+        isOpen={isDetailsModalOpen}
         sale={selectedSale}
         onClose={() => {
-          setIsModalOpen(false);
+          setIsDetailsModalOpen(false);
           setSelectedSale(null);
         }}
         type={activeTab}
+        onGetReceipt={handleGetReceipt}
+        isReceiptLoading={isReceiptLoading}
+      />
+
+      {/* ── Centered Blue Get Receipt -> POS Sales Receipt Modal ───────────── */}
+      <POSSalesReceiptModal
+        isOpen={isReceiptModalOpen}
+        onClose={() => {
+          setIsReceiptModalOpen(false);
+          setSelectedReceipt(null);
+        }}
+        receiptData={selectedReceipt}
       />
     </div>
   );

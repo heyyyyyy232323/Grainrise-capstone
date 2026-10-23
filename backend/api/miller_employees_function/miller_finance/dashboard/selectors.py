@@ -40,7 +40,7 @@ def get_finance_dashboard_data(supplier_profile_id: int) -> dict:
     paid_expenses = float(live_summary.get("total_paid") or 0.0)
     total_expenses = float(live_summary.get("total_expenses") or 0.0)
 
-    # 2. Net Revenue: Completed FTF Sales + Completed Online Sales
+    # 2. Net Revenue: Completed FTF Sales + Completed/Paid Online Sales
     with connection.cursor() as cur:
         cur.execute(
             """
@@ -55,10 +55,14 @@ def get_finance_dashboard_data(supplier_profile_id: int) -> dict:
 
         cur.execute(
             """
-            SELECT COALESCE(SUM(total_price), 0)
-            FROM miller_online_customer
-            WHERE supplier_profile_id = %s
-              AND LOWER(TRIM(status)) IN ('delivered', 'completed')
+            SELECT COALESCE(SUM(COALESCE(moop.amount, moc.total_price)), 0)
+            FROM miller_online_customer moc
+            LEFT JOIN miller_online_orders_payment moop ON moop.online_order_id = moc.online_order_id
+            WHERE moc.supplier_profile_id = %s
+              AND (
+                  LOWER(TRIM(moop.status)) = 'paid'
+                  OR (moop.status IS NULL AND LOWER(TRIM(moc.status)) IN ('delivered', 'completed'))
+              )
             """,
             [supplier_profile_id],
         )
@@ -82,11 +86,15 @@ def get_finance_dashboard_data(supplier_profile_id: int) -> dict:
 
         cur.execute(
             """
-            SELECT DATE(created_at), SUM(total_price)
-            FROM miller_online_customer
-            WHERE supplier_profile_id = %s
-              AND LOWER(TRIM(status)) IN ('delivered', 'completed')
-            GROUP BY DATE(created_at)
+            SELECT DATE(moc.created_at), SUM(COALESCE(moop.amount, moc.total_price))
+            FROM miller_online_customer moc
+            LEFT JOIN miller_online_orders_payment moop ON moop.online_order_id = moc.online_order_id
+            WHERE moc.supplier_profile_id = %s
+              AND (
+                  LOWER(TRIM(moop.status)) = 'paid'
+                  OR (moop.status IS NULL AND LOWER(TRIM(moc.status)) IN ('delivered', 'completed'))
+              )
+            GROUP BY DATE(moc.created_at)
             """,
             [supplier_profile_id],
         )
