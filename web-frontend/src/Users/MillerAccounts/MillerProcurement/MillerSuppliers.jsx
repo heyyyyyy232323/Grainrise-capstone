@@ -1,3 +1,4 @@
+import Toast from "../../../Components/Modals/Toast";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -800,10 +801,13 @@ const MillerSuppliers = () => {
 
       {/* Toast Notification */}
       {toastMsg && (
-        <div className="fixed bottom-6 right-6 z-[10001] bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs flex items-center gap-2 animate-in slide-in-from-bottom duration-200">
-          <CheckCircle2 size={16} className="text-emerald-400" />
-          <span>{toastMsg}</span>
-        </div>
+        <Toast
+          isOpen
+          type="success"
+          message={toastMsg}
+          duration={3000}
+          onClose={() => setToastMsg("")}
+        />
       )}
 
       {/* ── View / Edit Details Modal (Matching MillerOrderApproval.jsx) ── */}

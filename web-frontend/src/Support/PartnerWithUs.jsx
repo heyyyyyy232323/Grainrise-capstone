@@ -11,6 +11,7 @@ import LandingFooter from '../Components/Major-Components/LandingFooter';
 import shakehandsImg from '../assets/shakehands2.png';
 import RichTextEditor from '../Components/Minor-Components/RichTextEditor';
 import PolicyModal from '../Components/Minor-Components/PolicyModal';
+import Toast from '../Components/Modals/Toast';
 import AnimatedSection from './AnimatedSection';
 import './SupportPages.css';
 
@@ -2200,37 +2201,14 @@ export default function PartnerWithUs() {
 
       {/* ── Floating Toast Notification ── */}
       {toast && createPortal(
-        <div
-          role="alert"
-          className={`fixed bottom-6 right-6 z-[99999] max-w-sm sm:max-w-md flex items-start gap-3 p-4 rounded-xl shadow-2xl border transition-all animate-in slide-in-from-bottom-5 duration-200 ${
-            toast.type === 'error'
-              ? 'bg-red-50 dark:bg-[#201013] border-red-300 dark:border-red-800 text-red-900 dark:text-red-200'
-              : toast.type === 'success'
-              ? 'bg-emerald-50 dark:bg-[#0c2417] border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
-              : 'bg-white dark:bg-[#152e20] border-gray-200 dark:border-white/10 text-gray-900 dark:text-white'
-          }`}
-        >
-          <div className="shrink-0 mt-0.5">
-            {toast.type === 'error' ? (
-              <AlertTriangle size={18} className="text-red-600 dark:text-red-400" />
-            ) : toast.type === 'success' ? (
-              <CheckCircle2 size={18} className="text-[#00580C] dark:text-emerald-400" />
-            ) : (
-              <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs sm:text-[12.5px] font-semibold leading-snug">{toast.message}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setToast(null)}
-            className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5 rounded transition-colors cursor-pointer"
-            aria-label="Dismiss notification"
-          >
-            <X size={15} />
-          </button>
-        </div>,
+        <Toast
+          isOpen
+          type={toast.type}
+          message={toast.message}
+          duration={4500}
+          onClose={() => setToast(null)}
+          position="bottom-right"
+        />,
         document.body
       )}
     </div>

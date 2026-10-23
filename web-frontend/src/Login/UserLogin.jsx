@@ -77,9 +77,9 @@ export const resolvePostLoginDashboard = (user) => {
       return "/miller-driver/dashboard";
     }
     if (position === "branch_manager" || position === "branch manager") {
-      // Per requirements: Do NOT send Miller Branch Manager to Warehouse Branch Manager route.
-      // Use existing Miller Branch Manager route if implemented in project; currently not implemented in App.jsx.
-      return null;
+      return "/miller-branch-manager/dashboard";
+
+
     }
   }
 
@@ -132,6 +132,7 @@ export const resolvePostLoginDashboard = (user) => {
     miller_procurement: "/miller-procurement/dashboard",
     miller_finance: "/miller-finance/dashboard",
     miller_driver: "/miller-driver/dashboard",
+    miller_branch_manager: "/miller-branch-manager/dashboard",
     warehouse_encoder: "/warehouse-encoder/dashboard",
     warehouse_sales: "/warehouse-sales/dashboard",
     warehouse_logistics: "/warehouse-logistics/dashboard",

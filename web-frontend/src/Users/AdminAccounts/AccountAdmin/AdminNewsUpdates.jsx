@@ -4,7 +4,7 @@ import {
 } from "react";
 
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
-import Toast from "../../../Components/Minor-Components/Toast";
+import Toast from "../../../Components/Modals/Toast";
 
 import AdminNewsConfirmModal from "../../../Components/Modals/NewsUpdates/AdminNewsConfirmModal";
 import AdminNewsDetailsModal from "../../../Components/Modals/NewsUpdates/AdminNewsDetailsModal";

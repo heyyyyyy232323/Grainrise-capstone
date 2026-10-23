@@ -1,3 +1,4 @@
+import Toast from "../../../Components/Modals/Toast";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -605,9 +606,13 @@ export default function EmployeeManagement() {
 
       {/* Toast Notification */}
       {toastMsg && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
-          <CheckCircle2 size={16} /> {toastMsg}
-        </div>
+        <Toast
+          isOpen
+          type="success"
+          message={toastMsg}
+          duration={3000}
+          onClose={() => setToastMsg("")}
+        />
       )}
 
       {/* Active / Archived Tabs */}

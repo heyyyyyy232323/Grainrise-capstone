@@ -12,7 +12,7 @@ import Dropdown from "../../../Components/Minor-Components/Dropdown";
 import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import Tabs from "../../../Components/Minor-Components/Tabs";
-import Toast from "../../../Components/Minor-Components/Toast";
+import Toast from "../../../Components/Modals/Toast";
 import useToast from "../../../Components/hooks/useToast";
 import useApi from "../../../Components/hooks/useApi";
 
@@ -980,7 +980,7 @@ export default function MillerOnlinePaymentAccounts() {
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
-      <Toast toasts={toasts} onRemove={removeToast} />
+      <Toast toasts={toasts} removeToast={removeToast} />
 
       {/* Breadcrumbs */}
       <Breadcrumbs

@@ -11,7 +11,7 @@ import CustomGreenButton from "../../../Components/Minor-Components/CustomGreenB
 import CustomAmberButton from "../../../Components/Minor-Components/CustomAmberButton";
 import CustomRedButton from "../../../Components/Minor-Components/CustomRedButton";
 
-import Toast from "../../../Components/Minor-Components/Toast";
+import Toast from "../../../Components/Modals/Toast";
 
 import ArchiveAccountModal from "../../../Components/Modals/ArchiveAccountModal";
 import AccountActionConfirmModal from "../../../Components/Modals/AccountActionConfirmModal";

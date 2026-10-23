@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 import TextEditor from "../../../../Components/Minor-Components/TextEditor";
-import Toast from "../../../../Components/Minor-Components/Toast";
+import Toast from "../../../../Components/Modals/Toast";
 
 import ExistingDraftsModal from "../../../../Components/Modals/AdminModals/ExistingDraftsModal";
 import ClimateForecastModal from "../../../../Components/Modals/AdminModals/ClimateForecastModal";

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Search, Heart, MessageSquare, ArrowRight, Calendar, ChevronDown, ChevronUp, X, RefreshCw } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import useToast from "../../../Components/hooks/useToast";
-import Toast from "../../../Components/Minor-Components/Toast";
+import Toast from "../../../Components/Modals/Toast";
 import useFetchLatestNews from "../../../Components/hooks/NewsUpdates/useFetchLatestNews";
 
 export const MILLER_NEWS_DATA = [

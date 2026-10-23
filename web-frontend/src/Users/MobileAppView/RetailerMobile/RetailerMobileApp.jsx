@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Toast from "../../../Components/Modals/Toast";
 import { Plus, Calendar, X, Bell, Search, CheckCircle2, ShoppingBag } from "lucide-react";
 import { INITIAL_RETAILER_DATA } from "./RetailerMobileMockData";
 import RetailerMobileHeader from "./RetailerMobileHeader";
@@ -68,10 +69,14 @@ export default function RetailerMobileApp({ onExternalNavigate }) {
     <div className="flex flex-col min-h-full bg-[#f8fafc] text-gray-900 font-sans antialiased selection:bg-emerald-100 selection:text-emerald-900">
       {/* Toast popup */}
       {toastMessage && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900/90 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 backdrop-blur-sm animate-bounce">
-          <CheckCircle2 size={14} className="text-emerald-400" />
-          <span>{toastMessage}</span>
-        </div>
+        <Toast
+          isOpen
+          type="success"
+          message={toastMessage}
+          duration={3000}
+          onClose={() => setToastMessage(null)}
+          position="top-center"
+        />
       )}
 
       {/* ── 1. Top App Bar ────────────────────────────────────────────── */}

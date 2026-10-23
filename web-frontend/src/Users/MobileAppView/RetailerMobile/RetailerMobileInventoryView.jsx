@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Toast from "../../../Components/Modals/Toast";
 import {
   Search,
   SlidersHorizontal,
@@ -439,10 +440,14 @@ export default function RetailerMobileInventoryView({ onRestockClick }) {
     <div className="space-y-4 pb-24 select-none">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900/90 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-lg flex items-center gap-2 backdrop-blur-xs">
-          <CheckCircle2 size={14} className="text-emerald-400" />
-          <span>{toastMessage}</span>
-        </div>
+        <Toast
+          isOpen
+          type="success"
+          message={toastMessage}
+          duration={2500}
+          onClose={() => setToastMessage(null)}
+          position="top-center"
+        />
       )}
 
       {/* ── 1. Title ─────────────────────────────────────────────────── */}
