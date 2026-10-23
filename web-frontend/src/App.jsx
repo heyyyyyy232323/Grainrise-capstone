@@ -1,4 +1,4 @@
-﻿import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import React from "react";
 
 import LandingPage from "./LandingPage";
@@ -230,6 +230,25 @@ import MillerEmployeeManagement from "./Users/MillerAccounts/MillerManager/Emplo
 import MillerManagerNewsUpdates from "./Users/MillerAccounts/MillerManager/MillerManagerNewsUpdates";
 import MillerManagerNewsArticle from "./Users/MillerAccounts/MillerManager/MillerManagerNewsArticle";
 import MillerManagerMessages from "./Users/MillerAccounts/MillerManager/MillerManagerMessages";
+
+// ============================================================
+// MILLER BRANCH MANAGER
+// ============================================================
+
+import MillerBranchManagerDashboard from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerDashboard";
+import MillerBranchSupplierManagement from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerSupplierManagement";
+import MillerBranchSupplierDetails from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerSupplierDetails";
+import MillerBranchOrderApproval from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerOrderApproval";
+import MillerBranchExpenseManagement from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerExpenseManagement";
+import MillerBranchOnlinePaymentAccounts from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerOnlinePaymentAccounts";
+import MillerBranchPerformanceMonitoring from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerPerformanceMonitoring";
+import MillerBranchFulfillmentHistory from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerFulfillmentHistory";
+import MillerBranchSalesHistory from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerSalesHistory";
+import MillerBranchProcurementReceivingHistory from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerProcurementReceivingHistory";
+import MillerBranchFinanceManagementHistory from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerFinanceManagementHistory";
+import MillerBranchManagerNewsUpdates from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerNewsUpdates";
+import MillerBranchManagerNewsArticle from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerNewsArticle";
+import MillerBranchManagerMessages from "./Users/MillerAccounts/MillerBranchManager/MillerBranchManagerMessages";
 
 
 // ============================================================
@@ -1103,6 +1122,93 @@ function App() {
           {/* ==================================================
               RETAILER — WEB DESKTOP ROUTES (with sidebar layout)
           ================================================== */}
+
+          {/* ==================================================
+              MILLER BRANCH MANAGER
+          ================================================== */}
+
+          <Route element={<WarehouseEncoderLayout role="miller_branch_manager" />}>
+            <Route
+              path="/miller-branch-manager/dashboard"
+              element={<MillerBranchManagerDashboard />}
+            />
+
+            <Route
+              path="/miller-branch-manager/suppliers"
+              element={<MillerBranchSupplierManagement />}
+            />
+
+            <Route
+              path="/miller-branch-manager/suppliers/:supplierId"
+              element={<MillerBranchSupplierDetails />}
+            />
+
+            <Route
+              path="/miller-branch-manager/order-approval"
+              element={<MillerBranchOrderApproval />}
+            />
+
+            <Route
+              path="/miller-branch-manager/expenses"
+              element={<MillerBranchExpenseManagement />}
+            />
+
+            <Route
+              path="/miller-branch-manager/payment-accounts"
+              element={<MillerBranchOnlinePaymentAccounts />}
+            />
+
+            <Route
+              path="/miller-branch-manager/performance"
+              element={<MillerBranchPerformanceMonitoring />}
+            />
+
+            <Route
+              path="/miller-branch-manager/performance-monitoring"
+              element={<MillerBranchPerformanceMonitoring />}
+            />
+
+            <Route
+              path="/miller-branch-manager/fulfillment-history"
+              element={<MillerBranchFulfillmentHistory />}
+            />
+
+            <Route
+              path="/miller-branch-manager/sales-history"
+              element={<MillerBranchSalesHistory />}
+            />
+
+            <Route
+              path="/miller-branch-manager/procurement-history"
+              element={<MillerBranchProcurementReceivingHistory />}
+            />
+
+            <Route
+              path="/miller-branch-manager/finance-history"
+              element={<MillerBranchFinanceManagementHistory />}
+            />
+
+            <Route
+              path="/miller-branch-manager/messages"
+              element={<MillerBranchManagerMessages />}
+            />
+
+            <Route
+              path="/miller-branch-manager/news-updates"
+              element={<MillerBranchManagerNewsUpdates />}
+            />
+
+            <Route
+              path="/miller-branch-manager/news-updates/:id"
+              element={<MillerBranchManagerNewsArticle />}
+            />
+
+            <Route
+              path="/miller-branch-manager/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
+
 
           {/* Standalone fullscreen — Figma mobile app view */}
           <Route

@@ -1065,6 +1065,96 @@ export const getUserSidebarConfig = (role = "admin") => {
       ],
     },
 
+    miller_branch_manager: {
+      sections: [
+        {
+          title: "MAIN",
+          items: [
+            {
+              label: "Dashboard",
+              icon: LayoutDashboard,
+              path: "/miller-branch-manager/dashboard",
+            },
+          ],
+        },
+        {
+          title: "MANAGEMENT",
+          items: [
+            {
+              label: "Supplier Management",
+              icon: Truck,
+              path: "/miller-branch-manager/suppliers",
+            },
+            {
+              label: "Messages",
+              icon: MessagesSquare,
+              path: "/miller-branch-manager/messages",
+            },
+            {
+              label: "Order Approval",
+              icon: ClipboardCheck,
+              path: "/miller-branch-manager/order-approval",
+            },
+            {
+              label: "Expense Management",
+              icon: Receipt,
+              path: "/miller-branch-manager/expenses",
+            },
+            {
+              label: "Online Payment Accounts",
+              icon: CreditCard,
+              path: "/miller-branch-manager/payment-accounts",
+            },
+          ],
+        },
+        {
+          title: "ANALYTICS",
+          items: [
+            {
+              label: "Performance Monitoring",
+              icon: FileBarChart,
+              path: "/miller-branch-manager/performance",
+            },
+          ],
+        },
+        {
+          title: "HISTORY",
+          items: [
+            {
+              label: "Fulfillment History",
+              icon: PackageCheck,
+              path: "/miller-branch-manager/fulfillment-history",
+            },
+            {
+              label: "Sales History",
+              icon: Receipt,
+              path: "/miller-branch-manager/sales-history",
+            },
+            {
+              label: "Procurement Receiving History",
+              icon: Package,
+              path: "/miller-branch-manager/procurement-history",
+            },
+            {
+              label: "Finance Management History",
+              icon: CircleDollarSign,
+              path: "/miller-branch-manager/finance-history",
+            },
+          ],
+        },
+        {
+          title: "RESOURCES",
+          items: [
+            {
+              label: "News & Updates",
+              icon: Newspaper,
+              path: "/miller-branch-manager/news-updates",
+            },
+          ],
+        },
+      ],
+    },
+
     farmer: {
       sections: [
         {
@@ -1153,6 +1243,7 @@ export const userSidebarRoles = [
   "miller_procurement",
   "miller_finance",
   "miller_manager",
+  "miller_branch_manager",
   "farmer",
 ];
 
