@@ -315,21 +315,24 @@ def verify_payment_security_otp(user_id: int, email: str, incoming_otp: str, pur
 # PAYMENT SECURITY PASSWORD MANAGEMENT
 # ============================================================
 
-def send_first_time_setup_otp(user_id: int) -> dict:
+def send_first_time_setup_otp(user_id: int, is_employee: bool = False) -> dict:
     """
     Send OTP for first-time Payment Security Password configuration.
     """
+    table = "miller_employee_payment_account_security" if is_employee else "miller_payment_account_security"
+    id_col = "supplier_employee_id" if is_employee else "user_id"
+
     # 1. Check if security password already exists
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT security_id FROM miller_payment_account_security WHERE user_id = %s LIMIT 1",
+            f"SELECT security_id FROM {table} WHERE {id_col} = %s LIMIT 1",
             [user_id],
         )
         if cursor.fetchone():
             raise SecurityAlreadyConfiguredError("Payment security password has already been configured for this account.")
 
     # 2. Get user info
-    user_info = get_manager_user_info(user_id)
+    user_info = get_manager_user_info(user_id, is_employee=is_employee)
     if not user_info.get("email"):
         raise AccountValidationError("User does not have an active registered email address.")
 
@@ -343,15 +346,17 @@ def send_first_time_setup_otp(user_id: int) -> dict:
     return res
 
 
-def setup_security_password(user_id: int, otp: str, new_password: str, confirm_password: str) -> dict:
+def setup_security_password(user_id: int, otp: str, new_password: str, confirm_password: str, is_employee: bool = False) -> dict:
     """
-    Configure the initial Payment Security Password for the Manager.
-    ONE password applies to ALL branches owned by this user.
+    Configure the initial Payment Security Password for the Manager or Employee.
     """
+    table = "miller_employee_payment_account_security" if is_employee else "miller_payment_account_security"
+    id_col = "supplier_employee_id" if is_employee else "user_id"
+
     # 1. Check already configured
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT security_id FROM miller_payment_account_security WHERE user_id = %s LIMIT 1",
+            f"SELECT security_id FROM {table} WHERE {id_col} = %s LIMIT 1",
             [user_id],
         )
         if cursor.fetchone():
@@ -367,13 +372,27 @@ def setup_security_password(user_id: int, otp: str, new_password: str, confirm_p
 
     # 3. Check against login password
     with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT password_hash, email FROM users WHERE user_id = %s LIMIT 1",
-            [user_id],
-        )
-        u_row = cursor.fetchone()
+        if is_employee:
+            cursor.execute(
+                "SELECT password_hash, email FROM supplier_employees WHERE supplier_employee_id = %s LIMIT 1",
+                [user_id],
+            )
+            u_row = cursor.fetchone()
+        else:
+            cursor.execute(
+                "SELECT password_hash, email FROM users WHERE user_id = %s LIMIT 1",
+                [user_id],
+            )
+            u_row = cursor.fetchone()
+            if not u_row:
+                cursor.execute(
+                    "SELECT password_hash, email FROM supplier_employees WHERE supplier_employee_id = %s LIMIT 1",
+                    [user_id],
+                )
+                u_row = cursor.fetchone()
+
         if not u_row:
-            raise AccountValidationError("Manager account not found.")
+            raise AccountValidationError("Account not found.")
         login_hash, email = u_row
 
     if login_hash and check_password(new_password, login_hash):
@@ -387,41 +406,71 @@ def setup_security_password(user_id: int, otp: str, new_password: str, confirm_p
         purpose="payment_security_setup",
     )
 
-    # 5. Fetch representative supplier_profile_id (earliest branch owned by manager)
+    # 5. Fetch representative supplier_profile_id
     with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT supplier_profile_id
-            FROM supplier_profiles
-            WHERE user_id = %s
-            ORDER BY created_at ASC, supplier_profile_id ASC
-            LIMIT 1
-            """,
-            [user_id],
-        )
-        sp_row = cursor.fetchone()
+        if is_employee:
+            cursor.execute(
+                "SELECT supplier_profile_id FROM supplier_employees WHERE supplier_employee_id = %s LIMIT 1",
+                [user_id],
+            )
+            sp_row = cursor.fetchone()
+        else:
+            cursor.execute(
+                """
+                SELECT supplier_profile_id
+                FROM supplier_profiles
+                WHERE user_id = %s
+                ORDER BY created_at ASC, supplier_profile_id ASC
+                LIMIT 1
+                """,
+                [user_id],
+            )
+            sp_row = cursor.fetchone()
+            if not sp_row:
+                cursor.execute(
+                    "SELECT supplier_profile_id FROM supplier_employees WHERE supplier_employee_id = %s LIMIT 1",
+                    [user_id],
+                )
+                sp_row = cursor.fetchone()
+
         if not sp_row:
-            raise AccountValidationError("Cannot setup payment security: no branch profile found for this Manager.")
+            raise AccountValidationError("Cannot setup payment security: no branch profile found.")
         rep_supplier_profile_id = sp_row[0]
 
     # 6. Insert security record atomically
     hashed = make_password(new_password)
     with transaction.atomic():
         with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                INSERT INTO miller_payment_account_security (
-                    supplier_profile_id,
-                    user_id,
-                    password_hash,
-                    failed_attempts,
-                    locked_until,
-                    created_at,
-                    updated_at
-                ) VALUES (%s, %s, %s, 0, NULL, NOW(), NOW())
-                """,
-                [rep_supplier_profile_id, user_id, hashed],
-            )
+            if is_employee:
+                cursor.execute(
+                    """
+                    INSERT INTO miller_employee_payment_account_security (
+                        supplier_profile_id,
+                        supplier_employee_id,
+                        password_hash,
+                        failed_attempts,
+                        locked_until,
+                        created_at,
+                        updated_at
+                    ) VALUES (%s, %s, %s, 0, NULL, NOW(), NOW())
+                    """,
+                    [rep_supplier_profile_id, user_id, hashed],
+                )
+            else:
+                cursor.execute(
+                    """
+                    INSERT INTO miller_payment_account_security (
+                        supplier_profile_id,
+                        user_id,
+                        password_hash,
+                        failed_attempts,
+                        locked_until,
+                        created_at,
+                        updated_at
+                    ) VALUES (%s, %s, %s, 0, NULL, NOW(), NOW())
+                    """,
+                    [rep_supplier_profile_id, user_id, hashed],
+                )
 
     return {
         "success": True,
@@ -429,25 +478,43 @@ def setup_security_password(user_id: int, otp: str, new_password: str, confirm_p
     }
 
 
-def verify_security_password(user_id: int, plain_password: str) -> bool:
+def verify_security_password(user_id: int, plain_password: str, is_employee: bool = False) -> bool:
     """
-    Authenticate the Manager's Payment Security Password.
+    Authenticate the Manager's or Employee's Payment Security Password.
     Enforces lockout after 5 failed attempts (15-minute lock).
     """
     if not plain_password:
         raise InvalidPasswordError("Payment security password is required.")
 
+    table = "miller_employee_payment_account_security" if is_employee else "miller_payment_account_security"
+    id_col = "supplier_employee_id" if is_employee else "user_id"
+
     with connection.cursor() as cursor:
         cursor.execute(
-            """
+            f"""
             SELECT security_id, password_hash, failed_attempts, locked_until
-            FROM miller_payment_account_security
-            WHERE user_id = %s
+            FROM {table}
+            WHERE {id_col} = %s
             LIMIT 1
             """,
             [user_id],
         )
         row = cursor.fetchone()
+
+        if not row and not is_employee:
+            cursor.execute(
+                """
+                SELECT security_id, password_hash, failed_attempts, locked_until
+                FROM miller_employee_payment_account_security
+                WHERE supplier_employee_id = %s
+                LIMIT 1
+                """,
+                [user_id],
+            )
+            row = cursor.fetchone()
+            if row:
+                table = "miller_employee_payment_account_security"
+                id_col = "supplier_employee_id"
 
     if not row:
         raise SecurityNotConfiguredError(
@@ -472,7 +539,7 @@ def verify_security_password(user_id: int, plain_password: str) -> bool:
             failed_attempts = 0
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "UPDATE miller_payment_account_security SET failed_attempts = 0, locked_until = NULL WHERE security_id = %s",
+                    f"UPDATE {table} SET failed_attempts = 0, locked_until = NULL WHERE security_id = %s",
                     [sec_id],
                 )
 
@@ -483,7 +550,7 @@ def verify_security_password(user_id: int, plain_password: str) -> bool:
             if new_attempts >= OTP_MAX_ATTEMPTS:
                 lock_time = datetime.now() + timedelta(minutes=LOCKOUT_MINUTES)
                 cursor.execute(
-                    "UPDATE miller_payment_account_security SET failed_attempts = %s, locked_until = %s WHERE security_id = %s",
+                    f"UPDATE {table} SET failed_attempts = %s, locked_until = %s WHERE security_id = %s",
                     [new_attempts, lock_time, sec_id],
                 )
                 raise SecurityLockedError(
@@ -491,7 +558,7 @@ def verify_security_password(user_id: int, plain_password: str) -> bool:
                 )
             else:
                 cursor.execute(
-                    "UPDATE miller_payment_account_security SET failed_attempts = %s WHERE security_id = %s",
+                    f"UPDATE {table} SET failed_attempts = %s WHERE security_id = %s",
                     [new_attempts, sec_id],
                 )
                 remaining = OTP_MAX_ATTEMPTS - new_attempts
@@ -503,24 +570,37 @@ def verify_security_password(user_id: int, plain_password: str) -> bool:
     if failed_attempts > 0 or locked_until:
         with connection.cursor() as cursor:
             cursor.execute(
-                "UPDATE miller_payment_account_security SET failed_attempts = 0, locked_until = NULL WHERE security_id = %s",
+                f"UPDATE {table} SET failed_attempts = 0, locked_until = NULL WHERE security_id = %s",
                 [sec_id],
             )
 
     return True
 
 
-def send_forgot_security_password_otp(user_id: int) -> dict:
+def send_forgot_security_password_otp(user_id: int, is_employee: bool = False) -> dict:
     """
     Send OTP to reset forgotten Payment Security Password.
     """
+    table = "miller_employee_payment_account_security" if is_employee else "miller_payment_account_security"
+    id_col = "supplier_employee_id" if is_employee else "user_id"
+
     # 1. Check security record exists
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT security_id, locked_until FROM miller_payment_account_security WHERE user_id = %s LIMIT 1",
+            f"SELECT security_id, locked_until FROM {table} WHERE {id_col} = %s LIMIT 1",
             [user_id],
         )
         row = cursor.fetchone()
+        if not row and not is_employee:
+            cursor.execute(
+                "SELECT security_id, locked_until FROM miller_employee_payment_account_security WHERE supplier_employee_id = %s LIMIT 1",
+                [user_id],
+            )
+            row = cursor.fetchone()
+            if row:
+                table = "miller_employee_payment_account_security"
+                id_col = "supplier_employee_id"
+
         if not row:
             raise SecurityNotConfiguredError("Payment security password is not configured.")
         sec_id, locked_until = row
@@ -535,7 +615,7 @@ def send_forgot_security_password_otp(user_id: int) -> dict:
                 f"Payment security is temporarily locked. Please wait {mins_left} minute(s) before requesting a reset."
             )
 
-    user_info = get_manager_user_info(user_id)
+    user_info = get_manager_user_info(user_id, is_employee=is_employee)
     if not user_info.get("email"):
         raise AccountValidationError("User email not found.")
 
@@ -549,18 +629,31 @@ def send_forgot_security_password_otp(user_id: int) -> dict:
     return res
 
 
-def reset_security_password(user_id: int, otp: str, new_password: str, confirm_password: str) -> dict:
+def reset_security_password(user_id: int, otp: str, new_password: str, confirm_password: str, is_employee: bool = False) -> dict:
     """
     Reset Payment Security Password using verified OTP.
     Sends confirmation email and unlocks the security record.
     """
+    table = "miller_employee_payment_account_security" if is_employee else "miller_payment_account_security"
+    id_col = "supplier_employee_id" if is_employee else "user_id"
+
     # 1. Check record exists
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT security_id FROM miller_payment_account_security WHERE user_id = %s LIMIT 1",
+            f"SELECT security_id FROM {table} WHERE {id_col} = %s LIMIT 1",
             [user_id],
         )
         row = cursor.fetchone()
+        if not row and not is_employee:
+            cursor.execute(
+                "SELECT security_id FROM miller_employee_payment_account_security WHERE supplier_employee_id = %s LIMIT 1",
+                [user_id],
+            )
+            row = cursor.fetchone()
+            if row:
+                table = "miller_employee_payment_account_security"
+                id_col = "supplier_employee_id"
+
         if not row:
             raise SecurityNotConfiguredError("Payment security password is not configured.")
         sec_id = row[0]
@@ -575,13 +668,27 @@ def reset_security_password(user_id: int, otp: str, new_password: str, confirm_p
 
     # 3. Check against login password
     with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT password_hash, email, first_name FROM users WHERE user_id = %s LIMIT 1",
-            [user_id],
-        )
-        u_row = cursor.fetchone()
+        if is_employee:
+            cursor.execute(
+                "SELECT password_hash, email, first_name FROM supplier_employees WHERE supplier_employee_id = %s LIMIT 1",
+                [user_id],
+            )
+            u_row = cursor.fetchone()
+        else:
+            cursor.execute(
+                "SELECT password_hash, email, first_name FROM users WHERE user_id = %s LIMIT 1",
+                [user_id],
+            )
+            u_row = cursor.fetchone()
+            if not u_row:
+                cursor.execute(
+                    "SELECT password_hash, email, first_name FROM supplier_employees WHERE supplier_employee_id = %s LIMIT 1",
+                    [user_id],
+                )
+                u_row = cursor.fetchone()
+
         if not u_row:
-            raise AccountValidationError("Manager account not found.")
+            raise AccountValidationError("Account not found.")
         login_hash, email, first_name = u_row
 
     if login_hash and check_password(new_password, login_hash):
@@ -600,8 +707,8 @@ def reset_security_password(user_id: int, otp: str, new_password: str, confirm_p
     with transaction.atomic():
         with connection.cursor() as cursor:
             cursor.execute(
-                """
-                UPDATE miller_payment_account_security
+                f"""
+                UPDATE {table}
                 SET password_hash = %s, failed_attempts = 0, locked_until = NULL, updated_at = NOW()
                 WHERE security_id = %s
                 """,
@@ -642,12 +749,21 @@ def check_duplicate_payment_account(
     account_number: str,
     bank_name: str = None,
     exclude_id: int = None,
+    is_employee: bool = False,
+    supplier_profile_id: int = None,
 ) -> dict:
     """
     Check if a GCash or Bank payment account already exists across any of the
     Miller Manager's authorized branches (active or archived).
     Matches Type + Bank/Platform + Account Number (ignoring formatting differences).
     """
+    if is_employee and supplier_profile_id:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT user_id FROM supplier_profiles WHERE supplier_profile_id = %s LIMIT 1", [supplier_profile_id])
+            u_row = cursor.fetchone()
+            if u_row and u_row[0]:
+                user_id = u_row[0]
+
     clean_type = str(account_type or "").strip().lower()
     if clean_type not in ("gcash", "bank"):
         return {"is_duplicate": False}
