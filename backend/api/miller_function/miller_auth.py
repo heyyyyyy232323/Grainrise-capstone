@@ -425,3 +425,71 @@ def miller_manager_required(view_func):
         )
 
     return wrapped_view
+
+
+def miller_payment_security_user_required(view_func):
+    """
+    Authenticate either a Miller Manager or a Miller Employee (e.g. FLC or Driver)
+    for Payment Security and Online Payment Account operations.
+    Sets:
+    - request.grainrise_miller_id = user_id or supplier_employee_id
+    - request.grainrise_is_employee = True / False
+    - request.grainrise_supplier_profile_id = supplier_profile_id
+    - request.grainrise_supplier_employee_id = supplier_employee_id (if employee)
+    """
+    @wraps(view_func)
+    def wrapped_view(request, *args, **kwargs):
+        payload = authorization_payload(request)
+        if not payload or payload.get("auth_source") != "grainrise":
+            return JsonResponse({"success": False, "message": "Authentication required. Please sign in again."}, status=401)
+
+        role = payload.get("role")
+        account_type = payload.get("account_type")
+
+        # 1. Miller Manager
+        if role == "miller_manager" and account_type == "main_user":
+            miller = get_authenticated_miller_manager(request)
+            if not miller:
+                return JsonResponse({"success": False, "message": "Miller Manager authentication required."}, status=401)
+            request.grainrise_miller = miller
+            request.grainrise_miller_id = miller["user_id"]
+            request.grainrise_is_employee = False
+            request.grainrise_supplier_profile_id = miller["default_supplier_profile_id"]
+            request.grainrise_supplier_employee_id = None
+            return view_func(request, *args, **kwargs)
+
+        # 2. Supplier Employee (FLC, Driver, etc.)
+        if role == "supplier_employee" or account_type == "supplier_employee":
+            raw_emp_id = payload.get("sub")
+            try:
+                emp_id = int(raw_emp_id)
+            except (TypeError, ValueError):
+                return JsonResponse({"success": False, "message": "Invalid token subject."}, status=401)
+
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT supplier_employee_id, supplier_profile_id, first_name, last_name, email, position, status
+                    FROM supplier_employees
+                    WHERE supplier_employee_id = %s
+                    LIMIT 1
+                    """,
+                    [emp_id],
+                )
+                emp_row = cursor.fetchone()
+
+            if not emp_row or str(emp_row[6] or "").strip().lower() != "active":
+                return JsonResponse({"success": False, "message": "Active employee account required."}, status=401)
+
+            request.grainrise_miller = None
+            request.grainrise_miller_id = emp_row[0]
+            request.grainrise_is_employee = True
+            request.grainrise_supplier_profile_id = emp_row[1]
+            request.grainrise_supplier_employee_id = emp_row[0]
+            request.grainrise_employee_name = f"{emp_row[2]} {emp_row[3]}".strip()
+            request.grainrise_employee_email = emp_row[4]
+            return view_func(request, *args, **kwargs)
+
+        return JsonResponse({"success": False, "message": "Authorized user required."}, status=401)
+
+    return wrapped_view

@@ -567,6 +567,11 @@ export const getUserSidebarConfig = (role = "admin") => {
           title: "FINANCE",
           items: [
             {
+              label: "Online Payment Accounts",
+              icon: CreditCard,
+              path: "/miller-logistics/payment-accounts",
+            },
+            {
               label: "Reimbursement",
               icon: Wallet,
               path: "/miller-logistics/reimbursement",
@@ -940,6 +945,11 @@ export const getUserSidebarConfig = (role = "admin") => {
               label: "Payment Submission",
               icon: CreditCard,
               path: "/miller-driver/payment-submission",
+            },
+            {
+              label: "Online Payment Accounts",
+              icon: CreditCard,
+              path: "/miller-driver/payment-accounts",
             },
             {
               label: "Reimbursement",

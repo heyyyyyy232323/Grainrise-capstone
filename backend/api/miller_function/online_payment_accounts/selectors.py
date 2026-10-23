@@ -37,22 +37,36 @@ def mask_email(email: str) -> str:
     return f"{masked_user}@{domain}"
 
 
-def get_manager_security_status(user_id: int) -> dict:
+def get_manager_security_status(user_id: int, is_employee: bool = False) -> dict:
     """
-    Check if the Miller Manager has configured a Payment Security Password.
+    Check if the Miller Manager or Employee has configured a Payment Security Password.
     Returns status, failed attempts, and lock state.
     """
+    table = "miller_employee_payment_account_security" if is_employee else "miller_payment_account_security"
+    id_col = "supplier_employee_id" if is_employee else "user_id"
     with connection.cursor() as cursor:
         cursor.execute(
-            """
+            f"""
             SELECT security_id, supplier_profile_id, password_hash, failed_attempts, locked_until
-            FROM miller_payment_account_security
-            WHERE user_id = %s
+            FROM {table}
+            WHERE {id_col} = %s
             LIMIT 1
             """,
             [user_id],
         )
         row = cursor.fetchone()
+
+        if not row and not is_employee:
+            cursor.execute(
+                """
+                SELECT security_id, supplier_profile_id, password_hash, failed_attempts, locked_until
+                FROM miller_employee_payment_account_security
+                WHERE supplier_employee_id = %s
+                LIMIT 1
+                """,
+                [user_id],
+            )
+            row = cursor.fetchone()
 
     if not row:
         return {
@@ -86,22 +100,46 @@ def get_manager_security_status(user_id: int) -> dict:
     }
 
 
-def get_manager_user_info(user_id: int) -> dict:
+def get_manager_user_info(user_id: int, is_employee: bool = False) -> dict:
     """
-    Fetch Manager's registered name, email, and masked email.
+    Fetch Manager's or Employee's registered name, email, and masked email.
     Used for first-time setup prompt and client-side ID comparison.
     """
     with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT user_id, first_name, middle_initial, last_name, suffix, email, contact_number
-            FROM users
-            WHERE user_id = %s AND user_role = 'miller_manager'
-            LIMIT 1
-            """,
-            [user_id],
-        )
-        row = cursor.fetchone()
+        if is_employee:
+            cursor.execute(
+                """
+                SELECT supplier_employee_id, first_name, middle_initial, last_name, suffix, email, contact_number
+                FROM supplier_employees
+                WHERE supplier_employee_id = %s
+                LIMIT 1
+                """,
+                [user_id],
+            )
+            row = cursor.fetchone()
+        else:
+            cursor.execute(
+                """
+                SELECT user_id, first_name, middle_initial, last_name, suffix, email, contact_number
+                FROM users
+                WHERE user_id = %s
+                LIMIT 1
+                """,
+                [user_id],
+            )
+            row = cursor.fetchone()
+
+            if not row:
+                cursor.execute(
+                    """
+                    SELECT supplier_employee_id, first_name, middle_initial, last_name, suffix, email, contact_number
+                    FROM supplier_employees
+                    WHERE supplier_employee_id = %s
+                    LIMIT 1
+                    """,
+                    [user_id],
+                )
+                row = cursor.fetchone()
 
     if not row:
         return {

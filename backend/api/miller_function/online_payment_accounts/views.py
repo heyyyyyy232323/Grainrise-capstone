@@ -1,13 +1,17 @@
 import logging
-from django.db import IntegrityError
+from django.db import IntegrityError, connection
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from api.miller_function.miller_auth import miller_manager_required
+from api.miller_function.miller_auth import (
+    miller_manager_required,
+    miller_payment_security_user_required,
+)
 from .selectors import (
     get_manager_security_status,
     get_manager_user_info,
+    mask_account_number,
     list_manager_branches,
     list_branch_payment_accounts,
     get_branch_payment_account_detail,
@@ -53,7 +57,7 @@ logger = logging.getLogger(__name__)
 # ============================================================
 
 @api_view(["GET"])
-@miller_manager_required
+@miller_payment_security_user_required
 def security_status_view(request):
     """
     GET /api/miller/payment-accounts/security/status/
@@ -61,9 +65,10 @@ def security_status_view(request):
     Also returns user full name and masked email for verification and setup.
     """
     user_id = request.grainrise_miller_id
+    is_employee = getattr(request, "grainrise_is_employee", False)
     try:
-        sec_status = get_manager_security_status(user_id)
-        user_info = get_manager_user_info(user_id)
+        sec_status = get_manager_security_status(user_id, is_employee=is_employee)
+        user_info = get_manager_user_info(user_id, is_employee=is_employee)
         payload = {
             **sec_status,
             "masked_email": user_info.get("masked_email", ""),
@@ -91,15 +96,16 @@ def security_status_view(request):
 
 
 @api_view(["POST"])
-@miller_manager_required
+@miller_payment_security_user_required
 def send_setup_otp_view(request):
     """
     POST /api/miller/payment-accounts/security/send-setup-otp/
     Send 6-digit OTP for initial security password setup.
     """
     user_id = request.grainrise_miller_id
+    is_employee = getattr(request, "grainrise_is_employee", False)
     try:
-        res = send_first_time_setup_otp(user_id)
+        res = send_first_time_setup_otp(user_id, is_employee=is_employee)
         return Response(
             {
                 "success": True,
@@ -124,19 +130,20 @@ def send_setup_otp_view(request):
 
 
 @api_view(["POST"])
-@miller_manager_required
+@miller_payment_security_user_required
 def setup_security_password_view(request):
     """
     POST /api/miller/payment-accounts/security/setup-password/
     Verify OTP and configure the initial Payment Security Password.
     """
     user_id = request.grainrise_miller_id
+    is_employee = getattr(request, "grainrise_is_employee", False)
     otp = request.data.get("otp", "")
     new_password = request.data.get("new_password", "")
     confirm_password = request.data.get("confirm_password", "")
 
     try:
-        res = setup_security_password(user_id, otp, new_password, confirm_password)
+        res = setup_security_password(user_id, otp, new_password, confirm_password, is_employee=is_employee)
         return Response(res, status=status.HTTP_201_CREATED)
     except SecurityAlreadyConfiguredError as exc:
         return Response({"success": False, "message": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
@@ -150,17 +157,18 @@ def setup_security_password_view(request):
 
 
 @api_view(["POST"])
-@miller_manager_required
+@miller_payment_security_user_required
 def verify_security_password_view(request):
     """
     POST /api/miller/payment-accounts/security/verify/
     Verify the Payment Security Password before entering edit or sensitive operations.
     """
     user_id = request.grainrise_miller_id
+    is_employee = getattr(request, "grainrise_is_employee", False)
     password = request.data.get("password", "")
 
     try:
-        verify_security_password(user_id, password)
+        verify_security_password(user_id, password, is_employee=is_employee)
         return Response(
             {"success": True, "message": "Payment security authorization confirmed."},
             status=status.HTTP_200_OK,
@@ -175,7 +183,7 @@ def verify_security_password_view(request):
 
 
 @api_view(["POST"])
-@miller_manager_required
+@miller_payment_security_user_required
 def authorize_action_view(request):
     """
     POST /api/miller/payment-accounts/security/authorize-action/
@@ -192,6 +200,7 @@ def authorize_action_view(request):
         "archive_branch_account",
         "restore_branch_account",
         "reveal_branch_account",
+        "edit_employee_account",
         "archive_employee_account",
         "restore_employee_account",
         "reveal_employee_account",
@@ -208,18 +217,28 @@ def authorize_action_view(request):
     except (ValueError, TypeError):
         return Response({"success": False, "message": "Invalid account ID."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Validate that the target account belongs to one of the manager's authorized branches
-    if "branch" in action:
-        detail = get_branch_payment_account_detail(user_id, account_id)
-        if not detail:
-            return Response({"success": False, "message": "Account record not found or not authorized."}, status=status.HTTP_404_NOT_FOUND)
+    is_employee = getattr(request, "grainrise_is_employee", False)
+    if is_employee:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT credentials_id FROM miller_employee_online_transaction_credentials WHERE credentials_id = %s AND supplier_employee_id = %s LIMIT 1",
+                [account_id, user_id],
+            )
+            if not cursor.fetchone():
+                return Response({"success": False, "message": "Employee account record not found or not authorized."}, status=status.HTTP_404_NOT_FOUND)
     else:
-        detail = get_employee_payment_account_detail(user_id, account_id)
-        if not detail:
-            return Response({"success": False, "message": "Employee account record not found or not authorized."}, status=status.HTTP_404_NOT_FOUND)
+        # Validate that the target account belongs to one of the manager's authorized branches
+        if "branch" in action:
+            detail = get_branch_payment_account_detail(user_id, account_id)
+            if not detail:
+                return Response({"success": False, "message": "Account record not found or not authorized."}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            detail = get_employee_payment_account_detail(user_id, account_id)
+            if not detail:
+                return Response({"success": False, "message": "Employee account record not found or not authorized."}, status=status.HTTP_404_NOT_FOUND)
 
     try:
-        verify_security_password(user_id, password)
+        verify_security_password(user_id, password, is_employee=is_employee)
         token = issue_action_auth_token(user_id, action, account_id)
         return Response(
             {
@@ -242,15 +261,16 @@ def authorize_action_view(request):
 
 
 @api_view(["POST"])
-@miller_manager_required
+@miller_payment_security_user_required
 def send_forgot_otp_view(request):
     """
     POST /api/miller/payment-accounts/security/send-forgot-otp/
     Send OTP to reset forgotten Payment Security Password.
     """
     user_id = request.grainrise_miller_id
+    is_employee = getattr(request, "grainrise_is_employee", False)
     try:
-        res = send_forgot_security_password_otp(user_id)
+        res = send_forgot_security_password_otp(user_id, is_employee=is_employee)
         return Response(
             {
                 "success": True,
@@ -275,19 +295,20 @@ def send_forgot_otp_view(request):
 
 
 @api_view(["POST"])
-@miller_manager_required
+@miller_payment_security_user_required
 def reset_security_password_view(request):
     """
     POST /api/miller/payment-accounts/security/reset-password/
     Reset Payment Security Password via verified OTP.
     """
     user_id = request.grainrise_miller_id
+    is_employee = getattr(request, "grainrise_is_employee", False)
     otp = request.data.get("otp", "")
     new_password = request.data.get("new_password", "")
     confirm_password = request.data.get("confirm_password", "")
 
     try:
-        res = reset_security_password(user_id, otp, new_password, confirm_password)
+        res = reset_security_password(user_id, otp, new_password, confirm_password, is_employee=is_employee)
         return Response(res, status=status.HTTP_200_OK)
     except OtpExpiredOrInvalidError as exc:
         return Response({"success": False, "message": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
@@ -339,14 +360,16 @@ def _list_branch_accounts_logic(request):
 
 
 @api_view(["POST", "GET"])
-@miller_manager_required
+@miller_payment_security_user_required
 def check_duplicate_account_view(request):
     """
     POST/GET /api/miller/payment-accounts/branches/check-duplicate/
     Lightweight authenticated endpoint to check if an account number already exists
-    within the Manager's authorized branches (active or archived).
+    within the Manager's or Employee's authorized branches (active or archived).
     """
     user_id = request.grainrise_miller_id
+    is_employee = getattr(request, "grainrise_is_employee", False)
+    sp_id = getattr(request, "grainrise_supplier_profile_id", None)
     data = request.data if request.method == "POST" else request.query_params
     account_type = data.get("account_type") or data.get("type")
     account_number = data.get("account_number") or data.get("number")
@@ -360,6 +383,8 @@ def check_duplicate_account_view(request):
             account_number=account_number,
             bank_name=bank_name,
             exclude_id=exclude_id,
+            is_employee=is_employee,
+            supplier_profile_id=sp_id,
         )
         return Response({"success": True, **res}, status=status.HTTP_200_OK)
     except Exception as exc:
@@ -682,4 +707,244 @@ def restore_employee_account_view(request, pk):
     except Exception as exc:
         logger.exception("Restore employee account failed: %s", exc)
         return Response({"success": False, "message": "Failed to restore employee account."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ============================================================
+# EMPLOYEE PERSONAL ONLINE PAYMENT ACCOUNTS (FLC / DRIVER)
+# ============================================================
+
+@api_view(["GET"])
+@miller_payment_security_user_required
+def my_payment_accounts_list_view(request):
+    """
+    GET /api/miller/payment-accounts/my-accounts/
+    Returns personal payment accounts for the authenticated employee.
+    """
+    emp_id = getattr(request, "grainrise_supplier_employee_id", None) or request.grainrise_miller_id
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                credentials_id,
+                supplier_profile_id,
+                type,
+                platform_name,
+                bank_name,
+                account_number,
+                account_name,
+                verification_status,
+                is_default,
+                status,
+                archive_reason,
+                created_at,
+                updated_at
+            FROM miller_employee_online_transaction_credentials
+            WHERE supplier_employee_id = %s
+            ORDER BY is_default DESC, credentials_id DESC
+            """,
+            [emp_id],
+        )
+        rows = cursor.fetchall()
+
+    accounts = []
+    for r in rows:
+        cid, sp_id, acc_type, plat_name, b_name, raw_num, acc_name, verif_stat, is_def, acc_stat, arch_reason, created_at, updated_at = r
+        accounts.append({
+            "credentials_id": cid,
+            "id": cid,
+            "supplier_profile_id": sp_id,
+            "type": acc_type,
+            "platform_name": plat_name or ("GCash" if acc_type == "gcash" else (b_name or "Bank")),
+            "bank_name": b_name or ("—" if acc_type == "gcash" else "Bank"),
+            "account_name": acc_name,
+            "account_number_masked": mask_account_number(raw_num, acc_type),
+            "verification_status": verif_stat or "unverified",
+            "is_default": bool(is_def),
+            "status": acc_stat or "active",
+            "archive_reason": arch_reason or "",
+            "created_at": created_at.strftime("%Y-%m-%d %H:%M") if hasattr(created_at, "strftime") else str(created_at),
+        })
+
+    return Response({"success": True, "accounts": accounts}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@miller_payment_security_user_required
+def my_payment_accounts_create_view(request):
+    """
+    POST /api/miller/payment-accounts/my-accounts/create/
+    Creates a new personal payment account for the authenticated employee.
+    """
+    emp_id = getattr(request, "grainrise_supplier_employee_id", None) or request.grainrise_miller_id
+    sp_id = getattr(request, "grainrise_supplier_profile_id", None) or 1
+    data = request.data or {}
+
+    acc_type = (data.get("type") or "gcash").strip().lower()
+    platform_name = (data.get("platform_name") or ("GCash" if acc_type == "gcash" else data.get("bank_name", "Bank"))).strip()
+    bank_name = (data.get("bank_name") or "").strip()
+    account_name = (data.get("account_name") or "").strip()
+    account_number = (data.get("account_number") or "").strip()
+    is_default = 1 if data.get("is_default") else 0
+
+    if not account_name or not account_number:
+        return Response({"success": False, "message": "Account name and account number are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    verif_status = data.get("verification_status") or ("verified" if data.get("is_verified") else "unverified")
+
+    with connection.cursor() as cursor:
+        if is_default:
+            cursor.execute("UPDATE miller_employee_online_transaction_credentials SET is_default = 0 WHERE supplier_employee_id = %s", [emp_id])
+        cursor.execute(
+            """
+            INSERT INTO miller_employee_online_transaction_credentials (
+                supplier_profile_id,
+                supplier_employee_id,
+                type,
+                platform_name,
+                bank_name,
+                account_number,
+                account_name,
+                verification_status,
+                is_default,
+                status,
+                created_at,
+                updated_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'active', NOW(), NOW())
+            """,
+            [sp_id, emp_id, acc_type, platform_name, bank_name, account_number, account_name, verif_status, is_default],
+        )
+        new_id = cursor.lastrowid
+
+    return Response({"success": True, "message": "Payment account added successfully.", "credentials_id": new_id, "verification_status": verif_status}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["PUT"])
+@miller_payment_security_user_required
+def my_payment_accounts_update_view(request, pk):
+    """
+    PUT /api/miller/payment-accounts/my-accounts/<pk>/update/
+    """
+    emp_id = getattr(request, "grainrise_supplier_employee_id", None) or request.grainrise_miller_id
+    data = request.data or {}
+
+    acc_type = (data.get("type") or "gcash").strip().lower()
+    platform_name = (data.get("platform_name") or ("GCash" if acc_type == "gcash" else data.get("bank_name", "Bank"))).strip()
+    bank_name = (data.get("bank_name") or "").strip()
+    account_name = (data.get("account_name") or "").strip()
+    account_number = (data.get("account_number") or "").strip()
+    is_default = 1 if data.get("is_default") else 0
+
+    with connection.cursor() as cursor:
+        if is_default:
+            cursor.execute("UPDATE miller_employee_online_transaction_credentials SET is_default = 0 WHERE supplier_employee_id = %s", [emp_id])
+        cursor.execute(
+            """
+            UPDATE miller_employee_online_transaction_credentials
+            SET type = %s, platform_name = %s, bank_name = %s, account_name = %s,
+                account_number = CASE WHEN %s != '' THEN %s ELSE account_number END,
+                is_default = %s, updated_at = NOW()
+            WHERE credentials_id = %s AND supplier_employee_id = %s
+            """,
+            [acc_type, platform_name, bank_name, account_name, account_number, account_number, is_default, pk, emp_id],
+        )
+
+    return Response({"success": True, "message": "Payment account updated successfully."}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@miller_payment_security_user_required
+def my_payment_accounts_archive_view(request, pk):
+    """
+    POST /api/miller/payment-accounts/my-accounts/<pk>/archive/
+    """
+    emp_id = getattr(request, "grainrise_supplier_employee_id", None) or request.grainrise_miller_id
+    reason = (request.data.get("archive_reason") or "Archived by user").strip()
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE miller_employee_online_transaction_credentials
+            SET status = 'archived', archive_reason = %s, updated_at = NOW()
+            WHERE credentials_id = %s AND supplier_employee_id = %s
+            """,
+            [reason, pk, emp_id],
+        )
+
+    return Response({"success": True, "message": "Payment account archived successfully."}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@miller_payment_security_user_required
+def my_payment_accounts_restore_view(request, pk):
+    """
+    POST /api/miller/payment-accounts/my-accounts/<pk>/restore/
+    """
+    emp_id = getattr(request, "grainrise_supplier_employee_id", None) or request.grainrise_miller_id
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE miller_employee_online_transaction_credentials
+            SET status = 'active', archive_reason = NULL, updated_at = NOW()
+            WHERE credentials_id = %s AND supplier_employee_id = %s
+            """,
+            [pk, emp_id],
+        )
+
+    return Response({"success": True, "message": "Payment account restored successfully."}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@miller_payment_security_user_required
+def my_payment_accounts_verify_view(request, pk):
+    """
+    POST /api/miller/payment-accounts/my-accounts/<pk>/verify/
+    Marks an existing employee payment account as verified after client-side screening.
+    """
+    emp_id = getattr(request, "grainrise_supplier_employee_id", None) or request.grainrise_miller_id
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE miller_employee_online_transaction_credentials
+            SET verification_status = 'verified', updated_at = NOW()
+            WHERE credentials_id = %s AND supplier_employee_id = %s
+            """,
+            [pk, emp_id],
+        )
+
+    return Response({"success": True, "message": "Payment account verified successfully."}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@miller_payment_security_user_required
+def my_payment_accounts_reveal_view(request, pk):
+    """
+    POST /api/miller/payment-accounts/my-accounts/<pk>/reveal/
+    """
+    emp_id = getattr(request, "grainrise_supplier_employee_id", None) or request.grainrise_miller_id
+    password = request.data.get("password", "")
+
+    try:
+        verify_security_password(request.grainrise_miller_id, password, is_employee=getattr(request, "grainrise_is_employee", False))
+    except Exception as exc:
+        return Response({"success": False, "message": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT account_number
+            FROM miller_employee_online_transaction_credentials
+            WHERE credentials_id = %s AND supplier_employee_id = %s
+            LIMIT 1
+            """,
+            [pk, emp_id],
+        )
+        row = cursor.fetchone()
+
+    if not row:
+        return Response({"success": False, "message": "Account not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response({"success": True, "account_number": row[0]}, status=status.HTTP_200_OK)
+
 

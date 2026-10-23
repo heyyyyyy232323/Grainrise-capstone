@@ -367,7 +367,7 @@ function evaluatePhilippineIdOcr(rawText, userInfo, accountData, orientation = "
       orientation,
       managerDisplayName,
       diagnostics,
-      errorMessage: `The name detected on this ID does not match your registered manager name (${managerDisplayName}). Please provide your official Government ID.`,
+      errorMessage: `The name detected on this ID does not match your registered name (${managerDisplayName}). Please provide your official Government ID.`,
     };
   }
 
@@ -397,6 +397,9 @@ export default function FaceScreeningModal({
   accountData,
   userInfo,
   onAccountCreated,
+  title = "Manager Identity Screening",
+  endpoint = "/miller/payment-accounts/branches/",
+  onVerifyOnly,
 }) {
   const { request } = useApi();
 
@@ -902,14 +905,22 @@ export default function FaceScreeningModal({
     setIsSubmitting(true);
     setErrorMessage("");
     try {
-      const res = await request("/miller/payment-accounts/branches/", {
+      if (onVerifyOnly) {
+        await onVerifyOnly();
+        onClose();
+        return;
+      }
+
+      const postUrl = endpoint || "/miller/payment-accounts/branches/";
+      const postBody = { ...accountData, verification_status: "verified" };
+      const res = await request(postUrl, {
         method: "POST",
-        body: accountData,
+        body: postBody,
       });
 
-      if (res && res.success) {
+      if (res && (res.success || res.ok)) {
         if (onAccountCreated) {
-          onAccountCreated(res.data);
+          onAccountCreated(res.data || res);
         }
         onClose();
       } else {
@@ -946,7 +957,7 @@ export default function FaceScreeningModal({
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 tracking-tight">
-                Manager Identity Screening
+                {title}
               </h2>
             </div>
           </div>
@@ -993,20 +1004,27 @@ export default function FaceScreeningModal({
                 <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
                   <div>
                     <span className="text-slate-400">Type:</span>{" "}
-                    <b className="capitalize text-slate-800">{accountData?.account_type}</b>
+                    <b className="capitalize text-slate-800">
+                      {(accountData?.account_type || accountData?.type) === "bank"
+                        ? "Bank Account"
+                        : (accountData?.account_type || accountData?.type) === "gcash"
+                        ? "GCash"
+                        : accountData?.account_type || accountData?.type || "—"}
+                    </b>
                   </div>
                   <div>
                     <span className="text-slate-400">Account Name:</span>{" "}
-                    <b className="text-slate-800">{accountData?.account_name}</b>
+                    <b className="text-slate-800">{accountData?.account_name || "—"}</b>
                   </div>
                   <div className="col-span-2">
                     <span className="text-slate-400">Account Number:</span>{" "}
-                    <b className="font-mono text-slate-800">{accountData?.account_number}</b>
+                    <b className="font-mono text-slate-800">{accountData?.account_number || "—"}</b>
                   </div>
-                  {accountData?.bank_name && (
+                  {accountData?.bank_name && accountData.bank_name !== "—" && (
                     <div className="col-span-2">
                       <span className="text-slate-400">Bank:</span>{" "}
-                      <b className="text-slate-800">{accountData?.bank_name}</b> ({accountData?.card_type})
+                      <b className="text-slate-800">{accountData.bank_name}</b>
+                      {accountData.card_type ? ` (${accountData.card_type})` : ""}
                     </div>
                   )}
                 </div>

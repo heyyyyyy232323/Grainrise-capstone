@@ -51,5 +51,14 @@ urlpatterns = [
     path("employee-accounts/<int:pk>/reveal/", views.reveal_employee_account_number_view, name="miller_employee_accounts_alt_reveal"),
     path("employee-accounts/<int:pk>/archive/", views.archive_employee_account_view, name="miller_employee_accounts_alt_archive"),
     path("employee-accounts/<int:pk>/restore/", views.restore_employee_account_view, name="miller_employee_accounts_alt_restore"),
+
+    # Employee Personal Online Payment Accounts (Self-service for FLC / Driver / Staff)
+    path("my-accounts/", views.my_payment_accounts_list_view, name="miller_my_payment_accounts_list"),
+    path("my-accounts/create/", views.my_payment_accounts_create_view, name="miller_my_payment_accounts_create"),
+    path("my-accounts/<int:pk>/update/", views.my_payment_accounts_update_view, name="miller_my_payment_accounts_update"),
+    path("my-accounts/<int:pk>/archive/", views.my_payment_accounts_archive_view, name="miller_my_payment_accounts_archive"),
+    path("my-accounts/<int:pk>/restore/", views.my_payment_accounts_restore_view, name="miller_my_payment_accounts_restore"),
+    path("my-accounts/<int:pk>/verify/", views.my_payment_accounts_verify_view, name="miller_my_payment_accounts_verify"),
+    path("my-accounts/<int:pk>/reveal/", views.my_payment_accounts_reveal_view, name="miller_my_payment_accounts_reveal"),
 ]
 

@@ -9,6 +9,7 @@ export default function PaymentSecurityPasswordModal({
   description = "Enter your 12+ character payment security password to proceed.",
   confirmText = "Authorize",
   onAuthorize,
+  onConfirm,
   onForgotPassword,
 }) {
   const [password, setPassword] = useState("");
@@ -42,9 +43,10 @@ export default function PaymentSecurityPasswordModal({
 
     setIsLoading(true);
     setErrorMessage("");
+    const authorizeFn = onAuthorize || onConfirm;
     try {
-      if (onAuthorize) {
-        const result = await onAuthorize(password);
+      if (authorizeFn) {
+        const result = await authorizeFn(password);
         if (result && result.success === false) {
           setErrorMessage(result.error || result.message || "Invalid security password.");
           if (result.attempts_left !== undefined) {
