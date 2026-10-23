@@ -947,6 +947,11 @@ export const getUserSidebarConfig = (role = "admin") => {
               path: "/miller-driver/payment-submission",
             },
             {
+              label: "Online Payment Accounts",
+              icon: CreditCard,
+              path: "/miller-driver/payment-accounts",
+            },
+            {
               label: "Reimbursement",
               icon: Wallet,
               path: "/miller-driver/reimbursement",

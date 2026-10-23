@@ -206,6 +206,7 @@ import MillerDriverDashboard from "./Users/MillerAccounts/MillerDriver/MillerDri
 import MillerDriverMyDuties from "./Users/MillerAccounts/MillerDriver/MillerDriverMyDuties";
 import MillerDriverMessages from "./Users/MillerAccounts/MillerDriver/MillerDriverMessages";
 import MillerDriverPaymentSubmission from "./Users/MillerAccounts/MillerDriver/MillerDriverPaymentSubmission";
+import MillerDriverOnlinePaymentAccounts from "./Users/MillerAccounts/MillerDriver/MillerDriverOnlinePaymentAccounts";
 import MillerDriverReimbursement from "./Users/MillerAccounts/MillerDriver/MillerDriverReimbursement";
 import MillerDriverReimbursementHistory from "./Users/MillerAccounts/MillerDriver/MillerDriverReimbursementHistory";
 import MillerDriverAssignedHistory from "./Users/MillerAccounts/MillerDriver/MillerDriverAssignedHistory";
@@ -1004,6 +1005,11 @@ function App() {
             <Route
               path="/miller-driver/payment-submission"
               element={<MillerDriverPaymentSubmission />}
+            />
+
+            <Route
+              path="/miller-driver/payment-accounts"
+              element={<MillerDriverOnlinePaymentAccounts />}
             />
 
             <Route
