@@ -171,6 +171,7 @@ import MillerProductReturns from "./Users/MillerAccounts/MillerLogistics/MillerP
 import MillerReimbursement from "./Users/MillerAccounts/MillerLogistics/MillerReimbursement";
 import MillerReimbursementHistory from "./Users/MillerAccounts/MillerLogistics/MillerReimbursementHistory";
 import MillerLogisticsOnlinePaymentAccounts from "./Users/MillerAccounts/MillerLogistics/MillerLogisticsOnlinePaymentAccounts";
+import MillerVehicleAssigneeManagement from "./Users/MillerAccounts/MillerLogistics/MillerVehicleAssigneeManagement";
 
 
 // ============================================================
@@ -877,6 +878,11 @@ function App() {
             <Route
               path="/miller-logistics/delivery-management"
               element={<MillerDeliveryManagement />}
+            />
+
+            <Route
+              path="/miller-logistics/vehicle-assignee-management"
+              element={<MillerVehicleAssigneeManagement />}
             />
 
             <Route
