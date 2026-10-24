@@ -19,6 +19,8 @@ export default function RecentActivityCard({
   accentColor,
   showConnector = true,
 }) {
+  const visibleItems = items.slice(0, 5);
+
   return (
     <article
       className={`dark-readable-graph w-full overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.06)] ${className}`}
@@ -31,8 +33,8 @@ export default function RecentActivityCard({
 
       <div className="px-3 py-3 sm:px-4 sm:py-4">
         <div className="space-y-3">
-          {items.length > 0 ? (
-            items.map((item, index) => {
+          {visibleItems.length > 0 ? (
+            visibleItems.map((item, index) => {
               const toneColor = getItemColor(item, index, accentColor);
 
               return (
@@ -68,7 +70,7 @@ export default function RecentActivityCard({
                     </div>
                   </div>
 
-                  {showConnector && index < items.length - 1 ? (
+                  {showConnector && index < visibleItems.length - 1 ? (
                     <div className="ml-[13px] mt-2.5 h-5 border-l-2 border-emerald-700/70 sm:ml-[14px]" aria-hidden="true" />
                   ) : null}
                 </div>

@@ -95,47 +95,16 @@ const AnnouncementTable = ({
   return (
     <div
       className="
+        dark-readable-table
+        w-full
         overflow-hidden
-        rounded-xl
+        rounded-[14px]
         border
-        border-gray-200
+        border-slate-200
         bg-white
+        shadow-[0_6px_18px_rgba(15,23,42,0.06)]
       "
     >
-
-      {/* HEADER */}
-
-      <div
-        className="
-          border-b
-          border-gray-200
-          px-5
-          py-4
-        "
-      >
-        <h3
-          className="
-            text-sm
-            font-bold
-            text-gray-900
-          "
-        >
-          Announcement Records
-        </h3>
-
-        <p
-          className="
-            mt-1
-            text-xs
-            text-gray-500
-          "
-        >
-          View and manage published,
-          draft, and archived
-          announcements.
-        </p>
-      </div>
-
 
       {/* LOADING */}
 
@@ -162,9 +131,9 @@ const AnnouncementTable = ({
           <p
             className="
               mt-3
-              text-sm
+              text-[13px]
               font-semibold
-              text-gray-700
+              text-slate-700
             "
           >
             Loading announcements...
@@ -222,29 +191,25 @@ const AnnouncementTable = ({
             "
           >
             <table
-              className="
-                min-w-full
-                divide-y
-                divide-gray-200
-              "
+              className="w-full border-collapse text-[13px]"
             >
               <thead
                 className="
-                  bg-gray-50
+                  bg-[#EDEDED]
                 "
               >
                 <tr>
 
                   <th
                     className="
-                      px-5
+                      px-3
                       py-3
                       text-left
-                      text-xs
-                      font-semibold
-                      uppercase
-                      tracking-wide
-                      text-gray-500
+                      text-[11px]
+                      font-bold
+                      tracking-[0.03em]
+                      text-slate-600
+                      sm:px-4
                     "
                   >
                     Announcement
@@ -252,14 +217,14 @@ const AnnouncementTable = ({
 
                   <th
                     className="
-                      px-5
+                      px-3
                       py-3
                       text-left
-                      text-xs
-                      font-semibold
-                      uppercase
-                      tracking-wide
-                      text-gray-500
+                      text-[11px]
+                      font-bold
+                      tracking-[0.03em]
+                      text-slate-600
+                      sm:px-4
                     "
                   >
                     Audience
@@ -267,14 +232,14 @@ const AnnouncementTable = ({
 
                   <th
                     className="
-                      px-5
+                      px-3
                       py-3
                       text-left
-                      text-xs
-                      font-semibold
-                      uppercase
-                      tracking-wide
-                      text-gray-500
+                      text-[11px]
+                      font-bold
+                      tracking-[0.03em]
+                      text-slate-600
+                      sm:px-4
                     "
                   >
                     Status
@@ -282,14 +247,14 @@ const AnnouncementTable = ({
 
                   <th
                     className="
-                      px-5
+                      px-3
                       py-3
                       text-left
-                      text-xs
-                      font-semibold
-                      uppercase
-                      tracking-wide
-                      text-gray-500
+                      text-[11px]
+                      font-bold
+                      tracking-[0.03em]
+                      text-slate-600
+                      sm:px-4
                     "
                   >
                     Date Published
@@ -297,14 +262,14 @@ const AnnouncementTable = ({
 
                   <th
                     className="
-                      px-5
+                      px-3
                       py-3
                       text-right
-                      text-xs
-                      font-semibold
-                      uppercase
-                      tracking-wide
-                      text-gray-500
+                      text-[11px]
+                      font-bold
+                      tracking-[0.03em]
+                      text-slate-600
+                      sm:px-4
                     "
                   >
                     Actions
@@ -315,8 +280,6 @@ const AnnouncementTable = ({
 
               <tbody
                 className="
-                  divide-y
-                  divide-gray-100
                   bg-white
                 "
               >
@@ -353,8 +316,9 @@ const AnnouncementTable = ({
                           announcement?.announcement_id
                         }
                         className="
+                          border-b border-slate-100
                           transition
-                          hover:bg-gray-50
+                          hover:bg-slate-50/70
                         "
                       >
 
@@ -362,9 +326,10 @@ const AnnouncementTable = ({
 
                         <td
                           className="
-                            px-5
-                            py-4
+                            px-3
+                            py-3
                             align-top
+                            sm:px-4
                           "
                         >
                           <div
@@ -375,9 +340,9 @@ const AnnouncementTable = ({
                             <p
                               className="
                                 line-clamp-2
-                                text-sm
+                                text-[13px]
                                 font-semibold
-                                text-gray-900
+                                text-slate-900
                               "
                             >
                               {announcement?.title ||
@@ -387,8 +352,8 @@ const AnnouncementTable = ({
                             <p
                               className="
                                 mt-1
-                                text-xs
-                                text-gray-400
+                                text-[11px]
+                                text-slate-400
                               "
                             >
                               ID:{" "}
@@ -403,9 +368,10 @@ const AnnouncementTable = ({
 
                         <td
                           className="
-                            px-5
-                            py-4
+                            px-3
+                            py-3
                             align-top
+                            sm:px-4
                           "
                         >
                           <span
@@ -433,9 +399,10 @@ const AnnouncementTable = ({
 
                         <td
                           className="
-                            px-5
-                            py-4
+                            px-3
+                            py-3
                             align-top
+                            sm:px-4
                           "
                         >
                           <span
@@ -463,11 +430,12 @@ const AnnouncementTable = ({
 
                         <td
                           className="
-                            px-5
-                            py-4
+                            px-3
+                            py-3
                             align-top
-                            text-sm
-                            text-gray-600
+                            text-[13px]
+                            text-slate-600
+                            sm:px-4
                           "
                         >
                           {status === "draft"
@@ -482,9 +450,10 @@ const AnnouncementTable = ({
 
                         <td
                           className="
-                            px-5
-                            py-4
+                            px-3
+                            py-3
                             align-top
+                            sm:px-4
                           "
                         >
                           <div
@@ -492,7 +461,7 @@ const AnnouncementTable = ({
                               flex
                               items-center
                               justify-end
-                              gap-2
+                              gap-1.5
                             "
                           >
 
@@ -508,8 +477,8 @@ const AnnouncementTable = ({
                               title="View"
                               className="
                                 flex
-                                h-9
-                                w-9
+                                h-8
+                                w-8
                                 items-center
                                 justify-center
                                 rounded-lg
@@ -523,7 +492,7 @@ const AnnouncementTable = ({
                               "
                             >
                               <Eye
-                                size={16}
+                                size={14}
                               />
                             </button>
 
@@ -541,8 +510,8 @@ const AnnouncementTable = ({
                                 title="Edit"
                                 className="
                                   flex
-                                  h-9
-                                  w-9
+                                  h-8
+                                  w-8
                                   items-center
                                   justify-center
                                   rounded-lg
@@ -555,7 +524,7 @@ const AnnouncementTable = ({
                                 "
                               >
                                 <FileEdit
-                                  size={16}
+                                  size={14}
                                 />
                               </button>
                             )}
@@ -575,8 +544,8 @@ const AnnouncementTable = ({
                                 aria-label="Archive Announcement"
                                 className="
                                   flex
-                                  h-9
-                                  w-9
+                                  h-8
+                                  w-8
                                   items-center
                                   justify-center
                                   rounded-lg
@@ -590,7 +559,7 @@ const AnnouncementTable = ({
                                 "
                               >
                                 <Archive
-                                  size={16}
+                                  size={14}
                                 />
                               </button>
                             )}
@@ -610,8 +579,8 @@ const AnnouncementTable = ({
                                 aria-label="Reactivate Announcement"
                                 className="
                                   flex
-                                  h-9
-                                  w-9
+                                  h-8
+                                  w-8
                                   items-center
                                   justify-center
                                   rounded-lg
@@ -624,7 +593,7 @@ const AnnouncementTable = ({
                                 "
                               >
                                 <RotateCcw
-                                  size={16}
+                                  size={14}
                                 />
                               </button>
                             )}
@@ -644,8 +613,8 @@ const AnnouncementTable = ({
                                 aria-label="Delete Announcement"
                                 className="
                                   flex
-                                  h-9
-                                  w-9
+                                  h-8
+                                  w-8
                                   items-center
                                   justify-center
                                   rounded-lg
@@ -659,7 +628,7 @@ const AnnouncementTable = ({
                                 "
                               >
                                 <Trash2
-                                  size={16}
+                                  size={14}
                                 />
                               </button>
                             )}

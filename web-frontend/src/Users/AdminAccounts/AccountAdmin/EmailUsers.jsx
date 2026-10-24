@@ -30,6 +30,7 @@ import {
 
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import RichTextEditor from "../../../Components/Minor-Components/RichTextEditor";
+import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import Toast from "../../../Components/Modals/Toast";
 
 import SentEmailDetailsModal from "../../../Components/Modals/SentEmailDetailsModal";
@@ -43,6 +44,7 @@ import useEmailUsers from "../../../Components/hooks/AccountAdmin/useEmailUsers"
 // ============================================================
 
 const MAX_MESSAGE_LENGTH = 1000;
+const RECEIVED_MESSAGES_PAGE_SIZE = 10;
 
 
 const RECIPIENT_OPTIONS = [
@@ -452,6 +454,7 @@ export default function EmailUsers() {
   const [receivedSearch, setReceivedSearch] = useState("");
   const [receivedCategoryFilter, setReceivedCategoryFilter] = useState("all");
   const [receivedStatusFilter, setReceivedStatusFilter] = useState("all");
+  const [receivedPage, setReceivedPage] = useState(1);
   const [selectedReceivedMessage, setSelectedReceivedMessage] = useState(null);
   const [isReceivedDetailsOpen, setIsReceivedDetailsOpen] = useState(false);
 
@@ -487,6 +490,27 @@ export default function EmailUsers() {
       return true;
     });
   }, [receivedMessages, receivedSearch, receivedCategoryFilter, receivedStatusFilter]);
+
+  const receivedTotalPages = Math.max(
+    1,
+    Math.ceil(filteredReceivedMessages.length / RECEIVED_MESSAGES_PAGE_SIZE)
+  );
+
+  const paginatedReceivedMessages = useMemo(() => {
+    const startIndex = (receivedPage - 1) * RECEIVED_MESSAGES_PAGE_SIZE;
+    return filteredReceivedMessages.slice(
+      startIndex,
+      startIndex + RECEIVED_MESSAGES_PAGE_SIZE
+    );
+  }, [filteredReceivedMessages, receivedPage]);
+
+  useEffect(() => {
+    setReceivedPage(1);
+  }, [receivedSearch, receivedCategoryFilter, receivedStatusFilter]);
+
+  useEffect(() => {
+    setReceivedPage((currentPage) => Math.min(currentPage, receivedTotalPages));
+  }, [receivedTotalPages]);
 
   const handleOpenReceivedDetails = async (msg) => {
     setSelectedReceivedMessage(msg);
@@ -2470,231 +2494,212 @@ export default function EmailUsers() {
       ===================================================== */}
 
       {activeTab === "received" && (
-        <div className="w-full rounded-[14px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.06)] overflow-hidden">
-          {/* Header & Controls */}
-          <div className="p-5 border-b border-gray-100 bg-slate-50/60">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                  <span>Received Support Inquiries</span>
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-200/80 text-slate-700">
-                    {filteredReceivedMessages.length} total
-                  </span>
-                  {unreadReceivedCount > 0 && (
-                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-red-100 text-red-700">
-                      {unreadReceivedCount} unread
-                    </span>
-                  )}
-                </h2>
-                <p className="text-xs text-gray-500 mt-1">
-                  Customer concerns and technical support requests submitted through &ldquo;How Can We Help?&rdquo;.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => refreshReceivedMessages()}
-                disabled={isLoadingReceived}
-                className="inline-flex items-center gap-1.5 self-start sm:self-auto px-3.5 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                <RotateCw size={13} className={isLoadingReceived ? "animate-spin" : ""} />
-                <span>Refresh</span>
-              </button>
-            </div>
-
-            {/* Filter Bar */}
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Search */}
-              <div className="relative">
-                <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <div className="w-full">
+          <div className="mb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[220px] max-w-xs flex-1">
+                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
                   value={receivedSearch}
                   onChange={(e) => setReceivedSearch(e.target.value)}
                   placeholder="Search sender, subject, reference..."
-                  className="w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="h-[38px] w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 placeholder-gray-400 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                 />
               </div>
 
-              {/* Category Filter */}
-              <div>
-                <select
-                  value={receivedCategoryFilter}
-                  onChange={(e) => setReceivedCategoryFilter(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                >
-                  <option value="all">All Concern Categories</option>
-                  <option value="Technical Issue">Technical Issue</option>
-                  <option value="Account Access & Security">Account Access & Security</option>
-                  <option value="Order & Transaction Problem">Order & Transaction Problem</option>
-                  <option value="Registration / Verification">Registration / Verification</option>
-                  <option value="Inventory & Warehouse Sync">Inventory & Warehouse Sync</option>
-                  <option value="Billing & Payments">Billing & Payments</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
+              <select
+                value={receivedCategoryFilter}
+                onChange={(e) => setReceivedCategoryFilter(e.target.value)}
+                className="h-[38px] w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 outline-none transition-colors hover:bg-gray-50 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 sm:w-auto"
+              >
+                <option value="all">All Concern Categories</option>
+                <option value="Technical Issue">Technical Issue</option>
+                <option value="Account Access & Security">Account Access & Security</option>
+                <option value="Order & Transaction Problem">Order & Transaction Problem</option>
+                <option value="Registration / Verification">Registration / Verification</option>
+                <option value="Inventory & Warehouse Sync">Inventory & Warehouse Sync</option>
+                <option value="Billing & Payments">Billing & Payments</option>
+                <option value="Other">Other</option>
+              </select>
 
-              {/* Status Filter */}
-              <div>
-                <select
-                  value={receivedStatusFilter}
-                  onChange={(e) => setReceivedStatusFilter(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                >
-                  <option value="all">All Statuses (Unread, Read, Replied)</option>
-                  <option value="unread">Unread</option>
-                  <option value="read">Read</option>
-                  <option value="replied">Replied</option>
-                </select>
-              </div>
+              <select
+                value={receivedStatusFilter}
+                onChange={(e) => setReceivedStatusFilter(e.target.value)}
+                className="h-[38px] w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 outline-none transition-colors hover:bg-gray-50 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 sm:w-auto"
+              >
+                <option value="all">All Statuses (Unread, Read, Replied)</option>
+                <option value="unread">Unread</option>
+                <option value="read">Read</option>
+                <option value="replied">Replied</option>
+              </select>
+
+              <button
+                type="button"
+                onClick={() => refreshReceivedMessages()}
+                disabled={isLoadingReceived}
+                className="inline-flex h-[38px] items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+              >
+                <RotateCw size={13} className={isLoadingReceived ? "animate-spin" : ""} />
+                <span>Refresh</span>
+              </button>
             </div>
           </div>
 
-          {/* Table Container */}
           {isLoadingReceived ? (
-            <div className="py-16 text-center">
+            <div className="rounded-[14px] border border-slate-200 bg-white py-16 text-center shadow-[0_6px_18px_rgba(15,23,42,0.06)]">
               <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-gray-200 border-t-emerald-600" />
               <p className="mt-3 text-xs text-gray-500">Loading received support inquiries...</p>
             </div>
-          ) : filteredReceivedMessages.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-gray-50/80 border-b border-gray-200 text-gray-500 uppercase tracking-wider font-semibold">
-                  <tr>
-                    <th scope="col" className="px-4 py-3">Sender</th>
-                    <th scope="col" className="px-4 py-3">Category & Ref</th>
-                    <th scope="col" className="px-4 py-3">Subject & Preview</th>
-                    <th scope="col" className="px-4 py-3 text-center">Status</th>
-                    <th scope="col" className="px-4 py-3">Date Received</th>
-                    <th scope="col" className="px-4 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredReceivedMessages.map((msg) => {
-                    const id = msg.id || msg.support_id;
-                    const isRead = Boolean(msg.is_read);
-                    const status = String(msg.status || (isRead ? "read" : "unread")).toLowerCase();
-
-                    return (
-                      <tr
-                        key={id}
-                        className={`transition-colors hover:bg-slate-50/70 cursor-pointer ${
-                          status === "unread" ? "bg-red-50/20 font-medium" : ""
-                        }`}
-                        onClick={() => handleOpenReceivedDetails(msg)}
-                      >
-                        {/* 1. Sender */}
-                        <td className="px-4 py-3">
-                          <div className="font-semibold text-gray-900">{msg.full_name}</div>
-                          <div className="text-gray-500 text-[11px]">{msg.email}</div>
-                          {msg.user_role && (
-                            <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-gray-100 text-gray-600 text-[10px]">
-                              {msg.user_role}
-                            </span>
-                          )}
-                        </td>
-
-                        {/* 2. Category & Ref */}
-                        <td className="px-4 py-3">
-                          <span className="inline-block px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium text-[11px]">
-                            {msg.concern_category}
-                          </span>
-                          {msg.reference_id && (
-                            <div className="text-[11px] text-gray-500 mt-1 flex items-center gap-1 font-mono">
-                              <Hash size={10} className="text-gray-400" />
-                              {msg.reference_id}
-                            </div>
-                          )}
-                        </td>
-
-                        {/* 3. Subject & Preview */}
-                        <td className="px-4 py-3 max-w-xs">
-                          <div className={`truncate ${status === "unread" ? "font-bold text-gray-900" : "text-gray-800"}`}>
-                            {msg.subject}
-                          </div>
-                          <div className="truncate text-gray-500 text-[11px] mt-0.5">
-                            {msg.description}
-                          </div>
-                        </td>
-
-                        {/* 4. Status (NOT in first column) */}
-                        <td className="px-4 py-3 text-center whitespace-nowrap">
-                          {status === "replied" && (
-                            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border border-emerald-200 bg-emerald-50 text-emerald-700">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                              Replied
-                            </span>
-                          )}
-                          {status === "read" && (
-                            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium border border-slate-200 bg-slate-100 text-slate-700">
-                              <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                              Read
-                            </span>
-                          )}
-                          {status === "unread" && (
-                            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold border border-red-200 bg-red-50 text-red-700">
-                              <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                              Unread
-                            </span>
-                          )}
-                        </td>
-
-                        {/* 5. Date Received */}
-                        <td className="px-4 py-3 whitespace-nowrap text-gray-500 text-[11px]">
-                          {new Date(msg.created_at).toLocaleString("en-PH", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          })}
-                        </td>
-
-                        {/* 6. Actions */}
-                        <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenReceivedDetails(msg)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-md transition-colors"
-                            >
-                              <Eye size={12} />
-                              <span>View</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleReplyToSupport(msg)}
-                              title="Reply to this user"
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
-                            >
-                              <Send size={12} />
-                              <span>Reply</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
           ) : (
-            <div className="py-16 px-4 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-3">
-                <Inbox size={22} />
-              </div>
-              <h3 className="text-sm font-semibold text-gray-900">
-                {receivedSearch.trim() || receivedCategoryFilter !== "all" || receivedReadFilter !== "all"
+            <SectionedTableCard
+              columns={[
+                {
+                  key: "sender",
+                  label: "Sender",
+                  renderCell: (msg) => (
+                    <>
+                      <div className="font-semibold text-gray-900">{msg.full_name}</div>
+                      <div className="text-[11px] text-gray-500">{msg.email}</div>
+                      {msg.user_role && (
+                        <span className="mt-0.5 inline-block rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
+                          {msg.user_role}
+                        </span>
+                      )}
+                    </>
+                  ),
+                },
+                {
+                  key: "category",
+                  label: "Category & Ref",
+                  renderCell: (msg) => (
+                    <>
+                      <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                        {msg.concern_category}
+                      </span>
+                      {msg.reference_id && (
+                        <div className="mt-1 flex items-center gap-1 font-mono text-[11px] text-gray-500">
+                          <Hash size={10} className="text-gray-400" />
+                          {msg.reference_id}
+                        </div>
+                      )}
+                    </>
+                  ),
+                },
+                {
+                  key: "subject",
+                  label: "Subject & Preview",
+                  renderCell: (msg) => {
+                    const status = String(msg.status || (msg.is_read ? "read" : "unread")).toLowerCase();
+                    return (
+                      <div className="max-w-xs">
+                        <div className={`truncate ${status === "unread" ? "font-bold text-gray-900" : "text-gray-800"}`}>
+                          {msg.subject}
+                        </div>
+                        <div className="mt-0.5 truncate text-[11px] text-gray-500">{msg.description}</div>
+                      </div>
+                    );
+                  },
+                },
+                {
+                  key: "status",
+                  label: "Status",
+                  cellClassName: "text-center",
+                  renderCell: (msg) => {
+                    const status = String(msg.status || (msg.is_read ? "read" : "unread")).toLowerCase();
+                    const statusStyles = {
+                      replied: "border-emerald-200 bg-emerald-50 text-emerald-700",
+                      read: "border-slate-200 bg-slate-100 text-slate-700",
+                      unread: "border-red-200 bg-red-50 text-red-700",
+                    };
+                    const dotStyles = {
+                      replied: "bg-emerald-500",
+                      read: "bg-slate-400",
+                      unread: "bg-red-500",
+                    };
+                    return (
+                      <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusStyles[status] || statusStyles.read}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${dotStyles[status] || dotStyles.read}`} />
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </span>
+                    );
+                  },
+                },
+                {
+                  key: "created_at",
+                  label: "Date Received",
+                  renderCell: (msg) => (
+                    <span className="whitespace-nowrap text-[11px] text-gray-500">
+                      {new Date(msg.created_at).toLocaleString("en-PH", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </span>
+                  ),
+                },
+                {
+                  key: "action",
+                  label: "Actions",
+                  cellClassName: "text-right",
+                  renderCell: (msg) => (
+                    <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenReceivedDetails(msg)}
+                        className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+                      >
+                        <Eye size={12} />
+                        <span>View</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleReplyToSupport(msg)}
+                        title="Reply to this user"
+                        className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200"
+                      >
+                        <Send size={12} />
+                        <span>Reply</span>
+                      </button>
+                    </div>
+                  ),
+                },
+              ]}
+              sections={[
+                {
+                  rows: paginatedReceivedMessages,
+                },
+              ]}
+              currentPage={receivedPage}
+              totalPages={receivedTotalPages}
+              onPageChange={setReceivedPage}
+              footerLabel={`Showing ${
+                filteredReceivedMessages.length === 0
+                  ? 0
+                  : (receivedPage - 1) * RECEIVED_MESSAGES_PAGE_SIZE + 1
+              }-${Math.min(
+                receivedPage * RECEIVED_MESSAGES_PAGE_SIZE,
+                filteredReceivedMessages.length
+              )} of ${filteredReceivedMessages.length} inquiries`}
+              onRowClick={handleOpenReceivedDetails}
+              rowClassName={(msg) => {
+                const status = String(msg.status || (msg.is_read ? "read" : "unread")).toLowerCase();
+                return status === "unread" ? "bg-red-50/20 font-medium" : "";
+              }}
+              emptyStateTitle={
+                receivedSearch.trim() || receivedCategoryFilter !== "all" || receivedStatusFilter !== "all"
                   ? "No matching inquiries found"
-                  : "No support inquiries yet"}
-              </h3>
-              <p className="text-xs text-gray-500 max-w-sm mx-auto mt-1">
-                {receivedSearch.trim() || receivedCategoryFilter !== "all" || receivedReadFilter !== "all"
+                  : "No support inquiries yet"
+              }
+              emptyStateDescription={
+                receivedSearch.trim() || receivedCategoryFilter !== "all" || receivedStatusFilter !== "all"
                   ? "Try adjusting your search terms or filters to find what you are looking for."
-                  : "When users submit concerns via the Contact Support form, they will be listed here."}
-              </p>
-            </div>
+                  : "When users submit concerns via the Contact Support form, they will be listed here."
+              }
+            />
           )}
         </div>
       )}

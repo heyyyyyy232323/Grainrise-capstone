@@ -11,8 +11,6 @@ import {
 
 import {
   Archive,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   FileText,
   Loader2,
@@ -25,6 +23,7 @@ import {
 } from "lucide-react";
 
 import AnnouncementTable from "../../../../Components/Major-Components/AnnouncementTable";
+import PaginationControls from "../../../../Components/Minor-Components/PaginationControls";
 import Toast from "../../../../Components/Modals/Toast";
 
 import ViewAnnouncementModal from "../../../../Components/Modals/AdminModals/ViewAnnouncementModal";
@@ -763,10 +762,10 @@ const AnnouncementManagement = () => {
       {/* =====================================================
           CONTROLS
       ====================================================== */}
-      <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {/* SEARCH */}
-          <div className="relative min-w-56 flex-1 max-w-md">
+          <div className="relative min-w-[220px] max-w-md flex-1">
             <Search
               size={16}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -776,7 +775,7 @@ const AnnouncementManagement = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search announcements..."
-              className="h-10 w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+              className="h-[38px] w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
             />
           </div>
 
@@ -784,7 +783,7 @@ const AnnouncementManagement = () => {
           <select
             value={audience}
             onChange={(e) => setAudience(e.target.value)}
-            className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 outline-none transition focus:border-[#08511f]"
+            className="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 outline-none transition hover:bg-gray-50 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
           >
             <option value="">All Audiences</option>
             <option value="all">General (All)</option>
@@ -797,7 +796,7 @@ const AnnouncementManagement = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 outline-none transition focus:border-[#08511f]"
+            className="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 outline-none transition hover:bg-gray-50 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
           >
             <option value="">All Statuses</option>
             <option value="active">Active</option>
@@ -811,7 +810,7 @@ const AnnouncementManagement = () => {
           type="button"
           onClick={handleRefresh}
           disabled={isAnnouncementsLoading || isCountsLoading}
-          className="flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+          className="flex h-[38px] items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
         >
           <RefreshCcw
             size={15}
@@ -847,48 +846,18 @@ const AnnouncementManagement = () => {
       {/* =====================================================
           PAGINATION
       ====================================================== */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-1">
-        <p className="text-xs text-gray-500">
-          Showing <strong>{adminAnnouncements.length}</strong> of{" "}
-          <strong>{announcementPagination?.total || 0}</strong> announcement(s)
-        </p>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled={page <= 1 || isAnnouncementsLoading}
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
-            className="flex h-9 items-center justify-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <ChevronLeft size={16} />
-            Previous
-          </button>
-
-          <span className="min-w-24 text-center text-sm text-gray-600">
-            Page <strong>{page}</strong> of <strong>{totalPages}</strong>
-          </span>
-
-          <button
-            type="button"
-            disabled={page >= totalPages || isAnnouncementsLoading}
-            onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-            className="flex h-9 items-center justify-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Next
-            <ChevronRight size={16} />
-          </button>
-
-          <select
-            value={pageSize}
-            onChange={(e) => setPageSize(Number(e.target.value))}
-            className="h-9 rounded-lg border border-gray-300 bg-white px-2 text-sm text-gray-700"
-          >
-            <option value={10}>10 / page</option>
-            <option value={20}>20 / page</option>
-            <option value={50}>50 / page</option>
-          </select>
-        </div>
-      </div>
+      <PaginationControls
+        currentPage={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        pageLabel={`Showing ${adminAnnouncements.length} of ${
+          announcementPagination?.total || 0
+        } announcement${(announcementPagination?.total || 0) === 1 ? "" : "s"}`}
+        pageSize={pageSize}
+        pageSizeOptions={[10, 20, 50]}
+        onPageSizeChange={setPageSize}
+        disabled={isAnnouncementsLoading}
+      />
 
       {/* =====================================================
           MODALS

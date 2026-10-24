@@ -294,43 +294,37 @@ const AnnouncementPublication = () => {
 
   return (
     <>
-      {/* PAGE HEADER */}
-      <div className="mb-6 flex flex-col gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Create Announcement</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Write an announcement manually or use the latest climate forecast to prepare an article draft.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          <button
-            type="button"
-            id="use-existing-draft-btn"
-            onClick={handleOpenDrafts}
-            className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-gray-900"
-          >
-            <FileText size={16} className="text-gray-500" />
-            Use Existing Draft
-          </button>
-
-          <button
-            type="button"
-            id="climate-forecast-btn"
-            onClick={handleOpenClimate}
-            disabled={loadingForecast}
-            className="flex h-10 items-center gap-2 rounded-lg bg-[#005928] px-4 text-sm font-medium text-white shadow-sm transition hover:bg-[#004720] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Sparkles size={16} />
-            {loadingForecast ? "Getting Forecast..." : "Get Climate Forecast & Generate with AI"}
-          </button>
-        </div>
-      </div>
-
       {/* ANNOUNCEMENT DETAILS */}
       <section className="mb-5 rounded-xl border border-gray-200/90 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-        <h2 className="text-sm font-bold text-gray-900">Announcement Details</h2>
-        <p className="mt-0.5 text-xs text-gray-400">Set the title and intended audience for this announcement.</p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-gray-900">Announcement Details</h2>
+            <p className="mt-0.5 text-xs text-gray-400">Set the title and intended audience for this announcement.</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              id="use-existing-draft-btn"
+              onClick={handleOpenDrafts}
+              className="flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-gray-900"
+            >
+              <FileText size={14} className="text-gray-500" />
+              Use Existing Draft
+            </button>
+
+            <button
+              type="button"
+              id="climate-forecast-btn"
+              onClick={handleOpenClimate}
+              disabled={loadingForecast}
+              className="flex h-9 items-center gap-1.5 rounded-lg bg-[#005928] px-3 text-xs font-medium text-white shadow-sm transition hover:bg-[#004720] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Sparkles size={14} />
+              {loadingForecast ? "Getting Forecast..." : "Get Climate Forecast & Generate with AI"}
+            </button>
+          </div>
+        </div>
 
         <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">
           <div>
