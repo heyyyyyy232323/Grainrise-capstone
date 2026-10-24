@@ -18,5 +18,16 @@ urlpatterns = [
         name="flc-delivery-order-assign",
     ),
     path("driver-capacities/", views.flc_driver_capacities_view, name="flc-driver-capacities-list"),
+    path("product-returns/", views.flc_product_returns_view, name="flc-product-returns-list"),
+    path(
+        "product-returns/variants/",
+        views.flc_return_variants_view,
+        name="flc-return-variants-list",
+    ),
+    path(
+        "product-returns/<int:return_id>/process/",
+        views.flc_process_return_view,
+        name="flc-process-return",
+    ),
 ]
 

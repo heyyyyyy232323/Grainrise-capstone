@@ -531,7 +531,10 @@ def list_flc_delivery_orders(
             -- Payment
             mop.payment_method,
             mop.status AS payment_status,
-            mop.payment_reference
+            mop.payment_reference,
+            -- Approved Return Replacement (if this is an approved return replacement order)
+            mor_app.return_id AS approved_return_id,
+            mor_app.quantity AS approved_return_quantity
         FROM miller_online_customer moc
         LEFT JOIN miller_products mp
             ON mp.product_id = moc.miller_product_id
@@ -541,6 +544,12 @@ def list_flc_delivery_orders(
             ON wp.warehouse_profile_id = moc.warehouse_buyer_id
         LEFT JOIN miller_online_orders_payment mop
             ON mop.online_order_id = moc.online_order_id
+        LEFT JOIN (
+            SELECT online_order_id, MAX(return_id) AS return_id, SUM(quantity) AS quantity
+            FROM miller_online_orders_returns
+            WHERE status = 'Approved'
+            GROUP BY online_order_id
+        ) mor_app ON mor_app.online_order_id = moc.online_order_id
         WHERE {where_sql}
         {order_by_sql}
     """
@@ -569,7 +578,11 @@ def list_flc_delivery_orders(
         if not clean_addr:
             clean_addr = "Address not specified"
 
-        qty = float(r[2]) if r[2] is not None else 0.0
+        original_qty = float(r[2]) if r[2] is not None else 0.0
+        has_approved_return = r[35] is not None
+        # Per specification: Replacement quantity displayed and assigned = approved return quantity itself
+        effective_qty = float(r[36]) if (has_approved_return and r[36] is not None) else original_qty
+
         fare = float(r[3]) if r[3] is not None else 0.0
         total = float(r[4]) if r[4] is not None else 0.0
         unit_cost = float(r[13]) if r[13] is not None else 0.0
@@ -580,8 +593,11 @@ def list_flc_delivery_orders(
                 "id": r[0],
                 "batch_no": r[1],
                 "batch": r[1],
-                "ordered_quantity": qty,
-                "ordered_quantity_formatted": f"{qty:,.0f} kg" if qty.is_integer() else f"{qty:,.2f} kg",
+                "ordered_quantity": effective_qty,
+                "original_ordered_quantity": original_qty,
+                "is_replacement": has_approved_return,
+                "approved_return_id": r[35],
+                "ordered_quantity_formatted": f"{effective_qty:,.0f} kg" if effective_qty.is_integer() else f"{effective_qty:,.2f} kg",
                 "fare_fee": fare,
                 "fare_fee_formatted": f"₱{fare:,.2f}",
                 "total_price": total,
@@ -613,7 +629,12 @@ def list_flc_delivery_orders(
 
 def list_flc_drivers_with_capacity(supplier_profile_id):
     """
-    List active drivers for the branch with live capacity calculation.
+    List active drivers for the branch with live capacity calculation:
+    - active driver in supplier_employees (position='driver', status='active')
+    - active vehicle assignment in miller_vehicle_assignee (status='active')
+    - vehicle status and max capacity in miller_delivery_vehicle_management
+    - total pending load = sum of effective delivery quantities from miller_driver_assignment where status = 'Pending'
+    - remaining capacity = vehicle capacity - total pending load
     """
     sql = """
         SELECT
@@ -633,10 +654,22 @@ def list_flc_drivers_with_capacity(supplier_profile_id):
             v.type AS vehicle_type,
             v.capacity AS vehicle_capacity_str,
             v.status AS vehicle_status,
-            -- Pending load calculation
+            -- Pending load calculation (using replacement return quantity if approved return replacement)
             COALESCE(
                 (
-                    SELECT SUM(moc.ordered_quantity)
+                    SELECT SUM(
+                        COALESCE(
+                            (
+                                SELECT mor.quantity
+                                FROM miller_online_orders_returns mor
+                                WHERE mor.online_order_id = mda.online_order_id
+                                  AND mor.status = 'Approved'
+                                ORDER BY mor.return_id DESC
+                                LIMIT 1
+                            ),
+                            moc.ordered_quantity
+                        )
+                    )
                     FROM miller_driver_assignment mda
                     INNER JOIN miller_online_customer moc
                         ON moc.online_order_id = mda.online_order_id
@@ -712,4 +745,275 @@ def list_flc_drivers_with_capacity(supplier_profile_id):
         )
 
     return drivers
+
+
+def list_flc_product_returns(
+    supplier_profile_id,
+    search=None,
+    variant_filter=None,
+    start_date=None,
+    end_date=None,
+    sort_by=None,
+):
+    """
+    Retrieve product return requests scoped to the authenticated branch.
+    Only returns with status = 'Pending' are displayed per specification.
+    """
+    params = [supplier_profile_id]
+    where_clauses = [
+        "mor.supplier_profile_id = %s",
+        "mor.status = 'Pending'",
+    ]
+
+    if variant_filter and variant_filter != "all":
+        where_clauses.append("LOWER(TRIM(mp.product_name)) = LOWER(TRIM(%s))")
+        params.append(variant_filter)
+
+    if start_date:
+        where_clauses.append("DATE(mor.created_at) >= %s")
+        params.append(start_date)
+
+    if end_date:
+        where_clauses.append("DATE(mor.created_at) <= %s")
+        params.append(end_date)
+
+    if search:
+        search_like = f"%{search.strip()}%"
+        where_clauses.append(
+            """(
+                mor.return_reference_no LIKE %s
+                OR mor.receiving_reference_no LIKE %s
+                OR moc.batch_no LIKE %s
+                OR mp.product_name LIKE %s
+                OR mp.product_code LIKE %s
+                OR u.first_name LIKE %s
+                OR u.last_name LIKE %s
+                OR wp.business_name LIKE %s
+            )"""
+        )
+        params.extend([search_like] * 8)
+
+    where_sql = " AND ".join(where_clauses)
+
+    order_by_sql = "ORDER BY mor.created_at DESC, mor.return_id DESC"
+    if sort_by == "variant-asc":
+        order_by_sql = "ORDER BY mp.product_name ASC, mor.return_id DESC"
+    elif sort_by == "variant-desc":
+        order_by_sql = "ORDER BY mp.product_name DESC, mor.return_id DESC"
+    elif sort_by == "batch-asc":
+        order_by_sql = "ORDER BY moc.batch_no ASC, mor.return_id DESC"
+    elif sort_by == "batch-desc":
+        order_by_sql = "ORDER BY moc.batch_no DESC, mor.return_id DESC"
+    elif sort_by == "qty-desc":
+        order_by_sql = "ORDER BY mor.quantity DESC, mor.return_id DESC"
+    elif sort_by == "qty-asc":
+        order_by_sql = "ORDER BY mor.quantity ASC, mor.return_id DESC"
+    elif sort_by == "cost-desc":
+        order_by_sql = "ORDER BY (mor.quantity * COALESCE(mp.unit_cost, 0.0)) DESC, mor.return_id DESC"
+    elif sort_by == "cost-asc":
+        order_by_sql = "ORDER BY (mor.quantity * COALESCE(mp.unit_cost, 0.0)) ASC, mor.return_id DESC"
+
+    sql = f"""
+        SELECT
+            mor.return_id,
+            mor.return_reference_no,
+            mor.receiving_reference_no,
+            mor.quantity AS return_quantity,
+            mor.reason AS return_reason,
+            mor.proof AS return_proof,
+            mor.status AS return_status,
+            mor.created_at AS return_created_at,
+            -- Original Online Order
+            moc.online_order_id,
+            moc.batch_no,
+            moc.ordered_quantity,
+            moc.fare_fee,
+            moc.total_price,
+            moc.expected_arrival_date,
+            moc.status AS order_status,
+            -- Product
+            mp.product_id,
+            mp.product_name,
+            mp.product_code,
+            mp.unit_cost,
+            mp.stock_quantity AS product_stock,
+            -- Buyer info (Retailer or Warehouse)
+            mor.retailer_buyer_id,
+            mor.warehouse_buyer_id,
+            u.first_name AS ret_first,
+            u.middle_initial AS ret_mi,
+            u.last_name AS ret_last,
+            u.suffix AS ret_suffix,
+            u.contact_number AS ret_contact,
+            u.email AS ret_email,
+            u.province AS ret_prov,
+            u.municipality AS ret_muni,
+            u.barangay AS ret_brgy,
+            u.street_address AS ret_street,
+            wp.business_name AS wh_name,
+            wp.organization_name AS wh_org,
+            wp.official_contact_number AS wh_contact,
+            wp.official_email AS wh_email,
+            wp.province AS wh_prov,
+            wp.municipality AS wh_muni,
+            wp.barangay AS wh_brgy,
+            wp.street_address AS wh_street,
+            -- Delivered By Driver
+            mor.delivered_by,
+            se.first_name AS driver_first,
+            se.middle_initial AS driver_mi,
+            se.last_name AS driver_last,
+            se.suffix AS driver_suffix,
+            se.contact_number AS driver_contact,
+            v.plate_number AS driver_plate_number,
+            v.model AS driver_vehicle_model,
+            -- Payment
+            mop.payment_method,
+            mop.status AS payment_status,
+            mop.payment_reference
+        FROM miller_online_orders_returns mor
+        INNER JOIN miller_online_customer moc
+            ON moc.online_order_id = mor.online_order_id
+        LEFT JOIN miller_products mp
+            ON mp.product_id = moc.miller_product_id
+        LEFT JOIN users u
+            ON u.user_id = mor.retailer_buyer_id
+        LEFT JOIN warehouse_profiles wp
+            ON wp.warehouse_profile_id = mor.warehouse_buyer_id
+        LEFT JOIN miller_vehicle_assignee mva
+            ON mva.assigned_id = mor.delivered_by
+        LEFT JOIN supplier_employees se
+            ON se.supplier_employee_id = mva.driver_id
+        LEFT JOIN miller_delivery_vehicle_management v
+            ON v.vehicle_id = mva.vehicle_id
+        LEFT JOIN miller_online_orders_payment mop
+            ON mop.online_order_id = moc.online_order_id
+        WHERE {where_sql}
+        {order_by_sql}
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(sql, params)
+        rows = cursor.fetchall()
+
+    returns = []
+    for r in rows:
+        is_warehouse = r[21] is not None
+        buyer_type_str = "Warehouse" if is_warehouse else "Retailer"
+
+        if is_warehouse:
+            buyer_name = r[32] or r[33] or f"Warehouse #{r[21]}"
+            contact = r[34] or "—"
+            email = r[35] or "—"
+            addr_parts = [r[39], r[38], r[37], r[36]]
+        else:
+            buyer_name = _format_driver_name(r[22], r[23], r[24], r[25]) or f"Retailer #{r[20]}"
+            contact = r[26] or "—"
+            email = r[27] or "—"
+            addr_parts = [r[31], r[30], r[29], r[28]]
+
+        clean_addr = ", ".join([str(p).strip() for p in addr_parts if p and str(p).strip()])
+        if not clean_addr:
+            clean_addr = "Address not specified"
+
+        driver_name = _format_driver_name(r[41], r[42], r[43], r[44]) or "N/A"
+        driver_plate = r[46] or "N/A"
+        driver_model = r[47] or ""
+        driver_display = f"{driver_name} ({driver_plate})" if driver_plate != "N/A" else driver_name
+
+        ret_qty = float(r[3]) if r[3] is not None else 0.0
+        unit_cost = float(r[18]) if r[18] is not None else 0.0
+        total_return_cost = ret_qty * unit_cost
+
+        ord_qty = float(r[10]) if r[10] is not None else 0.0
+        fare = float(r[11]) if r[11] is not None else 0.0
+        order_total = float(r[12]) if r[12] is not None else 0.0
+        available_stock = float(r[19]) if r[19] is not None else 0.0
+
+        returns.append(
+            {
+                "return_id": r[0],
+                "id": r[0],
+                "return_reference_no": r[1],
+                "receiving_reference_no": r[2] or "—",
+                "quantity": ret_qty,
+                "numericQty": ret_qty,
+                "qty": f"{ret_qty:,.0f} kg" if ret_qty.is_integer() else f"{ret_qty:,.2f} kg",
+                "quantity_formatted": f"{ret_qty:,.0f} kg" if ret_qty.is_integer() else f"{ret_qty:,.2f} kg",
+                "reason": r[4] or "No reason specified.",
+                "proof": _resolve_photo_url(r[5]),
+                "status": r[6],
+                "created_at": r[7].isoformat() if r[7] else None,
+                "isoDate": r[7].strftime("%Y-%m-%d") if r[7] else "",
+                "created_at_formatted": r[7].strftime("%b %d, %Y") if r[7] else "—",
+                # Order Info
+                "online_order_id": r[8],
+                "batch_no": r[9],
+                "orderNo": r[9],
+                "ordered_quantity": ord_qty,
+                "ordered_quantity_formatted": f"{ord_qty:,.0f} kg" if ord_qty.is_integer() else f"{ord_qty:,.2f} kg",
+                "fare_fee": fare,
+                "fare_fee_formatted": f"₱{fare:,.2f}",
+                "total_price": order_total,
+                "total_price_formatted": f"₱{order_total:,.2f}",
+                "expected_arrival_date": r[13].isoformat() if r[13] else None,
+                "expected_arrival_date_formatted": r[13].strftime("%b %d, %Y") if r[13] else "—",
+                "order_status": r[14],
+                # Product Info
+                "product_id": r[15],
+                "product_name": r[16] or "Rice Variant",
+                "variant": r[16] or "Rice Variant",
+                "product_code": r[17] or "—",
+                "unit_cost": unit_cost,
+                "unit_cost_formatted": f"₱{unit_cost:,.2f}",
+                "total_return_cost": total_return_cost,
+                "total_return_cost_formatted": f"₱{total_return_cost:,.2f}",
+                "available_stock": available_stock,
+                "available_stock_formatted": f"{available_stock:,.0f} kg" if available_stock.is_integer() else f"{available_stock:,.2f} kg",
+                # Buyer Info
+                "buyer_type": buyer_type_str,
+                "buyer_name": buyer_name,
+                "buyer": buyer_name,
+                "retailer": buyer_name,
+                "contact_number": contact,
+                "email": email,
+                "delivery_address": clean_addr,
+                # Delivery Info
+                "delivered_by": r[40],
+                "driver_name": driver_name,
+                "driver_display": driver_display,
+                "driver_contact": r[45] or "—",
+                "driver_plate": driver_plate,
+                "driver_model": driver_model,
+                # Payment
+                "payment_method": r[48] or "N/A",
+                "payment_status": r[49] or "N/A",
+                "payment_reference": r[50] or "—",
+            }
+        )
+
+    return returns
+
+
+def list_flc_return_variants(supplier_profile_id):
+    """
+    Retrieve unique product variants present in Pending product returns.
+    """
+    sql = """
+        SELECT DISTINCT mp.product_name
+        FROM miller_online_orders_returns mor
+        INNER JOIN miller_online_customer moc
+            ON moc.online_order_id = mor.online_order_id
+        LEFT JOIN miller_products mp
+            ON mp.product_id = moc.miller_product_id
+        WHERE mor.supplier_profile_id = %s
+          AND mor.status = 'Pending'
+          AND mp.product_name IS NOT NULL
+        ORDER BY mp.product_name ASC
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(sql, [supplier_profile_id])
+        rows = cursor.fetchall()
+
+    return [r[0] for r in rows if r[0]]
 

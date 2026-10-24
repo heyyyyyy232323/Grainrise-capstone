@@ -10,15 +10,19 @@ from .selectors import (
     list_flc_active_drivers,
     list_flc_delivery_orders,
     list_flc_drivers_with_capacity,
+    list_flc_product_returns,
+    list_flc_return_variants,
     list_flc_vehicles,
 )
 from .services import (
     CrossBranchConflictError,
     DeliveryAssignmentError,
     DriverNotFoundError,
+    ReturnActionError,
     VehicleNotFoundError,
     VehicleValidationError,
     assign_order_to_driver,
+    process_return_action,
     update_flc_vehicle_status,
 )
 
@@ -359,6 +363,151 @@ def flc_assign_order_view(request, order_id):
             {
                 "success": False,
                 "message": f"Server error assigning order: {str(e)}",
+            },
+            status=500,
+        )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@miller_flc_required
+def flc_product_returns_view(request):
+    """
+    GET /api/miller-employees/logistics/product-returns/
+    Retrieve pending product returns scoped strictly to the authenticated FLC employee's branch.
+    Supports query params: search, variant, start_date, end_date, sort.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+
+    search = request.GET.get("search", "").strip()
+    variant = request.GET.get("variant", "").strip()
+    start_date = request.GET.get("start_date", "").strip()
+    end_date = request.GET.get("end_date", "").strip()
+    sort_by = request.GET.get("sort", "").strip()
+
+    try:
+        returns = list_flc_product_returns(
+            supplier_profile_id=supplier_profile_id,
+            search=search if search else None,
+            variant_filter=variant if variant else None,
+            start_date=start_date if start_date else None,
+            end_date=end_date if end_date else None,
+            sort_by=sort_by if sort_by else None,
+        )
+        return JsonResponse(
+            {
+                "success": True,
+                "returns": returns,
+                "total": len(returns),
+            },
+            status=200,
+        )
+    except Exception as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Failed to retrieve product returns: {str(e)}",
+            },
+            status=500,
+        )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@miller_flc_required
+def flc_return_variants_view(request):
+    """
+    GET /api/miller-employees/logistics/product-returns/variants/
+    Retrieve distinct product variants available in returns for the authenticated branch.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+
+    try:
+        variants = list_flc_return_variants(supplier_profile_id)
+        return JsonResponse(
+            {
+                "success": True,
+                "variants": variants,
+            },
+            status=200,
+        )
+    except Exception as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Failed to retrieve return variants: {str(e)}",
+            },
+            status=500,
+        )
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@miller_flc_required
+def flc_process_return_view(request, return_id):
+    """
+    POST /api/miller-employees/logistics/product-returns/<return_id>/process/
+    Atomically approve or reject a pending product return.
+    Expects JSON body:
+      - action: 'approve' | 'reject'
+      - rejection_reason: string (required if action == 'reject')
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    owner_user_id = request.grainrise_owner_user_id
+
+    try:
+        body = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except Exception:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Malformed JSON payload.",
+            },
+            status=400,
+        )
+
+    action = str(body.get("action", "")).strip().lower()
+    if action not in ("approve", "reject"):
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Invalid action. Must be 'approve' or 'reject'.",
+            },
+            status=400,
+        )
+
+    rejection_reason = body.get("rejection_reason")
+    if action == "reject" and not (rejection_reason and str(rejection_reason).strip()):
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Rejection reason is required when rejecting a return.",
+            },
+            status=400,
+        )
+
+    try:
+        result = process_return_action(
+            supplier_profile_id=supplier_profile_id,
+            return_id=return_id,
+            action=action,
+            rejection_reason=rejection_reason,
+            sender_user_id=owner_user_id,
+        )
+        return JsonResponse(result, status=200)
+    except ReturnActionError as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": str(e),
+            },
+            status=400,
+        )
+    except Exception as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Server error processing return: {str(e)}",
             },
             status=500,
         )
