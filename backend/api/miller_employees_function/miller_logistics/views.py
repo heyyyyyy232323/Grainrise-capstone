@@ -1,5 +1,6 @@
 import base64
 import json
+import logging
 import os
 import uuid
 
@@ -14,6 +15,9 @@ from api.miller_employees_function.employee_auth import miller_flc_required
 from api.miller_employees_function.miller_finance.reimbursements.services import (
     submit_reimbursement_request,
 )
+from . import selectors
+
+logger = logging.getLogger(__name__)
 from .selectors import (
     get_flc_vehicle_detail,
     list_flc_active_drivers,
@@ -820,5 +824,79 @@ def flc_submit_reimbursement_view(request):
         )
 
 
+@csrf_exempt
+@require_http_methods(["GET"])
+@miller_flc_required
+def flc_reimbursement_history_view(request):
+    """
+    GET /api/miller-employees/logistics/reimbursements/history/
+    List reimbursement history records for the authenticated FLC employee.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    employee_id = request.grainrise_supplier_employee_id
+
+    search = request.GET.get("search", "").strip() or None
+    status_filter = request.GET.get("status", "").strip() or None
+    category_filter = request.GET.get("category", "").strip() or None
+    start_date = request.GET.get("start_date", "").strip() or None
+    end_date = request.GET.get("end_date", "").strip() or None
+    sort_by = request.GET.get("sort_by", "").strip() or None
+
+    # Date range validation
+    if start_date and end_date and start_date > end_date:
+        return JsonResponse(
+            {"success": False, "error": "Start date cannot be after end date."},
+            status=400,
+        )
+
+    try:
+        records = selectors.list_flc_reimbursement_history(
+            supplier_profile_id=supplier_profile_id,
+            employee_id=employee_id,
+            search=search,
+            status_filter=status_filter,
+            category_filter=category_filter,
+            start_date=start_date,
+            end_date=end_date,
+            sort_by=sort_by,
+        )
+        return JsonResponse(
+            {
+                "success": True,
+                "count": len(records),
+                "data": records,
+            },
+            status=200,
+        )
+    except Exception as e:
+        logger.error(f"Error fetching reimbursement history: {e}", exc_info=True)
+        return JsonResponse(
+            {"success": False, "error": f"Failed to load reimbursement history: {str(e)}"},
+            status=500,
+        )
 
 
+@csrf_exempt
+@require_http_methods(["GET"])
+@miller_flc_required
+def flc_reimbursement_categories_view(request):
+    """
+    GET /api/miller-employees/logistics/reimbursements/categories/
+    List all standard and custom reimbursement categories for this branch.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    try:
+        categories = selectors.get_flc_reimbursement_categories(supplier_profile_id)
+        return JsonResponse(
+            {
+                "success": True,
+                "categories": categories,
+            },
+            status=200,
+        )
+    except Exception as e:
+        logger.error(f"Error fetching reimbursement categories: {e}", exc_info=True)
+        return JsonResponse(
+            {"success": False, "error": f"Failed to load reimbursement categories: {str(e)}"},
+            status=500,
+        )

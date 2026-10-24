@@ -49,5 +49,15 @@ urlpatterns = [
         views.flc_submit_reimbursement_view,
         name="flc-reimbursement-submit",
     ),
+    path(
+        "reimbursements/history/",
+        views.flc_reimbursement_history_view,
+        name="flc-reimbursement-history-list",
+    ),
+    path(
+        "reimbursements/categories/",
+        views.flc_reimbursement_categories_view,
+        name="flc-reimbursement-categories-list",
+    ),
 ]
 

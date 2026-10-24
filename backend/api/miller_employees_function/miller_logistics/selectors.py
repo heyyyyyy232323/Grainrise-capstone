@@ -1449,4 +1449,252 @@ def list_flc_fulfillment_history(
     return history
 
 
+def get_flc_reimbursement_categories(supplier_profile_id: int) -> list:
+    """
+    Return all standard reimbursement categories plus any custom categories
+    used in miller_reimbursement for this supplier branch.
+    """
+    preset = [
+        "Transportation & Travel",
+        "Meals & Allowances",
+        "Emergency",
+        "Equipment & Repair",
+        "Communication Expenses",
+        "Logistics",
+        "Office & Operating Supplies",
+        "Others",
+    ]
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT DISTINCT mr.types
+            FROM miller_reimbursement mr
+            WHERE mr.supplier_profile_id = %s
+              AND mr.types IS NOT NULL
+              AND TRIM(mr.types) != ''
+            ORDER BY mr.types ASC
+            """,
+            [supplier_profile_id],
+        )
+        db_types = [r[0].strip() for r in cursor.fetchall() if r[0] and r[0].strip()]
+
+    categories = list(preset)
+    for dt in db_types:
+        if dt not in categories:
+            categories.append(dt)
+    return categories
+
+
+def list_flc_reimbursement_history(
+    supplier_profile_id: int,
+    employee_id: int = None,
+    search: str = None,
+    status_filter: str = None,
+    category_filter: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    sort_by: str = None,
+) -> list:
+    """
+    List reimbursement history records belonging to the authenticated FLC branch and employee.
+
+    Tables involved:
+    - miller_reimbursement (mr)
+    - supplier_employees (se for requester, pe for payer)
+
+    Validations & Rules:
+    - Scoped strictly by supplier_profile_id.
+    - If employee_id is provided, scoped to requested_by = employee_id.
+    - Search by category (types), description, title, requester name, or request_reference_no.
+    - Date filtering using requested_date (start_date <= end_date validated).
+    - Status filtering: 'requested', 'paid', or 'all'.
+    - Category filtering: existing standard & custom categories.
+    - Sorting: newest first ('date-desc') or oldest first ('date-asc') by requested_date.
+    - Expense Date column: uses expense_date (formatted like 'Oct 23, 2026' or 'N/A' if null).
+    """
+    where_clauses = ["mr.supplier_profile_id = %s"]
+    params = [supplier_profile_id]
+
+    if employee_id:
+        where_clauses.append("mr.requested_by = %s")
+        params.append(employee_id)
+
+    if search:
+        term = f"%{search.strip()}%"
+        where_clauses.append(
+            """
+            (
+                mr.types LIKE %s
+                OR mr.description LIKE %s
+                OR mr.title LIKE %s
+                OR mr.request_reference_no LIKE %s
+                OR CONCAT_WS(' ', se.first_name, se.last_name) LIKE %s
+            )
+            """
+        )
+        params.extend([term, term, term, term, term])
+
+    if status_filter and status_filter.strip().lower() != "all":
+        st = status_filter.strip().lower()
+        if st in ["requested", "paid"]:
+            where_clauses.append("LOWER(mr.status) = %s")
+            params.append(st)
+
+    if category_filter and category_filter.strip().lower() != "all":
+        where_clauses.append("LOWER(mr.types) = %s")
+        params.append(category_filter.strip().lower())
+
+    if start_date:
+        where_clauses.append("DATE(mr.requested_date) >= %s")
+        params.append(start_date.strip())
+
+    if end_date:
+        where_clauses.append("DATE(mr.requested_date) <= %s")
+        params.append(end_date.strip())
+
+    order_by = "ORDER BY mr.requested_date DESC, mr.reimbursement_id DESC"
+    if sort_by == "date-asc":
+        order_by = "ORDER BY mr.requested_date ASC, mr.reimbursement_id ASC"
+
+    query = f"""
+        SELECT
+            mr.reimbursement_id,
+            mr.supplier_profile_id,
+            mr.requested_by,
+            mr.title,
+            mr.description,
+            mr.types,
+            mr.price,
+            mr.requested_date,
+            mr.photo_evidence,
+            mr.status,
+            mr.request_reference_no,
+            mr.paid_by,
+            mr.paid_date,
+            mr.method,
+            mr.receipt_photo,
+            mr.payment_reference_no,
+            mr.expense_date,
+            se.first_name AS req_first_name,
+            se.middle_initial AS req_middle_initial,
+            se.last_name AS req_last_name,
+            se.suffix AS req_suffix,
+            pe.first_name AS pay_first_name,
+            pe.middle_initial AS pay_middle_initial,
+            pe.last_name AS pay_last_name,
+            pe.suffix AS pay_suffix
+        FROM miller_reimbursement mr
+        LEFT JOIN supplier_employees se
+            ON se.supplier_employee_id = mr.requested_by
+        LEFT JOIN supplier_employees pe
+            ON pe.supplier_employee_id = mr.paid_by
+        WHERE {" AND ".join(where_clauses)}
+        {order_by}
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+
+    results = []
+    for r in rows:
+        reimb_id = r[0]
+        supp_id = r[1]
+        req_id = r[2]
+        title = r[3] or "Reimbursement Request"
+        description = r[4] or ""
+        types = r[5] or "Others"
+        price_val = float(r[6]) if r[6] is not None else 0.0
+        req_date = r[7]
+        photo_evidence = r[8]
+        status_val = str(r[9] or "requested").lower()
+        ref_no = r[10] or f"REIMB-{reimb_id}"
+        paid_by_id = r[11]
+        paid_date = r[12]
+        method = r[13]
+        receipt_photo = r[14]
+        payment_ref_no = r[15]
+        expense_date = r[16]
+
+        req_name = _format_driver_name(r[17], r[18], r[19], r[20]) or "N/A"
+        payer_name = _format_driver_name(r[21], r[22], r[23], r[24]) if paid_by_id else "N/A"
+
+        req_date_str = req_date.strftime("%b %d, %Y, %I:%M %p") if req_date else "N/A"
+        req_date_short = req_date.strftime("%b %d, %Y") if req_date else "N/A"
+        req_date_iso = req_date.isoformat() if req_date else ""
+
+        if expense_date:
+            expense_date_str = (
+                expense_date.strftime("%b %d, %Y")
+                if hasattr(expense_date, "strftime")
+                else str(expense_date)
+            )
+            expense_date_iso = (
+                expense_date.isoformat()
+                if hasattr(expense_date, "isoformat")
+                else str(expense_date)
+            )
+        else:
+            expense_date_str = "N/A"
+            expense_date_iso = ""
+
+        if paid_date:
+            paid_date_str = (
+                paid_date.strftime("%b %d, %Y, %I:%M %p")
+                if hasattr(paid_date, "strftime")
+                else str(paid_date)
+            )
+            paid_date_iso = (
+                paid_date.isoformat()
+                if hasattr(paid_date, "isoformat")
+                else str(paid_date)
+            )
+        else:
+            paid_date_str = "N/A"
+            paid_date_iso = ""
+
+        status_display = "Paid" if status_val == "paid" else "Requested"
+
+        results.append(
+            {
+                "id": reimb_id,
+                "reimbursement_id": reimb_id,
+                "supplier_profile_id": supp_id,
+                "requested_by": req_id,
+                "requested_by_name": req_name,
+                "requester": req_name,
+                "requestedBy": req_name,
+                "title": title,
+                "description": description,
+                "types": types,
+                "category": types,
+                "price": f"₱{price_val:,.2f}",
+                "amount": f"₱{price_val:,.2f}",
+                "numericAmount": price_val,
+                "requested_date": req_date_str,
+                "requested_date_short": req_date_short,
+                "requested_date_iso": req_date_iso,
+                "isoDate": req_date.strftime("%Y-%m-%d") if req_date else "",
+                "expense_date": expense_date_str,
+                "expense_date_iso": expense_date_iso,
+                "expenseDate": expense_date_str,
+                "status": status_display,
+                "status_raw": status_val,
+                "request_reference_no": ref_no,
+                "paid_by": paid_by_id,
+                "paid_by_name": payer_name or "N/A",
+                "paid_date": paid_date_str,
+                "paid_date_iso": paid_date_iso,
+                "method": method or "N/A",
+                "payment_reference_no": payment_ref_no or "N/A",
+                "photo_evidence": photo_evidence,
+                "photo_evidence_url": _resolve_photo_url(photo_evidence),
+                "receipt_photo": receipt_photo,
+                "receipt_photo_url": _resolve_photo_url(receipt_photo),
+            }
+        )
+
+    return results
+
+
 
