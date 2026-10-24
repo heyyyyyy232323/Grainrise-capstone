@@ -18,6 +18,7 @@ import {
   Eye,
   EyeOff,
   Lock,
+  ChevronDown,
 } from "lucide-react";
 import Footer from "../Components/Minor-Components/CustomFooter";
 import Logo from "../assets/Logo.png";
@@ -27,6 +28,16 @@ import usePhilippineAddress from "../Components/hooks/usePhilippineAddress";
 import Dropdown from "../Components/Minor-Components/Dropdown";
 
 const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"];
+const SUFFIX_OPTIONS = [
+  { value: "", label: "None" },
+  { value: "Jr.", label: "Jr." },
+  { value: "Sr.", label: "Sr." },
+  { value: "II", label: "II" },
+  { value: "III", label: "III" },
+  { value: "IV", label: "IV" },
+  { value: "V", label: "V" },
+  { value: "VI", label: "VI" },
+];
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
   "image/png",
@@ -34,6 +45,26 @@ const ALLOWED_MIME_TYPES = [
   "application/pdf",
 ];
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+
+const parsePhoneNumber = (num) => {
+  if (!num) return "";
+  let clean = String(num).replace(/\D/g, "");
+  if (clean.startsWith("63") && clean.length === 12) clean = clean.slice(2);
+  if (clean.startsWith("0") && clean.length === 11) clean = clean.slice(1);
+  if (clean.length > 10) clean = clean.slice(0, 10);
+  return clean;
+};
+
+const formatPhoneForBackend = (num) => {
+  if (!num) return "";
+  let clean = String(num).replace(/\D/g, "");
+  if (clean.startsWith("63") && clean.length === 12) clean = clean.slice(2);
+  if (clean.startsWith("0") && clean.length === 11) clean = clean.slice(1);
+  if (clean.length === 10 && clean.startsWith("9")) {
+    return "0" + clean;
+  }
+  return clean;
+};
 
 const CompleteProfile = () => {
   const navigate = useNavigate();
@@ -71,7 +102,168 @@ const CompleteProfile = () => {
   const [lastName, setLastName] = useState("");
   const [suffix, setSuffix] = useState("");
   const [gender, setGender] = useState("");
+  const [personalEmail, setPersonalEmail] = useState("");
   const [contactNumber, setContactNumber] = useState("");
+
+  // Personal Info input restriction & formatting handlers
+  const handleNameKeyDown = (e) => {
+    if (
+      e.key === "Backspace" ||
+      e.key === "Delete" ||
+      e.key === "Tab" ||
+      e.key === "ArrowLeft" ||
+      e.key === "ArrowRight" ||
+      e.key === "Home" ||
+      e.key === "End" ||
+      e.ctrlKey ||
+      e.metaKey
+    ) {
+      return;
+    }
+    // Block numbers and special characters. Letters and spaces only.
+    if (!/^[A-Za-zÑñ\s]$/.test(e.key)) {
+      e.preventDefault();
+    }
+  };
+
+  const handleFirstNameChange = (e) => {
+    const clean = e.target.value.replace(/[^A-Za-zÑñ\s]/g, "").slice(0, 50);
+    setFirstName(clean);
+    markTouched("firstName");
+  };
+
+  const handleFirstNamePaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text/plain");
+    const clean = pasted.replace(/[^A-Za-zÑñ\s]/g, "");
+    const input = e.target;
+    const start = input.selectionStart || 0;
+    const end = input.selectionEnd || 0;
+    const nextVal = (firstName.slice(0, start) + clean + firstName.slice(end)).slice(0, 50);
+    setFirstName(nextVal);
+    markTouched("firstName");
+  };
+
+  const handleMiddleInitialKeyDown = (e) => {
+    if (
+      e.key === "Backspace" ||
+      e.key === "Delete" ||
+      e.key === "Tab" ||
+      e.key === "ArrowLeft" ||
+      e.key === "ArrowRight" ||
+      e.ctrlKey ||
+      e.metaKey
+    ) {
+      return;
+    }
+    if (!/^[A-Za-zÑñ]$/.test(e.key)) {
+      e.preventDefault();
+    }
+  };
+
+  const handleMiddleInitialChange = (e) => {
+    const clean = e.target.value.replace(/[^A-Za-zÑñ]/g, "").toUpperCase().slice(0, 2);
+    setMiddleInitial(clean);
+    markTouched("middleInitial");
+  };
+
+  const handleMiddleInitialPaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text/plain");
+    const clean = pasted.replace(/[^A-Za-zÑñ]/g, "").toUpperCase().slice(0, 2);
+    setMiddleInitial(clean);
+    markTouched("middleInitial");
+  };
+
+  const handleLastNameChange = (e) => {
+    const clean = e.target.value.replace(/[^A-Za-zÑñ\s]/g, "").slice(0, 50);
+    setLastName(clean);
+    markTouched("lastName");
+  };
+
+  const handleLastNamePaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text/plain");
+    const clean = pasted.replace(/[^A-Za-zÑñ\s]/g, "");
+    const input = e.target;
+    const start = input.selectionStart || 0;
+    const end = input.selectionEnd || 0;
+    const nextVal = (lastName.slice(0, start) + clean + lastName.slice(end)).slice(0, 50);
+    setLastName(nextVal);
+    markTouched("lastName");
+  };
+
+  const handlePhoneKeyDown = (e) => {
+    if (
+      e.key === "Backspace" ||
+      e.key === "Delete" ||
+      e.key === "Tab" ||
+      e.key === "ArrowLeft" ||
+      e.key === "ArrowRight" ||
+      e.key === "Home" ||
+      e.key === "End" ||
+      e.ctrlKey ||
+      e.metaKey
+    ) {
+      return;
+    }
+    // Block non-digits
+    if (!/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
+      return;
+    }
+    // First digit must be 9
+    const input = e.target;
+    if (input.selectionStart === 0 && e.key !== "9") {
+      e.preventDefault();
+    }
+  };
+
+  const handlePhoneChange = (e) => {
+    let digits = e.target.value.replace(/\D/g, "");
+    while (digits.length > 0 && digits[0] !== "9") {
+      digits = digits.slice(1);
+    }
+    digits = digits.slice(0, 10);
+    setContactNumber(digits);
+    markTouched("contactNumber");
+  };
+
+  const handlePhonePaste = (e) => {
+    e.preventDefault();
+    let pasted = e.clipboardData.getData("text/plain").replace(/\D/g, "");
+    if (pasted.startsWith("63")) pasted = pasted.slice(2);
+    if (pasted.startsWith("0")) pasted = pasted.slice(1);
+    while (pasted.length > 0 && pasted[0] !== "9") {
+      pasted = pasted.slice(1);
+    }
+    pasted = pasted.slice(0, 10);
+    setContactNumber(pasted);
+    markTouched("contactNumber");
+  };
+
+  const handleEmailKeyDown = (e) => {
+    if (e.key === " ") {
+      e.preventDefault();
+    }
+  };
+
+  const handleEmailChange = (e) => {
+    const clean = e.target.value.replace(/\s/g, "").slice(0, 100);
+    setPersonalEmail(clean);
+    markTouched("personalEmail");
+  };
+
+  const handleEmailPaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text/plain").replace(/\s/g, "").slice(0, 100);
+    const input = e.target;
+    const start = input.selectionStart || 0;
+    const end = input.selectionEnd || 0;
+    const nextVal = (personalEmail.slice(0, start) + pasted + personalEmail.slice(end)).slice(0, 100);
+    setPersonalEmail(nextVal);
+    markTouched("personalEmail");
+  };
 
   // Company Address State (autofetched PSGC address with manual fallback)
   const address = usePhilippineAddress();
@@ -216,12 +408,16 @@ const CompleteProfile = () => {
       errors.firstName = "First name is required.";
     } else if (trimmedFirst.length < 2) {
       errors.firstName = "First name must be at least 2 characters.";
-    } else if (!/^[A-Za-z\s\-\.\']+$/.test(trimmedFirst)) {
-      errors.firstName = "First name contains invalid characters.";
+    } else if (trimmedFirst.length > 50) {
+      errors.firstName = "First name must not exceed 50 characters.";
+    } else if (!/^[A-Za-zÑñ\s]+$/.test(trimmedFirst)) {
+      errors.firstName = "First name may only contain letters.";
     }
 
-    if (middleInitial.trim() && middleInitial.trim().length > 5) {
-      errors.middleInitial = "Middle initial must be at most 5 characters.";
+    if (middleInitial.trim()) {
+      if (!/^[A-Za-zÑñ]{1,2}$/.test(middleInitial.trim())) {
+        errors.middleInitial = "Middle initial must be 1-2 letters.";
+      }
     }
 
     const trimmedLast = lastName.trim();
@@ -229,19 +425,36 @@ const CompleteProfile = () => {
       errors.lastName = "Last name is required.";
     } else if (trimmedLast.length < 2) {
       errors.lastName = "Last name must be at least 2 characters.";
-    } else if (!/^[A-Za-z\s\-\.\']+$/.test(trimmedLast)) {
-      errors.lastName = "Last name contains invalid characters.";
+    } else if (trimmedLast.length > 50) {
+      errors.lastName = "Last name must not exceed 50 characters.";
+    } else if (!/^[A-Za-zÑñ\s]+$/.test(trimmedLast)) {
+      errors.lastName = "Last name may only contain letters.";
     }
 
     if (!gender) {
       errors.gender = "Please select your gender.";
     }
 
-    const cleanContact = contactNumber.trim().replace(/[\s\-]/g, "");
+    const trimmedPersonalEmail = personalEmail.trim();
+    if (!trimmedPersonalEmail) {
+      errors.personalEmail = "Email address is required.";
+    } else if (trimmedPersonalEmail.length > 100) {
+      errors.personalEmail = "Email must not exceed 100 characters.";
+    } else if (!trimmedPersonalEmail.includes("@")) {
+      errors.personalEmail = "Email must include '@' (e.g. name@domain.com).";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedPersonalEmail)) {
+      errors.personalEmail = "Please enter a valid email address (e.g. name@domain.com).";
+    }
+
+    const cleanContact = contactNumber.replace(/\D/g, "");
     if (!cleanContact) {
       errors.contactNumber = "Contact number is required.";
-    } else if (!/^(09|\+639)\d{9}$/.test(cleanContact)) {
-      errors.contactNumber = "Invalid PH contact number (e.g. 09171234567 or +639171234567).";
+    } else if (!cleanContact.startsWith("9")) {
+      errors.contactNumber = "Mobile number must start with 9.";
+    } else if (cleanContact.length < 10) {
+      errors.contactNumber = `${10 - cleanContact.length} more digit${10 - cleanContact.length !== 1 ? "s" : ""} needed (10 digits required).`;
+    } else if (cleanContact.length > 10) {
+      errors.contactNumber = "Contact number must be exactly 10 digits.";
     }
 
     // Company Address
@@ -280,6 +493,7 @@ const CompleteProfile = () => {
     middleInitial,
     lastName,
     gender,
+    personalEmail,
     contactNumber,
     province,
     municipality,
@@ -306,7 +520,9 @@ const CompleteProfile = () => {
         !validationErrors.firstName &&
         !validationErrors.lastName &&
         !validationErrors.gender &&
-        !validationErrors.contactNumber
+        !validationErrors.personalEmail &&
+        !validationErrors.contactNumber &&
+        !validationErrors.middleInitial
       );
     }
     if (currentStep.key === "address") {
@@ -360,7 +576,8 @@ const CompleteProfile = () => {
         setLastName(u.last_name || "");
         setSuffix(u.suffix || "");
         setGender(u.gender || "");
-        setContactNumber(u.contact_number || "");
+        setPersonalEmail(u.email || user?.email || "");
+        setContactNumber(parsePhoneNumber(u.contact_number || ""));
 
         // Company Address fields
         const addrProv = p.province || u.province || "";
@@ -400,7 +617,8 @@ const CompleteProfile = () => {
             if (draft.lastName !== undefined) setLastName(draft.lastName);
             if (draft.suffix !== undefined) setSuffix(draft.suffix);
             if (draft.gender !== undefined) setGender(draft.gender);
-            if (draft.contactNumber !== undefined) setContactNumber(draft.contactNumber);
+            if (draft.personalEmail !== undefined) setPersonalEmail(draft.personalEmail);
+            if (draft.contactNumber !== undefined) setContactNumber(parsePhoneNumber(draft.contactNumber));
             if (draft.streetAddress !== undefined) setStreetAddress(draft.streetAddress);
             if (draft.province) {
               setAddressSeed((prev) => ({
@@ -515,6 +733,7 @@ const CompleteProfile = () => {
       lastName,
       suffix,
       gender,
+      personalEmail,
       contactNumber,
       province,
       municipality,
@@ -540,7 +759,8 @@ const CompleteProfile = () => {
       fd.append("last_name", lastName);
       fd.append("suffix", suffix);
       fd.append("gender", gender);
-      fd.append("contact_number", contactNumber);
+      fd.append("email", personalEmail.trim());
+      fd.append("contact_number", formatPhoneForBackend(contactNumber));
       fd.append("province", province);
       fd.append("municipality", municipality);
       fd.append("barangay", barangay);
@@ -623,17 +843,21 @@ const CompleteProfile = () => {
       setTouched((prev) => ({
         ...prev,
         firstName: true,
+        middleInitial: true,
         lastName: true,
         gender: true,
+        personalEmail: true,
         contactNumber: true,
       }));
       if (
         validationErrors.firstName ||
         validationErrors.lastName ||
         validationErrors.gender ||
-        validationErrors.contactNumber
+        validationErrors.personalEmail ||
+        validationErrors.contactNumber ||
+        validationErrors.middleInitial
       ) {
-        setErrorMessage("Please complete all required fields in Personal Information.");
+        setErrorMessage("Please complete all required fields in Personal Information correctly.");
         return;
       }
     }
@@ -734,6 +958,8 @@ const CompleteProfile = () => {
       validationErrors.firstName ||
       validationErrors.lastName ||
       validationErrors.gender ||
+      validationErrors.personalEmail ||
+      validationErrors.middleInitial ||
       validationErrors.contactNumber ||
       validationErrors.province ||
       validationErrors.municipality ||
@@ -756,7 +982,8 @@ const CompleteProfile = () => {
       formData.append("last_name", lastName);
       formData.append("suffix", suffix);
       formData.append("gender", gender);
-      formData.append("contact_number", contactNumber);
+      formData.append("email", personalEmail.trim());
+      formData.append("contact_number", formatPhoneForBackend(contactNumber));
 
       formData.append("province", province);
       formData.append("municipality", municipality);
@@ -1108,123 +1335,318 @@ const CompleteProfile = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* First Name */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    First Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    onBlur={() => markTouched("firstName")}
-                    placeholder="e.g. Carl"
-                    className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                      touched.firstName && validationErrors.firstName
-                        ? "border-red-400 bg-red-50/30 focus:border-red-500"
-                        : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                    }`}
-                  />
-                  {touched.firstName && validationErrors.firstName && (
-                    <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.firstName}</p>
-                  )}
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                      First Name <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {firstName.length}/50
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      maxLength={50}
+                      value={firstName}
+                      onKeyDown={handleNameKeyDown}
+                      onChange={handleFirstNameChange}
+                      onPaste={handleFirstNamePaste}
+                      onBlur={() => markTouched("firstName")}
+                      placeholder="e.g. Carl"
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none pr-9 transition ${
+                        (touched.firstName || firstName) && validationErrors.firstName
+                          ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-1 focus:ring-red-400"
+                          : firstName && !validationErrors.firstName
+                          ? "border-emerald-400 bg-emerald-50/20 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                      }`}
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      {(touched.firstName || firstName) && validationErrors.firstName ? (
+                        <AlertCircle size={16} className="text-red-500" />
+                      ) : firstName && !validationErrors.firstName ? (
+                        <CheckCircle2 size={16} className="text-emerald-600" />
+                      ) : null}
+                    </div>
+                  </div>
+                  {(touched.firstName || firstName) && validationErrors.firstName ? (
+                    <p className="mt-1 flex items-center gap-1 text-xs text-red-600 font-medium">
+                      <AlertCircle size={12} className="shrink-0" /> {validationErrors.firstName}
+                    </p>
+                  ) : firstName && !validationErrors.firstName ? (
+                    <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
+                      <Check size={12} className="shrink-0" /> Valid first name
+                    </p>
+                  ) : null}
                 </div>
 
                 {/* Middle Initial */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    Middle Initial
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={5}
-                    value={middleInitial}
-                    onChange={(e) => setMiddleInitial(e.target.value)}
-                    placeholder="e.g. R."
-                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f] outline-none"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                      Middle Initial <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {middleInitial.length}/2
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      maxLength={2}
+                      value={middleInitial}
+                      onKeyDown={handleMiddleInitialKeyDown}
+                      onChange={handleMiddleInitialChange}
+                      onPaste={handleMiddleInitialPaste}
+                      onBlur={() => markTouched("middleInitial")}
+                      placeholder="e.g. R"
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none pr-9 transition uppercase ${
+                        (touched.middleInitial || middleInitial) && validationErrors.middleInitial
+                          ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-1 focus:ring-red-400"
+                          : middleInitial && !validationErrors.middleInitial
+                          ? "border-emerald-400 bg-emerald-50/20 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                      }`}
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      {(touched.middleInitial || middleInitial) && validationErrors.middleInitial ? (
+                        <AlertCircle size={16} className="text-red-500" />
+                      ) : middleInitial && !validationErrors.middleInitial ? (
+                        <CheckCircle2 size={16} className="text-emerald-600" />
+                      ) : null}
+                    </div>
+                  </div>
+                  {(touched.middleInitial || middleInitial) && validationErrors.middleInitial ? (
+                    <p className="mt-1 flex items-center gap-1 text-xs text-red-600 font-medium">
+                      <AlertCircle size={12} className="shrink-0" /> {validationErrors.middleInitial}
+                    </p>
+                  ) : middleInitial && !validationErrors.middleInitial ? (
+                    <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
+                      <Check size={12} className="shrink-0" /> Valid initial
+                    </p>
+                  ) : null}
                 </div>
 
                 {/* Last Name */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    Last Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    onBlur={() => markTouched("lastName")}
-                    placeholder="e.g. Gamilla"
-                    className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                      touched.lastName && validationErrors.lastName
-                        ? "border-red-400 bg-red-50/30 focus:border-red-500"
-                        : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                    }`}
-                  />
-                  {touched.lastName && validationErrors.lastName && (
-                    <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.lastName}</p>
-                  )}
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                      Last Name <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {lastName.length}/50
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      maxLength={50}
+                      value={lastName}
+                      onKeyDown={handleNameKeyDown}
+                      onChange={handleLastNameChange}
+                      onPaste={handleLastNamePaste}
+                      onBlur={() => markTouched("lastName")}
+                      placeholder="e.g. Gamilla"
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none pr-9 transition ${
+                        (touched.lastName || lastName) && validationErrors.lastName
+                          ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-1 focus:ring-red-400"
+                          : lastName && !validationErrors.lastName
+                          ? "border-emerald-400 bg-emerald-50/20 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                      }`}
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      {(touched.lastName || lastName) && validationErrors.lastName ? (
+                        <AlertCircle size={16} className="text-red-500" />
+                      ) : lastName && !validationErrors.lastName ? (
+                        <CheckCircle2 size={16} className="text-emerald-600" />
+                      ) : null}
+                    </div>
+                  </div>
+                  {(touched.lastName || lastName) && validationErrors.lastName ? (
+                    <p className="mt-1 flex items-center gap-1 text-xs text-red-600 font-medium">
+                      <AlertCircle size={12} className="shrink-0" /> {validationErrors.lastName}
+                    </p>
+                  ) : lastName && !validationErrors.lastName ? (
+                    <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
+                      <Check size={12} className="shrink-0" /> Valid last name
+                    </p>
+                  ) : null}
                 </div>
 
-                {/* Suffix */}
+                {/* Suffix (Dropdown) */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    Suffix
+                    Suffix <span className="text-slate-400 font-normal lowercase">(optional)</span>
                   </label>
-                  <input
-                    type="text"
-                    value={suffix}
-                    onChange={(e) => setSuffix(e.target.value)}
-                    placeholder="e.g. Jr., III (optional)"
-                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f] outline-none"
-                  />
+                  <div className="relative">
+                    <select
+                      value={suffix}
+                      onChange={(e) => {
+                        setSuffix(e.target.value);
+                        markTouched("suffix");
+                      }}
+                      className="w-full appearance-none px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white pr-9 outline-none transition focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f] cursor-pointer"
+                    >
+                      {SUFFIX_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={16}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                    />
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-400">Select standard name extension if applicable</p>
                 </div>
 
-                {/* Gender */}
+                {/* Gender (Dropdown) */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
                     Gender <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={gender}
-                    onChange={(e) => setGender(e.target.value)}
-                    onBlur={() => markTouched("gender")}
-                    className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none bg-white transition ${
-                      touched.gender && validationErrors.gender
-                        ? "border-red-400 bg-red-50/30 focus:border-red-500"
-                        : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                    }`}
-                  >
-                    <option value="">Select Gender</option>
-                    {GENDER_OPTIONS.map((g) => (
-                      <option key={g} value={g}>
-                        {g}
-                      </option>
-                    ))}
-                  </select>
-                  {touched.gender && validationErrors.gender && (
-                    <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.gender}</p>
-                  )}
+                  <div className="relative">
+                    <select
+                      value={gender}
+                      onChange={(e) => {
+                        setGender(e.target.value);
+                        markTouched("gender");
+                      }}
+                      onBlur={() => markTouched("gender")}
+                      className={`w-full appearance-none px-3.5 py-2.5 text-sm rounded-xl border bg-white pr-9 outline-none transition cursor-pointer ${
+                        touched.gender && validationErrors.gender
+                          ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-1 focus:ring-red-400"
+                          : gender && !validationErrors.gender
+                          ? "border-emerald-400 bg-emerald-50/20 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                      }`}
+                    >
+                      <option value="">Select Gender</option>
+                      {GENDER_OPTIONS.map((g) => (
+                        <option key={g} value={g}>
+                          {g}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={16}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                    />
+                  </div>
+                  {touched.gender && validationErrors.gender ? (
+                    <p className="mt-1 flex items-center gap-1 text-xs text-red-600 font-medium">
+                      <AlertCircle size={12} className="shrink-0" /> {validationErrors.gender}
+                    </p>
+                  ) : gender && !validationErrors.gender ? (
+                    <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
+                      <Check size={12} className="shrink-0" /> Gender selected
+                    </p>
+                  ) : null}
                 </div>
 
-                {/* Contact Number */}
+                {/* Email Address */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    Contact Number <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={contactNumber}
-                    onChange={(e) => setContactNumber(e.target.value)}
-                    onBlur={() => markTouched("contactNumber")}
-                    placeholder="e.g. 09171234567"
-                    className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                      touched.contactNumber && validationErrors.contactNumber
-                        ? "border-red-400 bg-red-50/30 focus:border-red-500"
-                        : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                      Email Address <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {personalEmail.length}/100
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      maxLength={100}
+                      value={personalEmail}
+                      onKeyDown={handleEmailKeyDown}
+                      onChange={handleEmailChange}
+                      onPaste={handleEmailPaste}
+                      onBlur={() => markTouched("personalEmail")}
+                      placeholder="e.g. name@domain.com"
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none pr-9 transition ${
+                        (touched.personalEmail || personalEmail) && validationErrors.personalEmail
+                          ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-1 focus:ring-red-400"
+                          : personalEmail && !validationErrors.personalEmail
+                          ? "border-emerald-400 bg-emerald-50/20 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                      }`}
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      {(touched.personalEmail || personalEmail) && validationErrors.personalEmail ? (
+                        <AlertCircle size={16} className="text-red-500" />
+                      ) : personalEmail && !validationErrors.personalEmail ? (
+                        <CheckCircle2 size={16} className="text-emerald-600" />
+                      ) : null}
+                    </div>
+                  </div>
+                  {(touched.personalEmail || personalEmail) && validationErrors.personalEmail ? (
+                    <p className="mt-1 flex items-center gap-1 text-xs text-red-600 font-medium">
+                      <AlertCircle size={12} className="shrink-0" /> {validationErrors.personalEmail}
+                    </p>
+                  ) : personalEmail && !validationErrors.personalEmail ? (
+                    <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
+                      <Check size={12} className="shrink-0" /> Valid email format
+                    </p>
+                  ) : null}
+                </div>
+
+                {/* Contact Number (Standard Philippine Phone format) */}
+                <div className="sm:col-span-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                      Contact Number <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {contactNumber.length}/10 digits
+                    </span>
+                  </div>
+                  <div
+                    className={`flex items-center rounded-xl border overflow-hidden transition bg-white ${
+                      (touched.contactNumber || contactNumber) && validationErrors.contactNumber
+                        ? "border-red-400 ring-1 ring-red-400 bg-red-50/10"
+                        : contactNumber && !validationErrors.contactNumber
+                        ? "border-emerald-400 ring-1 ring-emerald-400 bg-emerald-50/10"
+                        : "border-slate-300 focus-within:border-[#08511f] focus-within:ring-1 focus-within:ring-[#08511f]"
                     }`}
-                  />
-                  {touched.contactNumber && validationErrors.contactNumber && (
-                    <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.contactNumber}</p>
+                  >
+                    <span className="px-3.5 py-2.5 text-sm font-semibold text-slate-600 bg-slate-50 border-r border-slate-200 select-none whitespace-nowrap">
+                      +63
+                    </span>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={10}
+                      value={contactNumber}
+                      onKeyDown={handlePhoneKeyDown}
+                      onChange={handlePhoneChange}
+                      onPaste={handlePhonePaste}
+                      onBlur={() => markTouched("contactNumber")}
+                      placeholder="9XXXXXXXXX"
+                      className="w-full px-3.5 py-2.5 text-sm outline-none bg-transparent text-slate-800 placeholder:text-slate-400"
+                    />
+                    <div className="pr-3 pointer-events-none">
+                      {(touched.contactNumber || contactNumber) && validationErrors.contactNumber ? (
+                        <AlertCircle size={16} className="text-red-500 shrink-0" />
+                      ) : contactNumber && !validationErrors.contactNumber ? (
+                        <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                      ) : null}
+                    </div>
+                  </div>
+                  {(touched.contactNumber || contactNumber) && validationErrors.contactNumber ? (
+                    <p className="mt-1 flex items-center gap-1 text-xs text-red-600 font-medium">
+                      <AlertCircle size={12} className="shrink-0" /> {validationErrors.contactNumber}
+                    </p>
+                  ) : contactNumber && !validationErrors.contactNumber ? (
+                    <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
+                      <Check size={12} className="shrink-0" /> Valid Philippine mobile number (+63 {contactNumber})
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Standard 10-digit mobile number starting with 9 (e.g. 9171234567)
+                    </p>
                   )}
                 </div>
               </div>
