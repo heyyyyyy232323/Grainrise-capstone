@@ -1,39 +1,111 @@
-import { useMemo, useState, useRef, useEffect } from "react";
-import { Search, Calendar, ChevronDown, ChevronUp, X } from "lucide-react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
+import {
+  Search,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  X,
+  Truck,
+  UserCheck,
+  AlertCircle,
+  RefreshCw,
+  Loader2,
+} from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
+import useApi from "../../../Components/hooks/useApi";
+import useToast from "../../../Components/hooks/useToast";
+import Toast from "../../../Components/Minor-Components/Toast";
 
-const sampleAssigned = Array.from({ length: 125 }, (_, i) => ({
-  id: `a-${i + 1}`,
-  orderNo: `Batch A2026 - 00${(i % 12) + 1}`,
-  variant: "Dinorado",
-  driver: "Driver Unknown A",
-  status: i % 3 === 0 ? "Assigned" : i % 3 === 1 ? "Completed" : "In Transit",
-  assignedOn: "Apr 12, 2026",
-  isoDate: `2026-04-${(i % 28 + 1).toString().padStart(2, "0")}`,
-}));
-
-const DELIVERY_OPTIONS = [
-  { value: "all", label: "All Delivery" },
-  { value: "pending", label: "Pending" },
-  { value: "in_transit", label: "In Transit" },
-  { value: "delivered", label: "Delivered" },
-];
-
-const ASSIGNMENT_OPTIONS = [
-  { value: "all", label: "All Assignment" },
-  { value: "assigned", label: "Assigned" },
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
+// ─── Status & Sort Dropdown Options ───────────────────────────────────────────
+const STATUS_OPTIONS = [
+  { value: "all", label: "All Statuses" },
+  { value: "active", label: "Active" },
+  { value: "changed", label: "Changed" },
 ];
 
 const SORT_OPTIONS = [
-  { value: "order-asc", label: "Order No. (A-Z)" },
-  { value: "variant-asc", label: "Variant (A-Z)" },
-  { value: "driver-asc", label: "Driver Name (A-Z)" },
-  { value: "status-asc", label: "Status" },
+  { value: "date-desc", label: "Newest First" },
+  { value: "date-asc", label: "Oldest First" },
+  { value: "model-asc", label: "Model (A-Z)" },
+  { value: "model-desc", label: "Model (Z-A)" },
+  { value: "plate-asc", label: "Plate Number (A-Z)" },
+  { value: "plate-desc", label: "Plate Number (Z-A)" },
+  { value: "driver-asc", label: "Driver (A-Z)" },
+  { value: "driver-desc", label: "Driver (Z-A)" },
 ];
 
+const vehicleStatusStyleMap = {
+  active: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+  inactive: "bg-slate-100 text-slate-700 border border-slate-200",
+  "for maintenance": "bg-amber-100 text-amber-700 border border-amber-200",
+  maintenance: "bg-amber-100 text-amber-700 border border-amber-200",
+};
+
+const getVehicleStatusLabel = (status) => {
+  if (!status) return "Active";
+  const key = String(status).toLowerCase();
+  if (key === "for maintenance" || key === "maintenance") return "For Maintenance";
+  return key.charAt(0).toUpperCase() + key.slice(1);
+};
+
+// ─── Photo URL Resolver ───────────────────────────────────────────────────────
+const resolvePhotoUrl = (photoPath) => {
+  if (!photoPath) return null;
+  const path = String(photoPath).trim();
+  if (
+    path.startsWith("http://") ||
+    path.startsWith("https://") ||
+    path.startsWith("//") ||
+    path.startsWith("data:") ||
+    path.startsWith("blob:")
+  ) {
+    return path;
+  }
+  let clean = path.replace(/^\/+/, "");
+  while (clean.startsWith("media/")) {
+    clean = clean.slice(6);
+  }
+  const backendBase = (
+    import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"
+  ).replace(/\/$/, "");
+  return `${backendBase}/media/${clean}`;
+};
+
+// ─── Format Capacity for Display ──────────────────────────────────────────────
+const formatCapacityDisplay = (val) => {
+  if (!val && val !== 0) return "—";
+  const clean = String(val).replace(/[^0-9.]/g, "");
+  if (!clean) return String(val);
+  const num = parseFloat(clean);
+  if (isNaN(num)) return String(val);
+  return `${num.toLocaleString()} kg`;
+};
+
+// ─── Modal Detail Row Sub-Component ───────────────────────────────────────────
+function ModalDetailRow({ label, value, isBadge = false, badgeStyle = "", children }) {
+  return (
+    <div className="flex items-start justify-between gap-3 py-1.5 text-xs sm:text-sm">
+      <span className="text-slate-500 font-medium shrink-0 pt-0.5">{label}:</span>
+      {children ? (
+        <div className="text-right flex-1 flex justify-end">{children}</div>
+      ) : isBadge ? (
+        <span
+          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold capitalize ${badgeStyle}`}
+        >
+          {value}
+        </span>
+      ) : (
+        <span className="font-semibold text-slate-800 text-right break-words max-w-[65%]">
+          {value || "—"}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ─── Custom Filter Dropdown ───────────────────────────────────────────────────
 function CustomDropdown({ label, options, value, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -96,18 +168,34 @@ function CustomDropdown({ label, options, value, onChange }) {
   );
 }
 
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function MillerAssignedHistory() {
+  const { request } = useApi();
+  const { toasts, showToast, removeToast } = useToast();
+
+  // Data & Loading States
+  const [assignments, setAssignments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
+
+  // Filter & Search States
   const [query, setQuery] = useState("");
-  const [deliveryFilter, setDeliveryFilter] = useState("all");
-  const [assignmentFilter, setAssignmentFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("order-asc");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("date-desc");
   const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
   const [tempDateRange, setTempDateRange] = useState({ startDate: "", endDate: "" });
   const [page, setPage] = useState(1);
 
+  // Date picker dropdown
   const [showDatePicker, setShowDatePicker] = useState(false);
   const dateRef = useRef(null);
 
+  // View Details Modal States
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [viewImageError, setViewImageError] = useState(false);
+
+  // Click outside listener for date picker
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dateRef.current && !dateRef.current.contains(e.target)) {
@@ -118,7 +206,67 @@ export default function MillerAssignedHistory() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch Assigned History from Backend
+  const fetchAssignedHistory = useCallback(async () => {
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const params = new URLSearchParams();
+      if (query.trim()) params.append("search", query.trim());
+      if (statusFilter && statusFilter !== "all") params.append("status", statusFilter);
+      if (sortBy) params.append("sort", sortBy);
+      if (dateRange.startDate) params.append("start_date", dateRange.startDate);
+      if (dateRange.endDate) params.append("end_date", dateRange.endDate);
+
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const res = await request(`/miller-employees/logistics/assigned-history/${qs}`);
+
+      if (res && res.success) {
+        const mapped = (res.assignments || []).map((item) => ({
+          ...item,
+          id: item.assigned_id,
+          assignedOn: item.assigned_on_formatted || item.assigned_on,
+        }));
+        setAssignments(mapped);
+      } else {
+        throw new Error(res?.message || "Failed to load vehicle assignment history.");
+      }
+    } catch (err) {
+      console.error("Error fetching vehicle assignment history:", err);
+      setFetchError(err.message || "Failed to load vehicle assignment history.");
+      setAssignments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [request, query, statusFilter, sortBy, dateRange]);
+
+  useEffect(() => {
+    fetchAssignedHistory();
+  }, [fetchAssignedHistory]);
+
+  // Date picker handlers with Start / End Date validation
+  const handleStartDateChange = (val) => {
+    setTempDateRange((prev) => {
+      const next = { ...prev, startDate: val };
+      if (next.endDate && val > next.endDate) {
+        next.endDate = "";
+      }
+      return next;
+    });
+  };
+
+  const handleEndDateChange = (val) => {
+    setTempDateRange((prev) => ({ ...prev, endDate: val }));
+  };
+
   const handleDateApply = () => {
+    if (
+      tempDateRange.startDate &&
+      tempDateRange.endDate &&
+      tempDateRange.startDate > tempDateRange.endDate
+    ) {
+      return;
+    }
     setDateRange(tempDateRange);
     setPage(1);
     setShowDatePicker(false);
@@ -131,67 +279,96 @@ export default function MillerAssignedHistory() {
     setShowDatePicker(false);
   };
 
+  // View Details Modal Open / Close
+  const handleOpenViewDetails = (row) => {
+    setSelectedRecord(row);
+    setViewImageError(false);
+    setIsViewModalOpen(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setSelectedRecord(null);
+    setViewImageError(false);
+  };
+
+  // Table Columns Definition
   const columns = [
-    { key: "orderNo", label: "Order No." },
-    { key: "variant", label: "Variant" },
+    { key: "model", label: "Model" },
     { key: "driver", label: "Assigned Driver" },
-    { key: "status", label: "Status" },
+    {
+      key: "status",
+      label: "Status",
+      renderCell: (row) => {
+        const isAct = String(row.status || row.assignment_status).toLowerCase() === "active";
+        return (
+          <span
+            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
+              isAct
+                ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                : "bg-amber-100 text-amber-800 border border-amber-200"
+            }`}
+          >
+            {row.status || row.assignment_status || "Active"}
+          </span>
+        );
+      },
+    },
     { key: "assignedOn", label: "Assigned On" },
-    { key: "action", label: "Action", headerClassName: "text-center", cellClassName: "!text-center !pr-3" },
+    {
+      key: "action",
+      label: "Action",
+      headerClassName: "text-center",
+      cellClassName: "!text-center !pr-3",
+    },
   ];
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    let result = sampleAssigned.filter((r) => {
-      if (q && !(`${r.orderNo} ${r.variant} ${r.driver}`.toLowerCase().includes(q))) return false;
-      
-      const matchesStart = !dateRange.startDate || r.isoDate >= dateRange.startDate;
-      const matchesEnd = !dateRange.endDate || r.isoDate <= dateRange.endDate;
-
-      if (!matchesStart || !matchesEnd) return false;
-
-      return true;
-    });
-
-    if (sortBy === "order-asc") result.sort((a, b) => a.orderNo.localeCompare(b.orderNo));
-    else if (sortBy === "variant-asc") result.sort((a, b) => a.variant.localeCompare(b.variant));
-    else if (sortBy === "driver-asc") result.sort((a, b) => a.driver.localeCompare(b.driver));
-    else if (sortBy === "status-asc") result.sort((a, b) => a.status.localeCompare(b.status));
-
-    return result;
-  }, [query, dateRange, sortBy]);
-
+  // Client Pagination
   const itemsPerPage = 10;
-  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
-  const startIndex = (page - 1) * itemsPerPage;
-  const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(assignments.length / itemsPerPage));
+  const safePage = Math.min(page, totalPages);
+  const startIndex = (safePage - 1) * itemsPerPage;
+  const paginated = assignments.slice(startIndex, startIndex + itemsPerPage);
   const sections = useMemo(() => [{ rows: paginated }], [paginated]);
 
   return (
     <div className="space-y-6">
-      <Breadcrumbs items={[{ label: "Records", path: "/miller-logistics/dashboard" }, { label: "Assigned History" }]} />
+      <Breadcrumbs
+        items={[
+          { label: "Records", path: "/miller-logistics/dashboard" },
+          { label: "Assigned History" },
+        ]}
+      />
 
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Assigned History</h1>
-        <p className="text-sm text-slate-500 mt-1">View all assigned, delivered, and completed delivery records.</p>
+        <p className="text-sm text-slate-500 mt-1">
+          View all vehicle assignment history and driver allocations.
+        </p>
       </div>
 
       {/* ── Filter Toolbar ────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        {/* 1. Search Filter (First) */}
+        {/* 1. Search Filter */}
         <div className="relative min-w-[220px] max-w-xs flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <input
             type="text"
             value={query}
-            onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-            placeholder="Search order no., batch no., driver, or product"
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search model, plate no., or driver"
             className="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
           />
           {query && (
             <button
               type="button"
-              onClick={() => { setQuery(""); setPage(1); }}
+              onClick={() => {
+                setQuery("");
+                setPage(1);
+              }}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
             >
               <X size={15} />
@@ -199,7 +376,7 @@ export default function MillerAssignedHistory() {
           )}
         </div>
 
-        {/* 2. Date Range Picker (Second) */}
+        {/* 2. Date Range Picker */}
         <div className="relative w-full sm:w-auto" ref={dateRef}>
           <button
             type="button"
@@ -213,7 +390,10 @@ export default function MillerAssignedHistory() {
                 ? `${dateRange.startDate} - ${dateRange.endDate || "..."}`
                 : "Date Range"}
             </span>
-            <Calendar size={16} className={dateRange.startDate ? "text-emerald-600" : "text-gray-500"} />
+            <Calendar
+              size={16}
+              className={dateRange.startDate ? "text-emerald-600" : "text-gray-500"}
+            />
           </button>
 
           {showDatePicker && (
@@ -226,9 +406,7 @@ export default function MillerAssignedHistory() {
                   <input
                     type="date"
                     value={tempDateRange.startDate}
-                    onChange={(e) =>
-                      setTempDateRange((prev) => ({ ...prev, startDate: e.target.value }))
-                    }
+                    onChange={(e) => handleStartDateChange(e.target.value)}
                     className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
                   />
                 </div>
@@ -238,10 +416,9 @@ export default function MillerAssignedHistory() {
                   </label>
                   <input
                     type="date"
+                    min={tempDateRange.startDate || undefined}
                     value={tempDateRange.endDate}
-                    onChange={(e) =>
-                      setTempDateRange((prev) => ({ ...prev, endDate: e.target.value }))
-                    }
+                    onChange={(e) => handleEndDateChange(e.target.value)}
                     className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
                   />
                 </div>
@@ -266,34 +443,236 @@ export default function MillerAssignedHistory() {
           )}
         </div>
 
-
-
-        {/* 4. Assignment Status Dropdown */}
+        {/* 3. Status Filter Dropdown */}
         <CustomDropdown
-          label="All Assignment"
-          options={ASSIGNMENT_OPTIONS}
-          value={assignmentFilter}
-          onChange={(v) => { setAssignmentFilter(v); setPage(1); }}
+          label="All Statuses"
+          options={STATUS_OPTIONS}
+          value={statusFilter}
+          onChange={(v) => {
+            setStatusFilter(v);
+            setPage(1);
+          }}
         />
 
-        {/* 5. Sort Dropdown */}
+        {/* 4. Sort Dropdown */}
         <CustomDropdown
           label="Sort By"
           options={SORT_OPTIONS}
           value={sortBy}
-          onChange={(v) => { setSortBy(v); setPage(1); }}
+          onChange={(v) => {
+            setSortBy(v);
+            setPage(1);
+          }}
         />
+
+        {/* 5. Refresh Button */}
+        <button
+          type="button"
+          onClick={fetchAssignedHistory}
+          disabled={loading}
+          className="flex items-center gap-1.5 border border-gray-200 bg-white px-3 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-gray-50 transition cursor-pointer h-[38px]"
+          title="Refresh assignments"
+        >
+          <RefreshCw size={14} className={loading ? "animate-spin text-emerald-600" : ""} />
+          <span className="hidden sm:inline">Refresh</span>
+        </button>
       </div>
 
+      {/* Error Banner */}
+      {fetchError && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-medium text-rose-700 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={16} className="text-rose-600 shrink-0" />
+            <span>{fetchError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={fetchAssignedHistory}
+            className="flex items-center gap-1 font-bold underline hover:text-rose-900 cursor-pointer"
+          >
+            <RefreshCw size={12} /> Retry
+          </button>
+        </div>
+      )}
+
+      {/* Table Card */}
       <SectionedTableCard
         columns={columns}
         sections={sections}
-        currentPage={page}
+        currentPage={safePage}
         totalPages={totalPages}
         onPageChange={setPage}
-        onViewDetails={(row) => console.log("View details for", row.id)}
-        footerLabel={`Showing ${startIndex + 1}-${Math.min(startIndex + itemsPerPage, filtered.length)} of ${filtered.length} records`}
+        onViewDetails={handleOpenViewDetails}
+        viewDetailsLabel="View Details"
+        emptyStateTitle={loading ? "Loading vehicle assignments..." : "No records found"}
+        emptyStateDescription={
+          loading
+            ? "Fetching vehicle assignment history from server..."
+            : "No vehicle assignment records match the selected filters or search criteria."
+        }
+        footerLabel={`Showing ${
+          assignments.length === 0 ? 0 : startIndex + 1
+        }-${Math.min(startIndex + itemsPerPage, assignments.length)} of ${
+          assignments.length
+        } records`}
       />
+
+      {/* ── View Details Modal ────────────────────────────────────────────── */}
+      {isViewModalOpen && selectedRecord && (
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className="relative w-full max-w-md sm:max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                    {selectedRecord.plate_number || selectedRecord.model || "Vehicle Details"}
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">Delivery Vehicle Details</p>
+                </div>
+                {/* Top X button only — No bottom close button */}
+                <button
+                  type="button"
+                  onClick={handleCloseViewModal}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                  aria-label="Close details"
+                  title="Close details"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-90px)] space-y-4">
+                {/* Vehicle Photo or Fallback Placeholder */}
+                <div className="flex flex-col items-center justify-center py-2">
+                  <div className="w-32 h-32 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-center shadow-xs">
+                    {resolvePhotoUrl(selectedRecord.photo || selectedRecord.photo_url) &&
+                    !viewImageError ? (
+                      <img
+                        src={resolvePhotoUrl(selectedRecord.photo || selectedRecord.photo_url)}
+                        alt={selectedRecord.plate_number || "Vehicle"}
+                        className="h-full w-full object-cover"
+                        onError={() => setViewImageError(true)}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-slate-300">
+                        <Truck size={36} />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1.5">
+                          No Photo
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Vehicle Specifications */}
+                <div className="space-y-1">
+                  <ModalDetailRow label="Plate Number" value={selectedRecord.plate_number} />
+                  <ModalDetailRow label="Type" value={selectedRecord.type} />
+                  <ModalDetailRow label="Model" value={selectedRecord.model} />
+                  <ModalDetailRow
+                    label="Number of Wheels"
+                    value={`${selectedRecord.number_of_wheels || 4} Wheels`}
+                  />
+                  <ModalDetailRow
+                    label="Capacity"
+                    value={
+                      selectedRecord.capacity_formatted ||
+                      formatCapacityDisplay(selectedRecord.capacity)
+                    }
+                  />
+                  <ModalDetailRow
+                    label="Vehicle Status"
+                    value={getVehicleStatusLabel(selectedRecord.vehicle_status)}
+                    isBadge={true}
+                    badgeStyle={
+                      vehicleStatusStyleMap[selectedRecord.vehicle_status?.toLowerCase()] ||
+                      "bg-gray-100 text-gray-700 border border-gray-200"
+                    }
+                  />
+
+                  {/* Inactive Reason (if inactive) */}
+                  {selectedRecord.vehicle_status === "inactive" &&
+                    selectedRecord.inactive_reason && (
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 mt-2 space-y-1">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                          Inactive Reason:
+                        </span>
+                        <p className="text-xs sm:text-sm text-slate-800 break-words font-medium">
+                          {selectedRecord.inactive_reason}
+                        </p>
+                      </div>
+                    )}
+
+                  {/* Maintenance Reason (if maintenance) */}
+                  {(selectedRecord.vehicle_status === "for maintenance" ||
+                    selectedRecord.vehicle_status === "maintenance") &&
+                    selectedRecord.maintenance_reason && (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 mt-2 space-y-1">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700">
+                          Maintenance Reason:
+                        </span>
+                        <p className="text-xs sm:text-sm text-amber-900 break-words font-medium">
+                          {selectedRecord.maintenance_reason}
+                        </p>
+                      </div>
+                    )}
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-slate-100 pt-2" />
+
+                {/* Driver & Assignment Details */}
+                <div className="space-y-1">
+                  <ModalDetailRow label="Assigned Driver">
+                    <div className="flex items-center gap-1.5 font-semibold text-slate-800 text-right">
+                      <UserCheck size={14} className="text-emerald-600 shrink-0" />
+                      <span>
+                        {selectedRecord.driver || selectedRecord.driver_name || "N/A"}
+                      </span>
+                    </div>
+                  </ModalDetailRow>
+
+                  <ModalDetailRow
+                    label="Assignment Status"
+                    value={selectedRecord.status || selectedRecord.assignment_status || "Active"}
+                    isBadge={true}
+                    badgeStyle={
+                      String(
+                        selectedRecord.status || selectedRecord.assignment_status
+                      ).toLowerCase() === "active"
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                        : "bg-amber-100 text-amber-800 border border-amber-200"
+                    }
+                  />
+
+                  <ModalDetailRow
+                    label="Assigned On"
+                    value={
+                      selectedRecord.assigned_on_formatted ||
+                      selectedRecord.assigned_on ||
+                      selectedRecord.assignedOn ||
+                      "—"
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      )}
+
+      {/* Toast Notifications */}
+      <Toast toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }

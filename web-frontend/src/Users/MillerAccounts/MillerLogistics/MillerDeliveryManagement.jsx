@@ -1,49 +1,44 @@
-import { useMemo, useState, useRef, useEffect } from "react";
-import { Search, Calendar, ChevronDown, ChevronUp, X } from "lucide-react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
+import {
+  Search,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Truck,
+  Building2,
+  User,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
+import Toast from "../../../Components/Minor-Components/Toast";
+import useToast from "../../../Components/hooks/useToast";
+import useApi from "../../../Components/hooks/useApi";
 
-const sampleOrders = Array.from({ length: 10 }, (_, i) => ({
-  id: `o-${i + 1}`,
-  batch: `Batch 2026 - 00${(i % 9) + 1}`,
-  retailer: `Retailer A`,
-  variant: "Dinorado",
-  qty: "2,500 kg",
-  arrival: "Apr 22, 2026",
-  isoDate: "2026-04-22",
-  priority: i % 3 === 0 ? "high" : i % 3 === 1 ? "standard" : "low",
-  sector: i % 4 === 0 ? "north" : i % 4 === 1 ? "south" : i % 4 === 2 ? "east" : "west",
-}));
+// ─── Filter & Sort Options ───────────────────────────────────────────────────
 
-const drivers = [
-  { id: "d-1", name: "Driver Unknown A", status: "Available", capacity: 340, max: 10000 },
-  { id: "d-2", name: "Driver Unknown A", status: "Available", capacity: 340, max: 10000 },
-  { id: "d-3", name: "Driver Unknown A", status: "Available", capacity: 340, max: 10000 },
-  { id: "d-4", name: "Driver Unknown A", status: "Available", capacity: 340, max: 10000 },
-  { id: "d-5", name: "Driver Unknown A", status: "Limited Capacity", capacity: 7800, max: 10000 },
-  { id: "d-6", name: "Driver Unknown A", status: "Full", capacity: 10000, max: 10000 },
-];
-
-const AREA_OPTIONS = [
-  { value: "all", label: "Delivery Area" },
-  { value: "north", label: "North Sector" },
-  { value: "south", label: "South Sector" },
-  { value: "east", label: "East Sector" },
-  { value: "west", label: "West Sector" },
-];
-
-const PRIORITY_OPTIONS = [
-  { value: "all", label: "Priority" },
-  { value: "high", label: "High" },
-  { value: "standard", label: "Standard" },
-  { value: "low", label: "Low" },
+const BUYER_TYPE_OPTIONS = [
+  { value: "all", label: "All Buyers" },
+  { value: "retailer", label: "Retailers Only" },
+  { value: "warehouse", label: "Warehouses Only" },
 ];
 
 const SORT_OPTIONS = [
+  { value: "date-asc", label: "Target Arrival (Earliest)" },
+  { value: "date-desc", label: "Target Arrival (Latest)" },
+  { value: "qty-desc", label: "Quantity High to Low" },
+  { value: "qty-asc", label: "Quantity Low to High" },
+  { value: "amount-desc", label: "Total Price High to Low" },
+  { value: "amount-asc", label: "Total Price Low to High" },
   { value: "batch-asc", label: "Batch No. (A-Z)" },
-  { value: "retailer-asc", label: "Retailer (A-Z)" },
-  { value: "variant-asc", label: "Variant (A-Z)" },
-  { value: "arrival-asc", label: "Target Arrival" },
+  { value: "batch-desc", label: "Batch No. (Z-A)" },
 ];
 
 const driverStatusStyles = {
@@ -62,8 +57,14 @@ const driverStatusStyles = {
     badge: "bg-rose-50 text-rose-700",
     bar: "bg-rose-500",
   },
+  "No Vehicle": {
+    cardBorder: "border-slate-300",
+    badge: "bg-slate-100 text-slate-600",
+    bar: "bg-slate-300",
+  },
 };
 
+// ─── Custom Filter Dropdown Sub-Component ─────────────────────────────────────
 function CustomDropdown({ label, options, value, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -86,7 +87,7 @@ function CustomDropdown({ label, options, value, onChange }) {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex items-center gap-2 border border-gray-200 bg-white px-3.5 py-2 rounded-xl text-sm font-medium text-slate-800 hover:bg-gray-50 transition-colors cursor-pointer h-[38px] justify-between w-full sm:w-auto min-w-[130px]"
+        className="flex items-center gap-2 border border-gray-200 bg-white px-3.5 py-2 rounded-xl text-sm font-medium text-slate-800 hover:bg-gray-50 transition-colors cursor-pointer h-[38px] justify-between w-full sm:w-auto min-w-[150px]"
       >
         <span>{displayLabel}</span>
         {isOpen ? (
@@ -97,7 +98,7 @@ function CustomDropdown({ label, options, value, onChange }) {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-1.5 left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-1.5 z-30 w-52 animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute top-full mt-1.5 left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-1.5 z-30 w-56 animate-in fade-in zoom-in-95 duration-100">
           <div className="space-y-0.5">
             {options.map((opt) => {
               const isSelected = value === opt.value;
@@ -126,19 +127,59 @@ function CustomDropdown({ label, options, value, onChange }) {
   );
 }
 
+// ─── Modal Detail Row Sub-Component (Matching Order Approval) ───────────
+function ModalDetailRow({ label, value, isBadge = false, badgeStyle = "", children }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-1.5 text-xs sm:text-sm">
+      <span className="text-slate-500 font-medium shrink-0">{label}:</span>
+      {children ? (
+        <div className="text-right">{children}</div>
+      ) : isBadge ? (
+        <span
+          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold capitalize ${badgeStyle}`}
+        >
+          {value}
+        </span>
+      ) : (
+        <span className="font-semibold text-slate-800 text-right break-words max-w-[65%]">
+          {value || "—"}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Component ──────────────────────────────────────────────────────────
 export default function MillerDeliveryManagement() {
+  const { request } = useApi();
+  const { toasts, showToast, removeToast } = useToast();
+
+  // Data states
+  const [orders, setOrders] = useState([]);
+  const [drivers, setDrivers] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+  const [loadingDrivers, setLoadingDrivers] = useState(true);
+  const [errorOrders, setErrorOrders] = useState(null);
+
+  // Filter & Search states
   const [query, setQuery] = useState("");
   const [driverQuery, setDriverQuery] = useState("");
-  const [deliveryArea, setDeliveryArea] = useState("all");
-  const [priority, setPriority] = useState("all");
-  const [sortBy, setSortBy] = useState("batch-asc");
+  const [buyerTypeFilter, setBuyerTypeFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("date-asc");
   const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
   const [tempDateRange, setTempDateRange] = useState({ startDate: "", endDate: "" });
   const [currentPage, setCurrentPage] = useState(1);
+  const [driverPage, setDriverPage] = useState(1);
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const dateRef = useRef(null);
 
+  // Modal & Assignment states
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedDriverId, setSelectedDriverId] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Close datepicker outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dateRef.current && !dateRef.current.contains(e.target)) {
@@ -149,6 +190,61 @@ export default function MillerDeliveryManagement() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch Delivery Orders
+  const fetchOrders = useCallback(async () => {
+    setLoadingOrders(true);
+    setErrorOrders(null);
+    try {
+      const params = new URLSearchParams();
+      if (query.trim()) params.append("search", query.trim());
+      if (buyerTypeFilter !== "all") params.append("buyer_type", buyerTypeFilter);
+      if (dateRange.startDate) params.append("start_date", dateRange.startDate);
+      if (dateRange.endDate) params.append("end_date", dateRange.endDate);
+      if (sortBy) params.append("sort", sortBy);
+
+      const url = `/miller-employees/logistics/delivery-orders/${
+        params.toString() ? `?${params.toString()}` : ""
+      }`;
+      const res = await request(url, { method: "GET" });
+
+      if (res && res.success) {
+        setOrders(res.orders || []);
+      } else {
+        setErrorOrders(res?.message || "Failed to load orders.");
+      }
+    } catch (err) {
+      setErrorOrders(err?.message || "Failed to connect to server.");
+    } finally {
+      setLoadingOrders(false);
+    }
+  }, [query, buyerTypeFilter, dateRange, sortBy, request]);
+
+  // Fetch Drivers with Live Capacities
+  const fetchDrivers = useCallback(async () => {
+    setLoadingDrivers(true);
+    try {
+      const res = await request("/miller-employees/logistics/driver-capacities/", {
+        method: "GET",
+      });
+      if (res && res.success) {
+        setDrivers(res.drivers || []);
+      }
+    } catch {
+      // silently retain or show toast if needed
+    } finally {
+      setLoadingDrivers(false);
+    }
+  }, [request]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  useEffect(() => {
+    fetchDrivers();
+  }, [fetchDrivers]);
+
+  // Date Range handlers
   const handleDateApply = () => {
     setDateRange(tempDateRange);
     setCurrentPage(1);
@@ -162,50 +258,114 @@ export default function MillerDeliveryManagement() {
     setShowDatePicker(false);
   };
 
+  // Columns for SectionedTableCard
   const columns = [
     { key: "batch", label: "Batch No." },
-    { key: "retailer", label: "Retailer" },
+    { key: "retailer", label: "Retailer / Buyer" },
     { key: "variant", label: "Variant" },
-    { key: "qty", label: "Qty (kg)" },
-    { key: "arrival", label: "Target Arrival" },
+    { key: "ordered_quantity_formatted", label: "Qty (kg)" },
+    { key: "total_price_formatted", label: "Total Price" },
+    { key: "expected_arrival_date_formatted", label: "Target Arrival" },
     { key: "action", label: "Action" },
   ];
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    let result = sampleOrders.filter((o) => {
-      const matchSearch =
-        q === "" || `${o.batch} ${o.retailer} ${o.variant}`.toLowerCase().includes(q);
-      const matchArea = deliveryArea === "all" || o.sector === deliveryArea;
-      const matchPriority = priority === "all" || o.priority === priority;
+  // Pagination for Orders Table
+  const itemsPerPage = 10;
+  const totalPages = Math.max(1, Math.ceil(orders.length / itemsPerPage));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * itemsPerPage;
+  const paginatedOrders = useMemo(() => {
+    return orders.slice(startIndex, startIndex + itemsPerPage);
+  }, [orders, startIndex, itemsPerPage]);
 
-      const matchStart = !dateRange.startDate || o.isoDate >= dateRange.startDate;
-      const matchEnd = !dateRange.endDate || o.isoDate <= dateRange.endDate;
+  const tableSections = useMemo(
+    () => [{ rows: paginatedOrders }],
+    [paginatedOrders]
+  );
 
-      return matchSearch && matchArea && matchPriority && matchStart && matchEnd;
-    });
-
-    if (sortBy === "batch-asc") result.sort((a, b) => a.batch.localeCompare(b.batch));
-    else if (sortBy === "retailer-asc") result.sort((a, b) => a.retailer.localeCompare(b.retailer));
-    else if (sortBy === "variant-asc") result.sort((a, b) => a.variant.localeCompare(b.variant));
-    else if (sortBy === "arrival-asc") result.sort((a, b) => a.arrival.localeCompare(b.arrival));
-
-    return result;
-  }, [query, deliveryArea, priority, dateRange, sortBy]);
-
+  // Filter & Pagination for Driver Capacity Sidebar (4 drivers per page per spec)
   const filteredDrivers = useMemo(() => {
     const q = driverQuery.trim().toLowerCase();
-    return drivers.filter((d) => q === "" || d.name.toLowerCase().includes(q));
-  }, [driverQuery]);
+    if (!q) return drivers;
+    return drivers.filter((d) =>
+      `${d.name} ${d.plate_number || ""} ${d.vehicle_model || ""}`
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [drivers, driverQuery]);
 
-  const itemsPerPage = 10;
-  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
-  const tableSections = useMemo(() => [{ rows: paginated }], [paginated]);
+  const driversPerPage = 4;
+  const totalDriverPages = Math.max(1, Math.ceil(filteredDrivers.length / driversPerPage));
+  const safeDriverPage = Math.min(driverPage, totalDriverPages);
+  const paginatedDrivers = useMemo(() => {
+    const start = (safeDriverPage - 1) * driversPerPage;
+    return filteredDrivers.slice(start, start + driversPerPage);
+  }, [filteredDrivers, safeDriverPage, driversPerPage]);
+
+  // Modal open / close handlers
+  const handleOpenModal = (orderRow) => {
+    setSelectedOrder(orderRow);
+    setSelectedDriverId("");
+  };
+
+  const handleCloseModal = () => {
+    if (actionLoading) return;
+    setSelectedOrder(null);
+    setSelectedDriverId("");
+  };
+
+  // Find currently selected driver in modal
+  const selectedDriverObj = useMemo(() => {
+    if (!selectedDriverId) return null;
+    return drivers.find((d) => String(d.driver_id) === String(selectedDriverId));
+  }, [drivers, selectedDriverId]);
+
+  // Validation: Driver must have active vehicle and sufficient remaining capacity
+  const isConfirmEnabled = useMemo(() => {
+    if (!selectedOrder || !selectedDriverObj) return false;
+    if (!selectedDriverObj.has_vehicle) return false;
+    if (selectedDriverObj.vehicle_status?.toLowerCase() !== "active") return false;
+    return selectedDriverObj.remaining_capacity >= selectedOrder.ordered_quantity;
+  }, [selectedOrder, selectedDriverObj]);
+
+  // Confirm Assignment Action
+  const handleConfirmAssignment = async () => {
+    if (!selectedOrder || !selectedDriverId || !isConfirmEnabled || actionLoading) return;
+
+    setActionLoading(true);
+    try {
+      const res = await request(
+        `/miller-employees/logistics/delivery-orders/${selectedOrder.online_order_id}/assign/`,
+        {
+          method: "POST",
+          body: JSON.stringify({ driver_id: parseInt(selectedDriverId, 10) }),
+        }
+      );
+
+      if (res && res.success) {
+        showToast(
+          res.message ||
+            `Order ${selectedOrder.batch_no} successfully assigned to driver!`,
+          "success"
+        );
+        handleCloseModal();
+        fetchOrders();
+        fetchDrivers();
+      } else {
+        showToast(res?.message || "Failed to assign driver.", "error");
+      }
+    } catch (err) {
+      showToast(err?.message || "Network error while assigning driver.", "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {/* Toast Notification Container */}
+      <Toast toasts={toasts} onRemoveToast={removeToast} />
+
       <Breadcrumbs
         items={[
           {
@@ -221,29 +381,39 @@ export default function MillerDeliveryManagement() {
           Delivery Management
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          Assign drivers to forwarded marketplace orders.
+          Assign drivers and vehicles to forwarded marketplace orders.
         </p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
-        <div className="flex-1 w-full">
+        {/* ── Main Orders Section ────────────────────────────────────────────── */}
+        <div className="flex-1 w-full min-w-0">
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6">
-            {/* ── Toolbar Controls ─────────────────────────────────────────────────── */}
+            {/* ── Toolbar Controls ─────────────────────────────────────────── */}
             <div className="flex flex-wrap items-center gap-2 mb-4">
               {/* Search Bar */}
               <div className="relative min-w-[220px] max-w-xs flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={16}
+                />
                 <input
                   type="text"
                   value={query}
-                  onChange={(e) => { setQuery(e.target.value); setCurrentPage(1); }}
-                  placeholder="Search batch no., retailer, or product"
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Search batch, buyer, or product"
                   className="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
                 />
                 {query && (
                   <button
                     type="button"
-                    onClick={() => { setQuery(""); setCurrentPage(1); }}
+                    onClick={() => {
+                      setQuery("");
+                      setCurrentPage(1);
+                    }}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                   >
                     <X size={15} />
@@ -257,7 +427,9 @@ export default function MillerDeliveryManagement() {
                   type="button"
                   onClick={() => setShowDatePicker((prev) => !prev)}
                   className={`flex items-center gap-2 border border-gray-200 bg-white px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full sm:w-auto justify-center transition-colors cursor-pointer h-[38px] ${
-                    dateRange.startDate ? "border-emerald-500 text-emerald-700 bg-emerald-50/40" : ""
+                    dateRange.startDate
+                      ? "border-emerald-500 text-emerald-700 bg-emerald-50/40"
+                      : ""
                   }`}
                 >
                   <span>
@@ -265,7 +437,12 @@ export default function MillerDeliveryManagement() {
                       ? `${dateRange.startDate} - ${dateRange.endDate || "..."}`
                       : "Date Range"}
                   </span>
-                  <Calendar size={16} className={dateRange.startDate ? "text-emerald-600" : "text-gray-500"} />
+                  <Calendar
+                    size={16}
+                    className={
+                      dateRange.startDate ? "text-emerald-600" : "text-gray-500"
+                    }
+                  />
                 </button>
 
                 {showDatePicker && (
@@ -278,9 +455,14 @@ export default function MillerDeliveryManagement() {
                         <input
                           type="date"
                           value={tempDateRange.startDate}
-                          onChange={(e) =>
-                            setTempDateRange((prev) => ({ ...prev, startDate: e.target.value }))
-                          }
+                          onChange={(e) => {
+                            const newStart = e.target.value;
+                            setTempDateRange((prev) => ({
+                              startDate: newStart,
+                              // If current end date is earlier than new start date, clear it
+                              endDate: prev.endDate && prev.endDate < newStart ? "" : prev.endDate,
+                            }));
+                          }}
                           className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
                         />
                       </div>
@@ -290,11 +472,15 @@ export default function MillerDeliveryManagement() {
                         </label>
                         <input
                           type="date"
+                          min={tempDateRange.startDate || undefined}
                           value={tempDateRange.endDate}
                           onChange={(e) =>
-                            setTempDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+                            setTempDateRange((prev) => ({
+                              ...prev,
+                              endDate: e.target.value,
+                            }))
                           }
-                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
+                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600 disabled:opacity-50"
                         />
                       </div>
                       <div className="flex gap-2 pt-2">
@@ -318,18 +504,65 @@ export default function MillerDeliveryManagement() {
                 )}
               </div>
 
-              <CustomDropdown label="Delivery Area" options={AREA_OPTIONS} value={deliveryArea} onChange={(v) => { setDeliveryArea(v); setCurrentPage(1); }} />
-              <CustomDropdown label="Priority" options={PRIORITY_OPTIONS} value={priority} onChange={(v) => { setPriority(v); setCurrentPage(1); }} />
+              {/* Retailers / Warehouses Buyer Filter (Replaced Priority) */}
+              <CustomDropdown
+                label="Buyer Type"
+                options={BUYER_TYPE_OPTIONS}
+                value={buyerTypeFilter}
+                onChange={(v) => {
+                  setBuyerTypeFilter(v);
+                  setCurrentPage(1);
+                }}
+              />
+
+              {/* Sort By Dropdown (includes Quantity & Amount sorting) */}
+              <CustomDropdown
+                label="Sort By"
+                options={SORT_OPTIONS}
+                value={sortBy}
+                onChange={(v) => {
+                  setSortBy(v);
+                  setCurrentPage(1);
+                }}
+              />
             </div>
 
+            {/* Error Message */}
+            {errorOrders && (
+              <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-medium text-rose-700 flex items-center justify-between">
+                <span>{errorOrders}</span>
+                <button
+                  type="button"
+                  onClick={fetchOrders}
+                  className="flex items-center gap-1 font-bold underline hover:text-rose-900 cursor-pointer"
+                >
+                  <RefreshCw size={13} /> Retry
+                </button>
+              </div>
+            )}
+
+            {/* Orders Table */}
             <SectionedTableCard
               columns={columns}
               sections={tableSections}
-              currentPage={currentPage}
+              currentPage={safePage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
-              onViewDetails={(row) => console.log("View details for", row.id)}
-              footerLabel={`Showing ${startIndex + 1}-${Math.min(startIndex + itemsPerPage, filtered.length)} of ${filtered.length} orders`}
+              onViewDetails={handleOpenModal}
+              viewDetailsLabel="View Details"
+              emptyStateTitle={
+                loadingOrders ? "Loading orders..." : "No orders found"
+              }
+              emptyStateDescription={
+                loadingOrders
+                  ? "Fetching forwarded delivery orders..."
+                  : "No orders match the selected filters or search criteria."
+              }
+              footerLabel={`Showing ${
+                orders.length === 0 ? 0 : startIndex + 1
+              }-${Math.min(startIndex + itemsPerPage, orders.length)} of ${
+                orders.length
+              } orders`}
             />
           </div>
         </div>
@@ -337,20 +570,35 @@ export default function MillerDeliveryManagement() {
         {/* ── Driver Capacity Sidebar ────────────────────────────────────────── */}
         <aside className="w-full lg:w-[360px] shrink-0">
           <div className="rounded-[12px] border border-slate-200 bg-white p-4 shadow-sm">
-            <h4 className="font-bold text-slate-900">Driver Capacity</h4>
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-slate-900">Driver Capacity</h4>
+              <span className="text-xs text-slate-500 font-medium">
+                {filteredDrivers.length} {filteredDrivers.length === 1 ? "Driver" : "Drivers"}
+              </span>
+            </div>
+
             <div className="relative mt-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                size={15}
+              />
               <input
                 type="text"
                 value={driverQuery}
-                onChange={(e) => setDriverQuery(e.target.value)}
-                placeholder="Search driver..."
+                onChange={(e) => {
+                  setDriverQuery(e.target.value);
+                  setDriverPage(1);
+                }}
+                placeholder="Search driver or plate..."
                 className="w-full pl-9 pr-8 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-emerald-500 outline-none bg-white placeholder-gray-400 text-gray-700"
               />
               {driverQuery && (
                 <button
                   type="button"
-                  onClick={() => setDriverQuery("")}
+                  onClick={() => {
+                    setDriverQuery("");
+                    setDriverPage(1);
+                  }}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                 >
                   <X size={14} />
@@ -358,61 +606,322 @@ export default function MillerDeliveryManagement() {
               )}
             </div>
 
-            <div className="mt-3 space-y-2">
-              {filteredDrivers.map((d) => {
-                const pct = Math.min(
-                  100,
-                  Math.round((d.capacity / d.max) * 100),
-                );
-                const style =
-                  driverStatusStyles[d.status] ?? driverStatusStyles.Available;
+            {/* Drivers list */}
+            <div className="mt-3 space-y-2.5">
+              {loadingDrivers ? (
+                <div className="py-8 text-center text-xs text-slate-400">
+                  <Loader2 className="animate-spin inline-block mr-1" size={14} />
+                  Loading driver capacities...
+                </div>
+              ) : paginatedDrivers.length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-400">
+                  No active drivers found.
+                </div>
+              ) : (
+                paginatedDrivers.map((d) => {
+                  const style =
+                    driverStatusStyles[d.status] ?? driverStatusStyles.Available;
 
-                return (
-                  <div
-                    key={d.id}
-                    className={`rounded-md border p-2 ${style.cardBorder}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-xs font-bold text-slate-900">
-                          {d.name}
+                  return (
+                    <div
+                      key={d.id}
+                      className={`rounded-xl border p-3 ${style.cardBorder} bg-white shadow-xs`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs font-bold text-slate-900">
+                            {d.name}
+                          </div>
+                          <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                            <Truck size={12} className="shrink-0 text-slate-400" />
+                            <span>
+                              {d.has_vehicle
+                                ? `${d.plate_number} • ${d.vehicle_model}`
+                                : "No vehicle assigned"}
+                            </span>
+                          </div>
                         </div>
                         <span
-                          className={`inline-block mt-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold ${style.badge}`}
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${style.badge}`}
                         >
                           {d.status}
                         </span>
                       </div>
-                      <button type="button" className="text-[11px] font-semibold text-slate-900 bg-white border border-slate-900 px-2 py-0.5 rounded cursor-pointer hover:bg-slate-50 transition">
-                        ASSIGN
-                      </button>
-                    </div>
 
-                    <div className="mt-2">
-                      <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                        <div
-                          className={`${style.bar} h-full`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <div className="mt-1.5 text-[10px] text-slate-500">
-                        Current Capacity
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700">
-                        <span>
-                          {d.capacity.toLocaleString()} /{" "}
-                          {d.max.toLocaleString()} kg
-                        </span>
-                        <span>{pct}%</span>
-                      </div>
+                      {/* Capacity progress bar */}
+                      {d.has_vehicle ? (
+                        <div className="mt-2.5">
+                          <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                            <div
+                              className={`${style.bar} h-full transition-all duration-300`}
+                              style={{ width: `${d.pct_used}%` }}
+                            />
+                          </div>
+                          <div className="mt-1.5 flex items-center justify-between text-[10px] text-slate-500">
+                            <span>Pending Load: {d.current_load.toLocaleString()} kg</span>
+                            <span>Max: {d.max.toLocaleString()} kg</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 mt-0.5">
+                            <span className="text-[#0B5D1E]">
+                              {d.remaining_capacity.toLocaleString()} kg remaining
+                            </span>
+                            <span>{d.pct_used}% used</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-2 text-[10px] text-slate-400 italic">
+                          Assign a vehicle to this driver to enable deliveries.
+                        </div>
+                      )}
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
+
+            {/* Pagination: 4 drivers per page */}
+            {totalDriverPages > 1 && (
+              <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span>
+                  Page {safeDriverPage} of {totalDriverPages}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setDriverPage((p) => Math.max(1, p - 1))}
+                    disabled={safeDriverPage <= 1}
+                    className="p-1 rounded hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    aria-label="Previous Page"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDriverPage((p) => Math.min(totalDriverPages, p + 1))}
+                    disabled={safeDriverPage >= totalDriverPages}
+                    className="p-1 rounded hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    aria-label="Next Page"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </aside>
       </div>
+
+      {/* ── View Details Modal (Matching Sales Order Approval UI) ──────────── */}
+      {selectedOrder &&
+        createPortal(
+          <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+            <div
+              className="relative w-full max-w-md sm:max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header: Batch number as title, only top-right X, NO backdrop dismissal */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                    {selectedOrder.batch_no}
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Delivery Assignment Details
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  disabled={actionLoading}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                  aria-label="Close modal"
+                  title="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-140px)] space-y-4">
+                {/* ── SECTION 1 — BUYER INFORMATION ─────────────────────────── */}
+                <div className="space-y-1">
+                  <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
+                    <span>Buyer Information</span>
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
+                        selectedOrder.buyer_type === "Warehouse"
+                          ? "bg-purple-100 text-purple-700"
+                          : "bg-blue-100 text-blue-700"
+                      }`}
+                    >
+                      {selectedOrder.buyer_type}
+                    </span>
+                  </div>
+
+                  <ModalDetailRow label="Buyer Name" value={selectedOrder.buyer_name} />
+                  <ModalDetailRow label="Contact Number" value={selectedOrder.contact_number} />
+                  <ModalDetailRow label="Delivery Address" value={selectedOrder.delivery_address} />
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-slate-100 pt-2" />
+
+                {/* ── SECTION 2 — ORDER INFORMATION ─────────────────────────── */}
+                <div className="space-y-1">
+                  <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+                    Order Information
+                  </div>
+
+                  <ModalDetailRow label="Product Variant" value={selectedOrder.product_name} />
+                  <ModalDetailRow label="Product Code" value={selectedOrder.product_code} />
+                  <ModalDetailRow
+                    label="Ordered Quantity"
+                    value={selectedOrder.ordered_quantity_formatted}
+                  />
+                  <ModalDetailRow
+                    label="Expected Arrival Date"
+                    value={selectedOrder.expected_arrival_date_formatted}
+                  />
+                  <ModalDetailRow
+                    label="Unit Cost"
+                    value={selectedOrder.unit_cost_formatted}
+                  />
+                  <ModalDetailRow
+                    label="Fare Fee"
+                    value={selectedOrder.fare_fee_formatted}
+                  />
+                  <ModalDetailRow label="Total Price">
+                    <span className="text-base font-extrabold text-[#0B5D1E]">
+                      {selectedOrder.total_price_formatted}
+                    </span>
+                  </ModalDetailRow>
+                  <ModalDetailRow
+                    label="Payment Method"
+                    value={selectedOrder.payment_method?.toUpperCase()}
+                  />
+                  <ModalDetailRow
+                    label="Payment Status"
+                    value={selectedOrder.payment_status}
+                    isBadge={true}
+                    badgeStyle={
+                      selectedOrder.payment_status?.toLowerCase() === "verified" ||
+                      selectedOrder.payment_status?.toLowerCase() === "paid"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-amber-100 text-amber-700"
+                    }
+                  />
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-slate-100 pt-2" />
+
+                {/* ── SECTION 3 — DELIVERY INFORMATION ──────────────────────── */}
+                <div className="space-y-2">
+                  <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+                    Delivery Information
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Assign Driver & Vehicle
+                    </label>
+                    <select
+                      value={selectedDriverId}
+                      onChange={(e) => setSelectedDriverId(e.target.value)}
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs sm:text-sm bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                    >
+                      <option value="">-- Choose an active driver --</option>
+                      {drivers.map((d) => {
+                        const capLabel = d.has_vehicle
+                          ? `${d.remaining_capacity.toLocaleString()} kg remaining (${d.plate_number} • ${d.vehicle_model})`
+                          : "No Vehicle Assigned";
+                        const disabled =
+                          !d.has_vehicle ||
+                          d.vehicle_status?.toLowerCase() !== "active" ||
+                          d.remaining_capacity < selectedOrder.ordered_quantity;
+
+                        return (
+                          <option
+                            key={d.id}
+                            value={d.driver_id}
+                            disabled={disabled}
+                          >
+                            {d.name} — {capLabel} {disabled ? " [Unavailable]" : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                    {/* Driver & Vehicle Capacity Snapshot Preview */}
+                    {selectedDriverObj && (
+                      <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">Assigned Vehicle:</span>
+                          <span className="font-semibold text-slate-800">
+                            {selectedDriverObj.plate_number} ({selectedDriverObj.vehicle_model})
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">Max Vehicle Capacity:</span>
+                          <span className="font-semibold text-slate-800">
+                            {selectedDriverObj.max.toLocaleString()} kg
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">Remaining Vehicle Capacity:</span>
+                          <span
+                            className={`font-bold ${
+                              selectedDriverObj.remaining_capacity < selectedOrder.ordered_quantity
+                                ? "text-rose-600"
+                                : "text-emerald-700"
+                            }`}
+                          >
+                            {selectedDriverObj.remaining_capacity.toLocaleString()} kg
+                          </span>
+                        </div>
+
+                        {selectedDriverObj.remaining_capacity < selectedOrder.ordered_quantity && (
+                          <div className="mt-2 rounded-lg bg-rose-50 border border-rose-200 p-2 text-[11px] text-rose-700 font-medium flex items-center gap-1.5">
+                            <AlertCircle size={14} className="shrink-0" />
+                            <span>
+                              Insufficient capacity. This order requires{" "}
+                              {selectedOrder.ordered_quantity_formatted}, but driver has only{" "}
+                              {selectedDriverObj.remaining_capacity.toLocaleString()} kg available.
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                </div>
+              </div>
+
+              {/* Modal Footer: Centered green Confirm button */}
+              <div className="flex items-center justify-center px-6 py-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleConfirmAssignment}
+                  disabled={!isConfirmEnabled || actionLoading}
+                  className="px-8 py-2.5 text-xs sm:text-sm font-semibold text-white bg-[#0B5D1E] hover:bg-[#084b18] rounded-xl transition flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {actionLoading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Assigning Order...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={16} />
+                      <span>Confirm</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
