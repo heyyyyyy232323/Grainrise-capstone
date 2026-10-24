@@ -10,6 +10,8 @@ from .selectors import (
     list_flc_active_drivers,
     list_flc_delivery_orders,
     list_flc_drivers_with_capacity,
+    list_flc_fulfillment_history,
+    list_flc_fulfillment_variants,
     list_flc_product_returns,
     list_flc_return_variants,
     list_flc_vehicle_assigned_history,
@@ -554,5 +556,72 @@ def flc_vehicle_assigned_history_view(request):
             },
             status=500,
         )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@miller_flc_required
+def flc_fulfillment_history_view(request):
+    """
+    GET /api/miller-employees/logistics/fulfillment-history/
+    Retrieve fulfillment/receiving records scoped to the authenticated FLC branch.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    search = request.GET.get("search", "").strip()
+    variant = request.GET.get("variant", "all").strip()
+    buyer_type = request.GET.get("buyer_type", "all").strip()
+    start_date = request.GET.get("start_date", "").strip() or None
+    end_date = request.GET.get("end_date", "").strip() or None
+    sort_by = request.GET.get("sort", "").strip()
+
+    try:
+        records = list_flc_fulfillment_history(
+            supplier_profile_id=supplier_profile_id,
+            search=search,
+            variant_filter=variant,
+            buyer_type_filter=buyer_type,
+            start_date=start_date,
+            end_date=end_date,
+            sort_by=sort_by,
+        )
+        return JsonResponse(
+            {
+                "success": True,
+                "fulfillments": records,
+                "total": len(records),
+            },
+            status=200,
+        )
+    except Exception as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Server error fetching fulfillment history: {str(e)}",
+            },
+            status=500,
+        )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@miller_flc_required
+def flc_fulfillment_variants_view(request):
+    """
+    GET /api/miller-employees/logistics/fulfillment-history/variants/
+    Retrieve distinct variants associated with receiving/products for this FLC branch.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    try:
+        variants = list_flc_fulfillment_variants(supplier_profile_id)
+        return JsonResponse({"success": True, "variants": variants}, status=200)
+    except Exception as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Server error fetching fulfillment variants: {str(e)}",
+            },
+            status=500,
+        )
+
 
 

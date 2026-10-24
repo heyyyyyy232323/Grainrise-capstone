@@ -34,5 +34,15 @@ urlpatterns = [
         views.flc_vehicle_assigned_history_view,
         name="flc-assigned-history-list",
     ),
+    path(
+        "fulfillment-history/",
+        views.flc_fulfillment_history_view,
+        name="flc-fulfillment-history-list",
+    ),
+    path(
+        "fulfillment-history/variants/",
+        views.flc_fulfillment_variants_view,
+        name="flc-fulfillment-variants-list",
+    ),
 ]
 
