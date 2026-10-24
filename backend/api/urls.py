@@ -368,20 +368,8 @@ urlpatterns = [
         partnership_inquiry.admin_update_partnership_inquiry_status,
         name="admin-partnership-inquiry-status",
     ),
-
-
-    # ========================================================
-    # EMAIL USERS
-    # GENERAL ADMIN EMAIL
-    # ========================================================
-
-    path(
-        "admin/email-users/send/",
-        include(
-            "api.account_admin_fnction.email_users.urls"
-        ),
-    ),
 ]
+
 
 
 
