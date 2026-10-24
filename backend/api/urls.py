@@ -77,6 +77,30 @@ urlpatterns = [
         name="auth-complete-profile",
     ),
 
+    path(
+        "auth/profile",
+        auth_views.user_profile,
+        name="auth-user-profile-no-slash",
+    ),
+
+    path(
+        "auth/profile/",
+        auth_views.user_profile,
+        name="auth-user-profile",
+    ),
+
+    path(
+        "auth/change-password",
+        auth_views.user_change_password,
+        name="auth-user-change-password-no-slash",
+    ),
+
+    path(
+        "auth/change-password/",
+        auth_views.user_change_password,
+        name="auth-user-change-password",
+    ),
+
 
     # ========================================================
     # ADMIN AUTHENTICATION

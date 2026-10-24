@@ -543,6 +543,112 @@ def change_temporary_password(request):
 
 
 # ============================================================
+# AUTHENTICATED USER PROFILE HELPER
+# ============================================================
+
+def get_authenticated_user_profile(user_id, payload=None):
+    """
+    Retrieves the user profile from the database across all roles:
+    - admins (admin_role: system_admin, account_admin)
+    - warehouse_employees
+    - supplier_employees
+    - users (retailer, warehouse_manager, miller_manager, farmer)
+    Returns (user_data_dict, table_name, id_column) or (None, None, None).
+    """
+    from django.db import connection
+
+    if not user_id:
+        return None, None, None
+
+    payload = payload or {}
+    jwt_role = str(payload.get("role") or "").strip().lower()
+    auth_source = str(payload.get("auth_source") or "").strip().lower()
+    account_type = str(payload.get("account_type") or "").strip().lower()
+    position = str(payload.get("position") or "").strip().lower()
+    org_type = str(payload.get("organization_type") or "").strip().lower()
+
+    candidates = []
+    if auth_source == "django_admin" or jwt_role in ("admin", "account_admin", "system_admin"):
+        candidates.append(("admins", "admin_id", "admin"))
+    elif account_type == "main_user" or jwt_role in ("retailer", "warehouse_manager", "miller_manager", "farmer"):
+        candidates.append(("users", "user_id", "main_user"))
+    elif account_type == "warehouse_employee" or jwt_role == "warehouse_employee" or org_type == "warehouse" or (jwt_role.startswith("warehouse_") and jwt_role != "warehouse_manager"):
+        candidates.append(("warehouse_employees", "warehouse_employee_id", "warehouse_employee"))
+        candidates.append(("supplier_employees", "supplier_employee_id", "supplier_employee"))
+    elif account_type == "supplier_employee" or jwt_role == "supplier_employee" or org_type == "supplier" or jwt_role.startswith("supplier_") or (jwt_role.startswith("miller_") and jwt_role != "miller_manager"):
+        candidates.append(("supplier_employees", "supplier_employee_id", "supplier_employee"))
+        candidates.append(("warehouse_employees", "warehouse_employee_id", "warehouse_employee"))
+
+    all_tables = [
+        ("admins", "admin_id", "admin"),
+        ("users", "user_id", "main_user"),
+        ("warehouse_employees", "warehouse_employee_id", "warehouse_employee"),
+        ("supplier_employees", "supplier_employee_id", "supplier_employee"),
+    ]
+    for table_info in all_tables:
+        if table_info not in candidates:
+            candidates.append(table_info)
+
+    with connection.cursor() as cursor:
+        for table, id_col, acct_kind in candidates:
+            role_col = "admin_role" if table == "admins" else ("position" if "employees" in table else "user_role")
+            cursor.execute(f"""
+                SELECT {id_col}, first_name, middle_initial, last_name, suffix, gender,
+                       province, municipality, postal_code, barangay, street_address,
+                       email, contact_number, username, {role_col}, status, must_change_password
+                FROM {table}
+                WHERE {id_col} = %s
+                LIMIT 1
+            """, [user_id])
+            row = cursor.fetchone()
+            if row:
+                raw_role = row[14]
+                if table == "admins":
+                    resolved_role = raw_role or "account_admin"
+                    resolved_acct_type = "admin"
+                    resolved_pos = None
+                elif table == "warehouse_employees":
+                    resolved_role = "warehouse_employee"
+                    resolved_acct_type = "warehouse_employee"
+                    resolved_pos = raw_role or position
+                elif table == "supplier_employees":
+                    resolved_role = "supplier_employee"
+                    resolved_acct_type = "supplier_employee"
+                    resolved_pos = raw_role or position
+                else: # users
+                    resolved_role = raw_role or "retailer"
+                    resolved_acct_type = "main_user"
+                    resolved_pos = None
+
+                user_dict = {
+                    "id": row[0],
+                    "first_name": row[1] or "",
+                    "middle_initial": row[2] or "",
+                    "last_name": row[3] or "",
+                    "suffix": row[4] or "",
+                    "gender": row[5] or "",
+                    "province": row[6] or "",
+                    "municipality": row[7] or "",
+                    "postal_code": row[8] or "",
+                    "barangay": row[9] or "",
+                    "street_address": row[10] or "",
+                    "email": row[11] or "",
+                    "contact_number": row[12] or "",
+                    "username": row[13] or "",
+                    "role": resolved_role,
+                    "account_type": resolved_acct_type,
+                    "position": resolved_pos,
+                    "status": row[15] or "active",
+                    "must_change_password": bool(row[16]),
+                    "table": table,
+                    "id_column": id_col,
+                }
+                return user_dict, table, id_col
+
+    return None, None, None
+
+
+# ============================================================
 # PROFILE STATUS & COMPLETION
 # ============================================================
 
@@ -559,6 +665,17 @@ def get_profile_status(request):
     
     user_id = auth[0]
     payload = auth[1] if len(auth) > 1 and isinstance(auth[1], dict) else {}
+
+    user_data, table, id_col = get_authenticated_user_profile(user_id, payload)
+    if table == 'admins' and user_data:
+        return Response({
+            'user': user_data,
+            'profile': {},
+            'documents': {},
+            'must_change_password': user_data.get('must_change_password', False),
+            'profile_incomplete': False,
+            'missing_fields': [],
+        })
 
     account_type = str(payload.get("account_type") or "").strip().lower()
     jwt_role = str(payload.get("role") or "").strip().lower()
@@ -962,4 +1079,168 @@ def complete_profile(request):
         "profile_incomplete": profile_incomplete,
         "is_partial": is_partial,
         "missing_fields": missing_fields if profile_incomplete else [],
+    }, status=status.HTTP_200_OK)
+
+# ============================================================
+# AUTHENTICATED USER PROFILE (GET & PATCH/PUT)
+# ============================================================
+
+@api_view(["GET", "PATCH", "PUT"])
+def user_profile(request):
+    """
+    GET /api/auth/profile/
+    Returns the authenticated user's profile across all roles (admins, employees, main users).
+
+    PATCH/PUT /api/auth/profile/
+    Updates personal info (first_name, middle_initial, last_name, suffix, gender)
+    and/or address info (province, municipality, postal_code, barangay, street_address).
+    """
+    from django.db import connection
+
+    auth = _get_auth_user(request)
+    if not auth:
+        return Response({"detail": "Authentication credentials required."}, status=status.HTTP_401_UNAUTHORIZED)
+
+    user_id = auth[0]
+    payload = auth[1] if len(auth) > 1 and isinstance(auth[1], dict) else {}
+
+    user_data, table, id_col = get_authenticated_user_profile(user_id, payload)
+    if not user_data:
+        return Response({"detail": "User account not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == "GET":
+        return Response({
+            "success": True,
+            "user": user_data
+        }, status=status.HTTP_200_OK)
+
+    # PATCH / PUT
+    data = request.data
+    field_mapping = {
+        "first_name": ["first_name", "firstName"],
+        "middle_initial": ["middle_initial", "middleInitial"],
+        "last_name": ["last_name", "lastName"],
+        "suffix": ["suffix"],
+        "gender": ["gender"],
+        "province": ["province"],
+        "municipality": ["municipality"],
+        "postal_code": ["postal_code", "postalCode"],
+        "barangay": ["barangay"],
+        "street_address": ["street_address", "streetAddress"],
+    }
+
+    updates = []
+    params = []
+
+    for col, keys in field_mapping.items():
+        matched_key = next((k for k in keys if k in data), None)
+        if matched_key is not None:
+            raw_val = data.get(matched_key)
+            cleaned_val = str(raw_val or "").strip()
+            # Validation
+            if col == "first_name" and not cleaned_val:
+                return Response({"detail": "First name cannot be empty."}, status=status.HTTP_400_BAD_REQUEST)
+            if col == "last_name" and not cleaned_val:
+                return Response({"detail": "Last name cannot be empty."}, status=status.HTTP_400_BAD_REQUEST)
+            if col == "middle_initial" and len(cleaned_val) > 10:
+                cleaned_val = cleaned_val[:10]
+
+            updates.append(f"{col} = %s")
+            params.append(cleaned_val if cleaned_val else None)
+
+    if not updates:
+        return Response({
+            "success": True,
+            "message": "No profile fields to update.",
+            "user": user_data
+        }, status=status.HTTP_200_OK)
+
+    updates.append("updated_at = CURRENT_TIMESTAMP")
+    params.append(user_id)
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"UPDATE {table} SET {', '.join(updates)} WHERE {id_col} = %s",
+            params
+        )
+
+    # Re-fetch updated profile
+    updated_user, _, _ = get_authenticated_user_profile(user_id, payload)
+
+    return Response({
+        "success": True,
+        "message": "Profile updated successfully.",
+        "user": updated_user or user_data
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+def user_change_password(request):
+    """
+    POST /api/auth/change-password/
+    Allows an authenticated user (admin, employee, main user) to change their password.
+    """
+    from django.db import connection
+    from django.contrib.auth.hashers import make_password
+    from .utils import verify_password
+
+    auth = _get_auth_user(request)
+    if not auth:
+        return Response({"detail": "Authentication credentials required."}, status=status.HTTP_401_UNAUTHORIZED)
+
+    user_id = auth[0]
+    payload = auth[1] if len(auth) > 1 and isinstance(auth[1], dict) else {}
+
+    user_data, table, id_col = get_authenticated_user_profile(user_id, payload)
+    if not user_data:
+        return Response({"detail": "User account not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    data = request.data or {}
+    current_password = str(data.get("current_password") or data.get("currentPassword") or "").strip()
+    new_password = str(data.get("new_password") or data.get("newPassword") or "").strip()
+    confirm_password = str(data.get("confirm_password") or data.get("confirmPassword") or "").strip()
+
+    if not current_password:
+        return Response({"detail": "Current password is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    with connection.cursor() as cursor:
+        cursor.execute(f"SELECT password_hash FROM {table} WHERE {id_col} = %s LIMIT 1", [user_id])
+        row = cursor.fetchone()
+
+    if not row or not row[0]:
+        return Response({"detail": "Could not retrieve account security information."}, status=status.HTTP_400_BAD_REQUEST)
+
+    stored_hash = row[0]
+    if not verify_password(current_password, stored_hash):
+        return Response({"detail": "Current password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not new_password or len(new_password) < 8:
+        return Response({"detail": "New password must be at least 8 characters long."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not any(c.isupper() for c in new_password) or not any(c.islower() for c in new_password) or not any(c.isdigit() for c in new_password):
+        return Response({"detail": "New password must contain at least one uppercase letter, one lowercase letter, and one number."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if new_password != confirm_password:
+        return Response({"detail": "New password and confirmation do not match."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if current_password == new_password or verify_password(new_password, stored_hash):
+        return Response({"detail": "New password cannot be the same as your current password."}, status=status.HTTP_400_BAD_REQUEST)
+
+    new_hash = make_password(new_password)
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            UPDATE {table}
+            SET password_hash = %s,
+                must_change_password = FALSE,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE {id_col} = %s
+            """,
+            [new_hash, user_id]
+        )
+
+    return Response({
+        "success": True,
+        "message": "Password updated successfully."
     }, status=status.HTTP_200_OK)
