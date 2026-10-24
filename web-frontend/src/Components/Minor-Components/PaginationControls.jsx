@@ -24,6 +24,10 @@ export default function PaginationControls({
   totalPages = 1,
   onPageChange,
   pageLabel,
+  pageSize,
+  pageSizeOptions = [],
+  onPageSizeChange,
+  disabled = false,
   className = "",
 }) {
   const safeCurrent = Math.min(Math.max(currentPage, 1), Math.max(totalPages, 1));
@@ -39,7 +43,7 @@ export default function PaginationControls({
       <div className="flex items-center gap-1.5 self-end sm:self-auto">
         <button
           type="button"
-          disabled={safeCurrent <= 1}
+          disabled={disabled || safeCurrent <= 1}
           onClick={() => onPageChange?.(safeCurrent - 1)}
           className="inline-flex h-8 items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
         >
@@ -62,12 +66,13 @@ export default function PaginationControls({
             <button
               key={item}
               type="button"
+              disabled={disabled}
               onClick={() => onPageChange?.(item)}
               className={`inline-flex h-8 min-w-8 items-center justify-center rounded-md border px-2.5 text-xs font-semibold transition ${
-                active
-                  ? "border-[#018311] bg-[#018311] text-white shadow-sm"
+                  active
+                    ? "border-[#018311] bg-[#018311] text-white shadow-sm"
                   : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-700"
-              }`}
+              } disabled:cursor-not-allowed disabled:opacity-40`}
             >
               {item}
             </button>
@@ -76,13 +81,29 @@ export default function PaginationControls({
 
         <button
           type="button"
-          disabled={safeCurrent >= safeTotal}
+          disabled={disabled || safeCurrent >= safeTotal}
           onClick={() => onPageChange?.(safeCurrent + 1)}
           className="inline-flex h-8 items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Next
           <ChevronRight size={14} />
         </button>
+
+        {pageSize && pageSizeOptions.length > 0 && onPageSizeChange ? (
+          <select
+            value={pageSize}
+            onChange={(event) => onPageSizeChange(Number(event.target.value))}
+            disabled={disabled}
+            className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-600 outline-none transition focus:border-emerald-300 focus:ring-1 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Items per page"
+          >
+            {pageSizeOptions.map((option) => (
+              <option key={option} value={option}>
+                {option} / page
+              </option>
+            ))}
+          </select>
+        ) : null}
       </div>
     </div>
   );

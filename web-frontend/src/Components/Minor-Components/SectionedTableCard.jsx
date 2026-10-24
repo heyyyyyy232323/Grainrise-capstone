@@ -68,6 +68,8 @@ export default function SectionedTableCard({
   totalPages = 1,
   onPageChange,
   onViewDetails,
+  onRowClick,
+  rowClassName,
   viewDetailsLabel = "View Details",
   emptyStateTitle,
   emptyStateDescription,
@@ -90,7 +92,7 @@ export default function SectionedTableCard({
       ) : (
         <div className="overflow-x-auto overflow-y-auto max-h-72 sm:max-h-96 md:max-h-none -mx-4 md:mx-0">
           <div className="px-4 md:px-0">
-            <table className={`w-full border-collapse ${tableClassName || "table-auto"}`}>
+            <table className={`w-full border-collapse text-[13px] ${tableClassName || "table-auto"}`}>
               {tableClassName?.includes("table-fixed") && (
                 <colgroup>
                   {columns.map((col) => (
@@ -99,7 +101,7 @@ export default function SectionedTableCard({
                 </colgroup>
               )}
             <thead>
-              <tr className="bg-[#EDEDED] text-left text-[11px] font-extrabold tracking-[0.03em] text-slate-600 sm:text-[12px]">
+              <tr className="bg-[#EDEDED] text-left text-[11px] font-bold tracking-[0.03em] text-slate-600">
                 {columns.map((column) => (
                   <th
                     key={column.key}
@@ -133,13 +135,19 @@ export default function SectionedTableCard({
                   ) : null}
 
                   {(section.rows || []).map((row, rowIndex) => (
-                    <tr key={row.id || `${section.label || "row"}-${rowIndex}`} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70">
+                    <tr
+                      key={row.id || `${section.label || "row"}-${rowIndex}`}
+                      onClick={() => onRowClick?.(row)}
+                      className={`border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70 ${
+                        onRowClick ? "cursor-pointer" : ""
+                      } ${typeof rowClassName === "function" ? rowClassName(row) : rowClassName || ""}`}
+                    >
                       {columns.map((column) => {
                         if (typeof column.renderCell === "function") {
                           return (
                             <td
                               key={column.key}
-                              className={`px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || ""}`}
+                              className={`px-3 py-3 align-middle text-[13px] font-medium text-slate-700 first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || ""}`}
                             >
                               {column.renderCell(row)}
                             </td>
@@ -150,7 +158,7 @@ export default function SectionedTableCard({
                           return (
                             <td
                               key={column.key}
-                              className={`px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || ""}`}
+                              className={`px-3 py-3 align-middle text-[13px] font-medium text-slate-700 first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || ""}`}
                             >
                               {column.render(row)}
                             </td>
@@ -166,7 +174,7 @@ export default function SectionedTableCard({
                               className={`whitespace-nowrap px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || ""}`}
                               style={column.width ? { width: column.width } : undefined}
                             >
-                              <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-bold capitalize ${getStatusClassName(cellValue)}`}>
+                              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize ${getStatusClassName(cellValue)}`}>
                                 {cellValue}
                               </span>
                             </td>

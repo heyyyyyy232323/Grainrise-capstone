@@ -4,6 +4,7 @@ from . import views
 from . import auth_views
 from .admin_auth import admin_views
 from . import partnership_inquiry
+from . import support_views
 
 
 urlpatterns = [
@@ -74,6 +75,30 @@ urlpatterns = [
         "auth/complete-profile",
         auth_views.complete_profile,
         name="auth-complete-profile",
+    ),
+
+    path(
+        "auth/profile",
+        auth_views.user_profile,
+        name="auth-user-profile-no-slash",
+    ),
+
+    path(
+        "auth/profile/",
+        auth_views.user_profile,
+        name="auth-user-profile",
+    ),
+
+    path(
+        "auth/change-password",
+        auth_views.user_change_password,
+        name="auth-user-change-password-no-slash",
+    ),
+
+    path(
+        "auth/change-password/",
+        auth_views.user_change_password,
+        name="auth-user-change-password",
     ),
 
 
@@ -257,6 +282,18 @@ urlpatterns = [
         "auth/forgot-password/reset",
         views.forgot_password_reset,
         name="forgot-password-reset",
+    ),
+
+
+    # ========================================================
+    # ========================================================
+    # CONTACT SUPPORT (PUBLIC)
+    # ========================================================
+
+    path(
+        "support/contact/",
+        support_views.submit_contact_support,
+        name="contact-support-submit",
     ),
 
 

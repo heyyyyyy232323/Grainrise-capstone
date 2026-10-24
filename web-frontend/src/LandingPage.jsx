@@ -106,13 +106,13 @@ export default function LandingPage() {
   }, [hash]);
 
   const ECOSYSTEM_STEPS = [
-    { icon: <Tractor size={22} strokeWidth={1.8} />,        label: 'Farm'       },
-    { icon: <Truck size={22} strokeWidth={1.8} />,          label: 'Millers'    },
-    { icon: <Warehouse size={22} strokeWidth={1.8} />,      label: 'Warehouse'  },
-    { icon: <ClipboardCheck size={22} strokeWidth={1.8} />, label: 'Inventory'  },
-    { icon: <FileText size={22} strokeWidth={1.8} />,       label: 'Orders'     },
-    { icon: <Truck size={22} strokeWidth={1.8} />,          label: 'Transport'  },
-    { icon: <Store size={22} strokeWidth={1.8} />,          label: 'Retailers'  },
+    { icon: <Tractor size={22} strokeWidth={1.8} />, label: 'Farm' },
+    { icon: <Truck size={22} strokeWidth={1.8} />, label: 'Millers' },
+    { icon: <Warehouse size={22} strokeWidth={1.8} />, label: 'Warehouse' },
+    { icon: <ClipboardCheck size={22} strokeWidth={1.8} />, label: 'Inventory' },
+    { icon: <FileText size={22} strokeWidth={1.8} />, label: 'Orders' },
+    { icon: <Truck size={22} strokeWidth={1.8} />, label: 'Transport' },
+    { icon: <Store size={22} strokeWidth={1.8} />, label: 'Retailers' },
   ];
 
   const EXPLORE_FEATURES = [
@@ -202,7 +202,7 @@ export default function LandingPage() {
 
   return (
     <div className="lp-root animate-page-fade">
-      
+
       {/* Restored: Header navigation handlers */}
       <LandingHeader scrollTo={scrollTo} onNavigate={scrollTo} />
 
@@ -219,11 +219,11 @@ export default function LandingPage() {
             </h1>
 
             <p className="lp-hero__sub">
-              A centralized, mission-critical platform synchronizing farmers, cooperative
+              A centralized platform connecting supply chain partners,
               <br className="lp-hero__line-break" />
-              millers, institutional buyers, regional silos, and retailers across the national
+              streamlining business operations, and improving visibility across
               <br className="lp-hero__line-break" />
-              rice reserve and distribution grid.
+              the rice distribution network.
             </p>
 
             <div className="lp-hero__ctas">
@@ -258,7 +258,7 @@ export default function LandingPage() {
 
       {/* ── ECOSYSTEM, PORTALS & EXPLORE WRAPPER ─── */}
       <div className="lp-ecosystem-portals-wrapper">
-        
+
         {/* ── ECOSYSTEM (Fade Up Effect) ─── */}
         <AnimatedSection className="lp-ecosystem" id="ecosystem" animation="fade-up">
           <h2 className="lp-section-headline lp-section-headline--center">
@@ -294,11 +294,11 @@ export default function LandingPage() {
 
             <div className="lp-explore__grid">
               {EXPLORE_FEATURES.map((item, idx) => (
-                <AnimatedSection 
-                  key={item.title} 
-                  tag="div" 
-                  animation="fade-up" 
-                  delay={idx * 80} 
+                <AnimatedSection
+                  key={item.title}
+                  tag="div"
+                  animation="fade-up"
+                  delay={idx * 80}
                   className="lp-explore-card"
                 >
                   <div className="lp-explore-card__icon-wrap">
@@ -389,7 +389,7 @@ export default function LandingPage() {
         <div className="lp-mobile-app__glow lp-mobile-app__glow--1" />
         <div className="lp-mobile-app__glow lp-mobile-app__glow--2" />
         <div className="lp-mobile-app__inner">
-          
+
           <AnimatedSection className="lp-mobile-app__phone-col" animation="slide-left">
             <div className="lp-phone-orb lp-phone-orb--top" />
             <div className="lp-phone-orb lp-phone-orb--bottom" />

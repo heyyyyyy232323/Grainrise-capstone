@@ -12,33 +12,41 @@ import {
   Sparkles,
   X,
   ChevronDown,
-  ChevronUp,
   ShieldCheck,
-  BookOpen,
-  UploadCloud
+  UploadCloud,
+  Loader2
 } from 'lucide-react';
 import LandingFooter from '../Components/Major-Components/LandingFooter';
 import LandingHeader from '../Components/Major-Components/LandingHeader';
 import AnimatedSection from './AnimatedSection';
 import './SupportPages.css';
 
+const API_BASE = (
+  import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+).replace(/\/$/, '') + '/api';
+
+const INITIAL_FORM_STATE = {
+  fullName: '',
+  email: '',
+  userRole: 'Farmer',
+  concernCategory: 'Technical Issue',
+  referenceId: '',
+  subject: '',
+  description: '',
+  attachmentFile: null,
+  attachmentName: '',
+  attachmentSize: ''
+};
+
 export default function ContactSupport() {
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    fullName: 'Mang Danilo Ramos',
-    email: 'danilo.ramos@grainrise.ph',
-    userRole: 'Farmer',
-    concernCategory: 'Technical Issue',
-    referenceId: 'PRD-2026-002',
-    subject: 'Unable to sync Point of Sale inventory with central Luzon node',
-    description: "During inventory sync on Tuesday morning at 09:30 AM PHT, the application reported code 'ERR-NODE-LBN-502'. We verified local network connection is active. As a result, 400 sacks of Sinandomeng palay remain marked 'pending broadcast'. Kindly advise on resynchronizing with the central Luzon node without generating duplicated ledger batches.",
-    attachmentName: 'screenshot-error.png',
-    attachmentSize: '1.2 MB'
-  });
-
+  const [formData, setFormData] = useState(INITIAL_FORM_STATE);
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedResult, setSubmittedResult] = useState(null);
   const [openFaq, setOpenFaq] = useState(null);
 
   const commonReasons = [
@@ -64,46 +72,160 @@ export default function ContactSupport() {
     }
   ];
 
+  const validateField = (name, value) => {
+    let error = '';
+    const trimmed = String(value || '').trim();
+
+    switch (name) {
+      case 'fullName':
+        if (!trimmed) {
+          error = 'Full name is required.';
+        } else if (trimmed.length < 2) {
+          error = 'Full name must be at least 2 characters.';
+        }
+        break;
+      case 'email':
+        if (!trimmed) {
+          error = 'Email address is required.';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+          error = 'Please enter a valid email address.';
+        }
+        break;
+      case 'subject':
+        if (!trimmed) {
+          error = 'Subject is required.';
+        } else if (trimmed.length < 3) {
+          error = 'Subject must be at least 3 characters.';
+        }
+        break;
+      case 'description':
+        if (!trimmed) {
+          error = 'Description is required.';
+        } else if (trimmed.length < 10) {
+          error = 'Please describe your concern with at least 10 characters.';
+        }
+        break;
+      case 'concernCategory':
+        if (!trimmed) {
+          error = 'Please select a concern category.';
+        }
+        break;
+      default:
+        break;
+    }
+
+    return error;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+
+    // Clear or update field validation
+    if (errors[name]) {
+      const fieldError = validateField(name, value);
+      setErrors(prev => ({
+        ...prev,
+        [name]: fieldError
+      }));
+    }
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    const fieldError = validateField(name, value);
+    if (fieldError) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: fieldError
+      }));
+    }
   };
 
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors(prev => ({ ...prev, attachment: 'File size must not exceed 5MB.' }));
+        return;
+      }
       const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
       setFormData(prev => ({
         ...prev,
+        attachmentFile: file,
         attachmentName: file.name,
         attachmentSize: `${sizeMB} MB`
       }));
+      setErrors(prev => ({ ...prev, attachment: '' }));
     }
   };
 
   const removeAttachment = () => {
     setFormData(prev => ({
       ...prev,
+      attachmentFile: null,
       attachmentName: '',
       attachmentSize: ''
     }));
+    setErrors(prev => ({ ...prev, attachment: '' }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.email || !formData.subject || !formData.description) {
-      alert('Please fill in all required fields.');
+    setServerError('');
+
+    // Full form validation check
+    const newErrors = {};
+    const fieldsToValidate = ['fullName', 'email', 'concernCategory', 'subject', 'description'];
+    fieldsToValidate.forEach(field => {
+      const err = validateField(field, formData[field]);
+      if (err) newErrors[field] = err;
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      const body = new FormData();
+      body.append('fullName', formData.fullName.trim());
+      body.append('email', formData.email.trim());
+      body.append('userRole', formData.userRole || '');
+      body.append('concernCategory', formData.concernCategory);
+      body.append('referenceId', formData.referenceId.trim());
+      body.append('subject', formData.subject.trim());
+      body.append('description', formData.description.trim());
+      if (formData.attachmentFile) {
+        body.append('attachment', formData.attachmentFile);
+        body.append('attachmentName', formData.attachmentName);
+      }
+
+      const res = await fetch(`${API_BASE}/support/contact/`, {
+        method: 'POST',
+        body,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Unable to submit your support request. Please try again.');
+      }
+
+      setSubmittedResult({
+        supportId: data.data?.support_id,
+        referenceId: formData.referenceId.trim() || `REF-GR-${String(data.data?.support_id).padStart(5, '0')}`,
+        email: formData.email.trim(),
+      });
       setSubmitted(true);
-    }, 1000);
+    } catch (err) {
+      setServerError(err.message || 'Network error: could not connect to server.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -195,23 +317,49 @@ export default function ContactSupport() {
               </p>
             </div>
 
+            {serverError && (
+              <div style={{
+                backgroundColor: '#fef2f2',
+                border: '1px solid #f87171',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                color: '#b91c1c',
+                fontSize: '13.5px'
+              }}>
+                <AlertTriangle size={18} style={{ flexShrink: 0 }} />
+                <span>{serverError}</span>
+              </div>
+            )}
+
             {submitted ? (
               <div style={{ textAlign: 'center', padding: '48px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
                 <CheckCircle2 size={54} color="#16a34a" />
                 <h3 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: '#111827' }}>Support Request Submitted!</h3>
                 <p style={{ fontSize: '14px', color: '#4b5563', maxWidth: '440px', lineHeight: 1.6, margin: 0 }}>
-                  Your support ticket has been recorded with reference <strong>{formData.referenceId || 'TKT-2026-089'}</strong>. Updates and instructions will be sent to <strong>{formData.email}</strong>.
+                  Your support inquiry has been successfully sent to the GrainRise Support Team. Reference: <strong>{submittedResult?.referenceId}</strong>.
+                  Updates will be sent to <strong>{submittedResult?.email}</strong>.
                 </p>
                 <button
+                  type="button"
                   className="support-submit-btn"
-                  style={{ alignSelf: 'center', marginTop: '12px' }}
-                  onClick={() => setSubmitted(false)}
+                  style={{ alignSelf: 'center', marginTop: '12px', minWidth: '220px' }}
+                  onClick={() => {
+                    setFormData(INITIAL_FORM_STATE);
+                    setErrors({});
+                    setServerError('');
+                    setSubmitted(false);
+                    setSubmittedResult(null);
+                  }}
                 >
                   Submit Another Request
                 </button>
               </div>
             ) : (
-              <form className="support-form-grid" onSubmit={handleSubmit}>
+              <form className="support-form-grid" onSubmit={handleSubmit} noValidate>
                 
                 {/* Row 1: Full Name & Email Address */}
                 <div className="support-form-row">
@@ -221,12 +369,19 @@ export default function ContactSupport() {
                       type="text"
                       id="fullName"
                       name="fullName"
-                      className="support-input"
+                      className={`support-input ${errors.fullName ? 'has-error' : ''}`}
+                      style={errors.fullName ? { borderColor: '#ef4444' } : {}}
                       value={formData.fullName}
                       onChange={handleChange}
-                      placeholder="e.g. Mang Danilo Ramos"
+                      onBlur={handleBlur}
+                      placeholder="Enter your full name"
                       required
                     />
+                    {errors.fullName && (
+                      <span style={{ color: '#ef4444', fontSize: '11.5px', marginTop: '4px', display: 'block' }}>
+                        {errors.fullName}
+                      </span>
+                    )}
                   </div>
 
                   <div className="support-form-group">
@@ -235,13 +390,21 @@ export default function ContactSupport() {
                       type="email"
                       id="email"
                       name="email"
-                      className="support-input"
+                      className={`support-input ${errors.email ? 'has-error' : ''}`}
+                      style={errors.email ? { borderColor: '#ef4444' } : {}}
                       value={formData.email}
                       onChange={handleChange}
-                      placeholder="e.g. danilo.ramos@grainrise.ph"
+                      onBlur={handleBlur}
+                      placeholder="Enter your email address"
                       required
                     />
-                    <span className="support-form-hint">Use an email address where you can receive support updates.</span>
+                    {errors.email ? (
+                      <span style={{ color: '#ef4444', fontSize: '11.5px', marginTop: '4px', display: 'block' }}>
+                        {errors.email}
+                      </span>
+                    ) : (
+                      <span className="support-form-hint">Use an email address where you can receive support updates.</span>
+                    )}
                   </div>
                 </div>
 
@@ -271,9 +434,11 @@ export default function ContactSupport() {
                     <select
                       id="concernCategory"
                       name="concernCategory"
-                      className="support-select"
+                      className={`support-select ${errors.concernCategory ? 'has-error' : ''}`}
+                      style={errors.concernCategory ? { borderColor: '#ef4444' } : {}}
                       value={formData.concernCategory}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       required
                     >
                       <option value="Technical Issue">Technical Issue</option>
@@ -284,6 +449,11 @@ export default function ContactSupport() {
                       <option value="Billing & Payments">Billing & Payments</option>
                       <option value="Other">Other</option>
                     </select>
+                    {errors.concernCategory && (
+                      <span style={{ color: '#ef4444', fontSize: '11.5px', marginTop: '4px', display: 'block' }}>
+                        {errors.concernCategory}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -299,7 +469,7 @@ export default function ContactSupport() {
                     className="support-input"
                     value={formData.referenceId}
                     onChange={handleChange}
-                    placeholder="PRD-2026-002"
+                    placeholder="Enter reference ID (if applicable)"
                   />
                   <span className="support-form-hint">Provide a reference number only if your concern is related to an existing GrainRise record.</span>
                 </div>
@@ -311,12 +481,19 @@ export default function ContactSupport() {
                     type="text"
                     id="subject"
                     name="subject"
-                    className="support-input"
+                    className={`support-input ${errors.subject ? 'has-error' : ''}`}
+                    style={errors.subject ? { borderColor: '#ef4444' } : {}}
                     value={formData.subject}
                     onChange={handleChange}
-                    placeholder="Brief summary of your concern"
+                    onBlur={handleBlur}
+                    placeholder="Enter subject of your concern"
                     required
                   />
+                  {errors.subject && (
+                    <span style={{ color: '#ef4444', fontSize: '11.5px', marginTop: '4px', display: 'block' }}>
+                      {errors.subject}
+                    </span>
+                  )}
                 </div>
 
                 {/* Row 5: Description */}
@@ -325,15 +502,22 @@ export default function ContactSupport() {
                   <textarea
                     id="description"
                     name="description"
-                    className="support-textarea"
+                    className={`support-textarea ${errors.description ? 'has-error' : ''}`}
+                    style={errors.description ? { borderColor: '#ef4444' } : {}}
                     value={formData.description}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     maxLength={1000}
-                    placeholder="Provide full details of what happened..."
+                    placeholder="Describe your concern or inquiry in detail..."
                     required
                   />
-                  <div className="support-char-counter">
-                    {formData.description.length} / 1000
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                    {errors.description ? (
+                      <span style={{ color: '#ef4444', fontSize: '11.5px' }}>{errors.description}</span>
+                    ) : <span />}
+                    <div className="support-char-counter">
+                      {formData.description.length} / 1000
+                    </div>
                   </div>
                 </div>
 
@@ -347,7 +531,7 @@ export default function ContactSupport() {
                     <div className="support-attachment-box">
                       <div className="support-attachment-info">
                         <Check size={16} color="#16a34a" />
-                        <span><strong>{formData.attachmentName}</strong> ({formData.attachmentSize}) • Uploaded successfully</span>
+                        <span><strong>{formData.attachmentName}</strong> ({formData.attachmentSize}) • Attached</span>
                       </div>
                       <button
                         type="button"
@@ -362,20 +546,26 @@ export default function ContactSupport() {
                     <label className="support-attachment-box" style={{ cursor: 'pointer' }}>
                       <div className="support-attachment-info" style={{ color: '#4b5563' }}>
                         <UploadCloud size={18} color="#16a34a" />
-                        <span>Click to attach screenshot or error log</span>
+                        <span>Click to attach screenshot, document, or error log</span>
                       </div>
                       <input
                         type="file"
-                        accept="image/png, image/jpeg, application/pdf"
+                        accept="image/png, image/jpeg, image/webp, application/pdf"
                         style={{ display: 'none' }}
                         onChange={handleFileUpload}
                       />
                     </label>
                   )}
 
-                  <span className="support-form-hint">
-                    PNG, JPG, or PDF • Maximum file size: 10 MB • Do not upload files containing passwords or verification codes.
-                  </span>
+                  {errors.attachment ? (
+                    <span style={{ color: '#ef4444', fontSize: '11.5px', marginTop: '4px', display: 'block' }}>
+                      {errors.attachment}
+                    </span>
+                  ) : (
+                    <span className="support-form-hint">
+                      PNG, JPG, WEBP, or PDF • Maximum file size: 5 MB • Do not upload files containing passwords or verification codes.
+                    </span>
+                  )}
                 </div>
 
                 {/* Submit CTA */}
@@ -383,8 +573,16 @@ export default function ContactSupport() {
                   type="submit"
                   className="support-submit-btn"
                   disabled={submitting}
+                  style={submitting ? { opacity: 0.75, cursor: 'not-allowed' } : {}}
                 >
-                  <span>{submitting ? 'Submitting Request...' : 'Submit Support Request'}</span>
+                  {submitting ? (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <Loader2 size={16} className="support-spinner animate-spin" />
+                      Submitting Request...
+                    </span>
+                  ) : (
+                    <span>Submit Support Request</span>
+                  )}
                 </button>
 
               </form>
@@ -405,7 +603,7 @@ export default function ContactSupport() {
                   <div className="support-step-num" style={{ width: '22px', height: '22px', fontSize: '10px' }}>01</div>
                   <div>
                     <h4 style={{ margin: 0, fontSize: '12.5px', fontWeight: 700, color: '#111827' }}>REQUEST RECEIVED</h4>
-                    <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: '#6b7280', lineHeight: 1.45 }}>Your support request is recorded for review.</p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: '#6b7280', lineHeight: 1.45 }}>Your support request is recorded and delivered to the Admin Support Desk.</p>
                   </div>
                 </div>
 
@@ -413,7 +611,7 @@ export default function ContactSupport() {
                   <div className="support-step-num" style={{ width: '22px', height: '22px', fontSize: '10px' }}>02</div>
                   <div>
                     <h4 style={{ margin: 0, fontSize: '12.5px', fontWeight: 700, color: '#111827' }}>CONCERN REVIEWED</h4>
-                    <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: '#6b7280', lineHeight: 1.45 }}>The GrainRise Support Team reviews the details you provided.</p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: '#6b7280', lineHeight: 1.45 }}>The GrainRise Administrator reviews the details and references provided.</p>
                   </div>
                 </div>
 
@@ -421,7 +619,7 @@ export default function ContactSupport() {
                   <div className="support-step-num" style={{ width: '22px', height: '22px', fontSize: '10px' }}>03</div>
                   <div>
                     <h4 style={{ margin: 0, fontSize: '12.5px', fontWeight: 700, color: '#111827' }}>SUPPORT UPDATE</h4>
-                    <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: '#6b7280', lineHeight: 1.45 }}>Updates or additional instructions may be sent to the email address provided in your request.</p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: '#6b7280', lineHeight: 1.45 }}>Updates or direct email responses are dispatched to your provided email address.</p>
                   </div>
                 </div>
               </div>
@@ -482,22 +680,28 @@ export default function ContactSupport() {
           </div>
 
           <div className="faq-accordion-list">
-            {commonReasons.map((item, idx) => (
-              <div key={idx} className={`faq-accordion-item ${openFaq === idx ? 'open' : ''}`}>
-                <button
-                  className="faq-accordion-btn"
-                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                >
-                  <span>{item.q}</span>
-                  {openFaq === idx ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                </button>
-                {openFaq === idx && (
-                  <div className="faq-accordion-content">
-                    {item.a}
+            {commonReasons.map((item, idx) => {
+              const isOpen = openFaq === idx;
+              return (
+                <div key={idx} className={`faq-accordion-item ${isOpen ? 'open' : ''}`}>
+                  <button
+                    className="faq-accordion-btn"
+                    onClick={() => setOpenFaq(isOpen ? null : idx)}
+                    aria-expanded={isOpen}
+                  >
+                    <span>{item.q}</span>
+                    <ChevronDown size={18} className="faq-accordion-chevron" />
+                  </button>
+                  <div className={`faq-accordion-collapse ${isOpen ? 'open' : ''}`}>
+                    <div className="faq-accordion-inner">
+                      <div className="faq-accordion-content">
+                        {item.a}
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </AnimatedSection>
 

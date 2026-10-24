@@ -12,6 +12,8 @@ RECIPIENT_RETAILER = "retailer"
 RECIPIENT_FARMER = "farmer"
 RECIPIENT_SPECIFIC = "specific_user"
 RECIPIENT_PARTNERSHIP = "partnership_inquiry"
+RECIPIENT_SUPPORT = "support_inquiry"
+RECIPIENT_CONTACT = "support_contact"
 
 
 VALID_RECIPIENT_TYPES = {
@@ -22,6 +24,8 @@ VALID_RECIPIENT_TYPES = {
     RECIPIENT_FARMER,
     RECIPIENT_SPECIFIC,
     RECIPIENT_PARTNERSHIP,
+    RECIPIENT_SUPPORT,
+    RECIPIENT_CONTACT,
     "user",
 }
 
@@ -34,6 +38,8 @@ RECIPIENT_LABELS = {
     RECIPIENT_FARMER: "Farmers",
     RECIPIENT_SPECIFIC: "Specific User",
     RECIPIENT_PARTNERSHIP: "Partner With Us Applicant",
+    RECIPIENT_SUPPORT: "Support Inquiry Contact",
+    RECIPIENT_CONTACT: "Support Inquiry Contact",
     "user": "Specific User",
 }
 
@@ -858,3 +864,112 @@ def sent_email_history_exists(
         row
         and row[0]
     )
+
+
+# ============================================================
+# RECEIVED SUPPORT MESSAGES (CONTACT SUPPORT)
+# ============================================================
+
+def list_received_support_messages(
+    search=None,
+    is_read=None,
+    category=None,
+    status=None,
+    limit=100,
+    offset=0,
+):
+    """
+    Return support inquiries submitted via Contact Support ('How Can We Help?').
+    Newest first.
+    """
+    with connection.cursor() as cursor:
+        conditions = ["1=1"]
+        params = []
+
+        if search:
+            search_term = f"%{str(search).strip()}%"
+            conditions.append(
+                "(m.full_name LIKE %s OR m.email LIKE %s OR m.subject LIKE %s OR m.reference_id LIKE %s OR m.description LIKE %s)"
+            )
+            params.extend([search_term, search_term, search_term, search_term, search_term])
+
+        if is_read is not None:
+            conditions.append("m.is_read = %s")
+            params.append(1 if is_read else 0)
+
+        if category and str(category).lower() != "all":
+            conditions.append("m.concern_category = %s")
+            params.append(str(category).strip())
+
+        if status and str(status).lower() != "all":
+            conditions.append("m.status = %s")
+            params.append(str(status).strip())
+
+        where_clause = " AND ".join(conditions)
+
+        sql = f"""
+            SELECT
+                m.support_id AS id,
+                m.support_id,
+                m.full_name,
+                m.email,
+                m.user_role,
+                m.concern_category,
+                m.reference_id,
+                m.subject,
+                m.description,
+                m.attachment_name,
+                m.attachment_file,
+                m.is_read,
+                m.status,
+                m.created_at,
+                m.updated_at
+            FROM contact_support_messages m
+            WHERE {where_clause}
+            ORDER BY m.created_at DESC, m.support_id DESC
+            LIMIT %s OFFSET %s
+        """
+        cursor.execute(sql, params + [int(limit), int(offset)])
+        rows = _rows_to_dicts(cursor)
+
+        cursor.execute("SELECT COUNT(*) FROM contact_support_messages WHERE status = 'unread' OR is_read = 0")
+        unread_row = cursor.fetchone()
+        unread_count = unread_row[0] if unread_row else 0
+
+        cursor.execute(f"SELECT COUNT(*) FROM contact_support_messages m WHERE {where_clause}", params)
+        total_row = cursor.fetchone()
+        total_count = total_row[0] if total_row else 0
+
+    return rows, unread_count, total_count
+
+
+def get_received_support_message_detail(support_id):
+    """
+    Return one complete received contact support message by ID.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                m.support_id AS id,
+                m.support_id,
+                m.full_name,
+                m.email,
+                m.user_role,
+                m.concern_category,
+                m.reference_id,
+                m.subject,
+                m.description,
+                m.attachment_name,
+                m.attachment_file,
+                m.is_read,
+                m.status,
+                m.created_at,
+                m.updated_at
+            FROM contact_support_messages m
+            WHERE m.support_id = %s
+            LIMIT 1
+            """,
+            [support_id],
+        )
+        return _row_to_dict(cursor)
