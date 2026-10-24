@@ -1,7 +1,10 @@
 import json
+import logging
 
 from datetime import date, datetime
 from decimal import Decimal
+
+logger = logging.getLogger(__name__)
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -263,6 +266,7 @@ def email_users_recipients(request):
         )
 
     except Exception as exc:
+        logger.exception("Email Users send failed:")
         return JsonResponse(
             {
                 "success":
@@ -318,6 +322,7 @@ def email_users_history(request):
         )
 
     except Exception as exc:
+        logger.exception("Email Users send failed:")
         return JsonResponse(
             {
                 "success":
@@ -385,6 +390,7 @@ def email_users_history_detail(
         )
 
     except Exception as exc:
+        logger.exception("Email Users send failed:")
         return JsonResponse(
             {
                 "success":
@@ -503,6 +509,7 @@ def email_users_send(
 
         recipient_id = data.get("recipient_id")
         recipient_user_id = data.get("recipient_user_id")
+        lookup_id = recipient_id or recipient_user_id
         recipient_email = data.get("recipient_email") or data.get("recipientEmail") or ""
         recipient_name = data.get("recipient_name") or data.get("recipientName") or ""
 
@@ -511,7 +518,6 @@ def email_users_send(
         # ====================================================
 
         if recipient_type in ("support_inquiry", "support_contact"):
-            lookup_id = recipient_id or recipient_user_id
             if lookup_id:
                 try:
                     msg = ContactSupportMessage.objects.filter(support_id=lookup_id).first()
@@ -620,6 +626,9 @@ def email_users_send(
 
                 recipient_name=
                     recipient_name,
+
+                recipient_id=
+                    lookup_id,
             )
         )
 
@@ -725,6 +734,7 @@ def email_users_send(
     # ========================================================
 
     except Exception as exc:
+        logger.exception("Email Users send failed:")
         return JsonResponse(
             {
                 "success":
@@ -787,6 +797,7 @@ def email_users_received(request):
         )
 
     except Exception as exc:
+        logger.exception("Email Users send failed:")
         return JsonResponse(
             {
                 "success": False,
@@ -824,6 +835,7 @@ def email_users_received_detail(request, support_id):
         )
 
     except Exception as exc:
+        logger.exception("Email Users send failed:")
         return JsonResponse(
             {
                 "success": False,
@@ -873,6 +885,7 @@ def email_users_received_mark_read(request, support_id):
         )
 
     except Exception as exc:
+        logger.exception("Email Users send failed:")
         return JsonResponse(
             {
                 "success": False,
@@ -928,6 +941,7 @@ def email_users_received_update_status(request, support_id):
             status=400,
         )
     except Exception as exc:
+        logger.exception("Email Users send failed:")
         return JsonResponse(
             {
                 "success": False,

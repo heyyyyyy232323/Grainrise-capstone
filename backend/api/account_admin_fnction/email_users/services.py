@@ -756,6 +756,7 @@ def send_account_admin_email(
     recipient_user_id=None,
     recipient_email=None,
     recipient_name=None,
+    recipient_id=None,
 ):
     """
     Complete Email Users send flow.
@@ -838,20 +839,6 @@ def send_account_admin_email(
         history_user_id = None
         history_email = clean_email
         history_recipient_type = RECIPIENT_SPECIFIC
-
-        if normalized_type in (RECIPIENT_SUPPORT, "support_contact") and recipient_id:
-            try:
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        """
-                        UPDATE contact_support_messages
-                        SET status = 'replied', is_read = 1, updated_at = NOW()
-                        WHERE support_id = %s
-                        """,
-                        [recipient_id],
-                    )
-            except Exception:
-                pass
 
     # ========================================================
     # SPECIFIC USER
@@ -943,6 +930,24 @@ def send_account_admin_email(
         )
     )
 
+    if (
+        normalized_type in (RECIPIENT_SUPPORT, "support_contact")
+        and recipient_id
+        and delivery.get("successful_count", 0) > 0
+    ):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE contact_support_messages
+                    SET status = 'replied', is_read = 1, updated_at = NOW()
+                    WHERE support_id = %s
+                    """,
+                    [recipient_id],
+                )
+        except Exception:
+            pass
+
 
     # ========================================================
     # SAVE HISTORY AFTER SUCCESSFUL DELIVERY
@@ -1015,6 +1020,8 @@ def send_account_admin_email(
         normalized_type in (
             RECIPIENT_SPECIFIC,
             RECIPIENT_PARTNERSHIP,
+            RECIPIENT_SUPPORT,
+            "support_contact",
         )
     ):
         result_message = (
