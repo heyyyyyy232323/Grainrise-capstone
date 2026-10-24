@@ -9,7 +9,6 @@ import {
 import LandingHeader from '../Components/Major-Components/LandingHeader';
 import LandingFooter from '../Components/Major-Components/LandingFooter';
 import shakehandsImg from '../assets/shakehands2.png';
-import RichTextEditor from '../Components/Minor-Components/RichTextEditor';
 import PolicyModal from '../Components/Minor-Components/PolicyModal';
 import Toast from '../Components/Modals/Toast';
 import AnimatedSection from './AnimatedSection';
@@ -24,6 +23,17 @@ const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'
 const ALLOWED_EXT = ['.jpg', '.jpeg', '.png', '.webp', '.pdf'];
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const POLICY_VERSION = '1.0';
+const PARTNERSHIP_REASONS = [
+  "Expand distribution and reach broader local retail markets",
+  "Source high-quality milled rice directly from verified millers",
+  "Access modern warehousing and grain storage facilities",
+  "Utilize digital inventory management and automated sales tools",
+  "Secure stable bulk supply agreements at competitive market prices",
+  "Streamline supply chain logistics and fulfillment operations",
+  "Partner on sustainable agriculture and food security initiatives",
+  "Explore commercial partnership and institutional procurement",
+  "Other business partnership inquiry",
+];
 const API_BASE = `${import.meta.env.VITE_API_BASE_URL}/api`;
 
 /**
@@ -114,8 +124,7 @@ function validatePhone(v) {
   return '';
 }
 function validateMessage(v) {
-  if (!v.trim()) return 'Message is required.';
-  if (v.trim().length < 20) return `At least 20 characters required (${v.trim().length}/20).`;
+  if (!v || !v.trim()) return 'Please select a reason for partnering with GrainRise.';
   return '';
 }
 function validateImageFile(file) {
@@ -725,9 +734,10 @@ export default function PartnerWithUs() {
     setFormData(p => ({ ...p, contactNumber: pasted }));
     setErrors(p => ({ ...p, contactNumber: validatePhone(pasted) }));
   };
-  const handleMessageChange = (html, text) => {
-    setFormData(p => ({ ...p, message: text }));
-    setErrors(p => ({ ...p, message: validateMessage(text) }));
+  const handleMessageChange = (e) => {
+    const val = typeof e === 'string' ? e : e.target.value;
+    setFormData(p => ({ ...p, message: val }));
+    setErrors(p => ({ ...p, message: validateMessage(val) }));
     setTouched(p => ({ ...p, message: true }));
   };
   const handleBlur = (field, value) => {
@@ -1433,28 +1443,34 @@ export default function PartnerWithUs() {
                             <FieldError msg={(touched.organization || submitAttempted) ? errors.organization : ''} />
                           </div>
 
-                          {/* Partnership Inquiry / Message */}
+                          {/* Reason for Joining GrainRise */}
                           <div className="flex flex-col sm:col-span-2">
                             <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5" htmlFor="message">
-                              PARTNERSHIP INQUIRY / MESSAGE <span className="text-red-500">*</span>
+                              REASON FOR JOINING GRAINRISE <span className="text-red-500">*</span>
                             </label>
-                            <div className={`rounded-md border overflow-hidden transition
-                              ${(touched.message || submitAttempted) && errors.message
-                                ? 'border-red-400 dark:border-red-500 ring-2 ring-red-200/40'
-                                : 'border-gray-200 dark:border-[#2d5c3c]'}`}>
-                              <RichTextEditor
+                            <div className="relative">
+                              <select
+                                id="message"
+                                name="message"
+                                value={formData.message}
                                 onChange={handleMessageChange}
-                                placeholder="Tell us about your organization and how you would like to partner with GrainRise."
-                                minHeight={130}
-                                maxLength={2000}
-                              />
+                                onBlur={() => handleBlur('message', formData.message)}
+                                className={`${inputCls((touched.message || submitAttempted) && errors.message)} cursor-pointer appearance-none pr-9 text-xs sm:text-sm`}
+                              >
+                                <option value="" disabled>Select your primary reason for joining GrainRise...</option>
+                                {PARTNERSHIP_REASONS.map((reason) => (
+                                  <option key={reason} value={reason}>
+                                    {reason}
+                                  </option>
+                                ))}
+                              </select>
+                              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 dark:text-gray-500">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
                             </div>
-                            <div className="flex items-center justify-between mt-1">
-                              <FieldError msg={(touched.message || submitAttempted) ? errors.message : ''} />
-                              <span className={`text-[10px] ml-auto select-none ${msgCharCount >= 2000 ? 'text-red-400' : 'text-gray-400'}`}>
-                                {msgCharCount} / 2000
-                              </span>
-                            </div>
+                            <FieldError msg={(touched.message || submitAttempted) ? errors.message : ''} />
                           </div>
                         </div>
 
@@ -1890,9 +1906,9 @@ export default function PartnerWithUs() {
                             </div>
                           </div>
                           <div>
-                            <span className="block text-[10px] text-gray-400 uppercase font-medium mb-1">Partnership Inquiry / Message</span>
-                            <div className="text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-[#163321] border border-gray-200 dark:border-[#2d5c3c] rounded p-2.5 max-h-24 overflow-y-auto leading-relaxed">
-                              {formData.message || <span className="italic text-gray-400">No message entered</span>}
+                            <span className="block text-[10px] text-gray-400 uppercase font-medium mb-1">Reason for Joining GrainRise</span>
+                            <div className="text-xs font-medium text-gray-800 dark:text-gray-200 bg-white dark:bg-[#163321] border border-gray-200 dark:border-[#2d5c3c] rounded p-2.5">
+                              {formData.message || <span className="italic text-gray-400">No reason selected</span>}
                             </div>
                           </div>
                         </div>
