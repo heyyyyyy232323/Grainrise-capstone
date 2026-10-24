@@ -220,6 +220,23 @@ urlpatterns = [
             "api.miller_function.messages.urls"
         ),
     ),
+
+    # ========================================================
+    # FULFILLMENT HISTORY
+    # ========================================================
+
+    path(
+        "fulfillment-history/",
+        include(
+            "api.miller_function.fulfillment_history.urls"
+        ),
+    ),
+    path(
+        "fulfillment-history",
+        include(
+            "api.miller_function.fulfillment_history.urls"
+        ),
+    ),
 ]
 
 

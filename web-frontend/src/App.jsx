@@ -1136,6 +1136,11 @@ function App() {
             />
 
             <Route
+              path="/miller-manager/fulfillment"
+              element={<MillerManagerFulfillmentHistory />}
+            />
+
+            <Route
               path="/miller-manager/sales-history"
               element={<MillerManagerSalesHistory />}
             />

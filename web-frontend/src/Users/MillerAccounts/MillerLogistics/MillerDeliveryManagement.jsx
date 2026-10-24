@@ -15,6 +15,8 @@ import {
   AlertCircle,
   Loader2,
   RefreshCw,
+  Eye,
+  PackageCheck,
 } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
@@ -179,6 +181,11 @@ export default function MillerDeliveryManagement() {
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Driver Details Modal states
+  const [viewDriver, setViewDriver] = useState(null);
+  const [driverDeliveries, setDriverDeliveries] = useState([]);
+  const [loadingDeliveries, setLoadingDeliveries] = useState(false);
+
   // Close datepicker outside
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -328,6 +335,36 @@ export default function MillerDeliveryManagement() {
     return selectedDriverObj.remaining_capacity >= selectedOrder.ordered_quantity;
   }, [selectedOrder, selectedDriverObj]);
 
+  // Driver Capacity Details modal handlers
+  const handleOpenDriverModal = async (driver) => {
+    setViewDriver(driver);
+    setDriverDeliveries([]);
+    setLoadingDeliveries(true);
+    try {
+      const res = await request(
+        `/miller-employees/logistics/driver-capacities/${driver.driver_id}/deliveries/`,
+        { method: "GET" }
+      );
+      if (res && res.success) {
+        setDriverDeliveries(res.deliveries || []);
+        if (res.driver) {
+          setViewDriver((prev) => ({ ...prev, ...res.driver }));
+        }
+      } else {
+        setDriverDeliveries([]);
+      }
+    } catch {
+      setDriverDeliveries([]);
+    } finally {
+      setLoadingDeliveries(false);
+    }
+  };
+
+  const handleCloseDriverModal = () => {
+    setViewDriver(null);
+    setDriverDeliveries([]);
+  };
+
   // Confirm Assignment Action
   const handleConfirmAssignment = async () => {
     if (!selectedOrder || !selectedDriverId || !isConfirmEnabled || actionLoading) return;
@@ -349,8 +386,7 @@ export default function MillerDeliveryManagement() {
           "success"
         );
         handleCloseModal();
-        fetchOrders();
-        fetchDrivers();
+        await Promise.all([fetchOrders(), fetchDrivers()]);
       } else {
         showToast(res?.message || "Failed to assign driver.", "error");
       }
@@ -641,11 +677,21 @@ export default function MillerDeliveryManagement() {
                             </span>
                           </div>
                         </div>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${style.badge}`}
-                        >
-                          {d.status}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${style.badge}`}
+                          >
+                            {d.status}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDriverModal(d)}
+                            className="rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-700 hover:text-slate-900 transition-colors cursor-pointer shadow-2xs"
+                            title="View driver capacity details"
+                          >
+                            View
+                          </button>
+                        </div>
                       </div>
 
                       {/* Capacity progress bar */}
@@ -917,6 +963,187 @@ export default function MillerDeliveryManagement() {
                     </>
                   )}
                 </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* ── DRIVER CAPACITY DETAILS MODAL ─────────────────────────────────────── */}
+      {viewDriver &&
+        createPortal(
+          <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+            <div
+              className="relative w-full max-w-lg sm:max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header: Driver Name, only top-right X, NO backdrop dismissal */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                    {viewDriver.name}
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Driver Capacity & Assigned Deliveries
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleCloseDriverModal}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                  aria-label="Close modal"
+                  title="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-90px)] space-y-4">
+                {/* ── SECTION 1 — DRIVER & VEHICLE CAPACITY CARD ─────────────── */}
+                <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
+                        Assigned Vehicle
+                      </div>
+                      <div className="text-sm font-bold text-slate-900 mt-0.5 flex items-center gap-1.5">
+                        <Truck size={15} className="text-slate-400 shrink-0" />
+                        <span>
+                          {viewDriver.has_vehicle
+                            ? `${viewDriver.plate_number} • ${viewDriver.vehicle_model}`
+                            : "No Vehicle Assigned"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                        (driverStatusStyles[viewDriver.status] ?? driverStatusStyles.Available).badge
+                      }`}
+                    >
+                      {viewDriver.status}
+                    </span>
+                  </div>
+
+                  {/* Capacity progress bar */}
+                  {viewDriver.has_vehicle ? (
+                    <div>
+                      <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
+                        <div
+                          className={`${
+                            (driverStatusStyles[viewDriver.status] ?? driverStatusStyles.Available).bar
+                          } h-full transition-all duration-300`}
+                          style={{ width: `${viewDriver.pct_used}%` }}
+                        />
+                      </div>
+                      <div className="mt-2.5 grid grid-cols-3 gap-2 text-center">
+                        <div className="rounded-lg bg-white border border-slate-200 p-2 shadow-2xs">
+                          <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+                            Max Capacity
+                          </div>
+                          <div className="text-xs sm:text-sm font-bold text-slate-900 mt-0.5">
+                            {viewDriver.max.toLocaleString()} kg
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-white border border-slate-200 p-2 shadow-2xs">
+                          <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+                            Pending Load
+                          </div>
+                          <div className="text-xs sm:text-sm font-bold text-amber-700 mt-0.5">
+                            {viewDriver.current_load.toLocaleString()} kg
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-white border border-slate-200 p-2 shadow-2xs">
+                          <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+                            Remaining
+                          </div>
+                          <div className="text-xs sm:text-sm font-bold text-[#0B5D1E] mt-0.5">
+                            {viewDriver.remaining_capacity.toLocaleString()} kg
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-400 italic py-1">
+                      No vehicle currently assigned to this driver. Assign an active vehicle to enable deliveries.
+                    </div>
+                  )}
+                </div>
+
+                {/* ── SECTION 2 — CURRENTLY ASSIGNED DELIVERIES TABLE ──────────── */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
+                      Currently Assigned Deliveries
+                    </div>
+                    <span className="rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-[10px] font-bold">
+                      {driverDeliveries.length} {driverDeliveries.length === 1 ? "Order" : "Orders"}
+                    </span>
+                  </div>
+
+                  {loadingDeliveries ? (
+                    <div className="py-12 text-center text-xs text-slate-400">
+                      <Loader2 className="animate-spin inline-block mr-1.5" size={16} />
+                      Loading assigned deliveries...
+                    </div>
+                  ) : driverDeliveries.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center bg-slate-50/50">
+                      <PackageCheck size={32} className="mx-auto text-slate-300 mb-2" />
+                      <div className="text-xs font-bold text-slate-700">No Pending Deliveries</div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        This driver currently has no assigned deliveries in progress.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-200 bg-slate-50 text-[10px] sm:text-[11px] font-bold uppercase text-slate-500 tracking-wider">
+                            <th className="py-2.5 px-3">Batch No</th>
+                            <th className="py-2.5 px-3">Product</th>
+                            <th className="py-2.5 px-3 text-right">Quantity (kg)</th>
+                            <th className="py-2.5 px-3">Buyer</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {driverDeliveries.map((del) => (
+                            <tr
+                              key={del.assignment_id || del.online_order_id}
+                              className="hover:bg-slate-50/60 transition-colors"
+                            >
+                              <td className="py-2.5 px-3 font-semibold text-slate-800 font-mono text-[11px]">
+                                <div>{del.batch_no}</div>
+                                {del.is_replacement && (
+                                  <span className="inline-block mt-0.5 rounded-full bg-amber-100 px-1.5 py-0.2 text-[9px] font-bold text-amber-700 uppercase">
+                                    Replacement
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-700 font-medium">
+                                {del.product_name}
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-bold text-slate-900">
+                                {del.quantity_formatted}
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-700">
+                                <div className="font-semibold text-slate-800">
+                                  {del.buyer_name}
+                                </div>
+                                {del.buyer_type && (
+                                  <div className="text-[10px] text-slate-400">
+                                    {del.buyer_type}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>,

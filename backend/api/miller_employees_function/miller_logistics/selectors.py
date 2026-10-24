@@ -633,7 +633,9 @@ def list_flc_drivers_with_capacity(supplier_profile_id):
     - active driver in supplier_employees (position='driver', status='active')
     - active vehicle assignment in miller_vehicle_assignee (status='active')
     - vehicle status and max capacity in miller_delivery_vehicle_management
-    - total pending load = sum of effective delivery quantities from miller_driver_assignment where status = 'Pending'
+    - total pending load = sum of effective delivery quantities from currently assigned, unfinished deliveries
+    - excludes completed, cancelled, or received orders
+    - prevents duplicate quantity counting
     - remaining capacity = vehicle capacity - total pending load
     """
     sql = """
@@ -660,30 +662,49 @@ def list_flc_drivers_with_capacity(supplier_profile_id):
                     SELECT SUM(
                         COALESCE(
                             (
-                                SELECT mor.quantity
+                                SELECT SUM(mor.quantity)
                                 FROM miller_online_orders_returns mor
-                                WHERE mor.online_order_id = mda.online_order_id
+                                WHERE mor.online_order_id = mda_sub.online_order_id
                                   AND mor.status = 'Approved'
-                                ORDER BY mor.return_id DESC
-                                LIMIT 1
                             ),
                             moc.ordered_quantity
                         )
                     )
-                    FROM miller_driver_assignment mda
+                    FROM (
+                        SELECT
+                            online_order_id,
+                            delivery_vehicle_id,
+                            supplier_profile_id
+                        FROM miller_driver_assignment
+                        WHERE status = 'Pending'
+                          AND delivery_vehicle_id = v.vehicle_id
+                          AND supplier_profile_id = %s
+                        GROUP BY online_order_id, delivery_vehicle_id, supplier_profile_id
+                    ) mda_sub
                     INNER JOIN miller_online_customer moc
-                        ON moc.online_order_id = mda.online_order_id
-                    WHERE mda.delivery_vehicle_id = v.vehicle_id
-                      AND mda.supplier_profile_id = %s
-                      AND mda.status = 'Pending'
+                        ON moc.online_order_id = mda_sub.online_order_id
+                    WHERE moc.status NOT IN ('Delivered', 'Cancelled', 'Declined')
+                      AND moc.status = 'Assigned to driver'
+                      AND mda_sub.online_order_id NOT IN (
+                          SELECT rh.online_order_id
+                          FROM miller_online_customer_receiving_history rh
+                          WHERE rh.supplier_profile_id = %s
+                      )
                 ),
                 0.0
             ) AS pending_load
         FROM supplier_employees se
-        LEFT JOIN miller_vehicle_assignee mva
-            ON mva.driver_id = se.supplier_employee_id
-            AND mva.supplier_profile_id = %s
-            AND mva.status = 'active'
+        LEFT JOIN (
+            SELECT mva1.*
+            FROM miller_vehicle_assignee mva1
+            INNER JOIN (
+                SELECT driver_id, MAX(assigned_id) AS max_assigned_id
+                FROM miller_vehicle_assignee
+                WHERE status = 'active'
+                  AND supplier_profile_id = %s
+                GROUP BY driver_id
+            ) mva2 ON mva1.assigned_id = mva2.max_assigned_id
+        ) mva ON mva.driver_id = se.supplier_employee_id
         LEFT JOIN miller_delivery_vehicle_management v
             ON v.vehicle_id = mva.vehicle_id
         WHERE se.supplier_profile_id = %s
@@ -693,7 +714,7 @@ def list_flc_drivers_with_capacity(supplier_profile_id):
     """
 
     with connection.cursor() as cursor:
-        cursor.execute(sql, [supplier_profile_id, supplier_profile_id, supplier_profile_id])
+        cursor.execute(sql, [supplier_profile_id, supplier_profile_id, supplier_profile_id, supplier_profile_id])
         rows = cursor.fetchall()
 
     drivers = []
@@ -745,6 +766,139 @@ def list_flc_drivers_with_capacity(supplier_profile_id):
         )
 
     return drivers
+
+
+def get_flc_driver_deliveries(supplier_profile_id, driver_id):
+    """
+    Retrieve live capacity details and currently assigned, unfinished deliveries for a specific driver.
+    Filters:
+    - Scoped strictly to authenticated supplier_profile_id
+    - Excludes completed, cancelled, or received orders
+    - Uses approved replacement return quantity for approved product returns
+    - Prevents duplicate delivery counting
+    """
+    drivers = list_flc_drivers_with_capacity(supplier_profile_id)
+    driver_info = next((d for d in drivers if int(d["driver_id"]) == int(driver_id)), None)
+    if not driver_info:
+        return None
+
+    deliveries_sql = """
+        SELECT
+            mda_sub.assignment_id,
+            mda_sub.online_order_id,
+            moc.batch_no,
+            COALESCE(mp.product_name, 'Rice Variant') AS product_name,
+            moc.ordered_quantity,
+            COALESCE(
+                (
+                    SELECT SUM(mor.quantity)
+                    FROM miller_online_orders_returns mor
+                    WHERE mor.online_order_id = mda_sub.online_order_id
+                      AND mor.status = 'Approved'
+                ),
+                moc.ordered_quantity
+            ) AS effective_quantity,
+            (
+                SELECT COUNT(*)
+                FROM miller_online_orders_returns mor
+                WHERE mor.online_order_id = mda_sub.online_order_id
+                  AND mor.status = 'Approved'
+            ) AS approved_returns_count,
+            moc.user_buyer_id,
+            u.first_name,
+            u.middle_initial,
+            u.last_name,
+            u.suffix,
+            moc.warehouse_buyer_id,
+            wp.business_name,
+            wp.organization_name,
+            moc.status AS order_status,
+            mda_sub.status AS assignment_status,
+            mda_sub.created_at AS assigned_at
+        FROM (
+            SELECT
+                MAX(assignment_id) AS assignment_id,
+                online_order_id,
+                delivery_vehicle_id,
+                supplier_profile_id,
+                MAX(status) AS status,
+                MAX(created_at) AS created_at
+            FROM miller_driver_assignment
+            WHERE status = 'Pending'
+              AND supplier_profile_id = %s
+            GROUP BY online_order_id, delivery_vehicle_id, supplier_profile_id
+        ) mda_sub
+        INNER JOIN miller_vehicle_assignee mva
+            ON mva.vehicle_id = mda_sub.delivery_vehicle_id
+            AND mva.driver_id = %s
+            AND mva.supplier_profile_id = %s
+            AND mva.status = 'active'
+        INNER JOIN miller_online_customer moc
+            ON moc.online_order_id = mda_sub.online_order_id
+        LEFT JOIN miller_products mp
+            ON mp.product_id = moc.miller_product_id
+        LEFT JOIN users u
+            ON u.user_id = moc.user_buyer_id
+        LEFT JOIN warehouse_profiles wp
+            ON wp.warehouse_profile_id = moc.warehouse_buyer_id
+        WHERE moc.status NOT IN ('Delivered', 'Cancelled', 'Declined')
+          AND moc.status = 'Assigned to driver'
+          AND mda_sub.online_order_id NOT IN (
+              SELECT rh.online_order_id
+              FROM miller_online_customer_receiving_history rh
+              WHERE rh.supplier_profile_id = %s
+          )
+        ORDER BY mda_sub.created_at DESC, mda_sub.assignment_id DESC
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            deliveries_sql,
+            [supplier_profile_id, driver_id, supplier_profile_id, supplier_profile_id],
+        )
+        rows = cursor.fetchall()
+
+    deliveries = []
+    for r in rows:
+        assignment_id = r[0]
+        online_order_id = r[1]
+        batch_no = r[2] or f"Order #{online_order_id}"
+        product_name = r[3]
+        original_qty = float(r[4]) if r[4] is not None else 0.0
+        effective_qty = float(r[5]) if r[5] is not None else original_qty
+        is_replacement = bool(r[6] and r[6] > 0)
+
+        is_warehouse = r[12] is not None
+        buyer_type = "Warehouse" if is_warehouse else "Retailer"
+        if is_warehouse:
+            buyer_name = r[13] or r[14] or f"Warehouse #{r[12]}"
+        else:
+            buyer_name = _format_driver_name(r[8], r[9], r[10], r[11]) or f"Retailer #{r[7]}"
+
+        deliveries.append(
+            {
+                "assignment_id": assignment_id,
+                "online_order_id": online_order_id,
+                "batch_no": batch_no,
+                "product_name": product_name,
+                "ordered_quantity": original_qty,
+                "quantity": effective_qty,
+                "quantity_formatted": f"{effective_qty:,.0f} kg" if effective_qty.is_integer() else f"{effective_qty:,.2f} kg",
+                "is_replacement": is_replacement,
+                "buyer": buyer_name,
+                "buyer_name": buyer_name,
+                "buyer_type": buyer_type,
+                "order_status": r[15],
+                "assignment_status": r[16],
+                "assigned_at": r[17].isoformat() if r[17] else None,
+            }
+        )
+
+    return {
+        "driver": driver_info,
+        "deliveries": deliveries,
+        "total": len(deliveries),
+    }
 
 
 def list_flc_product_returns(

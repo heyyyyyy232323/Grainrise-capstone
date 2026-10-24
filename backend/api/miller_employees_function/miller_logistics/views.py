@@ -19,6 +19,7 @@ from . import selectors
 
 logger = logging.getLogger(__name__)
 from .selectors import (
+    get_flc_driver_deliveries,
     get_flc_vehicle_detail,
     list_flc_active_drivers,
     list_flc_delivery_orders,
@@ -322,6 +323,46 @@ def flc_driver_capacities_view(request):
             {
                 "success": False,
                 "message": f"Failed to retrieve driver capacities: {str(e)}",
+            },
+            status=500,
+        )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@miller_flc_required
+def flc_driver_deliveries_view(request, driver_id):
+    """
+    GET /api/miller-employees/logistics/driver-capacities/<driver_id>/deliveries/
+    or  /api/miller-employees/logistics/drivers/<driver_id>/deliveries/
+    Retrieve live capacity details and currently assigned, unfinished deliveries for a specific driver.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+
+    try:
+        data = get_flc_driver_deliveries(supplier_profile_id, driver_id)
+        if not data:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": f"Driver #{driver_id} not found or does not belong to this branch.",
+                },
+                status=404,
+            )
+        return JsonResponse(
+            {
+                "success": True,
+                "driver": data["driver"],
+                "deliveries": data["deliveries"],
+                "total": data["total"],
+            },
+            status=200,
+        )
+    except Exception as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Failed to retrieve driver deliveries: {str(e)}",
             },
             status=500,
         )

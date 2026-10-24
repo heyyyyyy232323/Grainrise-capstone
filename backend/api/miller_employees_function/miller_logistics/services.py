@@ -351,6 +351,24 @@ def update_flc_vehicle_status(
             }
 
 
+def _format_driver_name(first_name, middle_initial, last_name, suffix):
+    """
+    Format employee full name cleanly.
+    """
+    parts = []
+    if first_name:
+        parts.append(str(first_name).strip())
+    if middle_initial:
+        mi = str(middle_initial).strip().rstrip(".")
+        if mi:
+            parts.append(f"{mi}.")
+    if last_name:
+        parts.append(str(last_name).strip())
+    if suffix:
+        parts.append(str(suffix).strip())
+    return " ".join(parts) if parts else ""
+
+
 class DeliveryAssignmentError(Exception):
     """Raised when delivery order assignment validation fails."""
     pass
@@ -368,6 +386,7 @@ def assign_order_to_driver(supplier_profile_id, online_order_id, driver_id):
     - Driver must have an active vehicle assignment in miller_vehicle_assignee
     - Vehicle must be active in miller_delivery_vehicle_management
     - Vehicle remaining capacity (capacity - existing pending load) must be >= order.ordered_quantity
+      (or replacement quantity if approved product return)
 
     Atomic operations:
     1. INSERT INTO miller_driver_assignment (supplier_profile_id, online_order_id, delivery_vehicle_id, status, proof_of_delivery)
@@ -402,12 +421,17 @@ def assign_order_to_driver(supplier_profile_id, online_order_id, driver_id):
         if not order_row:
             raise DeliveryAssignmentError(f"Order #{online_order_id} not found.")
 
-        if int(order_row[1]) != int(supplier_profile_id):
+        order_supplier_profile_id = order_row[1]
+        ordered_quantity = order_row[2]
+        batch_no = order_row[3] or f"Order #{online_order_id}"
+        order_status = order_row[4]
+
+        if order_supplier_profile_id is None or int(order_supplier_profile_id) != int(supplier_profile_id):
             raise DeliveryAssignmentError("This order belongs to another branch.")
 
-        if str(order_row[4]).strip() != "Forwarded to Logistics":
+        if str(order_status).strip() != "Forwarded to Logistics":
             raise DeliveryAssignmentError(
-                f"Order #{online_order_id} has status '{order_row[4]}'. Only orders with status 'Forwarded to Logistics' can be assigned."
+                f"Order #{online_order_id} has status '{order_status}'. Only orders with status 'Forwarded to Logistics' can be assigned."
             )
 
         # 1.1 Check if this order is a return replacement
@@ -424,16 +448,11 @@ def assign_order_to_driver(supplier_profile_id, online_order_id, driver_id):
             )
             approved_returns = cursor.fetchall()
 
-        if len(approved_returns) > 1:
-            raise DeliveryAssignmentError(
-                f"Multiple approved returns found for Order #{online_order_id}. Replacement assignment is ambiguous and cannot be automatically mapped."
-            )
-
-        if len(approved_returns) == 1:
+        if approved_returns:
             # Per specification: Replacement quantity displayed and assigned = approved return quantity itself
-            effective_order_quantity = float(approved_returns[0][1])
+            effective_order_quantity = sum(float(r[1] or 0.0) for r in approved_returns)
         else:
-            effective_order_quantity = float(order_row[2]) if order_row[2] is not None else 0.0
+            effective_order_quantity = float(ordered_quantity) if ordered_quantity is not None else 0.0
 
         # 2. Check for duplicate assignment (preserve completed assignments; block if already has Pending assignment)
         with connection.cursor() as cursor:
@@ -464,7 +483,9 @@ def assign_order_to_driver(supplier_profile_id, online_order_id, driver_id):
                     first_name,
                     last_name,
                     position,
-                    status
+                    status,
+                    middle_initial,
+                    suffix
                 FROM supplier_employees
                 WHERE supplier_employee_id = %s
                 LIMIT 1
@@ -476,7 +497,7 @@ def assign_order_to_driver(supplier_profile_id, online_order_id, driver_id):
         if not driver_row:
             raise DeliveryAssignmentError(f"Driver #{driver_id} not found.")
 
-        if int(driver_row[1]) != int(supplier_profile_id):
+        if driver_row[1] is None or int(driver_row[1]) != int(supplier_profile_id):
             raise DeliveryAssignmentError("Driver belongs to another branch.")
 
         if str(driver_row[4] or "").strip().lower() != "driver":
@@ -484,6 +505,8 @@ def assign_order_to_driver(supplier_profile_id, online_order_id, driver_id):
 
         if str(driver_row[5] or "").strip().lower() != "active":
             raise DeliveryAssignmentError(f"Driver #{driver_id} is currently inactive.")
+
+        driver_name = _format_driver_name(driver_row[2], driver_row[6], driver_row[3], driver_row[7]) or f"Driver #{driver_id}"
 
         # 4. Resolve active vehicle assignment for driver
         with connection.cursor() as cursor:
@@ -510,7 +533,7 @@ def assign_order_to_driver(supplier_profile_id, online_order_id, driver_id):
 
         if not vehicle_row:
             raise DeliveryAssignmentError(
-                f"Driver {driver_row[2]} {driver_row[3]} has no active vehicle assigned."
+                f"Driver {driver_name} has no active vehicle assigned."
             )
 
         vehicle_id = vehicle_row[1]
@@ -539,26 +562,38 @@ def assign_order_to_driver(supplier_profile_id, online_order_id, driver_id):
                     SUM(
                         COALESCE(
                             (
-                                SELECT mor.quantity
+                                SELECT SUM(mor.quantity)
                                 FROM miller_online_orders_returns mor
-                                WHERE mor.online_order_id = mda.online_order_id
+                                WHERE mor.online_order_id = mda_sub.online_order_id
                                   AND mor.status = 'Approved'
-                                ORDER BY mor.return_id DESC
-                                LIMIT 1
                             ),
                             moc.ordered_quantity
                         )
                     ),
                     0.0
                 )
-                FROM miller_driver_assignment mda
+                FROM (
+                    SELECT
+                        online_order_id,
+                        delivery_vehicle_id,
+                        supplier_profile_id
+                    FROM miller_driver_assignment
+                    WHERE status = 'Pending'
+                      AND delivery_vehicle_id = %s
+                      AND supplier_profile_id = %s
+                    GROUP BY online_order_id, delivery_vehicle_id, supplier_profile_id
+                ) mda_sub
                 INNER JOIN miller_online_customer moc
-                    ON moc.online_order_id = mda.online_order_id
-                WHERE mda.delivery_vehicle_id = %s
-                  AND mda.supplier_profile_id = %s
-                  AND mda.status = 'Pending'
+                    ON moc.online_order_id = mda_sub.online_order_id
+                WHERE moc.status NOT IN ('Delivered', 'Cancelled', 'Declined')
+                  AND moc.status = 'Assigned to driver'
+                  AND mda_sub.online_order_id NOT IN (
+                      SELECT rh.online_order_id
+                      FROM miller_online_customer_receiving_history rh
+                      WHERE rh.supplier_profile_id = %s
+                  )
                 """,
-                [vehicle_id, supplier_profile_id],
+                [vehicle_id, supplier_profile_id, supplier_profile_id],
             )
             pending_row = cursor.fetchone()
             current_pending_load = float(pending_row[0]) if pending_row and pending_row[0] is not None else 0.0
