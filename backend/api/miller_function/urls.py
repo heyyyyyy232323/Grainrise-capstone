@@ -135,6 +135,93 @@ urlpatterns = [
             "api.miller_function.vehicle_management.urls"
         ),
     ),
+
+    # ========================================================
+    # SALES HISTORY
+    # ========================================================
+
+    path(
+        "sales-history/",
+        include(
+            "api.miller_function.sales_history.urls"
+        ),
+    ),
+    path(
+        "sales-history",
+        include(
+            "api.miller_function.sales_history.urls"
+        ),
+    ),
+
+    # ========================================================
+    # FINANCE MANAGEMENT HISTORY & REPORTS
+    # ========================================================
+
+    path(
+        "finance-history/",
+        include(
+            "api.miller_function.finance_history.urls"
+        ),
+    ),
+    path(
+        "finance-history",
+        include(
+            "api.miller_function.finance_history.urls"
+        ),
+    ),
+
+    # ========================================================
+    # PERFORMANCE MONITORING
+    # ========================================================
+
+    path(
+        "performance-monitoring/",
+        include(
+            "api.miller_function.performance_monitoring.urls"
+        ),
+    ),
+    path(
+        "performance-monitoring",
+        include(
+            "api.miller_function.performance_monitoring.urls"
+        ),
+    ),
+
+    # ========================================================
+    # FARE FEE MANAGEMENT
+    # ========================================================
+
+    path(
+        "fare-fee/",
+        include(
+            "api.miller_function.fare_fee_management.urls"
+        ),
+    ),
+    path(
+        "fare-fee",
+        include(
+            "api.miller_function.fare_fee_management.urls"
+        ),
+    ),
+
+    # ========================================================
+    # MESSAGES
+    # ========================================================
+
+    path(
+        "messages/",
+        include(
+            "api.miller_function.messages.urls"
+        ),
+    ),
+    path(
+        "messages",
+        include(
+            "api.miller_function.messages.urls"
+        ),
+    ),
 ]
+
+
 
 

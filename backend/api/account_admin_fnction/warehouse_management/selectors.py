@@ -274,10 +274,22 @@ def list_warehouses(
             FROM users u
 
 
-            INNER JOIN warehouse_profiles wp
-
-                ON wp.user_id =
-                    u.user_id
+            LEFT JOIN (
+                SELECT
+                    wp1.user_id,
+                    wp1.business_name,
+                    wp1.organization_name
+                FROM warehouse_profiles wp1
+                INNER JOIN (
+                    SELECT
+                        user_id,
+                        MIN(warehouse_profile_id) AS min_wp_id
+                    FROM warehouse_profiles
+                    GROUP BY user_id
+                ) wp_min
+                    ON wp1.warehouse_profile_id = wp_min.min_wp_id
+            ) wp
+                ON wp.user_id = u.user_id
 
 
             -- ================================================
@@ -845,6 +857,16 @@ def get_warehouse_view_overview(
 
                 wp.official_contact_number,
 
+                wp.province,
+
+                wp.municipality,
+
+                wp.postal_code,
+
+                wp.barangay,
+
+                wp.street_address,
+
 
                 -- ============================================
                 -- ACTIVE EMPLOYEE COUNT
@@ -960,6 +982,9 @@ def get_warehouse_view_overview(
 
                 AND u.user_role = %s
 
+
+            ORDER BY
+                wp.warehouse_profile_id ASC
 
             LIMIT 1
             """,
@@ -1431,6 +1456,44 @@ def get_warehouse_reports(
 
 
 # ============================================================
+# WAREHOUSE PROFILES
+# ============================================================
+
+def get_warehouse_profiles(
+    user_id,
+):
+    """
+    Fetch all warehouse profiles owned by a Warehouse user.
+    """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return []
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                warehouse_profile_id,
+                business_name,
+                organization_name,
+                official_email,
+                official_contact_number,
+                province,
+                municipality,
+                barangay,
+                street_address,
+                postal_code
+            FROM warehouse_profiles
+            WHERE user_id = %s
+            ORDER BY warehouse_profile_id ASC
+            """,
+            [numeric_user_id],
+        )
+        return _rows_to_dicts(cursor)
+
+
+# ============================================================
 # COMPLETE WAREHOUSE VIEW DETAILS DATA
 # ============================================================
 
@@ -1449,6 +1512,7 @@ def get_warehouse_view_details_data(
         archived_employees
         ratings
         reports
+        profiles
     """
 
     if not warehouse_exists(
@@ -1502,6 +1566,13 @@ def get_warehouse_view_details_data(
     )
 
 
+    profiles = (
+        get_warehouse_profiles(
+            user_id
+        )
+    )
+
+
     return {
         "warehouse":
             warehouse,
@@ -1520,4 +1591,7 @@ def get_warehouse_view_details_data(
 
         "reports":
             reports,
+
+        "profiles":
+            profiles,
     }

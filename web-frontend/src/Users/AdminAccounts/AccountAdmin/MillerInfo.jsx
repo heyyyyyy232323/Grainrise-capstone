@@ -11,7 +11,9 @@ import {
 import { createPortal } from "react-dom";
 
 import {
+  ChevronDown,
   Search,
+  Star,
   X,
 } from "lucide-react";
 
@@ -22,6 +24,7 @@ import Toast from "../../../Components/Modals/Toast";
 
 import ArchiveAccountModal from "../../../Components/Modals/ArchiveAccountModal";
 import AccountActionConfirmModal from "../../../Components/Modals/AccountActionConfirmModal";
+import OnlineOrderRatingModal from "../../../Components/Modals/OnlineOrderRatingModal";
 
 import useToast from "../../../Components/hooks/useToast";
 import useMillerManagement from "../../../Components/hooks/AccountAdmin/useMillerManagement";
@@ -546,6 +549,23 @@ const MillerInfo = () => {
 
 
   // =========================================================
+  // ONLINE ORDER RATINGS STATE
+  // =========================================================
+
+  const [
+    selectedOnlineRating,
+    setSelectedOnlineRating,
+  ] =
+    useState(null);
+
+  const [
+    isRatingModalOpen,
+    setIsRatingModalOpen,
+  ] =
+    useState(false);
+
+
+  // =========================================================
   // LOAD MILLER
   // =========================================================
 
@@ -649,6 +669,67 @@ const MillerInfo = () => {
       : [];
 
 
+  const onlineOrderRatings =
+    Array.isArray(
+      millerViewDetails
+        ?.online_order_ratings
+    )
+      ? millerViewDetails
+          .online_order_ratings
+      : [];
+
+
+  const millerBranches =
+    Array.isArray(
+      millerViewDetails
+        ?.branches
+    )
+      ? millerViewDetails
+          .branches
+      : [];
+
+
+  const [
+    selectedBranchId,
+    setSelectedBranchId,
+  ] = useState("");
+
+
+  useEffect(() => {
+    if (millerBranches.length > 0 && !selectedBranchId) {
+      setSelectedBranchId(
+        String(millerBranches[0].supplier_profile_id)
+      );
+    }
+  }, [millerBranches, selectedBranchId]);
+
+
+  const activeBranch = useMemo(() => {
+    if (!millerBranches.length) return null;
+    return (
+      millerBranches.find(
+        (b) =>
+          String(b.supplier_profile_id) ===
+          String(selectedBranchId)
+      ) || millerBranches[0]
+    );
+  }, [millerBranches, selectedBranchId]);
+
+
+  const activeBranchAddress = useMemo(() => {
+    if (!activeBranch) return "";
+    return [
+      activeBranch.street_address,
+      activeBranch.barangay,
+      activeBranch.municipality,
+      activeBranch.province,
+      activeBranch.postal_code,
+    ]
+      .filter(Boolean)
+      .join(", ");
+  }, [activeBranch]);
+
+
   const reports =
     Array.isArray(
       millerViewDetails
@@ -660,6 +741,7 @@ const MillerInfo = () => {
 
 
   const businessName =
+    activeBranch?.business_name ||
     overview.business_name ||
     owner
       ?.business_information
@@ -668,6 +750,7 @@ const MillerInfo = () => {
 
 
   const organizationName =
+    activeBranch?.organization_name ||
     overview.organization_name ||
     owner
       ?.business_information
@@ -682,39 +765,65 @@ const MillerInfo = () => {
 
 
   // =========================================================
+  // BRANCH-SCOPED DATA
+  // =========================================================
+
+  const branchActiveEmployees = useMemo(() => {
+    if (!selectedBranchId) return activeEmployees;
+    return activeEmployees.filter(
+      (e) => String(e.supplier_profile_id) === String(selectedBranchId)
+    );
+  }, [activeEmployees, selectedBranchId]);
+
+
+  const branchArchivedEmployees = useMemo(() => {
+    if (!selectedBranchId) return archivedEmployees;
+    return archivedEmployees.filter(
+      (e) => String(e.supplier_profile_id) === String(selectedBranchId)
+    );
+  }, [archivedEmployees, selectedBranchId]);
+
+
+  const branchOnlineOrderRatings = useMemo(() => {
+    if (!selectedBranchId) return onlineOrderRatings;
+    return onlineOrderRatings.filter(
+      (r) => String(r.supplier_profile_id) === String(selectedBranchId)
+    );
+  }, [onlineOrderRatings, selectedBranchId]);
+
+
+  const branchReports = useMemo(() => {
+    if (!selectedBranchId) return reports;
+    return reports.filter((rep) => {
+      if (rep.supplier_profile_id) {
+        return String(rep.supplier_profile_id) === String(selectedBranchId);
+      }
+      return true;
+    });
+  }, [reports, selectedBranchId]);
+
+
+  const branchAverageRating = useMemo(() => {
+    if (branchOnlineOrderRatings.length === 0) return 0;
+    const total = branchOnlineOrderRatings.reduce(
+      (sum, r) => sum + (Number(r.rating) || 0),
+      0
+    );
+    return total / branchOnlineOrderRatings.length;
+  }, [branchOnlineOrderRatings]);
+
+
+  // =========================================================
   // SUMMARY
   // =========================================================
 
-  const activeEmployeeCount =
-    Number(
-      overview
-        ?.active_employee_count ??
-      activeEmployees.length
-    );
+  const activeEmployeeCount = branchActiveEmployees.length;
 
+  const archivedEmployeeCount = branchArchivedEmployees.length;
 
-  const archivedEmployeeCount =
-    Number(
-      overview
-        ?.archived_employee_count ??
-      archivedEmployees.length
-    );
+  const ratingCount = branchOnlineOrderRatings.length;
 
-
-  const ratingCount =
-    Number(
-      overview
-        ?.rating_count ??
-      ratings.length
-    );
-
-
-  const reportCount =
-    Number(
-      overview
-        ?.report_count ??
-      reports.length
-    );
+  const reportCount = branchReports.length;
 
 
   // =========================================================
@@ -1321,39 +1430,92 @@ const MillerInfo = () => {
     );
 
 
+
   // =========================================================
-  // RATINGS COLUMNS
+  // ONLINE ORDER RATINGS COLUMNS
   // =========================================================
 
-  const ratingsColumns =
+  const onlineOrderRatingsColumns =
     useMemo(
       () => [
         {
           key:
-            "reviewer_name",
+            "branch_name",
 
           label:
-            "Reviewer",
+            "Branch Name",
 
           width:
-            "22%",
+            "18%",
+
+          render:
+            (row) => (
+              <span className="font-semibold text-gray-900">
+                {displayValue(
+                  row.branch_name
+                )}
+              </span>
+            ),
         },
 
         {
           key:
-            "reviewer_role",
+            "order_id",
 
           label:
-            "Role",
+            "Order ID",
 
           width:
             "16%",
 
           render:
+            (row) => (
+              <span className="font-mono text-xs font-semibold text-gray-800">
+                {displayValue(
+                  row.order_id ||
+                  row.order_batch_no
+                )}
+              </span>
+            ),
+        },
+
+        {
+          key:
+            "product_name",
+
+          label:
+            "Product",
+
+          width:
+            "18%",
+
+          render:
             (row) =>
-              formatPosition(
-                row.reviewer_role
+              displayValue(
+                row.product_name ||
+                row.product
               ),
+        },
+
+        {
+          key:
+            "masked_reviewer",
+
+          label:
+            "Reviewer",
+
+          width:
+            "15%",
+
+          render:
+            (row) => (
+              <span className="font-semibold text-gray-800">
+                {displayValue(
+                  row.masked_reviewer ||
+                  row.customer
+                )}
+              </span>
+            ),
         },
 
         {
@@ -1364,31 +1526,22 @@ const MillerInfo = () => {
             "Rating",
 
           width:
-            "12%",
+            "13%",
 
           render:
-            (row) =>
-              `${Number(
-                row.rating || 0
-              ).toFixed(1)} / 5`,
-        },
-
-        {
-          key:
-            "comment",
-
-          label:
-            "Comment",
-
-          width:
-            "35%",
-
-          render:
-            (row) =>
-              displayValue(
-                row.comment,
-                "No comment"
-              ),
+            (row) => (
+              <div className="flex items-center gap-1">
+                <Star
+                  size={13}
+                  className="fill-amber-400 text-amber-400"
+                />
+                <span className="font-bold text-gray-900">
+                  {Number(
+                    row.rating || 0
+                  ).toFixed(1)} / 5
+                </span>
+              </div>
+            ),
         },
 
         {
@@ -1399,13 +1552,38 @@ const MillerInfo = () => {
             "Date",
 
           width:
-            "15%",
+            "12%",
 
           render:
             (row) =>
               formatDate(
                 row.created_at
               ),
+        },
+
+        {
+          key:
+            "action",
+
+          label:
+            "Action",
+
+          width:
+            "8%",
+
+          render:
+            (row) => (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedOnlineRating(row);
+                  setIsRatingModalOpen(true);
+                }}
+                className="rounded-md border border-slate-300 px-2.5 py-1 text-[11px] font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
+              >
+                View Details
+              </button>
+            ),
         },
       ],
       []
@@ -1529,7 +1707,7 @@ const MillerInfo = () => {
           "active-employees"
         ) {
           source =
-            activeEmployees;
+            branchActiveEmployees;
         }
 
         if (
@@ -1537,7 +1715,7 @@ const MillerInfo = () => {
           "archived-employees"
         ) {
           source =
-            archivedEmployees;
+            branchArchivedEmployees;
         }
 
         if (
@@ -1545,7 +1723,7 @@ const MillerInfo = () => {
           "ratings"
         ) {
           source =
-            ratings;
+            branchOnlineOrderRatings;
         }
 
         if (
@@ -1553,7 +1731,7 @@ const MillerInfo = () => {
           "reports"
         ) {
           source =
-            reports;
+            branchReports;
         }
 
 
@@ -1586,10 +1764,10 @@ const MillerInfo = () => {
       },
       [
         activeTab,
-        activeEmployees,
-        archivedEmployees,
-        ratings,
-        reports,
+        branchActiveEmployees,
+        branchArchivedEmployees,
+        branchOnlineOrderRatings,
+        branchReports,
         searchQuery,
       ]
     );
@@ -1646,7 +1824,7 @@ const MillerInfo = () => {
 
         : activeTab ===
           "ratings"
-          ? ratingsColumns
+          ? onlineOrderRatingsColumns
 
           : reportColumns;
 
@@ -1926,7 +2104,7 @@ const MillerInfo = () => {
 
           {
             label:
-              businessName,
+              "View Details",
           },
         ]}
       />
@@ -1964,7 +2142,7 @@ const MillerInfo = () => {
                 text-gray-900
               "
             >
-              {businessName}
+              Miller Account Details
             </h1>
 
             <span
@@ -1996,13 +2174,69 @@ const MillerInfo = () => {
               text-gray-500
             "
           >
-            {
-              organizationName
-                ? `${organizationName} • `
-                : ""
-            }
             Miller account information, employees, ratings, and reports.
           </p>
+
+          {millerBranches.length > 0 && (
+            <div className="mt-2.5 flex items-center gap-2">
+              <label
+                htmlFor="miller-header-branch-select"
+                className="text-xs font-semibold text-gray-600 shrink-0"
+              >
+                Branch:
+              </label>
+              <div className="relative min-w-[220px] max-w-xs">
+                <select
+                  id="miller-header-branch-select"
+                  value={
+                    selectedBranchId ||
+                    millerBranches[0]?.supplier_profile_id ||
+                    ""
+                  }
+                  onChange={(e) => {
+                    setSelectedBranchId(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="
+                    w-full
+                    appearance-none
+                    rounded-lg
+                    border
+                    border-gray-300
+                    bg-white
+                    py-1.5
+                    pl-3
+                    pr-8
+                    text-xs
+                    font-medium
+                    text-gray-800
+                    shadow-xs
+                    transition
+                    hover:border-gray-400
+                    focus:border-[#08511f]
+                    focus:outline-none
+                    focus:ring-1
+                    focus:ring-[#08511f]
+                    cursor-pointer
+                  "
+                >
+                  {millerBranches.map((branch) => (
+                    <option
+                      key={branch.supplier_profile_id}
+                      value={branch.supplier_profile_id}
+                    >
+                      {branch.business_name ||
+                        `Branch #${branch.supplier_profile_id}`}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={14}
+                  className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
 
@@ -2226,7 +2460,7 @@ const MillerInfo = () => {
           >
             {
               Number(
-                overview.average_rating ||
+                branchAverageRating ||
                 0
               ).toFixed(1)
             }
@@ -2324,7 +2558,7 @@ const MillerInfo = () => {
               text-gray-500
             "
           >
-            General business and contact information.
+            General business and branch information.
           </p>
         </div>
 
@@ -2334,8 +2568,7 @@ const MillerInfo = () => {
             grid
             grid-cols-1
             gap-5
-            md:grid-cols-2
-            xl:grid-cols-4
+            md:grid-cols-3
           "
         >
           <div>
@@ -2360,6 +2593,7 @@ const MillerInfo = () => {
             >
               {
                 displayValue(
+                  activeBranch?.business_name ||
                   overview.business_name
                 )
               }
@@ -2389,6 +2623,7 @@ const MillerInfo = () => {
             >
               {
                 displayValue(
+                  activeBranch?.organization_name ||
                   overview.organization_name
                 )
               }
@@ -2405,7 +2640,7 @@ const MillerInfo = () => {
                 text-gray-400
               "
             >
-              Official Email
+              Address
             </p>
 
             <p
@@ -2418,37 +2653,8 @@ const MillerInfo = () => {
             >
               {
                 displayValue(
-                  overview.official_email
-                )
-              }
-            </p>
-          </div>
-
-
-          <div>
-            <p
-              className="
-                text-[11px]
-                font-semibold
-                uppercase
-                text-gray-400
-              "
-            >
-              Official Contact
-            </p>
-
-            <p
-              className="
-                mt-1
-                text-sm
-                font-medium
-                text-gray-800
-              "
-            >
-              {
-                displayValue(
-                  overview
-                    .official_contact_number
+                  activeBranchAddress ||
+                  overview.business_street_address
                 )
               }
             </p>
@@ -2492,60 +2698,73 @@ const MillerInfo = () => {
         className="
           mt-4
           mb-4
-          w-full
-          max-w-sm
+          flex
+          flex-wrap
+          items-center
+          gap-3
         "
       >
         <div
           className="
-            relative
+            w-full
+            max-w-sm
           "
         >
-          <Search
-            size={
-              16
-            }
+          <div
             className="
-              absolute
-              left-3
-              top-1/2
-              -translate-y-1/2
-              text-gray-400
+              relative
             "
-          />
+          >
+            <Search
+              size={
+                16
+              }
+              className="
+                absolute
+                left-3
+                top-1/2
+                -translate-y-1/2
+                text-gray-400
+              "
+            />
 
-          <input
-            type="text"
-            value={
-              searchQuery
-            }
-            onChange={(event) => {
-              setSearchQuery(
-                event.target.value
-              );
+            <input
+              type="text"
+              value={
+                searchQuery
+              }
+              onChange={(event) => {
+                setSearchQuery(
+                  event.target.value
+                );
 
-              setCurrentPage(
-                1
-              );
-            }}
-            placeholder="Search records"
-            className="
-              w-full
-              rounded-lg
-              border
-              border-gray-200
-              bg-white
-              py-2
-              pl-10
-              pr-3
-              text-sm
-              text-gray-700
-              outline-none
-              focus:border-emerald-500
-              focus:ring-1
-              focus:ring-emerald-500
-            "
-          />
+                setCurrentPage(
+                  1
+                );
+              }}
+              placeholder={
+                activeTab === "ratings"
+                  ? "Search branch, product, reviewer, order ID..."
+                  : "Search records"
+              }
+              className="
+                w-full
+                rounded-lg
+                border
+                border-gray-200
+                bg-white
+                py-2
+                pl-10
+                pr-3
+                text-sm
+                text-gray-700
+                outline-none
+                focus:border-emerald-500
+                focus:ring-1
+                focus:ring-emerald-500
+              "
+            />
+          </div>
         </div>
       </div>
 
@@ -2572,6 +2791,12 @@ const MillerInfo = () => {
             page
           )
         }
+        onViewDetails={(row) => {
+          if (activeTab === "ratings") {
+            setSelectedOnlineRating(row);
+            setIsRatingModalOpen(true);
+          }
+        }}
         footerLabel={
           `Showing ${
             currentRows.length ===
@@ -2763,6 +2988,19 @@ const MillerInfo = () => {
         onConfirm={
           confirmDeleteEmployee
         }
+      />
+
+      {/* =====================================================
+          ONLINE ORDER RATING DETAILS MODAL
+      ===================================================== */}
+
+      <OnlineOrderRatingModal
+        isOpen={isRatingModalOpen}
+        onClose={() => {
+          setIsRatingModalOpen(false);
+          setSelectedOnlineRating(null);
+        }}
+        rating={selectedOnlineRating}
       />
     </>
   );

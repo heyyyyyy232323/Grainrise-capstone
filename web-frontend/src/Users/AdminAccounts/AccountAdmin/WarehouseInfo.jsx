@@ -6,6 +6,7 @@ import {
 
 import {
   Building2,
+  ChevronDown,
   Star,
   Users,
   Archive,
@@ -203,6 +204,9 @@ const normalizeEmployee = (
   id:
     employee?.employee_id,
 
+  warehouseProfileId:
+    employee?.warehouse_profile_id,
+
   name:
     employee?.employee_name ||
     "",
@@ -243,6 +247,9 @@ const normalizeRating = (
   id:
     rating?.rating_id,
 
+  warehouseProfileId:
+    rating?.warehouse_profile_id,
+
   reviewer:
     rating?.reviewer_name ||
     "",
@@ -276,6 +283,9 @@ const normalizeReport = (
 ) => ({
   id:
     report?.report_id,
+
+  warehouseProfileId:
+    report?.warehouse_profile_id,
 
   reportedBy:
     report?.reported_by ||
@@ -1361,13 +1371,80 @@ const WarehouseInfo = () => {
     {};
 
 
+  const warehouseProfiles = useMemo(() => {
+    if (Array.isArray(data.profiles) && data.profiles.length > 0) {
+      return data.profiles;
+    }
+    if (overview.warehouse_profile_id) {
+      return [
+        {
+          warehouse_profile_id: overview.warehouse_profile_id,
+          business_name: overview.business_name || business.business_name || "Warehouse",
+          organization_name: overview.organization_name || business.organization_name || "",
+          official_email: overview.official_email || business.official_email || "",
+          official_contact_number: overview.official_contact_number || business.official_contact_number || "",
+          province: overview.province || business.province || "",
+          municipality: overview.municipality || business.municipality || "",
+          barangay: overview.barangay || business.barangay || "",
+          street_address: overview.street_address || business.street_address || "",
+          postal_code: overview.postal_code || business.postal_code || "",
+        },
+      ];
+    }
+    return [];
+  }, [data.profiles, overview, business]);
+
+
+  const [
+    selectedProfileId,
+    setSelectedProfileId,
+  ] = useState("");
+
+
+  useEffect(() => {
+    if (warehouseProfiles.length > 0 && !selectedProfileId) {
+      setSelectedProfileId(
+        String(warehouseProfiles[0].warehouse_profile_id)
+      );
+    }
+  }, [warehouseProfiles, selectedProfileId]);
+
+
+  const activeProfile = useMemo(() => {
+    if (!warehouseProfiles.length) return null;
+    return (
+      warehouseProfiles.find(
+        (p) =>
+          String(p.warehouse_profile_id) ===
+          String(selectedProfileId)
+      ) || warehouseProfiles[0]
+    );
+  }, [warehouseProfiles, selectedProfileId]);
+
+
+  const activeProfileAddress = useMemo(() => {
+    if (!activeProfile) return "";
+    return [
+      activeProfile.street_address,
+      activeProfile.barangay,
+      activeProfile.municipality,
+      activeProfile.province,
+      activeProfile.postal_code,
+    ]
+      .filter(Boolean)
+      .join(", ");
+  }, [activeProfile]);
+
+
   const warehouseName =
+    activeProfile?.business_name ||
     business.business_name ||
     overview.business_name ||
     "Warehouse";
 
 
   const organizationName =
+    activeProfile?.organization_name ||
     business.organization_name ||
     overview.organization_name ||
     "";
@@ -1435,6 +1512,70 @@ const WarehouseInfo = () => {
         data.reports,
       ]
     );
+
+
+  // =========================================================
+  // PROFILE-SCOPED DATA
+  // =========================================================
+
+  const profileActiveEmployees = useMemo(() => {
+    if (!selectedProfileId) return activeEmployees;
+    return activeEmployees.filter((e) => {
+      if (e.warehouseProfileId) {
+        return String(e.warehouseProfileId) === String(selectedProfileId);
+      }
+      return true;
+    });
+  }, [activeEmployees, selectedProfileId]);
+
+
+  const profileArchivedEmployees = useMemo(() => {
+    if (!selectedProfileId) return archivedEmployees;
+    return archivedEmployees.filter((e) => {
+      if (e.warehouseProfileId) {
+        return String(e.warehouseProfileId) === String(selectedProfileId);
+      }
+      return true;
+    });
+  }, [archivedEmployees, selectedProfileId]);
+
+
+  const profileRatings = useMemo(() => {
+    if (!selectedProfileId) return ratings;
+    return ratings.filter((r) => {
+      if (r.warehouseProfileId) {
+        return String(r.warehouseProfileId) === String(selectedProfileId);
+      }
+      return true;
+    });
+  }, [ratings, selectedProfileId]);
+
+
+  const profileReports = useMemo(() => {
+    if (!selectedProfileId) return reports;
+    return reports.filter((rep) => {
+      if (rep.warehouseProfileId) {
+        return String(rep.warehouseProfileId) === String(selectedProfileId);
+      }
+      return true;
+    });
+  }, [reports, selectedProfileId]);
+
+
+  const profileAverageRating = useMemo(() => {
+    if (profileRatings.length === 0) return 0;
+    const total = profileRatings.reduce(
+      (sum, r) => sum + (Number(r.rating) || 0),
+      0
+    );
+    return total / profileRatings.length;
+  }, [profileRatings]);
+
+
+  const activeEmployeeCount = profileActiveEmployees.length;
+  const archivedEmployeeCount = profileArchivedEmployees.length;
+  const ratingCount = profileRatings.length;
+  const reportCount = profileReports.length;
 
 
   // =========================================================
@@ -1676,7 +1817,7 @@ const WarehouseInfo = () => {
   const searchedActiveEmployees =
     useMemo(
       () =>
-        activeEmployees.filter(
+        profileActiveEmployees.filter(
           (
             employee
           ) =>
@@ -1698,7 +1839,7 @@ const WarehouseInfo = () => {
               )
         ),
       [
-        activeEmployees,
+        profileActiveEmployees,
         query,
       ]
     );
@@ -1707,7 +1848,7 @@ const WarehouseInfo = () => {
   const searchedArchivedEmployees =
     useMemo(
       () =>
-        archivedEmployees.filter(
+        profileArchivedEmployees.filter(
           (
             employee
           ) =>
@@ -1729,7 +1870,7 @@ const WarehouseInfo = () => {
               )
         ),
       [
-        archivedEmployees,
+        profileArchivedEmployees,
         query,
       ]
     );
@@ -1738,7 +1879,7 @@ const WarehouseInfo = () => {
   const searchedRatings =
     useMemo(
       () =>
-        ratings.filter(
+        profileRatings.filter(
           (
             rating
           ) =>
@@ -1755,7 +1896,7 @@ const WarehouseInfo = () => {
               )
         ),
       [
-        ratings,
+        profileRatings,
         query,
       ]
     );
@@ -1764,7 +1905,7 @@ const WarehouseInfo = () => {
   const searchedReports =
     useMemo(
       () =>
-        reports.filter(
+        profileReports.filter(
           (
             report
           ) =>
@@ -1786,7 +1927,7 @@ const WarehouseInfo = () => {
               )
         ),
       [
-        reports,
+        profileReports,
         query,
       ]
     );
@@ -2355,7 +2496,7 @@ const WarehouseInfo = () => {
           "active-employees"
         ) {
           count =
-            activeEmployees.length;
+            activeEmployeeCount;
         }
 
 
@@ -2364,7 +2505,7 @@ const WarehouseInfo = () => {
           "archived-employees"
         ) {
           count =
-            archivedEmployees.length;
+            archivedEmployeeCount;
         }
 
 
@@ -2373,7 +2514,7 @@ const WarehouseInfo = () => {
           "ratings"
         ) {
           count =
-            ratings.length;
+            ratingCount;
         }
 
 
@@ -2382,7 +2523,7 @@ const WarehouseInfo = () => {
           "reports"
         ) {
           count =
-            reports.length;
+            reportCount;
         }
 
 
@@ -2557,7 +2698,7 @@ const WarehouseInfo = () => {
                 md:text-3xl
               "
             >
-              {warehouseName}
+              Warehouse Account Details
             </h1>
 
             <p
@@ -2567,10 +2708,70 @@ const WarehouseInfo = () => {
                 text-gray-500
               "
             >
-              {organizationName
-                ? organizationName
-                : "Warehouse account details and employee management."}
+              Warehouse account details and employee management.
             </p>
+
+            {warehouseProfiles.length > 0 && (
+              <div className="mt-2.5 flex items-center gap-2">
+                <label
+                  htmlFor="warehouse-header-profile-select"
+                  className="text-xs font-semibold text-gray-600 shrink-0"
+                >
+                  Warehouse:
+                </label>
+                <div className="relative min-w-[220px] max-w-xs">
+                  <select
+                    id="warehouse-header-profile-select"
+                    value={
+                      selectedProfileId ||
+                      warehouseProfiles[0]?.warehouse_profile_id ||
+                      ""
+                    }
+                    onChange={(e) => {
+                      setSelectedProfileId(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="
+                      w-full
+                      appearance-none
+                      rounded-lg
+                      border
+                      border-gray-300
+                      bg-white
+                      py-1.5
+                      pl-3
+                      pr-8
+                      text-xs
+                      font-medium
+                      text-gray-800
+                      shadow-xs
+                      transition
+                      hover:border-gray-400
+                      focus:border-[#08511f]
+                      focus:outline-none
+                      focus:ring-1
+                      focus:ring-[#08511f]
+                      cursor-pointer
+                    "
+                  >
+                    {warehouseProfiles.map((p) => (
+                      <option
+                        key={p.warehouse_profile_id}
+                        value={p.warehouse_profile_id}
+                      >
+                        {p.business_name ||
+                          p.organization_name ||
+                          `Warehouse #${p.warehouse_profile_id}`}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={14}
+                    className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -2673,10 +2874,7 @@ const WarehouseInfo = () => {
           }
           label="Active Employees"
           value={
-            Number(
-              overview.active_employee_count ??
-              activeEmployees.length
-            )
+            activeEmployeeCount
           }
         />
 
@@ -2686,10 +2884,7 @@ const WarehouseInfo = () => {
           }
           label="Archived Employees"
           value={
-            Number(
-              overview.archived_employee_count ??
-              archivedEmployees.length
-            )
+            archivedEmployeeCount
           }
         />
 
@@ -2700,15 +2895,12 @@ const WarehouseInfo = () => {
           label="Ratings"
           value={
             Number(
-              overview.average_rating ||
+              profileAverageRating ||
               0
             ).toFixed(1)
           }
           helper={
-            `${Number(
-              overview.rating_count ??
-              ratings.length
-            )} total rating(s)`
+            `${ratingCount} total rating(s)`
           }
         />
 
@@ -2718,12 +2910,147 @@ const WarehouseInfo = () => {
           }
           label="Reports"
           value={
-            Number(
-              overview.report_count ??
-              reports.length
-            )
+            reportCount
           }
         />
+      </div>
+
+
+      {/* =====================================================
+          WAREHOUSE OVERVIEW
+      ===================================================== */}
+
+      <div
+        className="
+          mb-6
+          rounded-xl
+          border
+          border-gray-200
+          bg-white
+          p-5
+        "
+      >
+        <div
+          className="
+            mb-4
+          "
+        >
+          <h2
+            className="
+              text-base
+              font-bold
+              text-gray-900
+            "
+          >
+            Warehouse Overview
+          </h2>
+
+          <p
+            className="
+              mt-1
+              text-xs
+              text-gray-500
+            "
+          >
+            General business and warehouse information.
+          </p>
+        </div>
+
+        <div
+          className="
+            grid
+            grid-cols-1
+            gap-5
+            md:grid-cols-3
+          "
+        >
+          <div>
+            <p
+              className="
+                text-[11px]
+                font-semibold
+                uppercase
+                text-gray-400
+              "
+            >
+              Business Name
+            </p>
+
+            <p
+              className="
+                mt-1
+                text-sm
+                font-medium
+                text-gray-800
+              "
+            >
+              {
+                displayValue(
+                  activeProfile?.business_name ||
+                  overview.business_name
+                )
+              }
+            </p>
+          </div>
+
+          <div>
+            <p
+              className="
+                text-[11px]
+                font-semibold
+                uppercase
+                text-gray-400
+              "
+            >
+              Organization Name
+            </p>
+
+            <p
+              className="
+                mt-1
+                text-sm
+                font-medium
+                text-gray-800
+              "
+            >
+              {
+                displayValue(
+                  activeProfile?.organization_name ||
+                  overview.organization_name
+                )
+              }
+            </p>
+          </div>
+
+          <div>
+            <p
+              className="
+                text-[11px]
+                font-semibold
+                uppercase
+                text-gray-400
+              "
+            >
+              Address
+            </p>
+
+            <p
+              className="
+                mt-1
+                text-sm
+                font-medium
+                text-gray-800
+              "
+            >
+              {
+                displayValue(
+                  activeProfileAddress ||
+                  formatAddress(business)
+                )
+              }
+            </p>
+          </div>
+        </div>
       </div>
 
 

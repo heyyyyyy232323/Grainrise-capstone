@@ -43,10 +43,6 @@ const SORT_OPTIONS = [
     value: "name-desc",
     label: "Miller (Z-A)",
   },
-  {
-    value: "company-asc",
-    label: "Company (A-Z)",
-  },
 ];
 
 const TABS = [
@@ -565,22 +561,17 @@ const SupplierManagement = () => {
         {
           key: "miller",
           label: "Miller Name",
-          width: "22%",
-        },
-        {
-          key: "company",
-          label: "Company Name",
-          width: "22%",
+          width: "30%",
         },
         {
           key: "email",
           label: "Email",
-          width: "22%",
+          width: "28%",
         },
         {
           key: "archiveReason",
           label: "Archive Reason",
-          width: "20%",
+          width: "26%",
           render: (row) => (
             <span className="text-[13px] text-slate-500">
               {displayValue(row?.archiveReason, "No reason recorded")}
@@ -590,7 +581,7 @@ const SupplierManagement = () => {
         {
           key: "action",
           label: "Action",
-          width: "14%",
+          width: "16%",
           render: (row) => (
             <div className="flex items-center justify-center gap-2">
               <button
@@ -622,27 +613,22 @@ const SupplierManagement = () => {
         {
           key: "miller",
           label: "Miller Name",
-          width: "25%",
-        },
-        {
-          key: "company",
-          label: "Company Name",
-          width: "25%",
+          width: "35%",
         },
         {
           key: "email",
           label: "Email",
-          width: "28%",
+          width: "35%",
         },
         {
           key: "contact",
           label: "Contact",
-          width: "14%",
+          width: "18%",
         },
         {
           key: "action",
           label: "Action",
-          width: "8%",
+          width: "12%",
           render: (row) => (
             <div className="flex justify-center">
               <button
@@ -666,27 +652,22 @@ const SupplierManagement = () => {
       {
         key: "miller",
         label: "Miller Name",
-        width: "23%",
-      },
-      {
-        key: "company",
-        label: "Company Name",
-        width: "23%",
+        width: "32%",
       },
       {
         key: "email",
         label: "Email",
-        width: "25%",
+        width: "32%",
       },
       {
         key: "contact",
         label: "Contact",
-        width: "14%",
+        width: "18%",
       },
       {
         key: "action",
         label: "Action",
-        width: "15%",
+        width: "18%",
         render: (row) => (
           <div className="flex items-center justify-center gap-1.5">
             <button
@@ -793,24 +774,6 @@ const SupplierManagement = () => {
               ).localeCompare(
                 String(
                   a.miller ||
-                  ""
-                )
-              )
-          );
-        }
-
-        if (
-          sortBy ===
-          "company-asc"
-        ) {
-          sorted.sort(
-            (a, b) =>
-              String(
-                a.company ||
-                ""
-              ).localeCompare(
-                String(
-                  b.company ||
                   ""
                 )
               )

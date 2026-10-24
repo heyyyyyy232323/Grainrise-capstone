@@ -13,7 +13,9 @@ from ..admin_auth import account_admin_required
 from .selectors import (
     TAB_TO_REVIEW,
     VALID_MILLER_TABS,
+    get_miller_branches,
     get_miller_details,
+    get_miller_online_order_ratings,
     get_miller_status_counts,
     get_miller_view_details_data,
     list_millers,
@@ -839,6 +841,26 @@ def miller_management_view_details(
         )
 
 
+        online_order_ratings = (
+            _serialize_data(
+                data.get(
+                    "online_order_ratings"
+                )
+                or []
+            )
+        )
+
+
+        branches = (
+            _serialize_data(
+                data.get(
+                    "branches"
+                )
+                or []
+            )
+        )
+
+
         reports = (
             _serialize_data(
                 data.get(
@@ -871,6 +893,12 @@ def miller_management_view_details(
 
                     "ratings":
                         ratings,
+
+                    "online_order_ratings":
+                        online_order_ratings,
+
+                    "branches":
+                        branches,
 
                     "reports":
                         reports,
@@ -1713,3 +1741,37 @@ def delete_miller_management_employee(
             },
             status=500,
         )
+
+
+# ============================================================
+# MILLER ONLINE ORDER RATINGS
+# ============================================================
+
+@csrf_exempt
+@require_GET
+@account_admin_required
+def get_miller_online_order_ratings_view(
+    request,
+    user_id,
+):
+    """
+    GET /admin/millers/<user_id>/online-order-ratings/
+    Accepts optional branch_id query parameter.
+    """
+    branch_id = request.GET.get("branch_id")
+    ratings = get_miller_online_order_ratings(
+        user_id,
+        branch_id=branch_id,
+    )
+    branches = get_miller_branches(
+        user_id
+    )
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "data": _serialize_data(ratings),
+            "branches": _serialize_data(branches),
+        },
+        status=200,
+    )

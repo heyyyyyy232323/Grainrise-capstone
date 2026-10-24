@@ -5,10 +5,10 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from api.miller_function.miller_auth import miller_manager_required
-from api.miller_employees_function.miller_procurement.receiving_history.selectors import (
-    get_receiving_history,
-    get_receiving_history_detail,
-    get_distinct_history_suppliers,
+from .selectors import (
+    get_manager_receiving_history,
+    get_manager_receiving_history_detail,
+    get_manager_distinct_history_suppliers,
 )
 
 logger = logging.getLogger(__name__)
@@ -23,12 +23,13 @@ logger = logging.getLogger(__name__)
 def manager_receiving_history_list_view(request):
     """
     GET /api/miller/receiving-history/
-    List historical receiving records scoped to the Miller Manager's business.
-    Supports search, date range, supplier, status, and sort_by filters.
+    List historical receiving records scoped across all branches owned by the Miller Manager.
+    Supports branch_id, search, date range, supplier, status, and sort_by filters.
     """
-    supplier_profile_id = request.grainrise_supplier_profile_id
+    miller_user_id = request.grainrise_miller_id
 
     try:
+        branch_id = request.query_params.get("branch_id") or request.query_params.get("branch")
         search = request.query_params.get("search")
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")
@@ -36,8 +37,9 @@ def manager_receiving_history_list_view(request):
         status_filter = request.query_params.get("status")
         sort_by = request.query_params.get("sort_by")
 
-        records = get_receiving_history(
-            supplier_profile_id=supplier_profile_id,
+        records = get_manager_receiving_history(
+            miller_user_id=miller_user_id,
+            branch_id=branch_id,
             search=search,
             start_date=start_date,
             end_date=end_date,
@@ -75,13 +77,14 @@ def manager_receiving_history_list_view(request):
 def manager_receiving_history_detail_view(request, receiving_id):
     """
     GET /api/miller/receiving-history/<receiving_id>/
-    Retrieve comprehensive details for a specific historical receiving record.
+    Retrieve comprehensive details for a specific historical receiving record,
+    verifying server-side that the receiving record belongs to one of the manager's branches.
     """
-    supplier_profile_id = request.grainrise_supplier_profile_id
+    miller_user_id = request.grainrise_miller_id
 
     try:
-        detail = get_receiving_history_detail(
-            supplier_profile_id=supplier_profile_id,
+        detail = get_manager_receiving_history_detail(
+            miller_user_id=miller_user_id,
             receiving_id=receiving_id,
         )
 
@@ -122,12 +125,16 @@ def manager_receiving_history_detail_view(request, receiving_id):
 def manager_receiving_history_suppliers_view(request):
     """
     GET /api/miller/receiving-history/suppliers/
-    Fetch distinct active suppliers that have historical receiving records.
+    Fetch distinct active suppliers that have historical receiving records across manager's branches.
     """
-    supplier_profile_id = request.grainrise_supplier_profile_id
+    miller_user_id = request.grainrise_miller_id
+    branch_id = request.query_params.get("branch_id") or request.query_params.get("branch")
 
     try:
-        suppliers = get_distinct_history_suppliers(supplier_profile_id=supplier_profile_id)
+        suppliers = get_manager_distinct_history_suppliers(
+            miller_user_id=miller_user_id,
+            branch_id=branch_id,
+        )
         return Response(
             {
                 "success": True,

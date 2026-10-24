@@ -1,32 +1,21 @@
 import Toast from "../../../Components/Modals/Toast";
-import { useState, useMemo, useRef, useEffect } from "react";
-import { Search, FileText, ChevronDown, Calendar, X, CheckCircle2 } from "lucide-react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { Search, Plus, ChevronDown, Calendar, X, Loader2 } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
+import FarePolicyModal from "../../../Components/Modals/MillerManager/FarePolicyModal";
+import useApi from "../../../Components/hooks/useApi";
 
-const MOCK_FARE_RATES = Array.from({ length: 20 }, (_, i) => {
-  const isActive = i % 2 === 0;
-  const day = (i % 28) + 1;
-  const formattedDay = day < 10 ? `0${day}` : `${day}`;
-  return {
-    id: `rate-${i + 1}`,
-    rateName: `BATCH 2026 - 00${(i % 5) + 1}`,
-    description: "Temporary hike during harvest peak.",
-    freeDistance: "15 km",
-    baseFee: "₱ 500.00",
-    additionalFee: "₱ 25.00/km",
-    status: isActive ? "Active" : "Inactive",
-    lastUpdatedDate: `Aug ${formattedDay}, 2026`,
-    isoDate: `2026-08-${formattedDay}`,
-    lastUpdatedTime: "9:15 PHT",
-  };
-});
-
-const STATUS_OPTIONS = ["Status", "All Statuses", "Active", "Inactive"];
+const STATUS_OPTIONS = ["Status", "All Statuses", "Active", "Archive"];
 const SORT_OPTIONS = ["Sort By", "Latest", "Oldest", "Base Fee: High to Low", "Base Fee: Low to High"];
 
 export default function MillerFareFeeManagement() {
-  const [rates, setRates] = useState(MOCK_FARE_RATES);
+  const { request } = useApi();
+
+  const [rates, setRates] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Status");
   const [sortBy, setSortBy] = useState("Sort By");
@@ -38,6 +27,10 @@ export default function MillerFareFeeManagement() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const dateRef = useRef(null);
 
+  // Modal states
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editModalData, setEditModalData] = useState(null);
+
   // Popover dismissal handling for Date Picker
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -48,6 +41,79 @@ export default function MillerFareFeeManagement() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const showToast = (msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(""), 3000);
+  };
+
+  // Fetch policies and branches from live database
+  const fetchFarePolicies = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await request("/miller/fare-fee/");
+      if (res && res.success) {
+        const rawData = Array.isArray(res.data) ? res.data : [];
+        const mapped = rawData.map((item) => ({
+          id: item.fare_fee_id,
+          fareFeeId: item.fare_fee_id,
+          rateName: item.rate_name || "",
+          description: item.description || "",
+          freeDeliveryDistance: item.free_delivery_distance,
+          freeDistance: `${Number(item.free_delivery_distance || 0).toLocaleString("en-US", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+          })} km`,
+          rawBaseFee: Number(item.base_fee || 0),
+          baseFee: `₱ ${Number(item.base_fee || 0).toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}`,
+          rawAdditionalFee: Number(item.additional_fee_per_kilometers || 0),
+          additionalFee: `₱ ${Number(item.additional_fee_per_kilometers || 0).toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}/km`,
+          status: item.status || (item.raw_status === "archived" ? "Archived" : "Active"),
+          rawStatus: item.raw_status || (item.status === "Archived" ? "archived" : "active"),
+          archiveReason: item.archive_reason || "",
+          lastUpdatedDate: item.last_updated_date || "",
+          lastUpdatedTime: item.last_updated_time || "",
+          isoDate: item.iso_date || "",
+          effectiveBranches: item.effective_branches || [],
+          effectiveBranchIds: item.effective_branch_ids || [],
+          rawItem: item,
+        }));
+        setRates(mapped);
+
+        if (Array.isArray(res.branches) && res.branches.length > 0) {
+          setBranches(res.branches);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load fare policies:", err);
+      showToast("Failed to load fare policies.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [request]);
+
+  // Load branches fallback if not provided in initial response
+  const fetchBranches = useCallback(async () => {
+    try {
+      const res = await request("/miller/branches/");
+      if (res && res.success && Array.isArray(res.data)) {
+        setBranches(res.data);
+      }
+    } catch (err) {
+      console.error("Failed to load branches:", err);
+    }
+  }, [request]);
+
+  useEffect(() => {
+    fetchFarePolicies();
+    fetchBranches();
+  }, [fetchFarePolicies, fetchBranches]);
 
   const handleDateApply = () => {
     setDateRange(tempDateRange);
@@ -62,9 +128,9 @@ export default function MillerFareFeeManagement() {
     setShowDatePicker(false);
   };
 
-  const showToast = (msg) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(""), 3000);
+  const handleModalSuccess = (savedPolicy, message) => {
+    showToast(message || "Fare policy saved successfully.");
+    fetchFarePolicies();
   };
 
   const columns = [
@@ -75,7 +141,9 @@ export default function MillerFareFeeManagement() {
       renderCell: (row) => (
         <div>
           <p className="text-[13px] font-medium text-slate-700">{row.rateName}</p>
-          <p className="text-[10px] text-gray-400 font-medium leading-tight mt-0.5">{row.description}</p>
+          {row.description ? (
+            <p className="text-[10px] text-gray-400 font-medium leading-tight mt-0.5">{row.description}</p>
+          ) : null}
         </div>
       ),
     },
@@ -135,7 +203,7 @@ export default function MillerFareFeeManagement() {
       renderCell: (row) => (
         <button
           type="button"
-          onClick={() => showToast(`Editing fare rate: ${row.rateName}`)}
+          onClick={() => setEditModalData(row.rawItem || row)}
           className="rounded-full border border-slate-200 bg-white px-3.5 py-1 text-[11px] font-semibold text-gray-700 shadow-2xs hover:bg-slate-50 hover:border-slate-300 transition cursor-pointer"
         >
           Edit
@@ -157,7 +225,8 @@ export default function MillerFareFeeManagement() {
       const matchStatus =
         statusFilter === "Status" ||
         statusFilter === "All Statuses" ||
-        item.status === statusFilter;
+        item.status === statusFilter ||
+        (statusFilter === "Archive" && (item.status === "Archive" || item.status === "Archived"));
 
       // Date Range Filter
       const matchStart = !dateRange.startDate || item.isoDate >= dateRange.startDate;
@@ -168,13 +237,21 @@ export default function MillerFareFeeManagement() {
 
     // Sorting Logic
     if (sortBy === "Latest") {
-      result.sort((a, b) => b.isoDate.localeCompare(a.isoDate));
+      result.sort((a, b) =>
+        (b.rawItem?.updated_at || b.rawItem?.created_at || b.isoDate || "").localeCompare(
+          a.rawItem?.updated_at || a.rawItem?.created_at || a.isoDate || ""
+        )
+      );
     } else if (sortBy === "Oldest") {
-      result.sort((a, b) => a.isoDate.localeCompare(b.isoDate));
+      result.sort((a, b) =>
+        (a.rawItem?.updated_at || a.rawItem?.created_at || a.isoDate || "").localeCompare(
+          b.rawItem?.updated_at || b.rawItem?.created_at || b.isoDate || ""
+        )
+      );
     } else if (sortBy === "Base Fee: High to Low") {
-      result.sort((a, b) => parseFloat(b.baseFee.replace(/[^0-9.-]+/g, "")) - parseFloat(a.baseFee.replace(/[^0-9.-]+/g, "")));
+      result.sort((a, b) => b.rawBaseFee - a.rawBaseFee);
     } else if (sortBy === "Base Fee: Low to High") {
-      result.sort((a, b) => parseFloat(a.baseFee.replace(/[^0-9.-]+/g, "")) - parseFloat(b.baseFee.replace(/[^0-9.-]+/g, "")));
+      result.sort((a, b) => a.rawBaseFee - b.rawBaseFee);
     }
 
     return result;
@@ -217,7 +294,7 @@ export default function MillerFareFeeManagement() {
                 setSearch(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Search tax name, description"
+              placeholder="Search rate name, description"
               className="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
             />
             {search && (
@@ -234,7 +311,7 @@ export default function MillerFareFeeManagement() {
             )}
           </div>
 
-          {/* 1. Date Range Picker Dropdown (Moved to First Filter Position) */}
+          {/* 1. Date Range Picker Dropdown */}
           <div className="relative w-full sm:w-auto" ref={dateRef}>
             <button
               type="button"
@@ -343,15 +420,15 @@ export default function MillerFareFeeManagement() {
           </div>
         </div>
 
-        {/* Right-side Action Button */}
+        {/* Right-side Action Button: Replaced Generate Financial Reports with Add New Fare Policy */}
         <div className="flex items-center gap-2 self-start lg:self-center">
           <button
             type="button"
-            onClick={() => showToast("Generating Financial Reports...")}
+            onClick={() => setIsAddModalOpen(true)}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0B5D1E] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#084b18] transition cursor-pointer whitespace-nowrap h-[38px]"
           >
-            <FileText size={15} />
-            Generate Financial Reports
+            <Plus size={16} />
+            Add New Fare Policy
           </button>
         </div>
       </div>
@@ -375,6 +452,27 @@ export default function MillerFareFeeManagement() {
         totalPages={totalPages}
         onPageChange={setCurrentPage}
         footerLabel={`Showing rate records — Page ${currentPage} of ${totalPages}`}
+        emptyStateTitle="No fare rate records found"
+        emptyStateDescription="No matching fare policies were found. Create a new fare policy to manage delivery fees."
+      />
+
+      {/* ── Add Fare Policy Modal ────────────────────────────────────────── */}
+      <FarePolicyModal
+        isOpen={isAddModalOpen}
+        mode="add"
+        branches={branches}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={handleModalSuccess}
+      />
+
+      {/* ── Edit Fare Policy Modal ───────────────────────────────────────── */}
+      <FarePolicyModal
+        isOpen={Boolean(editModalData)}
+        mode="edit"
+        policy={editModalData}
+        branches={branches}
+        onClose={() => setEditModalData(null)}
+        onSuccess={handleModalSuccess}
       />
     </div>
   );

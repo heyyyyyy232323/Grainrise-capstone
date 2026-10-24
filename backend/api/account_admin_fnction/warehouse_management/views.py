@@ -850,6 +850,16 @@ def warehouse_management_view_details(
         )
 
 
+        profiles = (
+            _serialize_data(
+                data.get(
+                    "profiles"
+                )
+                or []
+            )
+        )
+
+
         return JsonResponse(
             {
                 "success":
@@ -863,6 +873,9 @@ def warehouse_management_view_details(
 
                     "owner":
                         owner,
+
+                    "profiles":
+                        profiles,
 
                     "active_employees":
                         active_employees,

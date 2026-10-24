@@ -31,6 +31,22 @@ urlpatterns = [
 
 
     # ========================================================
+    # ONLINE ORDER RATINGS
+    # ========================================================
+
+    path(
+        "<str:user_id>/online-order-ratings/",
+        views.get_miller_online_order_ratings_view,
+        name="online-order-ratings",
+    ),
+    path(
+        "<str:user_id>/online-order-ratings",
+        views.get_miller_online_order_ratings_view,
+        name="online-order-ratings-no-slash",
+    ),
+
+
+    # ========================================================
     # CONFIRM APPLICATION
     # ========================================================
 

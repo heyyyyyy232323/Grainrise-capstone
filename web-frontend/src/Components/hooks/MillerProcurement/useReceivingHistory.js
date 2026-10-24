@@ -17,6 +17,11 @@ export default function useReceivingHistory({ isManager = false } = {}) {
       try {
         const queryParams = new URLSearchParams();
         if (params.search) queryParams.append("search", params.search);
+        if (params.branchId && params.branchId !== "all") {
+          queryParams.append("branch_id", params.branchId);
+        } else if (params.branch && params.branch !== "all") {
+          queryParams.append("branch_id", params.branch);
+        }
         if (params.startDate) queryParams.append("start_date", params.startDate);
         if (params.endDate) queryParams.append("end_date", params.endDate);
         if (params.supplierId && params.supplierId !== "all") {

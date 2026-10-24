@@ -125,6 +125,11 @@ export default function MillerSalesHistoryDetailsModal({
                   </span>
                 </ModalDetailRow>
 
+                {/* Branch Name */}
+                {(sale.branchName || sale.branch) && (
+                  <ModalDetailRow label="Branch Name" value={sale.branchName || sale.branch} />
+                )}
+
                 {/* 3. Product */}
                 <ModalDetailRow label="Product" value={sale.productName || sale.variant} />
 
@@ -197,6 +202,11 @@ export default function MillerSalesHistoryDetailsModal({
               </>
             ) : (
               <>
+                {/* Branch Name */}
+                {(sale.branchName || sale.branch) && (
+                  <ModalDetailRow label="Branch Name" value={sale.branchName || sale.branch} />
+                )}
+
                 {/* 1. Product */}
                 <ModalDetailRow label="Product" value={sale.productName || sale.variant} />
 

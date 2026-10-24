@@ -1151,6 +1151,11 @@ function App() {
             />
 
             <Route
+              path="/miller-manager/finance-history/report"
+              element={<MillerFinanceManagementHistory reportMode={true} />}
+            />
+
+            <Route
               path="/miller-manager/messages"
               element={<MillerManagerMessages />}
             />

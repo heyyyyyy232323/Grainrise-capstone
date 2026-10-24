@@ -410,10 +410,22 @@ def list_millers(
             FROM users u
 
 
-            INNER JOIN supplier_profiles p
-
-                ON p.user_id =
-                    u.user_id
+            LEFT JOIN (
+                SELECT
+                    sp1.user_id,
+                    sp1.business_name,
+                    sp1.organization_name
+                FROM supplier_profiles sp1
+                INNER JOIN (
+                    SELECT
+                        user_id,
+                        MIN(supplier_profile_id) AS min_sp_id
+                    FROM supplier_profiles
+                    GROUP BY user_id
+                ) sp_min
+                    ON sp1.supplier_profile_id = sp_min.min_sp_id
+            ) p
+                ON p.user_id = u.user_id
 
 
             {archive_join}
@@ -908,9 +920,9 @@ def get_miller_view_overview(
     except (ValueError, TypeError):
         return None
 
-    has_ratings = (
+    has_online_ratings = (
         _table_exists(
-            "miller_ratings"
+            "miller_online_orders_rating"
         )
     )
 
@@ -922,20 +934,21 @@ def get_miller_view_overview(
     )
 
 
-    if has_ratings:
+    if has_online_ratings:
 
         rating_columns = """
             COALESCE(
                 (
                     SELECT
-                        AVG(
-                            mr.rating
-                        )
+                        ROUND(AVG(moor.rating), 1)
 
-                    FROM miller_ratings mr
+                    FROM miller_online_orders_rating moor
+
+                    INNER JOIN supplier_profiles sp_rate
+                        ON sp_rate.supplier_profile_id = moor.supplier_profile_id
 
                     WHERE
-                        mr.miller_user_id =
+                        sp_rate.user_id =
                             u.user_id
                 ),
                 0
@@ -945,12 +958,15 @@ def get_miller_view_overview(
 
             (
                 SELECT
-                    COUNT(*)
+                    COUNT(moor.rating_id)
 
-                FROM miller_ratings mr
+                FROM miller_online_orders_rating moor
+
+                INNER JOIN supplier_profiles sp_rate
+                    ON sp_rate.supplier_profile_id = moor.supplier_profile_id
 
                 WHERE
-                    mr.miller_user_id =
+                    sp_rate.user_id =
                         u.user_id
             )
             AS rating_count
@@ -1094,6 +1110,9 @@ def get_miller_view_overview(
 
                 AND u.user_role = %s
 
+
+            ORDER BY
+                p.supplier_profile_id ASC
 
             LIMIT 1
             """,
@@ -1598,6 +1617,190 @@ def get_miller_reports(
 
 
 # ============================================================
+# MILLER BRANCHES & ONLINE ORDER RATINGS
+# ============================================================
+
+def mask_online_order_reviewer(
+    first_name=None,
+    business_name=None,
+):
+    """
+    Mask reviewer identity for anonymity:
+    - Retailer: first letter of first_name + '***'
+    - Warehouse: first letter of first word of business_name + '***'
+    """
+    if first_name and str(first_name).strip():
+        char = str(first_name).strip()[0].upper()
+        return f"{char}***"
+
+    if business_name and str(business_name).strip():
+        first_word = str(business_name).strip().split()[0]
+        char = first_word[0].upper() if first_word else "W"
+        return f"{char}***"
+
+    return "A***"
+
+
+def get_miller_branches(
+    user_id,
+):
+    """
+    Fetch all branches owned by a Miller user.
+    """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return []
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                supplier_profile_id,
+                business_name,
+                organization_name,
+                official_email,
+                official_contact_number,
+                province,
+                municipality,
+                barangay,
+                street_address,
+                postal_code
+            FROM supplier_profiles
+            WHERE user_id = %s
+            ORDER BY supplier_profile_id ASC
+            """,
+            [numeric_user_id],
+        )
+        columns = [col[0] for col in cursor.description]
+        rows = cursor.fetchall()
+
+    return [
+        dict(zip(columns, r))
+        for r in rows
+    ]
+
+
+def get_miller_online_order_ratings(
+    user_id,
+    branch_id=None,
+):
+    """
+    Fetch customer online order ratings for one Miller's branches.
+    Never exposes unmasked reviewer identities.
+    """
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return []
+
+    where_clauses = ["sp.user_id = %s"]
+    params = [numeric_user_id]
+
+    if branch_id and str(branch_id).lower() != "all":
+        try:
+            params.append(int(branch_id))
+            where_clauses.append("moor.supplier_profile_id = %s")
+        except (ValueError, TypeError):
+            pass
+
+    query = f"""
+        SELECT
+            moor.rating_id,
+            moor.supplier_profile_id,
+            sp.business_name AS branch_name,
+            moor.online_order_id,
+            moc.batch_no AS order_batch_no,
+            moor.miller_product_id,
+            COALESCE(mp.product_name, 'Unknown Product') AS product_name,
+            u.first_name AS retailer_first_name,
+            wp.business_name AS warehouse_business_name,
+            moor.rating,
+            moor.comment,
+            moor.created_at
+        FROM miller_online_orders_rating moor
+        INNER JOIN supplier_profiles sp ON sp.supplier_profile_id = moor.supplier_profile_id
+        LEFT JOIN miller_online_customer moc ON moc.online_order_id = moor.online_order_id
+        LEFT JOIN miller_products mp ON mp.product_id = moor.miller_product_id
+        LEFT JOIN users u ON u.user_id = moor.user_buyer_id
+        LEFT JOIN warehouse_profiles wp ON wp.warehouse_profile_id = moor.warehouse_buyer_id
+        WHERE {' AND '.join(where_clauses)}
+        ORDER BY moor.created_at DESC, moor.rating_id DESC
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+
+    if not rows:
+        return []
+
+    rating_ids = [r[0] for r in rows]
+    attachments_map = {}
+
+    placeholders = ",".join(["%s"] * len(rating_ids))
+    att_query = f"""
+        SELECT rating_id, attachment
+        FROM miller_online_orders_rating_attachment
+        WHERE rating_id IN ({placeholders})
+        ORDER BY rating_attachment_id ASC
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(att_query, rating_ids)
+        att_rows = cursor.fetchall()
+
+    for r_id, att in att_rows:
+        if r_id not in attachments_map:
+            attachments_map[r_id] = []
+        if att:
+            attachments_map[r_id].append(att)
+
+    ratings_list = []
+    for r in rows:
+        (
+            rating_id,
+            supplier_profile_id,
+            branch_name,
+            online_order_id,
+            order_batch_no,
+            miller_product_id,
+            product_name,
+            retailer_first_name,
+            warehouse_business_name,
+            rating_val,
+            comment,
+            created_at,
+        ) = r
+
+        masked = mask_online_order_reviewer(
+            first_name=retailer_first_name,
+            business_name=warehouse_business_name,
+        )
+
+        ratings_list.append({
+            "rating_id": rating_id,
+            "id": rating_id,
+            "supplier_profile_id": supplier_profile_id,
+            "branch_name": branch_name or f"Branch #{supplier_profile_id}",
+            "online_order_id": online_order_id,
+            "order_id": order_batch_no or f"ORD-{online_order_id}",
+            "order_batch_no": order_batch_no or f"ORD-{online_order_id}",
+            "miller_product_id": miller_product_id,
+            "product_name": product_name,
+            "product": product_name,
+            "masked_reviewer": masked,
+            "customer": masked,
+            "reviewer_name": masked,
+            "rating": float(rating_val) if rating_val is not None else 0.0,
+            "comment": comment or "",
+            "created_at": created_at,
+            "attachments": attachments_map.get(rating_id, []),
+        })
+
+    return ratings_list
+
+
+# ============================================================
 # COMPLETE MILLER VIEW DETAILS
 # ============================================================
 
@@ -1613,6 +1816,8 @@ def get_miller_view_details_data(
         active_employees
         archived_employees
         ratings
+        online_order_ratings
+        branches
         reports
     """
 
@@ -1660,6 +1865,20 @@ def get_miller_view_details_data(
     )
 
 
+    online_order_ratings = (
+        get_miller_online_order_ratings(
+            user_id
+        )
+    )
+
+
+    branches = (
+        get_miller_branches(
+            user_id
+        )
+    )
+
+
     reports = (
         get_miller_reports(
             user_id
@@ -1682,6 +1901,12 @@ def get_miller_view_details_data(
 
         "ratings":
             ratings,
+
+        "online_order_ratings":
+            online_order_ratings,
+
+        "branches":
+            branches,
 
         "reports":
             reports,

@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { Search, ChevronDown } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { Search, ChevronDown, X } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
 import ToastNotification from "../../../Components/Modals/Toast";
 import useReceivingHistory from "../../../Components/hooks/MillerProcurement/useReceivingHistory";
 import ReceivingHistoryDetailsModal from "../../../Components/Modals/MillerProcurement/ReceivingHistoryDetailsModal";
+import useApi from "../../../Components/hooks/useApi";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -110,6 +111,7 @@ function groupRowsByReceivingDate(rows) {
 }
 
 const MillerProcurementReceivingHistory = () => {
+  const { request } = useApi();
   const {
     fetchReceivingHistory,
     fetchReceivingDetail,
@@ -117,6 +119,11 @@ const MillerProcurementReceivingHistory = () => {
   } = useReceivingHistory({ isManager: true });
 
   const [records, setRecords] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState("all");
+  const [showBranchDrop, setShowBranchDrop] = useState(false);
+  const branchRef = useRef(null);
+
   const [search, setSearch] = useState("");
   const [qcStatusFilter, setQcStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
@@ -128,33 +135,118 @@ const MillerProcurementReceivingHistory = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Close branch dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (branchRef.current && !branchRef.current.contains(e.target)) {
+        setShowBranchDrop(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Fetch ALL branches owned by the authenticated Miller Manager using GET /miller/branches/
+  const fetchBranches = useCallback(async () => {
+    try {
+      const res = await request("/miller/branches/", { method: "GET" });
+      const rawList = res?.data ?? (Array.isArray(res) ? res : []);
+      if (Array.isArray(rawList)) {
+        setBranches(rawList);
+      }
+    } catch (err) {
+      console.error("Failed to load branches:", err);
+    }
+  }, [request]);
+
+  useEffect(() => {
+    fetchBranches();
+  }, [fetchBranches]);
+
+  // Populate branch options dynamically using GET /miller/branches/ (response.data)
+  // supplier_profile_id = filter value, business_name = displayed Branch Name
+  // Includes ALL owned branches (even with 0 receiving records), with "All Branches" as default.
+  const branchOptions = useMemo(() => {
+    const map = new Map();
+
+    // 1. Add ALL owned branches from GET /miller/branches/
+    for (const b of branches) {
+      if (b && b.supplier_profile_id != null) {
+        map.set(
+          String(b.supplier_profile_id),
+          b.business_name || b.organization_name || `Branch #${b.supplier_profile_id}`
+        );
+      }
+    }
+
+    // 2. Also ensure any branch present in receiving records is covered
+    for (const item of records) {
+      const id = item.supplier_profile_id ?? item.supplierProfileId;
+      const name = item.branch_name || item.branchName || item.branch;
+      if (id !== undefined && id !== null && name && !map.has(String(id))) {
+        map.set(String(id), name);
+      }
+    }
+
+    const list = Array.from(map.entries())
+      .map(([id, name]) => ({ value: String(id), label: name }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+    return [{ value: "all", label: "All Branches" }, ...list];
+  }, [branches, records]);
+
+  // Display label for current branch selection
+  const selectedBranchLabel = useMemo(() => {
+    if (selectedBranch === "all") return "All Branches";
+    const found = branchOptions.find((b) => String(b.value) === String(selectedBranch));
+    return found ? found.label : "All Branches";
+  }, [selectedBranch, branchOptions]);
+
+  // Handle branch filter change
+  const handleBranchSelect = (branchValue) => {
+    setSelectedBranch(branchValue);
+    setCurrentPage(1);
+    setShowBranchDrop(false);
+  };
+
   // Load receiving records from backend
   const loadHistory = useCallback(async () => {
     try {
       const data = await fetchReceivingHistory({
         search,
         sortBy,
+        branchId: selectedBranch !== "all" ? selectedBranch : undefined,
       });
       setRecords(data);
     } catch {
       // Handled in hook
     }
-  }, [fetchReceivingHistory, search, sortBy]);
+  }, [fetchReceivingHistory, search, sortBy, selectedBranch]);
 
   useEffect(() => {
     loadHistory();
   }, [loadHistory]);
 
-  // Reset pagination on filter or search change
+  // Reset pagination on filter, search, or branch change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, qcStatusFilter, sortBy]);
+  }, [search, qcStatusFilter, sortBy, selectedBranch]);
 
-  // Filter case-insensitively across search parameters and QC status
+  // Filter case-insensitively across search parameters, QC status, and Branch
   const filteredRecords = useMemo(() => {
     const term = search.trim().toLowerCase();
 
     return records.filter((item) => {
+      // Branch Filter
+      if (selectedBranch && selectedBranch !== "all") {
+        const itemBranchId = String(
+          item.supplier_profile_id ?? item.supplierProfileId ?? ""
+        );
+        if (itemBranchId !== String(selectedBranch)) {
+          return false;
+        }
+      }
+
       // QC Status Filter
       if (qcStatusFilter && qcStatusFilter !== "all") {
         const itemQc = determineQcStatus(item);
@@ -169,15 +261,17 @@ const MillerProcurementReceivingHistory = () => {
       const supplier = String(item.supplier || "").toLowerCase();
       const variant = String(item.variant || item.product_name || "").toLowerCase();
       const refNo = String(item.receiving_reference_no || "").toLowerCase();
+      const branch = String(item.branch_name || item.branchName || "").toLowerCase();
 
       return (
         batchNo.includes(term) ||
         supplier.includes(term) ||
         variant.includes(term) ||
-        refNo.includes(term)
+        refNo.includes(term) ||
+        branch.includes(term)
       );
     });
-  }, [records, search, qcStatusFilter]);
+  }, [records, search, qcStatusFilter, selectedBranch]);
 
   // Pagination calculation
   const totalItems = filteredRecords.length;
@@ -331,9 +425,56 @@ const MillerProcurementReceivingHistory = () => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search batch no., supplier, or product"
-            className="h-9 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-xs text-gray-700 placeholder-gray-400 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+            placeholder="Search batch no., supplier, product, or branch"
+            className="h-9 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-8 text-xs text-gray-700 placeholder-gray-400 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Branch Filter Dropdown (Same design as Manager Sales History) */}
+        <div className="relative" ref={branchRef}>
+          <button
+            type="button"
+            onClick={() => setShowBranchDrop((prev) => !prev)}
+            className={`flex items-center gap-2 border border-gray-200 bg-white px-3 py-2 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 justify-center transition-colors cursor-pointer h-9 ${
+              selectedBranch !== "all"
+                ? "border-emerald-500 text-emerald-700 bg-emerald-50/40"
+                : ""
+            }`}
+          >
+            <span>{selectedBranchLabel}</span>
+            <ChevronDown
+              size={14}
+              className={`text-gray-500 transition-transform duration-200 ${showBranchDrop ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {showBranchDrop && (
+            <div className="absolute top-full mt-2 left-0 bg-white border border-gray-200 rounded-xl shadow-lg p-1.5 z-20 min-w-[200px] max-h-60 overflow-y-auto">
+              {branchOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => handleBranchSelect(opt.value)}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                    String(selectedBranch) === String(opt.value)
+                      ? "bg-[#EAF7E8] text-[#0B5D1E] font-bold"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* QC Status Filter */}
@@ -387,7 +528,7 @@ const MillerProcurementReceivingHistory = () => {
         footerLabel={`Showing ${startEntry}–${endEntry} of ${totalItems} receiving records`}
         isEmpty={!loading && filteredRecords.length === 0}
         emptyStateTitle="No receiving records found"
-        emptyStateDescription="No delivery receiving records match your selected search or QC filter."
+        emptyStateDescription="No delivery receiving records match your selected branch, search, or QC filter."
       />
 
       {/* ── View Details Modal ───────────────────────────────────── */}

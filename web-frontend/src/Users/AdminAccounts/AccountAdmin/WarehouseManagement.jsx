@@ -42,10 +42,6 @@ const SORT_OPTIONS = [
     value: "name-desc",
     label: "Manager Name (Z-A)",
   },
-  {
-    value: "company-asc",
-    label: "Company (A-Z)",
-  },
 ];
 
 
@@ -841,18 +837,7 @@ const WarehouseManagement = () => {
                 "Manager Name",
 
               width:
-                "22%",
-            },
-
-
-            {
-              key: "company",
-
-              label:
-                "Company Name",
-
-              width:
-                "22%",
+                "28%",
             },
 
 
@@ -863,7 +848,7 @@ const WarehouseManagement = () => {
                 "Email",
 
               width:
-                "20%",
+                "26%",
             },
 
 
@@ -875,7 +860,7 @@ const WarehouseManagement = () => {
                 "Archive Reason",
 
               width:
-                "20%",
+                "26%",
 
               render:
                 (
@@ -976,18 +961,7 @@ const WarehouseManagement = () => {
               "Manager Name",
 
             width:
-              "22%",
-          },
-
-
-          {
-            key: "company",
-
-            label:
-              "Company Name",
-
-            width:
-              "22%",
+              "30%",
           },
 
 
@@ -998,7 +972,7 @@ const WarehouseManagement = () => {
               "Email",
 
             width:
-              "20%",
+              "28%",
           },
 
 
@@ -1009,7 +983,7 @@ const WarehouseManagement = () => {
               "Contact",
 
             width:
-              "16%",
+              "22%",
           },
 
 
@@ -1250,28 +1224,7 @@ const WarehouseManagement = () => {
                 )
               )
           );
-
-        } else if (
-          sortBy ===
-          "company-asc"
-        ) {
-          sorted.sort(
-            (
-              a,
-              b
-            ) =>
-              String(
-                a.company ||
-                ""
-              ).localeCompare(
-                String(
-                  b.company ||
-                  ""
-                )
-              )
-          );
         }
-
 
         return sorted;
       },
