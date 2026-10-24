@@ -12,6 +12,7 @@ from .selectors import (
     list_flc_drivers_with_capacity,
     list_flc_product_returns,
     list_flc_return_variants,
+    list_flc_vehicle_assigned_history,
     list_flc_vehicles,
 )
 from .services import (
@@ -511,4 +512,47 @@ def flc_process_return_view(request, return_id):
             },
             status=500,
         )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@miller_flc_required
+def flc_vehicle_assigned_history_view(request):
+    """
+    GET /api/miller-employees/logistics/assigned-history/
+    Retrieve vehicle assignment history records scoped to the authenticated FLC branch.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    search = request.GET.get("search", "").strip()
+    status_filter = request.GET.get("status", "all").strip()
+    start_date = request.GET.get("start_date", "").strip() or None
+    end_date = request.GET.get("end_date", "").strip() or None
+    sort_by = request.GET.get("sort", "date-desc").strip()
+
+    try:
+        assignments = list_flc_vehicle_assigned_history(
+            supplier_profile_id=supplier_profile_id,
+            search=search,
+            status_filter=status_filter,
+            start_date=start_date,
+            end_date=end_date,
+            sort_by=sort_by,
+        )
+        return JsonResponse(
+            {
+                "success": True,
+                "assignments": assignments,
+                "total": len(assignments),
+            },
+            status=200,
+        )
+    except Exception as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Server error fetching vehicle assignment history: {str(e)}",
+            },
+            status=500,
+        )
+
 

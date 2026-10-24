@@ -1017,3 +1017,161 @@ def list_flc_return_variants(supplier_profile_id):
 
     return [r[0] for r in rows if r[0]]
 
+
+def list_flc_vehicle_assigned_history(
+    supplier_profile_id,
+    search=None,
+    status_filter=None,
+    start_date=None,
+    end_date=None,
+    sort_by=None,
+):
+    """
+    Retrieve all vehicle assignment records for the authenticated FLC employee's branch.
+    Includes active, changed, and historical assignments.
+
+    DATABASE TABLES:
+    - miller_vehicle_assignee mva
+    - miller_delivery_vehicle_management v
+    - supplier_employees se
+    """
+    params = [supplier_profile_id]
+    where_clauses = ["mva.supplier_profile_id = %s"]
+
+    # Status filter: All, Active, Changed
+    if status_filter and status_filter.lower() in ("active", "changed"):
+        where_clauses.append("LOWER(mva.status) = LOWER(%s)")
+        params.append(status_filter.strip())
+
+    # Date range filter on assignment creation date (created_at)
+    if start_date:
+        where_clauses.append("DATE(mva.created_at) >= %s")
+        params.append(start_date)
+
+    if end_date:
+        where_clauses.append("DATE(mva.created_at) <= %s")
+        params.append(end_date)
+
+    # Search filter: vehicle model, plate number, or driver name
+    if search:
+        search_like = f"%{search.strip()}%"
+        where_clauses.append(
+            """(
+                v.model LIKE %s
+                OR v.plate_number LIKE %s
+                OR se.first_name LIKE %s
+                OR se.last_name LIKE %s
+                OR CONCAT(se.first_name, ' ', se.last_name) LIKE %s
+            )"""
+        )
+        params.extend([search_like] * 5)
+
+    where_sql = " AND ".join(where_clauses)
+
+    # Sorting
+    order_by_sql = "ORDER BY mva.created_at DESC, mva.assigned_id DESC"
+    if sort_by == "model-asc":
+        order_by_sql = "ORDER BY v.model ASC, mva.created_at DESC"
+    elif sort_by == "model-desc":
+        order_by_sql = "ORDER BY v.model DESC, mva.created_at DESC"
+    elif sort_by == "plate-asc":
+        order_by_sql = "ORDER BY v.plate_number ASC, mva.created_at DESC"
+    elif sort_by == "plate-desc":
+        order_by_sql = "ORDER BY v.plate_number DESC, mva.created_at DESC"
+    elif sort_by == "driver-asc":
+        order_by_sql = "ORDER BY se.first_name ASC, se.last_name ASC, mva.created_at DESC"
+    elif sort_by == "driver-desc":
+        order_by_sql = "ORDER BY se.first_name DESC, se.last_name DESC, mva.created_at DESC"
+    elif sort_by == "date-desc":
+        order_by_sql = "ORDER BY mva.created_at DESC, mva.assigned_id DESC"
+    elif sort_by == "date-asc":
+        order_by_sql = "ORDER BY mva.created_at ASC, mva.assigned_id ASC"
+
+    sql = f"""
+        SELECT
+            mva.assigned_id,
+            mva.status AS assignment_status,
+            mva.created_at AS assigned_on,
+            mva.updated_at,
+            -- Vehicle info
+            v.vehicle_id,
+            v.model,
+            v.plate_number,
+            v.type,
+            v.number_of_wheels,
+            v.capacity,
+            v.photo,
+            v.status AS vehicle_status,
+            v.inactive_reason,
+            v.maintenance_reason,
+            -- Driver info
+            se.supplier_employee_id AS driver_id,
+            se.first_name AS driver_first_name,
+            se.middle_initial AS driver_middle_initial,
+            se.last_name AS driver_last_name,
+            se.suffix AS driver_suffix,
+            se.email AS driver_email,
+            se.contact_number AS driver_contact_number
+        FROM miller_vehicle_assignee mva
+        INNER JOIN miller_delivery_vehicle_management v
+            ON v.vehicle_id = mva.vehicle_id
+        INNER JOIN supplier_employees se
+            ON se.supplier_employee_id = mva.driver_id
+        WHERE {where_sql}
+        {order_by_sql}
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(sql, params)
+        rows = cursor.fetchall()
+
+    assignments = []
+    for r in rows:
+        driver_name = _format_driver_name(r[15], r[16], r[17], r[18])
+        cap = _parse_capacity_kg(r[9])
+        cap_formatted = f"{cap:,.0f} kg" if cap.is_integer() else f"{cap:,.2f} kg"
+
+        created_at_dt = r[2]
+        created_at_iso = created_at_dt.isoformat() if created_at_dt else None
+        created_at_formatted = created_at_dt.strftime("%b %d, %Y") if created_at_dt else "—"
+
+        status_raw = str(r[1] or "active").strip()
+        status_clean = "Active" if status_raw.lower() == "active" else "Changed"
+
+        assignments.append(
+            {
+                "assigned_id": r[0],
+                "id": r[0],
+                "status": status_clean,
+                "assignment_status": status_clean,
+                "status_raw": status_raw,
+                "assigned_on": created_at_formatted,
+                "assigned_on_formatted": created_at_formatted,
+                "assigned_on_iso": created_at_iso,
+                "created_at": created_at_iso,
+                "isoDate": created_at_dt.strftime("%Y-%m-%d") if created_at_dt else "",
+                # Vehicle Details
+                "vehicle_id": r[4],
+                "model": r[5] or "Vehicle",
+                "plate_number": r[6] or "—",
+                "type": r[7] or "Delivery Vehicle",
+                "number_of_wheels": r[8] or 4,
+                "capacity": cap,
+                "capacity_formatted": cap_formatted,
+                "photo": r[10],
+                "photo_url": _resolve_photo_url(r[10]),
+                "vehicle_status": r[11] or "active",
+                "inactive_reason": r[12],
+                "maintenance_reason": r[13],
+                # Driver Details
+                "driver_id": r[14],
+                "driver": driver_name,
+                "driver_name": driver_name,
+                "driver_email": r[19] or "—",
+                "driver_contact": r[20] or "—",
+            }
+        )
+
+    return assignments
+
+

@@ -29,5 +29,10 @@ urlpatterns = [
         views.flc_process_return_view,
         name="flc-process-return",
     ),
+    path(
+        "assigned-history/",
+        views.flc_vehicle_assigned_history_view,
+        name="flc-assigned-history-list",
+    ),
 ]
 
