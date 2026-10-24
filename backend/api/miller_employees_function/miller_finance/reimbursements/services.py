@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.db import connection, transaction
+from django.utils import timezone
 
 from .selectors import (
     FAILED_PAYOUT_STATUSES,
@@ -1575,12 +1576,14 @@ def submit_reimbursement_request(
     category: str,
     price,
     photo_evidence: str = "",
+    expense_date=None,
 ) -> dict:
     """
     Submit a new reimbursement request into miller_reimbursement in 'requested' status.
     Atomically creates a notification for Miller Finance so they are notified of the new request.
     Enforces branch isolation and prevents duplicate notifications.
     """
+    import datetime
     from decimal import Decimal
     from api.miller_employees_function.miller_finance.notifications.services import (
         create_finance_notification,
@@ -1589,6 +1592,29 @@ def submit_reimbursement_request(
     price_dec = Decimal(str(price or "0.00")).quantize(Decimal("0.01"))
     if price_dec <= Decimal("0.00"):
         raise ValueError("Reimbursement price must be greater than zero.")
+
+    # Validate expense_date
+    today = timezone.now().date()
+    parsed_expense_date = None
+    if expense_date:
+        if isinstance(expense_date, str):
+            try:
+                parsed_expense_date = datetime.date.fromisoformat(str(expense_date).strip())
+            except ValueError:
+                raise ValueError("Invalid expense date format. Must be YYYY-MM-DD.")
+        elif isinstance(expense_date, (datetime.date, datetime.datetime)):
+            parsed_expense_date = (
+                expense_date.date()
+                if isinstance(expense_date, datetime.datetime)
+                else expense_date
+            )
+        else:
+            raise ValueError("Invalid expense date provided.")
+
+        if parsed_expense_date > today:
+            raise ValueError("Expense date cannot be in the future.")
+    else:
+        parsed_expense_date = today
 
     clean_title = (title or "").strip() or "Reimbursement Request"
     clean_desc = (description or "").strip() or "N/A"
@@ -1619,7 +1645,7 @@ def submit_reimbursement_request(
                 FROM miller_reimbursement
                 """
             )
-            next_id = cursor.fetchone()[0]
+            next_id = int(cursor.fetchone()[0] or 1)
             ref_no = f"REIMB-{supplier_profile_id}-{next_id:04d}"
 
             now = timezone.now()
@@ -1635,8 +1661,9 @@ def submit_reimbursement_request(
                     requested_date,
                     photo_evidence,
                     status,
-                    request_reference_no
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'requested', %s)
+                    request_reference_no,
+                    expense_date
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'requested', %s, %s)
                 """,
                 [
                     supplier_profile_id,
@@ -1648,6 +1675,7 @@ def submit_reimbursement_request(
                     now,
                     photo_evidence or "",
                     ref_no,
+                    parsed_expense_date,
                 ],
             )
             new_reimbursement_id = cursor.lastrowid
@@ -1671,6 +1699,7 @@ def submit_reimbursement_request(
         "title": clean_title,
         "price": float(price_dec),
         "requested_by": requester_name,
+        "expense_date": str(parsed_expense_date),
     }
 
 

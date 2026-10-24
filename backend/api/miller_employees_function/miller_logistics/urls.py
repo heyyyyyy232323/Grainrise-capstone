@@ -44,5 +44,10 @@ urlpatterns = [
         views.flc_fulfillment_variants_view,
         name="flc-fulfillment-variants-list",
     ),
+    path(
+        "reimbursements/submit/",
+        views.flc_submit_reimbursement_view,
+        name="flc-reimbursement-submit",
+    ),
 ]
 

@@ -1,10 +1,19 @@
+import base64
 import json
+import os
+import uuid
 
+from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from api.miller_employees_function.employee_auth import miller_flc_required
+from api.miller_employees_function.miller_finance.reimbursements.services import (
+    submit_reimbursement_request,
+)
 from .selectors import (
     get_flc_vehicle_detail,
     list_flc_active_drivers,
@@ -622,6 +631,194 @@ def flc_fulfillment_variants_view(request):
             },
             status=500,
         )
+
+
+def _save_reimbursement_attachment(file_obj, base64_str, supplier_profile_id):
+    """
+    Validate and save attachment file (file_obj or base64 data URL).
+    Returns relative media URL like /media/reimbursements/7/abc12345.jpg.
+    Raises ValueError on validation failures.
+    """
+    allowed_exts = {".png", ".jpg", ".jpeg", ".webp"}
+    max_bytes = 10 * 1024 * 1024  # 10 MB
+
+    if file_obj is not None:
+        name = getattr(file_obj, "name", "")
+        ext = os.path.splitext(name)[1].lower()
+        if ext not in allowed_exts:
+            raise ValueError(
+                f"Unsupported file format '{ext}'. Only PNG, JPG, JPEG, and WEBP files are accepted."
+            )
+        if file_obj.size > max_bytes:
+            raise ValueError("Attachment file exceeds the 10 MB size limit.")
+
+        unique_name = f"reimb_{uuid.uuid4().hex[:12]}{ext}"
+        rel_path = f"reimbursements/{supplier_profile_id}/{unique_name}"
+        saved_path = default_storage.save(rel_path, file_obj)
+        media_url = getattr(settings, "MEDIA_URL", "/media/")
+        return f"{media_url.rstrip('/')}/{saved_path.lstrip('/')}"
+
+    if base64_str and str(base64_str).strip():
+        raw_str = str(base64_str).strip()
+        ext = ".jpg"
+        b64_payload = raw_str
+        if raw_str.startswith("data:"):
+            header, _, b64_payload = raw_str.partition(",")
+            if "image/png" in header:
+                ext = ".png"
+            elif "image/webp" in header:
+                ext = ".webp"
+            elif "image/jpeg" in header or "image/jpg" in header:
+                ext = ".jpg"
+            else:
+                raise ValueError(
+                    "Unsupported image format in captured photo. Only PNG, JPG, and WEBP are accepted."
+                )
+
+        try:
+            binary_bytes = base64.b64decode(b64_payload, validate=False)
+        except Exception as exc:
+            raise ValueError("Invalid captured photo data.") from exc
+
+        if not binary_bytes or len(binary_bytes) < 64:
+            raise ValueError("Captured photo is empty or corrupted.")
+
+        if len(binary_bytes) > max_bytes:
+            raise ValueError("Captured photo exceeds the 10 MB size limit.")
+
+        unique_name = f"reimb_{uuid.uuid4().hex[:12]}{ext}"
+        rel_path = f"reimbursements/{supplier_profile_id}/{unique_name}"
+        saved_path = default_storage.save(rel_path, ContentFile(binary_bytes))
+        media_url = getattr(settings, "MEDIA_URL", "/media/")
+        return f"{media_url.rstrip('/')}/{saved_path.lstrip('/')}"
+
+    raise ValueError("Attachment is required. Please upload a receipt or take a photo.")
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@miller_flc_required
+def flc_submit_reimbursement_view(request):
+    """
+    POST /api/miller-employees/logistics/reimbursements/submit/
+    Submit a new reimbursement request for the authenticated FLC employee.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    employee_id = request.grainrise_supplier_employee_id
+
+    # Handle multipart or JSON
+    if request.content_type and "multipart/form-data" in request.content_type:
+        category = request.POST.get("category", "").strip()
+        custom_category = request.POST.get("custom_category", "").strip()
+        cost_raw = request.POST.get("cost", "").strip()
+        expense_date_raw = request.POST.get("expense_date", "").strip()
+        description = request.POST.get("description", "").strip()
+        title = request.POST.get("title", "").strip()
+        file_obj = request.FILES.get("attachment") or request.FILES.get("file")
+        base64_str = request.POST.get("attachment_base64", "").strip()
+    else:
+        try:
+            body = json.loads(request.body.decode("utf-8")) if request.body else {}
+        except Exception:
+            body = {}
+        category = str(body.get("category", "")).strip()
+        custom_category = str(body.get("custom_category", "")).strip()
+        cost_raw = str(body.get("cost", "")).strip()
+        expense_date_raw = str(body.get("expense_date", "")).strip()
+        description = str(body.get("description", "")).strip()
+        title = str(body.get("title", "")).strip()
+        file_obj = None
+        base64_str = str(body.get("attachment", "")).strip()
+
+    # Category validation
+    valid_categories = [
+        "Transportation & Travel",
+        "Meals & Allowances",
+        "Emergency",
+        "Equipment & Repair",
+        "Communication Expenses",
+        "Logistics",
+        "Office & Operating Supplies",
+        "Others",
+    ]
+    if not category:
+        return JsonResponse({"success": False, "message": "Expense category is required."}, status=400)
+
+    if category == "Others":
+        if not custom_category:
+            return JsonResponse(
+                {"success": False, "message": "Please specify the custom category for 'Others'."},
+                status=400,
+            )
+        final_category = custom_category
+    else:
+        final_category = category
+
+    # Cost validation
+    try:
+        cost = float(cost_raw)
+        if cost <= 0:
+            return JsonResponse(
+                {"success": False, "message": "Cost must be a positive number greater than zero."},
+                status=400,
+            )
+    except (TypeError, ValueError):
+        return JsonResponse(
+            {"success": False, "message": "Please enter a valid numeric cost amount."},
+            status=400,
+        )
+
+    # Expense Date validation
+    if not expense_date_raw:
+        return JsonResponse({"success": False, "message": "Expense date is required."}, status=400)
+
+    # Description validation
+    if not description:
+        return JsonResponse({"success": False, "message": "Description is required."}, status=400)
+    if len(description) > 1000:
+        return JsonResponse(
+            {"success": False, "message": "Description cannot exceed 1,000 characters."},
+            status=400,
+        )
+
+    # Attachment validation & saving
+    try:
+        photo_url = _save_reimbursement_attachment(file_obj, base64_str, supplier_profile_id)
+    except ValueError as e:
+        return JsonResponse({"success": False, "message": str(e)}, status=400)
+
+    # Call submit_reimbursement_request
+    try:
+        final_title = title or f"{final_category} Reimbursement"
+        result = submit_reimbursement_request(
+            supplier_profile_id=supplier_profile_id,
+            requested_by_employee_id=employee_id,
+            title=final_title,
+            description=description,
+            category=final_category,
+            price=cost,
+            photo_evidence=photo_url,
+            expense_date=expense_date_raw,
+        )
+        return JsonResponse(
+            {
+                "success": True,
+                "message": f"Reimbursement request {result.get('request_reference_no')} submitted successfully.",
+                "reimbursement": result,
+            },
+            status=201,
+        )
+    except ValueError as e:
+        return JsonResponse({"success": False, "message": str(e)}, status=400)
+    except Exception as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Server error submitting reimbursement request: {str(e)}",
+            },
+            status=500,
+        )
+
 
 
 
