@@ -11,5 +11,12 @@ urlpatterns = [
         name="flc-vehicle-update-status",
     ),
     path("drivers/", views.flc_active_drivers_view, name="flc-active-drivers-list"),
+    path("delivery-orders/", views.flc_delivery_orders_view, name="flc-delivery-orders-list"),
+    path(
+        "delivery-orders/<int:order_id>/assign/",
+        views.flc_assign_order_view,
+        name="flc-delivery-order-assign",
+    ),
+    path("driver-capacities/", views.flc_driver_capacities_view, name="flc-driver-capacities-list"),
 ]
 

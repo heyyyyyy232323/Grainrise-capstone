@@ -412,3 +412,304 @@ def list_flc_active_drivers(supplier_profile_id):
 
     return drivers
 
+
+def _parse_capacity_kg(capacity_val):
+    """
+    Safely extract numeric kg capacity from varchar like '1,000 kg' or Decimal/float.
+    """
+    if capacity_val is None:
+        return 0.0
+    val_str = str(capacity_val).lower().replace(",", "").replace("kg", "").strip()
+    try:
+        return float(val_str)
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def list_flc_delivery_orders(
+    supplier_profile_id,
+    search=None,
+    buyer_type=None,
+    start_date=None,
+    end_date=None,
+    sort_by=None,
+):
+    """
+    Retrieve orders scoped to authenticated branch with status = 'Forwarded to Logistics'.
+    """
+    params = [supplier_profile_id]
+    where_clauses = [
+        "moc.supplier_profile_id = %s",
+        "moc.status = 'Forwarded to Logistics'",
+    ]
+
+    if buyer_type and buyer_type != "all":
+        if buyer_type == "retailer":
+            where_clauses.append("moc.user_buyer_id IS NOT NULL")
+        elif buyer_type == "warehouse":
+            where_clauses.append("moc.warehouse_buyer_id IS NOT NULL")
+
+    if start_date:
+        where_clauses.append("moc.expected_arrival_date >= %s")
+        params.append(start_date)
+
+    if end_date:
+        where_clauses.append("moc.expected_arrival_date <= %s")
+        params.append(end_date)
+
+    if search:
+        search_like = f"%{search.strip()}%"
+        where_clauses.append(
+            """(
+                moc.batch_no LIKE %s
+                OR mp.product_name LIKE %s
+                OR mp.product_code LIKE %s
+                OR u.first_name LIKE %s
+                OR u.last_name LIKE %s
+                OR wp.business_name LIKE %s
+            )"""
+        )
+        params.extend([search_like] * 6)
+
+    where_sql = " AND ".join(where_clauses)
+
+    order_by_sql = "ORDER BY moc.expected_arrival_date ASC, moc.online_order_id ASC"
+    if sort_by == "qty-desc":
+        order_by_sql = "ORDER BY moc.ordered_quantity DESC, moc.online_order_id DESC"
+    elif sort_by == "qty-asc":
+        order_by_sql = "ORDER BY moc.ordered_quantity ASC, moc.online_order_id ASC"
+    elif sort_by == "amount-desc":
+        order_by_sql = "ORDER BY moc.total_price DESC, moc.online_order_id DESC"
+    elif sort_by == "amount-asc":
+        order_by_sql = "ORDER BY moc.total_price ASC, moc.online_order_id ASC"
+    elif sort_by == "batch-asc":
+        order_by_sql = "ORDER BY moc.batch_no ASC, moc.online_order_id ASC"
+    elif sort_by == "batch-desc":
+        order_by_sql = "ORDER BY moc.batch_no DESC, moc.online_order_id DESC"
+    elif sort_by == "date-desc":
+        order_by_sql = "ORDER BY moc.expected_arrival_date DESC, moc.online_order_id DESC"
+    elif sort_by == "date-asc":
+        order_by_sql = "ORDER BY moc.expected_arrival_date ASC, moc.online_order_id ASC"
+
+    sql = f"""
+        SELECT
+            moc.online_order_id,
+            moc.batch_no,
+            moc.ordered_quantity,
+            moc.fare_fee,
+            moc.total_price,
+            moc.expected_arrival_date,
+            moc.status,
+            moc.created_at,
+            moc.user_buyer_id,
+            moc.warehouse_buyer_id,
+            -- Product
+            mp.product_id,
+            mp.product_name,
+            mp.product_code,
+            mp.unit_cost,
+            -- Retailer
+            u.first_name,
+            u.middle_initial,
+            u.last_name,
+            u.suffix,
+            u.contact_number AS retailer_contact,
+            u.email AS retailer_email,
+            u.province AS retailer_province,
+            u.municipality AS retailer_municipality,
+            u.barangay AS retailer_barangay,
+            u.street_address AS retailer_street,
+            -- Warehouse
+            wp.business_name AS wh_name,
+            wp.organization_name AS wh_org,
+            wp.official_contact_number AS wh_contact,
+            wp.official_email AS wh_email,
+            wp.province AS wh_province,
+            wp.municipality AS wh_municipality,
+            wp.barangay AS wh_barangay,
+            wp.street_address AS wh_street,
+            -- Payment
+            mop.payment_method,
+            mop.status AS payment_status,
+            mop.payment_reference
+        FROM miller_online_customer moc
+        LEFT JOIN miller_products mp
+            ON mp.product_id = moc.miller_product_id
+        LEFT JOIN users u
+            ON u.user_id = moc.user_buyer_id
+        LEFT JOIN warehouse_profiles wp
+            ON wp.warehouse_profile_id = moc.warehouse_buyer_id
+        LEFT JOIN miller_online_orders_payment mop
+            ON mop.online_order_id = moc.online_order_id
+        WHERE {where_sql}
+        {order_by_sql}
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(sql, params)
+        rows = cursor.fetchall()
+
+    orders = []
+    for r in rows:
+        is_warehouse = r[9] is not None
+        buyer_type_str = "Warehouse" if is_warehouse else "Retailer"
+
+        if is_warehouse:
+            buyer_name = r[24] or r[25] or f"Warehouse #{r[9]}"
+            contact = r[26] or "—"
+            email = r[27] or "—"
+            addr_parts = [r[31], r[30], r[29], r[28]]
+        else:
+            buyer_name = _format_driver_name(r[14], r[15], r[16], r[17]) or f"Retailer #{r[8]}"
+            contact = r[18] or "—"
+            email = r[19] or "—"
+            addr_parts = [r[23], r[22], r[21], r[20]]
+
+        clean_addr = ", ".join([str(p).strip() for p in addr_parts if p and str(p).strip()])
+        if not clean_addr:
+            clean_addr = "Address not specified"
+
+        qty = float(r[2]) if r[2] is not None else 0.0
+        fare = float(r[3]) if r[3] is not None else 0.0
+        total = float(r[4]) if r[4] is not None else 0.0
+        unit_cost = float(r[13]) if r[13] is not None else 0.0
+
+        orders.append(
+            {
+                "online_order_id": r[0],
+                "id": r[0],
+                "batch_no": r[1],
+                "batch": r[1],
+                "ordered_quantity": qty,
+                "ordered_quantity_formatted": f"{qty:,.0f} kg" if qty.is_integer() else f"{qty:,.2f} kg",
+                "fare_fee": fare,
+                "fare_fee_formatted": f"₱{fare:,.2f}",
+                "total_price": total,
+                "total_price_formatted": f"₱{total:,.2f}",
+                "expected_arrival_date": r[5].isoformat() if r[5] else None,
+                "expected_arrival_date_formatted": r[5].strftime("%b %d, %Y") if r[5] else "—",
+                "status": r[6],
+                "created_at": r[7].isoformat() if r[7] else None,
+                "buyer_type": buyer_type_str,
+                "buyer_name": buyer_name,
+                "retailer": buyer_name,
+                "contact_number": contact,
+                "email": email,
+                "delivery_address": clean_addr,
+                "product_id": r[10],
+                "product_name": r[11] or "Rice Variant",
+                "variant": r[11] or "Rice Variant",
+                "product_code": r[12] or "—",
+                "unit_cost": unit_cost,
+                "unit_cost_formatted": f"₱{unit_cost:,.2f}",
+                "payment_method": r[32] or "N/A",
+                "payment_status": r[33] or "N/A",
+                "payment_reference": r[34] or "—",
+            }
+        )
+
+    return orders
+
+
+def list_flc_drivers_with_capacity(supplier_profile_id):
+    """
+    List active drivers for the branch with live capacity calculation.
+    """
+    sql = """
+        SELECT
+            se.supplier_employee_id,
+            se.first_name,
+            se.middle_initial,
+            se.last_name,
+            se.suffix,
+            se.contact_number,
+            se.status AS driver_status,
+            -- Vehicle assignee
+            mva.assigned_id,
+            -- Vehicle details
+            v.vehicle_id,
+            v.plate_number,
+            v.model,
+            v.type AS vehicle_type,
+            v.capacity AS vehicle_capacity_str,
+            v.status AS vehicle_status,
+            -- Pending load calculation
+            COALESCE(
+                (
+                    SELECT SUM(moc.ordered_quantity)
+                    FROM miller_driver_assignment mda
+                    INNER JOIN miller_online_customer moc
+                        ON moc.online_order_id = mda.online_order_id
+                    WHERE mda.delivery_vehicle_id = v.vehicle_id
+                      AND mda.supplier_profile_id = %s
+                      AND mda.status = 'Pending'
+                ),
+                0.0
+            ) AS pending_load
+        FROM supplier_employees se
+        LEFT JOIN miller_vehicle_assignee mva
+            ON mva.driver_id = se.supplier_employee_id
+            AND mva.supplier_profile_id = %s
+            AND mva.status = 'active'
+        LEFT JOIN miller_delivery_vehicle_management v
+            ON v.vehicle_id = mva.vehicle_id
+        WHERE se.supplier_profile_id = %s
+          AND LOWER(se.position) = 'driver'
+          AND LOWER(se.status) = 'active'
+        ORDER BY se.first_name ASC, se.last_name ASC
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(sql, [supplier_profile_id, supplier_profile_id, supplier_profile_id])
+        rows = cursor.fetchall()
+
+    drivers = []
+    for r in rows:
+        driver_name = _format_driver_name(r[1], r[2], r[3], r[4])
+        has_vehicle = r[8] is not None
+        vehicle_id = r[8]
+        plate_number = r[9]
+        model = r[10]
+        vehicle_status = r[13]
+        max_cap = _parse_capacity_kg(r[12]) if has_vehicle else 0.0
+        pending_load = float(r[14]) if r[14] is not None else 0.0
+        remaining_cap = max(0.0, max_cap - pending_load)
+
+        if not has_vehicle:
+            status_label = "No Vehicle"
+        elif vehicle_status and vehicle_status.lower() != "active":
+            status_label = vehicle_status.capitalize()
+        elif remaining_cap <= 0:
+            status_label = "Full"
+        elif pending_load > (max_cap * 0.75):
+            status_label = "Limited Capacity"
+        else:
+            status_label = "Available"
+
+        pct_used = min(100, round((pending_load / max_cap) * 100)) if max_cap > 0 else 0
+
+        drivers.append(
+            {
+                "driver_id": r[0],
+                "id": r[0],
+                "name": driver_name,
+                "first_name": r[1],
+                "last_name": r[3],
+                "contact_number": r[5],
+                "has_vehicle": has_vehicle,
+                "vehicle_id": vehicle_id,
+                "plate_number": plate_number,
+                "vehicle_model": model,
+                "vehicle_status": vehicle_status,
+                "capacity": pending_load,
+                "current_load": pending_load,
+                "max": max_cap,
+                "max_capacity": max_cap,
+                "remaining_capacity": remaining_cap,
+                "pct_used": pct_used,
+                "status": status_label,
+            }
+        )
+
+    return drivers
+

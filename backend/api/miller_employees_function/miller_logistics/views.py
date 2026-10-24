@@ -8,13 +8,17 @@ from api.miller_employees_function.employee_auth import miller_flc_required
 from .selectors import (
     get_flc_vehicle_detail,
     list_flc_active_drivers,
+    list_flc_delivery_orders,
+    list_flc_drivers_with_capacity,
     list_flc_vehicles,
 )
 from .services import (
     CrossBranchConflictError,
+    DeliveryAssignmentError,
     DriverNotFoundError,
     VehicleNotFoundError,
     VehicleValidationError,
+    assign_order_to_driver,
     update_flc_vehicle_status,
 )
 
@@ -219,6 +223,142 @@ def flc_vehicle_update_status_view(request, vehicle_id):
             {
                 "success": False,
                 "message": f"Server error updating vehicle: {str(e)}",
+            },
+            status=500,
+        )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@miller_flc_required
+def flc_delivery_orders_view(request):
+    """
+    GET /api/miller-employees/logistics/delivery-orders/
+    Retrieve branch orders with status = 'Forwarded to Logistics'.
+    Supports query parameters:
+    - search: batch_no, buyer, or product name
+    - buyer_type: all | retailer | warehouse
+    - start_date: YYYY-MM-DD
+    - end_date: YYYY-MM-DD
+    - sort: qty-desc | qty-asc | amount-desc | amount-asc | batch-asc | date-desc | date-asc
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+
+    search = request.GET.get("search", "").strip()
+    buyer_type = request.GET.get("buyer_type", "all").strip().lower()
+    start_date = request.GET.get("start_date", "").strip() or None
+    end_date = request.GET.get("end_date", "").strip() or None
+    sort_by = request.GET.get("sort", "").strip()
+
+    try:
+        orders = list_flc_delivery_orders(
+            supplier_profile_id=supplier_profile_id,
+            search=search,
+            buyer_type=buyer_type,
+            start_date=start_date,
+            end_date=end_date,
+            sort_by=sort_by,
+        )
+        return JsonResponse(
+            {
+                "success": True,
+                "orders": orders,
+                "total": len(orders),
+            },
+            status=200,
+        )
+    except Exception as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Failed to retrieve delivery orders: {str(e)}",
+            },
+            status=500,
+        )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@miller_flc_required
+def flc_driver_capacities_view(request):
+    """
+    GET /api/miller-employees/logistics/driver-capacities/
+    Retrieve active drivers in the branch with vehicle capacity and pending load calculations.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+
+    try:
+        drivers = list_flc_drivers_with_capacity(supplier_profile_id)
+        return JsonResponse(
+            {
+                "success": True,
+                "drivers": drivers,
+                "total": len(drivers),
+            },
+            status=200,
+        )
+    except Exception as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Failed to retrieve driver capacities: {str(e)}",
+            },
+            status=500,
+        )
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@miller_flc_required
+def flc_assign_order_view(request, order_id):
+    """
+    POST /api/miller-employees/logistics/delivery-orders/<order_id>/assign/
+    Atomically assign a forwarded order to an active driver and vehicle.
+    Expects JSON body: { "driver_id": <int> }
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+
+    try:
+        body = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except Exception:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Malformed JSON payload.",
+            },
+            status=400,
+        )
+
+    driver_id = body.get("driver_id")
+    if not driver_id:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "driver_id is required.",
+            },
+            status=400,
+        )
+
+    try:
+        result = assign_order_to_driver(
+            supplier_profile_id=supplier_profile_id,
+            online_order_id=order_id,
+            driver_id=driver_id,
+        )
+        return JsonResponse(result, status=200)
+    except DeliveryAssignmentError as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": str(e),
+            },
+            status=400,
+        )
+    except Exception as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Server error assigning order: {str(e)}",
             },
             status=500,
         )
