@@ -330,17 +330,15 @@ export default function FrequentlyAskedQuestions() {
                           aria-expanded={isOpen}
                         >
                           <span>{item.q}</span>
-                          {isOpen ? (
-                            <ChevronUp size={18} className="faq-accordion-chevron" />
-                          ) : (
-                            <ChevronDown size={18} className="faq-accordion-chevron" />
-                          )}
+                          <ChevronDown size={18} className="faq-accordion-chevron" />
                         </button>
-                        {isOpen && (
-                          <div className="faq-accordion-content">
-                            {item.a}
+                        <div className={`faq-accordion-collapse ${isOpen ? 'open' : ''}`}>
+                          <div className="faq-accordion-inner">
+                            <div className="faq-accordion-content">
+                              {item.a}
+                            </div>
                           </div>
-                        )}
+                        </div>
                       </div>
                     );
                   })}

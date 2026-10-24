@@ -8,7 +8,21 @@ import {
   Search,
   User,
   X,
+  Send,
+  Inbox,
+  RotateCw,
+  Eye,
+  EyeOff,
+  Calendar,
+  Tag,
+  Hash,
+  Paperclip,
+  CheckCircle2,
+  AlertTriangle,
+  Mail,
 } from "lucide-react";
+
+import ReceivedSupportDetailsModal from "../../../Components/Modals/ReceivedSupportDetailsModal";
 
 import {
   useLocation,
@@ -320,6 +334,16 @@ export default function EmailUsers() {
 
     getSentEmailDetails,
     clearSelectedEmail,
+
+    receivedMessages,
+    unreadReceivedCount,
+    totalReceivedCount,
+    isLoadingReceived,
+    loadReceivedMessages,
+    refreshReceivedMessages,
+    getReceivedMessageDetails,
+    markReceivedMessageRead,
+    updateReceivedMessageStatus,
   } = useEmailUsers();
 
 
@@ -419,6 +443,104 @@ export default function EmailUsers() {
   // =========================================================
   // HISTORY
   // =========================================================
+
+  // =========================================================
+  // TABS & RECEIVED MESSAGES STATE
+  // =========================================================
+
+  const [activeTab, setActiveTab] = useState("sent");
+  const [receivedSearch, setReceivedSearch] = useState("");
+  const [receivedCategoryFilter, setReceivedCategoryFilter] = useState("all");
+  const [receivedStatusFilter, setReceivedStatusFilter] = useState("all");
+  const [selectedReceivedMessage, setSelectedReceivedMessage] = useState(null);
+  const [isReceivedDetailsOpen, setIsReceivedDetailsOpen] = useState(false);
+
+  const filteredReceivedMessages = useMemo(() => {
+    return (receivedMessages || []).filter((msg) => {
+      const msgStatus = String(msg.status || (msg.is_read ? "read" : "unread")).toLowerCase();
+      if (receivedStatusFilter !== "all" && msgStatus !== receivedStatusFilter.toLowerCase()) {
+        return false;
+      }
+      if (
+        receivedCategoryFilter !== "all" &&
+        String(msg.concern_category || "").toLowerCase() !== receivedCategoryFilter.toLowerCase()
+      ) {
+        return false;
+      }
+      if (receivedSearch.trim()) {
+        const query = receivedSearch.toLowerCase();
+        const name = String(msg.full_name || "").toLowerCase();
+        const email = String(msg.email || "").toLowerCase();
+        const subject = String(msg.subject || "").toLowerCase();
+        const ref = String(msg.reference_id || "").toLowerCase();
+        const desc = String(msg.description || "").toLowerCase();
+        if (
+          !name.includes(query) &&
+          !email.includes(query) &&
+          !subject.includes(query) &&
+          !ref.includes(query) &&
+          !desc.includes(query)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [receivedMessages, receivedSearch, receivedCategoryFilter, receivedStatusFilter]);
+
+  const handleOpenReceivedDetails = async (msg) => {
+    setSelectedReceivedMessage(msg);
+    setIsReceivedDetailsOpen(true);
+    const id = msg.id || msg.support_id;
+    const currentStatus = String(msg.status || (msg.is_read ? "read" : "unread")).toLowerCase();
+    if (currentStatus === "unread") {
+      await updateReceivedMessageStatus(id, "read");
+      setSelectedReceivedMessage((prev) => prev ? { ...prev, status: "read", is_read: 1 } : prev);
+    }
+  };
+
+  const handleUpdateSupportStatus = async (supportId, newStatus) => {
+    const success = await updateReceivedMessageStatus(supportId, newStatus);
+    if (success) {
+      setSelectedReceivedMessage((prev) => prev ? { ...prev, status: newStatus, is_read: newStatus === "unread" ? 0 : 1 } : prev);
+      showToast({
+        type: "success",
+        title: "Status Updated",
+        message: `Inquiry status changed to ${newStatus}.`,
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleReplyToSupport = (supportMsg) => {
+    setActiveTab("sent");
+    setRecipientType("specific_user");
+    const supportId = supportMsg.id || supportMsg.support_id;
+    setSelectedRecipient({
+      recipient_type: "support_inquiry",
+      recipient_id: supportId,
+      support_id: supportId,
+      user_id: null,
+      inquiry_id: null,
+      full_name: supportMsg.full_name,
+      first_name: supportMsg.full_name,
+      last_name: "",
+      business_name: "",
+      email: supportMsg.email,
+      username: "",
+      user_role: supportMsg.user_role || "Support User",
+    });
+    setSubject(
+      supportMsg.subject.toLowerCase().startsWith("re:")
+        ? supportMsg.subject
+        : `Re: ${supportMsg.subject}`
+    );
+    const quoteHtml = `<p>Hi ${supportMsg.full_name},</p><p><br></p><p>Thank you for reaching out to GrainRise Support regarding your concern (${supportMsg.concern_category}${supportMsg.reference_id ? ` - Ref: ${supportMsg.reference_id}` : ""}).</p><p><br></p><hr><p style="color:#64748b;font-size:12px;"><strong>Original Support Inquiry from ${supportMsg.full_name} (${supportMsg.email}):</strong><br>${supportMsg.description.replace(/\n/g, '<br>')}</p>`;
+    setMessageHtml(quoteHtml);
+    setMessagePlain(`Hi ${supportMsg.full_name},\n\nThank you for reaching out to GrainRise Support.\n\n---\nOriginal Support Inquiry:\n${supportMsg.description}`);
+    setEditorKey((prev) => prev + 1);
+    showToast(`Composing reply to ${supportMsg.full_name}`, "info");
+  };
 
   const [
     historySearch,
@@ -688,12 +810,16 @@ export default function EmailUsers() {
         null
       );
 
+      setRecipientType(
+        "all_users"
+      );
+
       setRecipientSearch(
         ""
       );
 
       setRecipientPickerOpen(
-        true
+        false
       );
 
       clearRecipients();
@@ -715,25 +841,23 @@ export default function EmailUsers() {
 
       try {
         const isSpecific =
-          recipientType ===
-          "specific_user";
+          recipientType === "specific_user" || Boolean(selectedRecipient);
 
         const subRecipientType =
           isSpecific
-            ? (selectedRecipient?.recipient_type || "user")
+            ? (selectedRecipient?.recipient_type || "support_inquiry")
             : recipientType;
 
         const subRecipientId =
-          isSpecific
-            ? (selectedRecipient?.recipient_id ||
-               selectedRecipient?.user_id ||
-               selectedRecipient?.inquiry_id ||
-               null)
-            : null;
+          selectedRecipient?.recipient_id ||
+          selectedRecipient?.user_id ||
+          selectedRecipient?.inquiry_id ||
+          selectedRecipient?.support_id ||
+          null;
 
         const response =
           await sendEmail({
-            recipientType,
+            recipientType: isSpecific ? "specific_user" : recipientType,
             recipient_type: subRecipientType,
             recipient_id: subRecipientId,
 
@@ -751,16 +875,10 @@ export default function EmailUsers() {
                 : null,
 
             recipientEmail:
-              isSpecific
-                ? selectedRecipient
-                    ?.email
-                : "",
+              selectedRecipient?.email || "",
 
             recipientName:
-              isSpecific
-                ? selectedRecipient
-                    ?.full_name
-                : "",
+              selectedRecipient?.full_name || "",
           });
 
 
@@ -813,12 +931,21 @@ export default function EmailUsers() {
               "Email Sent",
 
             message:
-              response?.message ||
-              "The email was sent successfully.",
+              isSpecific && (subRecipientType === "support_inquiry" || subRecipientType === "support_contact")
+                ? "Reply sent successfully. Inquiry marked as Replied."
+                : (response?.message || "The email was sent successfully."),
 
             duration:
               5000,
           });
+        }
+
+        if (
+          isSpecific &&
+          (subRecipientType === "support_inquiry" || subRecipientType === "support_contact") &&
+          subRecipientId
+        ) {
+          updateReceivedMessageStatus(subRecipientId, "replied").catch(() => {});
         }
 
 
@@ -1026,16 +1153,54 @@ export default function EmailUsers() {
 
 
       {/* =====================================================
-          CONTENT
+          TABS: SENT EMAILS / RECEIVED SUPPORT MESSAGES
       ===================================================== */}
 
-      <div
-        className="
-          grid
-          gap-6
-          md:grid-cols-3
-        "
-      >
+      <div className="mb-6 flex items-center gap-2 border-b border-gray-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab("sent")}
+          className={`relative pb-3 px-4 text-sm font-semibold transition-colors flex items-center gap-2 border-b-2 ${
+            activeTab === "sent"
+              ? "text-emerald-700 border-emerald-600"
+              : "text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300"
+          }`}
+        >
+          <Send size={15} />
+          <span>Sent Emails</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("received")}
+          className={`relative pb-3 px-4 text-sm font-semibold transition-colors flex items-center gap-2 border-b-2 ${
+            activeTab === "received"
+              ? "text-emerald-700 border-emerald-600"
+              : "text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300"
+          }`}
+        >
+          <Inbox size={15} />
+          <span>Received (Support Inquiries)</span>
+          {unreadReceivedCount > 0 && (
+            <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
+              {unreadReceivedCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* =====================================================
+          TAB 1: SENT EMAILS (COMPOSER & SENT HISTORY)
+      ===================================================== */}
+
+      {activeTab === "sent" && (
+        <div
+          className="
+            grid
+            gap-6
+            md:grid-cols-3
+          "
+        >
         {/* ===================================================
             COMPOSER
         =================================================== */}
@@ -1164,300 +1329,269 @@ export default function EmailUsers() {
                   mt-2
                 "
               >
-                <select
-                  value={
-                    recipientType
-                  }
-                  onChange={
-                    handleRecipientTypeChange
-                  }
-                  className="
-                    w-full
-                    rounded-md
-                    border
-                    border-gray-200
-                    bg-white
-                    px-3
-                    py-2
-                    text-sm
-                    text-gray-700
-                    focus:border-emerald-500
-                    focus:outline-none
-                    focus:ring-1
-                    focus:ring-emerald-500
-                  "
-                >
-                  {
-                    RECIPIENT_OPTIONS.map(
-                      (
-                        option
-                      ) => (
-                        <option
-                          key={
-                            option.value
-                          }
-                          value={
-                            option.value
-                          }
+                {
+                  selectedRecipient ? (
+                    /* USER DIRECTLY IN SEND TO */
+                    <div
+                      className="
+                        flex
+                        items-start
+                        justify-between
+                        gap-4
+                        rounded-xl
+                        border
+                        border-emerald-200
+                        bg-emerald-50
+                        px-4
+                        py-3
+                      "
+                    >
+                      <div
+                        className="
+                          flex
+                          min-w-0
+                          items-start
+                          gap-3
+                        "
+                      >
+                        <div
+                          className="
+                            flex
+                            h-9
+                            w-9
+                            shrink-0
+                            items-center
+                            justify-center
+                            rounded-full
+                            bg-white
+                            text-[#08511f]
+                          "
                         >
-                          {
-                            option.label
+                          <User
+                            size={17}
+                          />
+                        </div>
+
+                        <div
+                          className="
+                            min-w-0
+                          "
+                        >
+                          <p
+                            className="
+                              truncate
+                              text-sm
+                              font-semibold
+                              text-gray-900
+                            "
+                          >
+                            {
+                              displayValue(
+                                selectedRecipient?.full_name,
+                                "Selected User"
+                              )
+                            }
+                          </p>
+
+                          <p
+                            className="
+                              mt-0.5
+                              break-all
+                              text-xs
+                              text-gray-500
+                            "
+                          >
+                            {
+                              displayValue(
+                                selectedRecipient?.email
+                              )
+                            }
+                          </p>
+
+                          <div
+                            className="
+                              mt-2
+                              flex
+                              flex-wrap
+                              items-center
+                              gap-2
+                            "
+                          >
+                            {
+                              selectedRecipient?.user_role && (
+                                <span
+                                  className="
+                                    rounded-full
+                                    border
+                                    border-gray-200
+                                    bg-white
+                                    px-2
+                                    py-0.5
+                                    text-[10px]
+                                    font-semibold
+                                    text-gray-600
+                                  "
+                                >
+                                  {
+                                    formatLabel(
+                                      selectedRecipient?.user_role
+                                    )
+                                  }
+                                </span>
+                              )
+                            }
+
+                            {
+                              selectedRecipient?.status && (
+                                <span
+                                  className={`
+                                    rounded-full
+                                    border
+                                    px-2
+                                    py-0.5
+                                    text-[10px]
+                                    font-semibold
+                                    ${getStatusClasses(
+                                      selectedRecipient?.status
+                                    )}
+                                  `}
+                                >
+                                  {
+                                    formatLabel(
+                                      selectedRecipient?.status
+                                    )
+                                  }
+                                </span>
+                              )
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        className="
+                          flex
+                          shrink-0
+                          items-center
+                          gap-2
+                        "
+                      >
+                        <button
+                          type="button"
+                          onClick={
+                            handleOpenRecipientPicker
                           }
-                        </option>
-                      )
-                    )
-                  }
-                </select>
+                          className="
+                            rounded-lg
+                            border
+                            border-emerald-200
+                            bg-white
+                            px-3
+                            py-1.5
+                            text-xs
+                            font-semibold
+                            text-[#08511f]
+                            transition
+                            hover:bg-emerald-100
+                          "
+                        >
+                          Change
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={
+                            handleRemoveRecipient
+                          }
+                          className="
+                            flex
+                            h-8
+                            w-8
+                            items-center
+                            justify-center
+                            rounded-lg
+                            border
+                            border-gray-200
+                            bg-white
+                            text-gray-400
+                            transition
+                            hover:bg-gray-50
+                            hover:text-gray-600
+                          "
+                          aria-label="Remove selected recipient"
+                        >
+                          <X
+                            size={15}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* GROUP DROPDOWN WHEN NO SPECIFIC RECIPIENT SELECTED */
+                    <select
+                      value={
+                        recipientType
+                      }
+                      onChange={
+                        handleRecipientTypeChange
+                      }
+                      className="
+                        w-full
+                        rounded-md
+                        border
+                        border-gray-200
+                        bg-white
+                        px-3
+                        py-2
+                        text-sm
+                        text-gray-700
+                        focus:border-emerald-500
+                        focus:outline-none
+                        focus:ring-1
+                        focus:ring-emerald-500
+                      "
+                    >
+                      {
+                        RECIPIENT_OPTIONS.map(
+                          (
+                            option
+                          ) => (
+                            <option
+                              key={
+                                option.value
+                              }
+                              value={
+                                option.value
+                              }
+                            >
+                              {
+                                option.label
+                              }
+                            </option>
+                          )
+                        )
+                      }
+                    </select>
+                  )
+                }
               </div>
 
 
               {/* ===============================================
-                  SPECIFIC USER
+                  SPECIFIC USER SEARCH PICKER (WHEN CHOSEN BUT NOT YET SELECTED)
               =============================================== */}
 
               {
                 recipientType ===
-                  "specific_user" && (
+                  "specific_user" && !selectedRecipient && (
                   <div
                     className="
                       mt-4
                     "
                   >
-                    <label
-                      className="
-                        text-xs
-                        font-semibold
-                        text-slate-600
-                      "
-                    >
-                      SELECT USER{" "}
-
-                      <span
-                        className="
-                          text-red-500
-                        "
-                      >
-                        *
-                      </span>
-                    </label>
 
 
-                    {/* =========================================
-                        SELECTED USER
-                    ========================================= */}
 
-                    {
-                      selectedRecipient && (
-                        <div
-                          className="
-                            mt-2
-                            flex
-                            items-start
-                            justify-between
-                            gap-4
-                            rounded-xl
-                            border
-                            border-emerald-200
-                            bg-emerald-50
-                            px-4
-                            py-3
-                          "
-                        >
-                          <div
-                            className="
-                              flex
-                              min-w-0
-                              items-start
-                              gap-3
-                            "
-                          >
-                            <div
-                              className="
-                                flex
-                                h-9
-                                w-9
-                                shrink-0
-                                items-center
-                                justify-center
-                                rounded-full
-                                bg-white
-                                text-[#08511f]
-                              "
-                            >
-                              <User
-                                size={17}
-                              />
-                            </div>
-
-
-                            <div
-                              className="
-                                min-w-0
-                              "
-                            >
-                              <p
-                                className="
-                                  truncate
-                                  text-sm
-                                  font-semibold
-                                  text-gray-900
-                                "
-                              >
-                                {
-                                  displayValue(
-                                    selectedRecipient
-                                      ?.full_name,
-                                    "Selected User"
-                                  )
-                                }
-                              </p>
-
-
-                              <p
-                                className="
-                                  mt-0.5
-                                  break-all
-                                  text-xs
-                                  text-gray-500
-                                "
-                              >
-                                {
-                                  displayValue(
-                                    selectedRecipient
-                                      ?.email
-                                  )
-                                }
-                              </p>
-
-
-                              <div
-                                className="
-                                  mt-2
-                                  flex
-                                  flex-wrap
-                                  items-center
-                                  gap-2
-                                "
-                              >
-                                {
-                                  selectedRecipient
-                                    ?.user_role && (
-                                    <span
-                                      className="
-                                        rounded-full
-                                        border
-                                        border-gray-200
-                                        bg-white
-                                        px-2
-                                        py-0.5
-                                        text-[10px]
-                                        font-semibold
-                                        text-gray-600
-                                      "
-                                    >
-                                      {
-                                        formatLabel(
-                                          selectedRecipient
-                                            ?.user_role
-                                        )
-                                      }
-                                    </span>
-                                  )
-                                }
-
-
-                                {
-                                  selectedRecipient
-                                    ?.status && (
-                                    <span
-                                      className={`
-                                        rounded-full
-                                        border
-                                        px-2
-                                        py-0.5
-                                        text-[10px]
-                                        font-semibold
-                                        ${getStatusClasses(
-                                          selectedRecipient
-                                            ?.status
-                                        )}
-                                      `}
-                                    >
-                                      {
-                                        formatLabel(
-                                          selectedRecipient
-                                            ?.status
-                                        )
-                                      }
-                                    </span>
-                                  )
-                                }
-                              </div>
-                            </div>
-                          </div>
-
-
-                          <div
-                            className="
-                              flex
-                              shrink-0
-                              items-center
-                              gap-2
-                            "
-                          >
-                            <button
-                              type="button"
-                              onClick={
-                                handleOpenRecipientPicker
-                              }
-                              className="
-                                rounded-lg
-                                border
-                                border-emerald-200
-                                bg-white
-                                px-3
-                                py-1.5
-                                text-xs
-                                font-semibold
-                                text-[#08511f]
-                                transition
-                                hover:bg-emerald-100
-                              "
-                            >
-                              Change
-                            </button>
-
-
-                            <button
-                              type="button"
-                              onClick={
-                                handleRemoveRecipient
-                              }
-                              className="
-                                flex
-                                h-8
-                                w-8
-                                items-center
-                                justify-center
-                                rounded-lg
-                                border
-                                border-gray-200
-                                bg-white
-                                text-gray-400
-                                transition
-                                hover:bg-gray-50
-                                hover:text-gray-600
-                              "
-                              aria-label="Remove selected recipient"
-                            >
-                              <X
-                                size={15}
-                              />
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    }
 
 
                     {/* =========================================
@@ -2328,7 +2462,242 @@ export default function EmailUsers() {
             }
           </div>
         </aside>
-      </div>
+        </div>
+      )}
+
+      {/* =====================================================
+          TAB 2: RECEIVED SUPPORT INQUIRIES
+      ===================================================== */}
+
+      {activeTab === "received" && (
+        <div className="w-full rounded-[14px] border border-slate-200 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.06)] overflow-hidden">
+          {/* Header & Controls */}
+          <div className="p-5 border-b border-gray-100 bg-slate-50/60">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <span>Received Support Inquiries</span>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-200/80 text-slate-700">
+                    {filteredReceivedMessages.length} total
+                  </span>
+                  {unreadReceivedCount > 0 && (
+                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-red-100 text-red-700">
+                      {unreadReceivedCount} unread
+                    </span>
+                  )}
+                </h2>
+                <p className="text-xs text-gray-500 mt-1">
+                  Customer concerns and technical support requests submitted through &ldquo;How Can We Help?&rdquo;.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => refreshReceivedMessages()}
+                disabled={isLoadingReceived}
+                className="inline-flex items-center gap-1.5 self-start sm:self-auto px-3.5 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                <RotateCw size={13} className={isLoadingReceived ? "animate-spin" : ""} />
+                <span>Refresh</span>
+              </button>
+            </div>
+
+            {/* Filter Bar */}
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Search */}
+              <div className="relative">
+                <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={receivedSearch}
+                  onChange={(e) => setReceivedSearch(e.target.value)}
+                  placeholder="Search sender, subject, reference..."
+                  className="w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+
+              {/* Category Filter */}
+              <div>
+                <select
+                  value={receivedCategoryFilter}
+                  onChange={(e) => setReceivedCategoryFilter(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                >
+                  <option value="all">All Concern Categories</option>
+                  <option value="Technical Issue">Technical Issue</option>
+                  <option value="Account Access & Security">Account Access & Security</option>
+                  <option value="Order & Transaction Problem">Order & Transaction Problem</option>
+                  <option value="Registration / Verification">Registration / Verification</option>
+                  <option value="Inventory & Warehouse Sync">Inventory & Warehouse Sync</option>
+                  <option value="Billing & Payments">Billing & Payments</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              {/* Status Filter */}
+              <div>
+                <select
+                  value={receivedStatusFilter}
+                  onChange={(e) => setReceivedStatusFilter(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                >
+                  <option value="all">All Statuses (Unread, Read, Replied)</option>
+                  <option value="unread">Unread</option>
+                  <option value="read">Read</option>
+                  <option value="replied">Replied</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Table Container */}
+          {isLoadingReceived ? (
+            <div className="py-16 text-center">
+              <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-gray-200 border-t-emerald-600" />
+              <p className="mt-3 text-xs text-gray-500">Loading received support inquiries...</p>
+            </div>
+          ) : filteredReceivedMessages.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50/80 border-b border-gray-200 text-gray-500 uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th scope="col" className="px-4 py-3">Sender</th>
+                    <th scope="col" className="px-4 py-3">Category & Ref</th>
+                    <th scope="col" className="px-4 py-3">Subject & Preview</th>
+                    <th scope="col" className="px-4 py-3 text-center">Status</th>
+                    <th scope="col" className="px-4 py-3">Date Received</th>
+                    <th scope="col" className="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredReceivedMessages.map((msg) => {
+                    const id = msg.id || msg.support_id;
+                    const isRead = Boolean(msg.is_read);
+                    const status = String(msg.status || (isRead ? "read" : "unread")).toLowerCase();
+
+                    return (
+                      <tr
+                        key={id}
+                        className={`transition-colors hover:bg-slate-50/70 cursor-pointer ${
+                          status === "unread" ? "bg-red-50/20 font-medium" : ""
+                        }`}
+                        onClick={() => handleOpenReceivedDetails(msg)}
+                      >
+                        {/* 1. Sender */}
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-gray-900">{msg.full_name}</div>
+                          <div className="text-gray-500 text-[11px]">{msg.email}</div>
+                          {msg.user_role && (
+                            <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-gray-100 text-gray-600 text-[10px]">
+                              {msg.user_role}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* 2. Category & Ref */}
+                        <td className="px-4 py-3">
+                          <span className="inline-block px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium text-[11px]">
+                            {msg.concern_category}
+                          </span>
+                          {msg.reference_id && (
+                            <div className="text-[11px] text-gray-500 mt-1 flex items-center gap-1 font-mono">
+                              <Hash size={10} className="text-gray-400" />
+                              {msg.reference_id}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* 3. Subject & Preview */}
+                        <td className="px-4 py-3 max-w-xs">
+                          <div className={`truncate ${status === "unread" ? "font-bold text-gray-900" : "text-gray-800"}`}>
+                            {msg.subject}
+                          </div>
+                          <div className="truncate text-gray-500 text-[11px] mt-0.5">
+                            {msg.description}
+                          </div>
+                        </td>
+
+                        {/* 4. Status (NOT in first column) */}
+                        <td className="px-4 py-3 text-center whitespace-nowrap">
+                          {status === "replied" && (
+                            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border border-emerald-200 bg-emerald-50 text-emerald-700">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                              Replied
+                            </span>
+                          )}
+                          {status === "read" && (
+                            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium border border-slate-200 bg-slate-100 text-slate-700">
+                              <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                              Read
+                            </span>
+                          )}
+                          {status === "unread" && (
+                            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold border border-red-200 bg-red-50 text-red-700">
+                              <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                              Unread
+                            </span>
+                          )}
+                        </td>
+
+                        {/* 5. Date Received */}
+                        <td className="px-4 py-3 whitespace-nowrap text-gray-500 text-[11px]">
+                          {new Date(msg.created_at).toLocaleString("en-PH", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })}
+                        </td>
+
+                        {/* 6. Actions */}
+                        <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenReceivedDetails(msg)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-md transition-colors"
+                            >
+                              <Eye size={12} />
+                              <span>View</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleReplyToSupport(msg)}
+                              title="Reply to this user"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+                            >
+                              <Send size={12} />
+                              <span>Reply</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="py-16 px-4 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-3">
+                <Inbox size={22} />
+              </div>
+              <h3 className="text-sm font-semibold text-gray-900">
+                {receivedSearch.trim() || receivedCategoryFilter !== "all" || receivedReadFilter !== "all"
+                  ? "No matching inquiries found"
+                  : "No support inquiries yet"}
+              </h3>
+              <p className="text-xs text-gray-500 max-w-sm mx-auto mt-1">
+                {receivedSearch.trim() || receivedCategoryFilter !== "all" || receivedReadFilter !== "all"
+                  ? "Try adjusting your search terms or filters to find what you are looking for."
+                  : "When users submit concerns via the Contact Support form, they will be listed here."}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
 
       {/* =====================================================
@@ -2348,6 +2717,22 @@ export default function EmailUsers() {
         isLoading={
           isLoadingDetails
         }
+      />
+
+      {/* =====================================================
+          RECEIVED SUPPORT MESSAGE DETAILS MODAL
+      ===================================================== */}
+
+      <ReceivedSupportDetailsModal
+        isOpen={isReceivedDetailsOpen}
+        onClose={() => {
+          setIsReceivedDetailsOpen(false);
+          setSelectedReceivedMessage(null);
+        }}
+        message={selectedReceivedMessage}
+        onToggleRead={(id, isRead) => handleUpdateSupportStatus(id, isRead ? "read" : "unread")}
+        onUpdateStatus={handleUpdateSupportStatus}
+        onReply={handleReplyToSupport}
       />
     </div>
   );

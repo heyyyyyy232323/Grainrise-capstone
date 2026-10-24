@@ -90,6 +90,40 @@ const useEmailUsers = () => {
 
 
   // =========================================================
+  // RECEIVED SUPPORT MESSAGES
+  // =========================================================
+
+  const [
+    receivedMessages,
+    setReceivedMessages,
+  ] = useState([]);
+
+  const [
+    unreadReceivedCount,
+    setUnreadReceivedCount,
+  ] = useState(0);
+
+  const [
+    totalReceivedCount,
+    setTotalReceivedCount,
+  ] = useState(0);
+
+  const [
+    isLoadingReceived,
+    setIsLoadingReceived,
+  ] = useState(false);
+
+  const [
+    selectedReceivedDetails,
+    setSelectedReceivedDetails,
+  ] = useState(null);
+
+  const [
+    isLoadingReceivedDetails,
+    setIsLoadingReceivedDetails,
+  ] = useState(false);
+
+  // =========================================================
   // ERROR
   // =========================================================
 
@@ -192,6 +226,160 @@ const useEmailUsers = () => {
     ]
   );
 
+
+  // =========================================================
+  // RECEIVED SUPPORT MESSAGES METHODS
+  // =========================================================
+
+  const loadReceivedMessages = useCallback(
+    async (params = {}) => {
+      setIsLoadingReceived(true);
+      setError("");
+
+      try {
+        const query = new URLSearchParams();
+        if (params.search) query.set("search", params.search);
+        if (params.category && params.category !== "all") query.set("category", params.category);
+        if (params.status && params.status !== "all") query.set("status", params.status);
+        if (params.is_read !== undefined && params.is_read !== "all" && params.is_read !== null) {
+          query.set("is_read", params.is_read);
+        }
+
+        const qs = query.toString() ? `?${query.toString()}` : "";
+        const response = await request(`/admin/email-users/received/${qs}`, {
+          method: "GET",
+          throwOnError: true,
+        });
+
+        const results = Array.isArray(response?.results) ? response.results : [];
+        setReceivedMessages(results);
+        setUnreadReceivedCount(Number(response?.unread_count || 0));
+        setTotalReceivedCount(Number(response?.total || results.length));
+        return results;
+      } catch (err) {
+        const message = err?.message || "Unable to load received support messages.";
+        setError(message);
+        setReceivedMessages([]);
+        throw err;
+      } finally {
+        setIsLoadingReceived(false);
+      }
+    },
+    [request]
+  );
+
+  const refreshReceivedMessages = useCallback(
+    async (params = {}) => {
+      return loadReceivedMessages(params);
+    },
+    [loadReceivedMessages]
+  );
+
+  const getReceivedMessageDetails = useCallback(
+    async (supportId) => {
+      if (!supportId) throw new Error("Support message ID is required.");
+      setIsLoadingReceivedDetails(true);
+      setSelectedReceivedDetails(null);
+      setError("");
+
+      try {
+        const response = await request(`/admin/email-users/received/${supportId}/`, {
+          method: "GET",
+          throwOnError: true,
+        });
+
+        const message = response?.result || null;
+        setSelectedReceivedDetails(message);
+        return message;
+      } catch (err) {
+        const message = err?.message || "Unable to load support message details.";
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoadingReceivedDetails(false);
+      }
+    },
+    [request]
+  );
+
+  const markReceivedMessageRead = useCallback(
+    async (supportId, isRead = true) => {
+      if (!supportId) return false;
+      try {
+        await request(`/admin/email-users/received/${supportId}/read/`, {
+          method: "POST",
+          body: { is_read: isRead },
+          throwOnError: true,
+        });
+
+        setReceivedMessages((prev) =>
+          prev.map((m) =>
+            m.id === supportId || m.support_id === supportId
+              ? { ...m, is_read: isRead ? 1 : 0 }
+              : m
+          )
+        );
+
+        setSelectedReceivedDetails((prev) =>
+          prev && (prev.id === supportId || prev.support_id === supportId)
+            ? { ...prev, is_read: isRead ? 1 : 0 }
+            : prev
+        );
+
+        setUnreadReceivedCount((prev) =>
+          Math.max(0, isRead ? prev - 1 : prev + 1)
+        );
+
+        return true;
+      } catch (err) {
+        console.error("Failed to update read status:", err);
+        return false;
+      }
+    },
+    [request]
+  );
+
+  const updateReceivedMessageStatus = useCallback(
+    async (supportId, status) => {
+      if (!supportId || !status) return false;
+      try {
+        await request(`/admin/email-users/received/${supportId}/status/`, {
+          method: "POST",
+          body: { status },
+          throwOnError: true,
+        });
+
+        setReceivedMessages((prev) =>
+          prev.map((m) =>
+            m.id === supportId || m.support_id === supportId
+              ? { ...m, status }
+              : m
+          )
+        );
+
+        setSelectedReceivedDetails((prev) =>
+          prev && (prev.id === supportId || prev.support_id === supportId)
+            ? { ...prev, status }
+            : prev
+        );
+
+        return true;
+      } catch (err) {
+        console.error("Failed to update message status:", err);
+        return false;
+      }
+    },
+    [request]
+  );
+
+  const clearSelectedReceivedDetails = useCallback(() => {
+    setSelectedReceivedDetails(null);
+  }, []);
+
+  // Initial load of received messages
+  useEffect(() => {
+    loadReceivedMessages().catch(() => {});
+  }, [loadReceivedMessages]);
 
   // =========================================================
   // SEARCH SPECIFIC USERS
@@ -683,6 +871,25 @@ const useEmailUsers = () => {
   // =========================================================
 
   return {
+    // ========================================================
+    // RECEIVED SUPPORT MESSAGES
+    // ========================================================
+
+    receivedMessages,
+    unreadReceivedCount,
+    totalReceivedCount,
+    isLoadingReceived,
+
+    selectedReceivedDetails,
+    isLoadingReceivedDetails,
+
+    loadReceivedMessages,
+    refreshReceivedMessages,
+    getReceivedMessageDetails,
+    markReceivedMessageRead,
+    updateReceivedMessageStatus,
+    clearSelectedReceivedDetails,
+
     // ========================================================
     // HISTORY
     // ========================================================

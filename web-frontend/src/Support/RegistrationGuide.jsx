@@ -373,20 +373,26 @@ export default function RegistrationGuide() {
           </div>
 
           <div className="faq-accordion-list">
-            {faqs.map((item, idx) => (
-              <div key={idx} className={`faq-accordion-item ${openFaq === idx ? 'open' : ''}`}>
-                <button
-                  className="faq-accordion-btn"
-                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                >
-                  <span>{item.q}</span>
-                  {openFaq === idx ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                </button>
-                {openFaq === idx && (
-                  <div className="faq-accordion-content">{item.a}</div>
-                )}
-              </div>
-            ))}
+            {faqs.map((item, idx) => {
+              const isOpen = openFaq === idx;
+              return (
+                <div key={idx} className={`faq-accordion-item ${isOpen ? 'open' : ''}`}>
+                  <button
+                    className="faq-accordion-btn"
+                    onClick={() => setOpenFaq(isOpen ? null : idx)}
+                    aria-expanded={isOpen}
+                  >
+                    <span>{item.q}</span>
+                    <ChevronDown size={18} className="faq-accordion-chevron" />
+                  </button>
+                  <div className={`faq-accordion-collapse ${isOpen ? 'open' : ''}`}>
+                    <div className="faq-accordion-inner">
+                      <div className="faq-accordion-content">{item.a}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
 

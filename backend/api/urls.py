@@ -4,6 +4,7 @@ from . import views
 from . import auth_views
 from .admin_auth import admin_views
 from . import partnership_inquiry
+from . import support_views
 
 
 urlpatterns = [
@@ -257,6 +258,18 @@ urlpatterns = [
         "auth/forgot-password/reset",
         views.forgot_password_reset,
         name="forgot-password-reset",
+    ),
+
+
+    # ========================================================
+    # ========================================================
+    # CONTACT SUPPORT (PUBLIC)
+    # ========================================================
+
+    path(
+        "support/contact/",
+        support_views.submit_contact_support,
+        name="contact-support-submit",
     ),
 
 

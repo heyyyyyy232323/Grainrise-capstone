@@ -14,6 +14,7 @@ from .selectors import (
     RECIPIENT_SPECIFIC,
     RECIPIENT_WAREHOUSE,
     RECIPIENT_PARTNERSHIP,
+    RECIPIENT_SUPPORT,
     VALID_RECIPIENT_TYPES,
     get_admin_email_sender,
     get_broadcast_email_recipients,
@@ -178,6 +179,16 @@ def _resolve_specific_recipient(
         )
 
     if not user:
+        if recipient_email:
+            cleaned_direct = _normalize_email(recipient_email)
+            if cleaned_direct:
+                return {
+                    "user_id": None,
+                    "name": str(recipient_email).strip(),
+                    "email": cleaned_direct,
+                    "role": "external_recipient",
+                    "status": "active",
+                }
         raise ValueError(
             "The selected email recipient was not found."
         )
@@ -801,24 +812,25 @@ def send_account_admin_email(
     # ========================================================
 
     # ========================================================
-    # PARTNERSHIP INQUIRY RECIPIENT
+    # PARTNERSHIP OR SUPPORT INQUIRY RECIPIENT
     # ========================================================
 
-    if normalized_type == RECIPIENT_PARTNERSHIP:
+    if normalized_type in (RECIPIENT_PARTNERSHIP, RECIPIENT_SUPPORT, "support_contact"):
         clean_email = _normalize_email(recipient_email)
         if not clean_email:
             raise ValueError(
-                "The partnership applicant does not have a valid email address."
+                "The recipient does not have a valid email address."
             )
 
         clean_name = str(recipient_name or clean_email).strip()
+        role = "support_inquiry" if normalized_type in (RECIPIENT_SUPPORT, "support_contact") else "partnership_inquiry"
         recipients = [
             {
                 "user_id": None,
                 "name": clean_name,
                 "email": clean_email,
-                "role": "partnership_inquiry",
-                "status": "to_review",
+                "role": role,
+                "status": "open",
             }
         ]
 
@@ -826,6 +838,20 @@ def send_account_admin_email(
         history_user_id = None
         history_email = clean_email
         history_recipient_type = RECIPIENT_SPECIFIC
+
+        if normalized_type in (RECIPIENT_SUPPORT, "support_contact") and recipient_id:
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        UPDATE contact_support_messages
+                        SET status = 'replied', is_read = 1, updated_at = NOW()
+                        WHERE support_id = %s
+                        """,
+                        [recipient_id],
+                    )
+            except Exception:
+                pass
 
     # ========================================================
     # SPECIFIC USER
@@ -1056,3 +1082,60 @@ def send_account_admin_email(
                 ),
         },
     }
+
+
+# ============================================================
+# RECEIVED SUPPORT MESSAGE SERVICES
+# ============================================================
+
+def mark_support_message_read(support_id, is_read=True):
+    """
+    Mark a contact support message as read or unread.
+    If marked as read and status was 'unread', change status to 'read'.
+    If marked as unread, change status to 'unread'.
+    """
+    with connection.cursor() as cursor:
+        if is_read:
+            cursor.execute(
+                """
+                UPDATE contact_support_messages
+                SET is_read = 1,
+                    status = CASE WHEN status = 'replied' THEN 'replied' ELSE 'read' END,
+                    updated_at = NOW()
+                WHERE support_id = %s
+                """,
+                [support_id],
+            )
+        else:
+            cursor.execute(
+                """
+                UPDATE contact_support_messages
+                SET is_read = 0, status = 'unread', updated_at = NOW()
+                WHERE support_id = %s
+                """,
+                [support_id],
+            )
+        return cursor.rowcount > 0
+
+
+def update_support_message_status(support_id, status):
+    """
+    Update the status of a contact support message ('unread', 'read', 'replied').
+    """
+    allowed_statuses = {"unread", "read", "replied"}
+    clean_status = str(status or "").strip().lower()
+    if clean_status not in allowed_statuses:
+        raise ValueError(f"Invalid status '{clean_status}'. Allowed: {', '.join(sorted(allowed_statuses))}")
+
+    is_read = 0 if clean_status == "unread" else 1
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE contact_support_messages
+            SET status = %s, is_read = %s, updated_at = NOW()
+            WHERE support_id = %s
+            """,
+            [clean_status, is_read, support_id],
+        )
+        return cursor.rowcount > 0

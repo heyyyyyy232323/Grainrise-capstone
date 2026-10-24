@@ -163,3 +163,63 @@ class PartnershipInquiry(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.organization_company}) - {self.partner_role} - {self.status}"
+
+
+class ContactSupportMessage(models.Model):
+    """
+    Dedicated model for messages submitted via the Contact Support ('How Can We Help?') form.
+    Messages are received and viewed in the Admin Module's Email Users section (Received tab).
+    """
+
+    support_id = models.BigAutoField(primary_key=True)
+    full_name = models.CharField(max_length=255)
+    email = models.EmailField(max_length=255)
+    user_role = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Role or classification of the sender (e.g. Farmer, Retailer, etc.)",
+    )
+    concern_category = models.CharField(
+        max_length=100,
+        help_text="Category of concern (e.g. Technical Issue, Account Access, etc.)",
+    )
+    reference_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Optional transaction or reference number",
+    )
+    subject = models.CharField(max_length=255)
+    description = models.TextField()
+    attachment_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Original filename of the attachment",
+    )
+    attachment_file = models.FileField(
+        upload_to="support_attachments/",
+        blank=True,
+        null=True,
+        help_text="Uploaded support attachment file",
+    )
+    is_read = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Whether this support message has been read by an admin",
+    )
+    status = models.CharField(
+        max_length=50,
+        default="open",
+        help_text="Status of the concern (open, in_progress, resolved)",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "contact_support_messages"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"[{self.concern_category}] {self.subject} from {self.full_name} ({self.email})"
