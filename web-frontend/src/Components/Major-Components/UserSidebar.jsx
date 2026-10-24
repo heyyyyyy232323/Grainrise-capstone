@@ -542,6 +542,11 @@ export const getUserSidebarConfig = (role = "admin") => {
               path: "/miller-logistics/delivery-management",
             },
             {
+              label: "Vehicle Assignment",
+              icon: Car,
+              path: "/miller-logistics/vehicle-assignee-management",
+            },
+            {
               label: "Product Returns",
               icon: CornerUpLeft,
               path: "/miller-logistics/product-returns",

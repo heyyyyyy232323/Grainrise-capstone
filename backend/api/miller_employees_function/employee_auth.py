@@ -656,3 +656,50 @@ def miller_sales_required(view_func):
         return view_func(request, *args, **kwargs)
 
     return wrapped_view
+
+
+# ============================================================
+# MILLER FULFILLMENT & LOGISTICS COORDINATOR GUARD DECORATOR
+# ============================================================
+
+def miller_flc_required(view_func):
+    """
+    Decorator requiring an authenticated Miller Employee with position == 'fulfillment_logistics_coordinator'.
+
+    Security rules:
+    - Never trust supplier_profile_id from frontend / request query / body.
+    - Resolves authoritative identity and branch scoping strictly from the DB via get_authenticated_miller_employee.
+    - Requires DB employee status == 'active'.
+    - Requires DB employee position == 'fulfillment_logistics_coordinator'.
+    - Blocks Encoder, Procurement, Finance, Seller, Driver, Branch Manager.
+
+    Attaches to request:
+    - request.grainrise_supplier_employee
+    - request.grainrise_supplier_employee_id
+    - request.grainrise_supplier_profile_id
+    - request.grainrise_owner_user_id
+    - request.grainrise_employee_position
+    """
+    @wraps(view_func)
+    def wrapped_view(request, *args, **kwargs):
+        employee = get_authenticated_miller_employee(
+            request, required_position="fulfillment_logistics_coordinator"
+        )
+        if not employee:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Fulfillment Logistics Coordinator authentication required. Please sign in again.",
+                },
+                status=401,
+            )
+
+        request.grainrise_supplier_employee = employee
+        request.grainrise_supplier_employee_id = employee["supplier_employee_id"]
+        request.grainrise_supplier_profile_id = employee["supplier_profile_id"]
+        request.grainrise_owner_user_id = employee["owner_user_id"]
+        request.grainrise_employee_position = employee["position"]
+
+        return view_func(request, *args, **kwargs)
+
+    return wrapped_view
