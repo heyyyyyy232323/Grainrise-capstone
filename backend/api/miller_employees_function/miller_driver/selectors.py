@@ -693,3 +693,253 @@ def get_driver_conversation_thread(
         "messages": messages_list,
     }
 
+
+def get_driver_payment_submissions(
+    supplier_profile_id: int,
+    driver_id: int,
+    search_query: str | None = None,
+    payment_method_filter: str | None = None,
+    status_filter: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> list[dict]:
+    """
+    Fetch COD payments collected by the authenticated driver.
+    Scoped strictly by supplier_profile_id and driver_id.
+    Handles date range, search, payment method, and status filtering.
+    Preserves transaction grouping by cod_transaction_key.
+    """
+    params = [supplier_profile_id, driver_id]
+    where_clauses = ["cod.supplier_profile_id = %s", "cod.driver_id = %s"]
+
+    # 1. Search Query
+    if search_query and search_query.strip():
+        q = f"%{search_query.strip()}%"
+        where_clauses.append(
+            """(
+                moc.batch_no LIKE %s
+                OR u.first_name LIKE %s
+                OR u.last_name LIKE %s
+                OR CONCAT_WS(' ', u.first_name, u.last_name) LIKE %s
+                OR u.street_address LIKE %s
+                OR u.barangay LIKE %s
+                OR u.municipality LIKE %s
+                OR u.province LIKE %s
+            )"""
+        )
+        params.extend([q, q, q, q, q, q, q, q])
+
+    # 2. Payment Method Filter
+    if payment_method_filter and payment_method_filter.strip():
+        method_str = payment_method_filter.strip()
+        if method_str.lower() in ("cash on delivery", "cash"):
+            where_clauses.append("cod.payment_method = 'Cash'")
+        elif method_str.lower() in ("gcash", "online payment"):
+            where_clauses.append("cod.payment_method = 'GCash'")
+        elif method_str.lower() in ("bank", "bank transfer"):
+            where_clauses.append("cod.payment_method = 'Bank'")
+        else:
+            where_clauses.append("cod.payment_method = %s")
+            params.append(method_str)
+
+    # 3. Status Filter (Handled, Submitted)
+    if status_filter and status_filter.strip():
+        st = status_filter.strip().capitalize()
+        if st in ("Handled", "Submitted"):
+            where_clauses.append("cod.status = %s")
+            params.append(st)
+
+    # 4. Date Range Filtering
+    if start_date and start_date.strip():
+        where_clauses.append("DATE(cod.handled_at) >= %s")
+        params.append(start_date.strip())
+    if end_date and end_date.strip():
+        where_clauses.append("DATE(cod.handled_at) <= %s")
+        params.append(end_date.strip())
+
+    where_sql = " AND ".join(where_clauses)
+
+    query = f"""
+        SELECT
+            cod.cod_id,
+            cod.cod_transaction_key,
+            cod.online_order_id,
+            cod.payment_method,
+            cod.total AS cod_row_total,
+            cod.amount_paid,
+            cod.`change` AS change_amount,
+            cod.payment_reference_no,
+            cod.external_payment_reference_no,
+            cod.receipt_photo,
+            cod.status,
+            cod.handled_at,
+            cod.submitted_at,
+            moc.batch_no,
+            moc.ordered_quantity,
+            COALESCE(mp.unit_cost, 0.0) AS unit_cost,
+            moc.total_price AS order_total,
+            COALESCE(mp.product_name, 'Rice Product') AS product_name,
+            u.user_id,
+            TRIM(CONCAT_WS(' ', u.first_name, u.middle_initial, u.last_name, u.suffix)) AS retailer_name,
+            TRIM(CONCAT_WS(', ', NULLIF(u.street_address, ''), NULLIF(u.barangay, ''), NULLIF(u.municipality, ''), NULLIF(u.province, ''))) AS destination_address,
+            COALESCE(sp.business_name, 'GrainRise Milling Company') AS business_name,
+            TRIM(CONCAT_WS(' ', se.first_name, se.last_name)) AS driver_name
+        FROM miller_online_customer_cash_on_delivery cod
+        INNER JOIN miller_online_customer moc
+            ON moc.online_order_id = cod.online_order_id
+        LEFT JOIN miller_products mp
+            ON mp.product_id = moc.miller_product_id
+        LEFT JOIN users u
+            ON u.user_id = moc.user_buyer_id
+        LEFT JOIN supplier_profiles sp
+            ON sp.supplier_profile_id = cod.supplier_profile_id
+        LEFT JOIN supplier_employees se
+            ON se.supplier_employee_id = cod.driver_id
+        WHERE {where_sql}
+        ORDER BY cod.handled_at DESC, cod.cod_transaction_key ASC, cod.cod_id ASC
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params)
+        raw_rows = cursor.fetchall()
+
+    if not raw_rows:
+        return []
+
+    # Map raw rows to dicts
+    mapped = []
+    for r in raw_rows:
+        (
+            cod_id,
+            tx_key,
+            order_id,
+            pay_method,
+            cod_row_total,
+            amount_paid,
+            change_amount,
+            pay_ref,
+            ext_ref,
+            receipt_photo,
+            status,
+            handled_at,
+            submitted_at,
+            batch_no,
+            ordered_qty,
+            unit_cost,
+            order_total,
+            product_name,
+            retailer_user_id,
+            retailer_name,
+            destination_addr,
+            business_name,
+            driver_name,
+        ) = r
+
+        mapped.append({
+            "cod_id": cod_id,
+            "id": f"cod-{cod_id}",
+            "cod_transaction_key": tx_key,
+            "online_order_id": order_id,
+            "payment_method": pay_method,
+            "cod_row_total": float(cod_row_total or 0),
+            "amount_paid": float(amount_paid or 0),
+            "change": float(change_amount or 0),
+            "payment_reference_no": pay_ref,
+            "external_payment_reference_no": ext_ref,
+            "receipt_photo": receipt_photo,
+            "status": status,
+            "handled_at": handled_at.isoformat() if handled_at else None,
+            "paid_at": handled_at.strftime("%I:%M %p") if handled_at else "—",
+            "date": handled_at.date().isoformat() if handled_at else "",
+            "submitted_at": submitted_at.isoformat() if submitted_at else None,
+            "batch_no": batch_no or "—",
+            "batchNo": batch_no or "—",
+            "ordered_quantity": float(ordered_qty or 0),
+            "qty": f"{float(ordered_qty or 0):,.0f} kg" if float(ordered_qty or 0).is_integer() else f"{float(ordered_qty or 0):,.2f} kg",
+            "unit_cost": float(unit_cost or 0),
+            "unit_cost_formatted": f"₱{float(unit_cost or 0):,.2f}",
+            "order_total": float(order_total or cod_row_total or 0),
+            "amount": f"₱{float(order_total or cod_row_total or 0):,.2f}",
+            "product_name": product_name,
+            "variant": product_name,
+            "retailer_user_id": retailer_user_id,
+            "retailer": retailer_name or "Retailer",
+            "destination": destination_addr or "Designated Delivery Destination",
+            "business_name": business_name,
+            "driver_name": driver_name or "Assigned Driver",
+        })
+
+    # Group by cod_transaction_key to attach transaction-level metadata
+    groups = {}
+    for item in mapped:
+        k = item["cod_transaction_key"]
+        if k not in groups:
+            groups[k] = []
+        groups[k].append(item)
+
+    results = []
+    for k, group_items in groups.items():
+        is_multi = len(group_items) > 1
+        tx_batches = list(dict.fromkeys(item["batch_no"] for item in group_items))
+        tx_total = sum(item["order_total"] for item in group_items)
+
+        # Build items list for modal & POS receipt
+        items_payload = [
+            {
+                "online_order_id": item["online_order_id"],
+                "product_name": item["product_name"],
+                "batch_no": item["batch_no"],
+                "ordered_quantity": item["ordered_quantity"],
+                "display_quantity": item["qty"].replace(" kg", ""),
+                "unit_cost": item["unit_cost"],
+                "unit_cost_formatted": item["unit_cost_formatted"],
+                "total_price": item["order_total"],
+                "total_price_formatted": item["amount"],
+            }
+            for item in group_items
+        ]
+
+        first = group_items[0]
+        tx_receipt_data = {
+            "business_name": first["business_name"],
+            "reference_no": first["payment_reference_no"],
+            "transaction_date_formatted": first["handled_at"][:19].replace("T", " ") if first["handled_at"] else "",
+            "driver_name": first["driver_name"],
+            "customer_name": first["retailer"],
+            "buyer_type": "Retailer",
+            "batch_no": ", ".join(tx_batches),
+            "payment_method": first["payment_method"],
+            "external_payment_reference_no": first["external_payment_reference_no"],
+            "receipt_photo": first["receipt_photo"],
+            "items": items_payload,
+            "total_amount": tx_total,
+            "total_amount_formatted": f"₱{tx_total:,.2f}",
+            "amount_paid": first["amount_paid"],
+            "amount_paid_formatted": f"₱{first['amount_paid']:,.2f}",
+            "change_amount": first["change"],
+            "change_amount_formatted": f"₱{first['change']:,.2f}",
+            "status": first["status"],
+        }
+
+        for idx, item in enumerate(group_items):
+            is_last = idx == len(group_items) - 1
+            action_label = "View Details" if item["status"] == "Submitted" else "Submit Payment"
+
+            results.append({
+                **item,
+                "is_multi_order": is_multi,
+                "is_first_in_group": idx == 0,
+                "is_last_in_group": is_last,
+                "group_order_count": len(group_items),
+                "group_order_index": idx,
+                "transaction_total": tx_total,
+                "transaction_total_formatted": f"₱{tx_total:,.2f}",
+                "transaction_batches": tx_batches,
+                "transaction_batches_str": ", ".join(tx_batches),
+                "transaction_items": items_payload,
+                "receipt_data": tx_receipt_data,
+                "action_label": action_label,
+            })
+
+    return results
+

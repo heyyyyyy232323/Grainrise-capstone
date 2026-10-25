@@ -692,3 +692,138 @@ def send_driver_message(
         },
     }
 
+
+def submit_driver_cod_payment(
+    supplier_profile_id: int,
+    driver_id: int,
+    cod_transaction_key: str,
+) -> dict:
+    """
+    Submit collected COD payment for a transaction group.
+    - Strictly validates driver ownership and branch scoping for the cod_transaction_key.
+    - Ensures status is strictly 'Handled' (rejects already 'Submitted' to prevent duplicate submission).
+    - Atomically updates all rows sharing the cod_transaction_key to 'Submitted' and saves submitted_at = NOW().
+    - Returns full receipt payload for immediate POS receipt modal display.
+    """
+    if not cod_transaction_key or not cod_transaction_key.strip():
+        raise DriverDeliveryError("cod_transaction_key is required.", 400)
+
+    clean_key = cod_transaction_key.strip()
+
+    with connection.cursor() as cursor:
+        # 1. Check ownership and current statuses
+        cursor.execute(
+            """
+            SELECT
+                cod.cod_id,
+                cod.status,
+                cod.payment_method,
+                cod.payment_reference_no,
+                cod.external_payment_reference_no,
+                cod.receipt_photo,
+                cod.amount_paid,
+                cod.`change`,
+                cod.handled_at,
+                moc.online_order_id,
+                moc.batch_no,
+                moc.ordered_quantity,
+                COALESCE(mp.unit_cost, 0.0) AS unit_cost,
+                moc.total_price,
+                COALESCE(mp.product_name, 'Rice Product') AS product_name,
+                TRIM(CONCAT_WS(' ', u.first_name, u.middle_initial, u.last_name, u.suffix)) AS retailer_name,
+                COALESCE(sp.business_name, 'GrainRise Milling Company') AS business_name,
+                TRIM(CONCAT_WS(' ', se.first_name, se.last_name)) AS driver_name
+            FROM miller_online_customer_cash_on_delivery cod
+            INNER JOIN miller_online_customer moc
+                ON moc.online_order_id = cod.online_order_id
+            LEFT JOIN miller_products mp
+                ON mp.product_id = moc.miller_product_id
+            LEFT JOIN users u
+                ON u.user_id = moc.user_buyer_id
+            LEFT JOIN supplier_profiles sp
+                ON sp.supplier_profile_id = cod.supplier_profile_id
+            LEFT JOIN supplier_employees se
+                ON se.supplier_employee_id = cod.driver_id
+            WHERE cod.cod_transaction_key = %s
+              AND cod.supplier_profile_id = %s
+              AND cod.driver_id = %s
+            ORDER BY cod.cod_id ASC
+            """,
+            [clean_key, supplier_profile_id, driver_id],
+        )
+        rows = cursor.fetchall()
+
+        if not rows:
+            raise DriverDeliveryError("Transaction not found or you are not authorized to submit it.", 404)
+
+        # Check if already submitted
+        statuses = [r[1] for r in rows]
+        if any(s == "Submitted" for s in statuses):
+            raise DriverDeliveryError("This payment transaction has already been submitted.", 400)
+
+        if any(s != "Handled" for s in statuses):
+            raise DriverDeliveryError("Payment transaction cannot be submitted due to invalid status.", 400)
+
+        # 2. Atomically update all rows in this transaction to 'Submitted'
+        cursor.execute(
+            """
+            UPDATE miller_online_customer_cash_on_delivery
+            SET status = 'Submitted',
+                submitted_at = NOW()
+            WHERE cod_transaction_key = %s
+              AND supplier_profile_id = %s
+              AND driver_id = %s
+              AND status = 'Handled'
+            """,
+            [clean_key, supplier_profile_id, driver_id],
+        )
+
+    # 3. Construct receipt payload
+    first = rows[0]
+    tx_total = sum(float(r[13] or 0) for r in rows)
+    items_payload = [
+        {
+            "online_order_id": r[9],
+            "product_name": r[14],
+            "batch_no": r[10] or "—",
+            "ordered_quantity": float(r[11] or 0),
+            "display_quantity": f"{float(r[11] or 0):,.0f}" if float(r[11] or 0).is_integer() else f"{float(r[11] or 0):,.2f}",
+            "unit_cost": float(r[12] or 0),
+            "unit_cost_formatted": f"₱{float(r[12] or 0):,.2f}",
+            "total_price": float(r[13] or 0),
+            "total_price_formatted": f"₱{float(r[13] or 0):,.2f}",
+        }
+        for r in rows
+    ]
+
+    all_batches = list(dict.fromkeys(r[10] for r in rows if r[10]))
+
+    receipt_data = {
+        "business_name": first[16],
+        "reference_no": first[3],
+        "transaction_date_formatted": first[8].strftime("%Y-%m-%d %I:%M %p") if first[8] else "",
+        "driver_name": first[17] or "Assigned Driver",
+        "customer_name": first[15] or "Valued Retailer",
+        "buyer_type": "Retailer",
+        "batch_no": ", ".join(all_batches),
+        "payment_method": first[2],
+        "external_payment_reference_no": first[4],
+        "receipt_photo": first[5],
+        "items": items_payload,
+        "total_amount": tx_total,
+        "total_amount_formatted": f"₱{tx_total:,.2f}",
+        "amount_paid": float(first[6] or 0),
+        "amount_paid_formatted": f"₱{float(first[6] or 0):,.2f}",
+        "change_amount": float(first[7] or 0),
+        "change_amount_formatted": f"₱{float(first[7] or 0):,.2f}",
+        "status": "Submitted",
+    }
+
+    return {
+        "success": True,
+        "message": "Payment submitted successfully.",
+        "cod_transaction_key": clean_key,
+        "receipt_data": receipt_data,
+    }
+
+

@@ -74,6 +74,8 @@ export default function DriverPOSReceiptModal({
   const transactionDateFormatted = receiptData.transaction_date_formatted || new Date().toLocaleString();
   const driverName = receiptData.driver_name || "Assigned Driver";
   const customerName = receiptData.customer_name || "Valued Retailer";
+  const buyerType = receiptData.buyer_type || "Retailer";
+  const batchNo = receiptData.batch_no || "";
   const paymentMethod = receiptData.payment_method || "Cash";
   const externalRef = receiptData.external_payment_reference_no;
   const receiptPhoto = receiptData.receipt_photo;
@@ -406,11 +408,13 @@ export default function DriverPOSReceiptModal({
 
           {/* Transaction Metadata Box */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 space-y-0.5">
+            <ReceiptRow label="Buyer Type" value={buyerType} />
+            <ReceiptRow label="Buyer Name" value={customerName} />
+            {batchNo && <ReceiptRow label="Batch No." value={batchNo} />}
             <ReceiptRow label="Payment Reference" value={referenceNo} isMono={true} />
             <ReceiptRow label="Transaction Date & Time" value={transactionDateFormatted} />
-            <ReceiptRow label="Driver" value={driverName} />
-            <ReceiptRow label="Customer" value={customerName} />
             <ReceiptRow label="Payment Method" value={paymentMethod} />
+            {driverName && <ReceiptRow label="Driver" value={driverName} />}
             {externalRef && <ReceiptRow label="External Ref No." value={externalRef} isMono={true} />}
           </div>
 

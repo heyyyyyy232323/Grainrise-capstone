@@ -15,6 +15,7 @@ from .selectors import (
     get_driver_assigned_vehicle,
     get_driver_conversation_thread,
     get_driver_duties,
+    get_driver_payment_submissions,
     get_last_ping_for_orders,
 )
 from .services import (
@@ -24,6 +25,7 @@ from .services import (
     record_driver_live_ping,
     send_driver_message,
     start_driver_live_tracking,
+    submit_driver_cod_payment,
 )
 
 logger = logging.getLogger(__name__)
@@ -366,3 +368,79 @@ def driver_messages_send_view(request):
     except Exception as e:
         logger.exception("Failed to send driver message: %s", e)
         return Response({"success": False, "message": "Failed to send message."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(["GET"])
+@miller_driver_required
+def driver_payment_submissions_list_view(request):
+    """
+    GET /api/miller-employees/driver/payments/submissions/
+    List COD payment collections for the authenticated driver.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    driver_id = request.grainrise_driver_id
+
+    search_query = request.query_params.get("search")
+    payment_method_filter = request.query_params.get("payment_method")
+    status_filter = request.query_params.get("status")
+    start_date = request.query_params.get("start_date")
+    end_date = request.query_params.get("end_date")
+
+    try:
+        submissions = get_driver_payment_submissions(
+            supplier_profile_id=supplier_profile_id,
+            driver_id=driver_id,
+            search_query=search_query,
+            payment_method_filter=payment_method_filter,
+            status_filter=status_filter,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        return Response(
+            {
+                "success": True,
+                "submissions": submissions,
+                "count": len(submissions),
+            },
+            status=status.HTTP_200_OK,
+        )
+    except Exception as e:
+        logger.exception("Failed to load driver payment submissions: %s", e)
+        return Response(
+            {"success": False, "message": "Failed to load payment submissions."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@api_view(["POST"])
+@miller_driver_required
+def driver_payment_submit_view(request):
+    """
+    POST /api/miller-employees/driver/payments/submit/
+    Submit collected COD payment for a transaction group.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    driver_id = request.grainrise_driver_id
+
+    cod_transaction_key = request.data.get("cod_transaction_key")
+    if not cod_transaction_key:
+        return Response(
+            {"success": False, "message": "cod_transaction_key is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        result = submit_driver_cod_payment(
+            supplier_profile_id=supplier_profile_id,
+            driver_id=driver_id,
+            cod_transaction_key=cod_transaction_key,
+        )
+        return Response(result, status=status.HTTP_200_OK)
+    except DriverDeliveryError as e:
+        return Response({"success": False, "message": e.message}, status=e.status_code)
+    except Exception as e:
+        logger.exception("Failed to submit driver COD payment: %s", e)
+        return Response(
+            {"success": False, "message": "Failed to submit payment."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
