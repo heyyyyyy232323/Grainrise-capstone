@@ -346,3 +346,350 @@ def get_last_ping_for_orders(
         "last_ping_at": row[4].isoformat() if row[4] else None,
         "status": row[5],
     }
+
+
+def get_driver_assigned_conversations(
+    supplier_profile_id: int,
+    driver_id: int,
+) -> list[dict]:
+    """
+    Retrieve conversations for the authenticated driver.
+    Lists buyers (Retailer and Warehouse) assigned to this driver,
+    including active assignment status, latest message, and unread counts.
+    """
+    with connection.cursor() as cursor:
+        # 1. Get all unique buyers assigned to this driver
+        cursor.execute(
+            """
+            SELECT DISTINCT
+                moc.user_buyer_id,
+                moc.warehouse_buyer_id
+            FROM miller_driver_assignment mda
+            INNER JOIN miller_online_customer moc
+                ON moc.online_order_id = mda.online_order_id
+            INNER JOIN miller_vehicle_assignee mva
+                ON mva.vehicle_id = mda.delivery_vehicle_id
+                AND mva.driver_id = %s
+                AND mva.supplier_profile_id = %s
+                AND mva.status = 'active'
+            WHERE mda.supplier_profile_id = %s
+            """,
+            [driver_id, supplier_profile_id, supplier_profile_id],
+        )
+        assigned_buyers = cursor.fetchall()
+
+    conversations = []
+
+    for u_id, wh_id in assigned_buyers:
+        is_retailer = u_id is not None
+        recipient_id = u_id if is_retailer else wh_id
+        recipient_type = "Retailer" if is_retailer else "Warehouse"
+
+        with connection.cursor() as cursor:
+            # 2. Buyer Profile Info
+            if is_retailer:
+                cursor.execute(
+                    """
+                    SELECT
+                        TRIM(CONCAT_WS(' ', first_name, middle_initial, last_name, suffix)) AS name,
+                        contact_number,
+                        TRIM(CONCAT_WS(', ', NULLIF(street_address, ''), NULLIF(barangay, ''), NULLIF(municipality, ''), NULLIF(province, ''))) AS address
+                    FROM users
+                    WHERE user_id = %s
+                    LIMIT 1
+                    """,
+                    [recipient_id],
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT
+                        business_name,
+                        official_contact_number,
+                        TRIM(CONCAT_WS(', ', NULLIF(street_address, ''), NULLIF(barangay, ''), NULLIF(municipality, ''), NULLIF(province, ''))) AS address
+                    FROM warehouse_profiles
+                    WHERE warehouse_profile_id = %s
+                    LIMIT 1
+                    """,
+                    [recipient_id],
+                )
+            buyer_row = cursor.fetchone()
+            if not buyer_row:
+                continue
+
+            buyer_name = buyer_row[0] or f"{recipient_type} #{recipient_id}"
+            contact_number = buyer_row[1] or ""
+            address = buyer_row[2] or ""
+
+            # 3. Check for Active Delivery Assignment
+            target_buyer_filter = "moc.user_buyer_id = %s" if is_retailer else "moc.warehouse_buyer_id = %s"
+            cursor.execute(
+                f"""
+                SELECT
+                    moc.batch_no,
+                    COALESCE(mp.product_name, 'Rice Product') AS product_name,
+                    moc.ordered_quantity,
+                    moc.status AS order_status
+                FROM miller_driver_assignment mda
+                INNER JOIN miller_online_customer moc
+                    ON moc.online_order_id = mda.online_order_id
+                LEFT JOIN miller_products mp
+                    ON mp.product_id = moc.miller_product_id
+                INNER JOIN miller_vehicle_assignee mva
+                    ON mva.vehicle_id = mda.delivery_vehicle_id
+                    AND mva.driver_id = %s
+                    AND mva.supplier_profile_id = %s
+                    AND mva.status = 'active'
+                WHERE mda.supplier_profile_id = %s
+                  AND mda.status = 'Pending'
+                  AND moc.status IN ('Assigned to driver', 'In transit')
+                  AND {target_buyer_filter}
+                ORDER BY moc.online_order_id ASC
+                """,
+                [driver_id, supplier_profile_id, supplier_profile_id, recipient_id],
+            )
+            active_orders = cursor.fetchall()
+
+            has_active_assignment = len(active_orders) > 0
+            active_batch_numbers = [r[0] for r in active_orders]
+            batch_summary = (
+                " · ".join(f"{r[0]} ({r[1]} {r[2]}kg)" for r in active_orders[:2])
+                if active_orders
+                else "No active delivery assignment"
+            )
+
+            # 4. Latest Message in Thread
+            msg_filter = (
+                """(
+                    (m.sender_supplier_profile_id = %s AND m.receiver_user_id = %s)
+                    OR (m.receiver_supplier_profile_id = %s AND m.sender_user_id = %s)
+                )"""
+                if is_retailer
+                else """(
+                    (m.sender_supplier_profile_id = %s AND m.receiver_warehouse_profile_id = %s)
+                    OR (m.receiver_supplier_profile_id = %s AND m.sender_warehouse_profile_id = %s)
+                )"""
+            )
+            cursor.execute(
+                f"""
+                SELECT
+                    m.message_content,
+                    m.created_at,
+                    m.sender_supplier_profile_id
+                FROM messages m
+                WHERE {msg_filter}
+                ORDER BY m.created_at DESC, m.message_id DESC
+                LIMIT 1
+                """,
+                [supplier_profile_id, recipient_id, supplier_profile_id, recipient_id],
+            )
+            last_msg_row = cursor.fetchone()
+
+            last_msg_text = last_msg_row[0] if last_msg_row else "No messages yet"
+            last_msg_time = last_msg_row[1].isoformat() if last_msg_row and last_msg_row[1] else None
+
+            # 5. Count Unread Messages from Buyer
+            unread_filter = (
+                """
+                m.receiver_supplier_profile_id = %s
+                AND m.sender_user_id = %s
+                AND m.seen_at IS NULL
+                """
+                if is_retailer
+                else """
+                m.receiver_supplier_profile_id = %s
+                AND m.sender_warehouse_profile_id = %s
+                AND m.seen_at IS NULL
+                """
+            )
+            cursor.execute(
+                f"""
+                SELECT COUNT(*)
+                FROM messages m
+                WHERE {unread_filter}
+                """,
+                [supplier_profile_id, recipient_id],
+            )
+            unread_count = cursor.fetchone()[0]
+
+        conversations.append({
+            "id": f"{recipient_type}_{recipient_id}",
+            "recipient_id": recipient_id,
+            "recipient_type": recipient_type,
+            "name": buyer_name,
+            "role": recipient_type,
+            "contact_number": contact_number,
+            "address": address,
+            "has_active_assignment": has_active_assignment,
+            "active_batch_numbers": active_batch_numbers,
+            "batch": batch_summary,
+            "lastMsg": last_msg_text,
+            "lastMsgTime": last_msg_time,
+            "unread": unread_count,
+            "avatar": buyer_name[0].upper() if buyer_name else "B",
+        })
+
+    # Sort conversations: active assignments first, then by latest message date
+    conversations.sort(
+        key=lambda c: (1 if c["has_active_assignment"] else 0, c["lastMsgTime"] or ""),
+        reverse=True,
+    )
+    return conversations
+
+
+def get_driver_conversation_thread(
+    supplier_profile_id: int,
+    driver_id: int,
+    recipient_id: int,
+    recipient_type: str,
+) -> dict:
+    """
+    Retrieve message history for a specific conversation with an assigned buyer.
+    Also returns active assignment status, and marks incoming messages as seen.
+    """
+    is_retailer = recipient_type.lower() == "retailer"
+
+    with connection.cursor() as cursor:
+        # 1. Buyer details
+        if is_retailer:
+            cursor.execute(
+                """
+                SELECT
+                    TRIM(CONCAT_WS(' ', first_name, middle_initial, last_name, suffix)) AS name,
+                    contact_number,
+                    TRIM(CONCAT_WS(', ', NULLIF(street_address, ''), NULLIF(barangay, ''), NULLIF(municipality, ''), NULLIF(province, ''))) AS address
+                FROM users
+                WHERE user_id = %s
+                LIMIT 1
+                """,
+                [recipient_id],
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT
+                    business_name,
+                    official_contact_number,
+                    TRIM(CONCAT_WS(', ', NULLIF(street_address, ''), NULLIF(barangay, ''), NULLIF(municipality, ''), NULLIF(province, ''))) AS address
+                FROM warehouse_profiles
+                WHERE warehouse_profile_id = %s
+                LIMIT 1
+                """,
+                [recipient_id],
+            )
+        buyer_row = cursor.fetchone()
+        buyer_name = buyer_row[0] if buyer_row else f"{recipient_type} #{recipient_id}"
+        contact_number = buyer_row[1] if buyer_row else ""
+        address = buyer_row[2] if buyer_row else ""
+
+        # 2. Check active assignment
+        target_buyer_filter = "moc.user_buyer_id = %s" if is_retailer else "moc.warehouse_buyer_id = %s"
+        cursor.execute(
+            f"""
+            SELECT
+                moc.batch_no,
+                COALESCE(mp.product_name, 'Rice Product') AS product_name,
+                moc.ordered_quantity,
+                moc.status AS order_status
+            FROM miller_driver_assignment mda
+            INNER JOIN miller_online_customer moc
+                ON moc.online_order_id = mda.online_order_id
+            LEFT JOIN miller_products mp
+                ON mp.product_id = moc.miller_product_id
+            INNER JOIN miller_vehicle_assignee mva
+                ON mva.vehicle_id = mda.delivery_vehicle_id
+                AND mva.driver_id = %s
+                AND mva.supplier_profile_id = %s
+                AND mva.status = 'active'
+            WHERE mda.supplier_profile_id = %s
+              AND mda.status = 'Pending'
+              AND moc.status IN ('Assigned to driver', 'In transit')
+              AND {target_buyer_filter}
+            ORDER BY moc.online_order_id ASC
+            """,
+            [driver_id, supplier_profile_id, supplier_profile_id, recipient_id],
+        )
+        active_orders = cursor.fetchall()
+        has_active_assignment = len(active_orders) > 0
+        active_batch_numbers = list(dict.fromkeys(r[0] for r in active_orders if r[0]))
+
+        # 3. Mark incoming unread messages as seen
+        if is_retailer:
+            cursor.execute(
+                """
+                UPDATE messages
+                SET seen_at = NOW()
+                WHERE receiver_supplier_profile_id = %s
+                  AND sender_user_id = %s
+                  AND seen_at IS NULL
+                """,
+                [supplier_profile_id, recipient_id],
+            )
+        else:
+            cursor.execute(
+                """
+                UPDATE messages
+                SET seen_at = NOW()
+                WHERE receiver_supplier_profile_id = %s
+                  AND sender_warehouse_profile_id = %s
+                  AND seen_at IS NULL
+                """,
+                [supplier_profile_id, recipient_id],
+            )
+
+        # 4. Fetch chronological messages
+        msg_filter = (
+            """(
+                (m.sender_supplier_profile_id = %s AND m.receiver_user_id = %s)
+                OR (m.receiver_supplier_profile_id = %s AND m.sender_user_id = %s)
+            )"""
+            if is_retailer
+            else """(
+                (m.sender_supplier_profile_id = %s AND m.receiver_warehouse_profile_id = %s)
+                OR (m.receiver_supplier_profile_id = %s AND m.sender_warehouse_profile_id = %s)
+            )"""
+        )
+        cursor.execute(
+            f"""
+            SELECT
+                m.message_id,
+                m.sender_supplier_profile_id,
+                m.message_content,
+                m.created_at,
+                m.seen_at
+            FROM messages m
+            WHERE {msg_filter}
+            ORDER BY m.created_at ASC, m.message_id ASC
+            """,
+            [supplier_profile_id, recipient_id, supplier_profile_id, recipient_id],
+        )
+        msg_rows = cursor.fetchall()
+
+    messages_list = []
+    for r in msg_rows:
+        msg_id, sender_sp, content, created_at, seen_at = r
+        is_mine = sender_sp == supplier_profile_id
+
+        # Time formatting
+        time_str = created_at.strftime("%I:%M %p") if created_at else ""
+
+        messages_list.append({
+            "id": msg_id,
+            "sender": "me" if is_mine else "them",
+            "text": content or "",
+            "time": time_str,
+            "timestamp": created_at.isoformat() if created_at else None,
+            "seen": seen_at is not None,
+        })
+
+    return {
+        "recipient_id": recipient_id,
+        "recipient_type": "Retailer" if is_retailer else "Warehouse",
+        "name": buyer_name,
+        "contact_number": contact_number,
+        "address": address,
+        "has_active_assignment": has_active_assignment,
+        "active_batch_numbers": active_batch_numbers,
+        "messages": messages_list,
+    }
+

@@ -10,6 +10,9 @@ from .views import (
     driver_live_tracking_exit_view,
     driver_live_tracking_ping_view,
     driver_live_tracking_start_view,
+    driver_messages_conversations_view,
+    driver_messages_send_view,
+    driver_messages_thread_view,
 )
 
 urlpatterns = [
@@ -19,4 +22,7 @@ urlpatterns = [
     path("live-tracking/ping/", driver_live_tracking_ping_view, name="driver-live-tracking-ping"),
     path("live-tracking/exit/", driver_live_tracking_exit_view, name="driver-live-tracking-exit"),
     path("delivery/complete/", driver_delivery_complete_view, name="driver-delivery-complete"),
+    path("messages/conversations/", driver_messages_conversations_view, name="driver-messages-conversations"),
+    path("messages/thread/", driver_messages_thread_view, name="driver-messages-thread"),
+    path("messages/send/", driver_messages_send_view, name="driver-messages-send"),
 ]

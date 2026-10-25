@@ -11,7 +11,9 @@ from rest_framework.response import Response
 from api.miller_employees_function.employee_auth import miller_driver_required
 from .selectors import (
     get_buyer_group_for_tracking,
+    get_driver_assigned_conversations,
     get_driver_assigned_vehicle,
+    get_driver_conversation_thread,
     get_driver_duties,
     get_last_ping_for_orders,
 )
@@ -20,6 +22,7 @@ from .services import (
     complete_driver_delivery,
     exit_driver_live_tracking,
     record_driver_live_ping,
+    send_driver_message,
     start_driver_live_tracking,
 )
 
@@ -281,3 +284,85 @@ def driver_delivery_complete_view(request):
     except Exception as e:
         logger.exception("Failed to complete delivery: %s", e)
         return Response({"success": False, "message": "Failed to complete delivery."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(["GET"])
+@miller_driver_required
+def driver_messages_conversations_view(request):
+    """
+    GET /api/miller-employees/driver/messages/conversations/
+    Retrieve assigned buyer conversations for the authenticated driver.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    driver_id = request.grainrise_driver_id
+    try:
+        conversations = get_driver_assigned_conversations(
+            supplier_profile_id=supplier_profile_id,
+            driver_id=driver_id,
+        )
+        return Response({"success": True, "conversations": conversations}, status=status.HTTP_200_OK)
+    except Exception as e:
+        logger.exception("Failed to load driver conversations: %s", e)
+        return Response({"success": False, "message": "Failed to load conversations."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(["GET"])
+@miller_driver_required
+def driver_messages_thread_view(request):
+    """
+    GET /api/miller-employees/driver/messages/thread/?recipient_id=...&recipient_type=...
+    Retrieve message history for a specific conversation and mark incoming messages as seen.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    driver_id = request.grainrise_driver_id
+
+    recipient_id = request.query_params.get("recipient_id")
+    recipient_type = request.query_params.get("recipient_type", "Retailer")
+
+    if not recipient_id:
+        return Response({"success": False, "message": "recipient_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        thread_data = get_driver_conversation_thread(
+            supplier_profile_id=supplier_profile_id,
+            driver_id=driver_id,
+            recipient_id=int(recipient_id),
+            recipient_type=recipient_type,
+        )
+        return Response({"success": True, "thread": thread_data}, status=status.HTTP_200_OK)
+    except Exception as e:
+        logger.exception("Failed to load driver thread: %s", e)
+        return Response({"success": False, "message": "Failed to load message thread."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(["POST"])
+@miller_driver_required
+def driver_messages_send_view(request):
+    """
+    POST /api/miller-employees/driver/messages/send/
+    Send message to assigned buyer. Strictly enforces active delivery assignment.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    driver_id = request.grainrise_driver_id
+
+    recipient_id = request.data.get("recipient_id")
+    recipient_type = request.data.get("recipient_type", "Retailer")
+    content = request.data.get("message_content") or request.data.get("content")
+
+    if not recipient_id:
+        return Response({"success": False, "message": "recipient_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        result = send_driver_message(
+            supplier_profile_id=supplier_profile_id,
+            driver_id=driver_id,
+            recipient_id=int(recipient_id),
+            recipient_type=recipient_type,
+            content=content,
+        )
+        return Response(result, status=status.HTTP_201_CREATED)
+    except DriverDeliveryError as e:
+        return Response({"success": False, "message": e.message}, status=e.status_code)
+    except Exception as e:
+        logger.exception("Failed to send driver message: %s", e)
+        return Response({"success": False, "message": "Failed to send message."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

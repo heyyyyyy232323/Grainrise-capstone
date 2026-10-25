@@ -584,3 +584,111 @@ def complete_driver_delivery(
         "proof_of_delivery": pod_saved_path,
         "has_remaining_orders": has_remaining,
     }
+
+
+def send_driver_message(
+    supplier_profile_id: int,
+    driver_id: int,
+    recipient_id: int,
+    recipient_type: str,
+    content: str,
+) -> dict:
+    """
+    Send a message from the authenticated Miller Driver to an assigned buyer.
+    Strictly verifies that an active delivery assignment exists for this buyer before inserting.
+    Sender identity is set to the authenticated Miller branch.
+    """
+    trimmed = (content or "").strip()
+    if not trimmed:
+        raise DriverDeliveryError("Message content cannot be empty.", 400)
+
+    is_retailer = recipient_type.lower() == "retailer"
+
+    with connection.cursor() as cursor:
+        # 1. Strictly validate active delivery assignment
+        target_buyer_filter = "moc.user_buyer_id = %s" if is_retailer else "moc.warehouse_buyer_id = %s"
+        cursor.execute(
+            f"""
+            SELECT 1
+            FROM miller_driver_assignment mda
+            INNER JOIN miller_online_customer moc
+                ON moc.online_order_id = mda.online_order_id
+            INNER JOIN miller_vehicle_assignee mva
+                ON mva.vehicle_id = mda.delivery_vehicle_id
+                AND mva.driver_id = %s
+                AND mva.supplier_profile_id = %s
+                AND mva.status = 'active'
+            WHERE mda.supplier_profile_id = %s
+              AND mda.status = 'Pending'
+              AND moc.status IN ('Assigned to driver', 'In transit')
+              AND {target_buyer_filter}
+            LIMIT 1
+            """,
+            [driver_id, supplier_profile_id, supplier_profile_id, recipient_id],
+        )
+        if not cursor.fetchone():
+            raise DriverDeliveryError(
+                "Cannot send message: You do not have an active delivery assignment for this buyer.",
+                403,
+            )
+
+        # 2. Get owner user ID of the supplier profile
+        cursor.execute(
+            "SELECT user_id FROM supplier_profiles WHERE supplier_profile_id = %s LIMIT 1",
+            [supplier_profile_id],
+        )
+        owner_row = cursor.fetchone()
+        owner_user_id = owner_row[0] if owner_row else None
+
+        # 3. Insert message into messages table
+        rx_user_id = recipient_id if is_retailer else None
+        rx_warehouse_id = recipient_id if not is_retailer else None
+
+        cursor.execute(
+            """
+            INSERT INTO messages (
+                sender_supplier_profile_id,
+                receiver_supplier_profile_id,
+                sender_user_id,
+                receiver_user_id,
+                sender_warehouse_profile_id,
+                receiver_warehouse_profile_id,
+                message_content,
+                created_at,
+                seen_at
+            ) VALUES (
+                %s, NULL, %s, %s, NULL, %s, %s, NOW(), NULL
+            )
+            """,
+            [
+                supplier_profile_id,
+                owner_user_id,
+                rx_user_id,
+                rx_warehouse_id,
+                trimmed,
+            ],
+        )
+        new_msg_id = cursor.lastrowid
+
+        cursor.execute(
+            "SELECT created_at FROM messages WHERE message_id = %s",
+            [new_msg_id],
+        )
+        created_row = cursor.fetchone()
+        created_at = created_row[0] if created_row else datetime.now()
+
+    time_str = created_at.strftime("%I:%M %p")
+
+    return {
+        "success": True,
+        "message": "Message sent successfully.",
+        "data": {
+            "id": new_msg_id,
+            "sender": "me",
+            "text": trimmed,
+            "time": time_str,
+            "timestamp": created_at.isoformat() if hasattr(created_at, "isoformat") else None,
+            "seen": False,
+        },
+    }
+
