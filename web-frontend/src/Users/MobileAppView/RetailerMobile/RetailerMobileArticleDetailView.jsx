@@ -10,7 +10,10 @@ import {
   Send,
   CornerDownRight,
   ChevronDown,
+  Flag,
 } from "lucide-react";
+import ReportCommentModal from "../../../Components/Modals/NewsUpdates/ReportCommentModal";
+import useNewsUpdates from "../../../Components/hooks/NewsUpdates/useNewsUpdates";
 
 export default function RetailerMobileArticleDetailView({
   article,
@@ -21,6 +24,26 @@ export default function RetailerMobileArticleDetailView({
   const [isSaved, setIsSaved] = useState(false);
   const [likesCount, setLikesCount] = useState(24);
   const [commentText, setCommentText] = useState("");
+  const [reportingComment, setReportingComment] = useState(null);
+  const [feedback, setFeedback] = useState(null);
+
+  const { reportNewsComment } = useNewsUpdates();
+
+  const handleReportComment = async (reason) => {
+    if (!reportingComment) return;
+    try {
+      await reportNewsComment({
+        commentId: reportingComment.id,
+        reason,
+        title: article?.title || "News Article",
+      });
+      setFeedback({ type: "success", text: "Report submitted successfully." });
+      setTimeout(() => setFeedback(null), 4000);
+    } catch (err) {
+      setFeedback({ type: "error", text: err?.message || "Unable to submit report." });
+      setTimeout(() => setFeedback(null), 4000);
+    }
+  };
   const [comments, setComments] = useState([
     {
       id: "c-1",
@@ -268,6 +291,16 @@ export default function RetailerMobileArticleDetailView({
           </div>
         </div>
 
+        {feedback && (
+          <div className={`p-2.5 rounded-xl text-xs font-semibold ${
+            feedback.type === "success"
+              ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
+              : "bg-red-50 border border-red-200 text-red-800"
+          }`}>
+            {feedback.text}
+          </div>
+        )}
+
         {/* Comment Thread List */}
         <div className="space-y-4 pt-1">
           {comments.map((c) => (
@@ -297,6 +330,14 @@ export default function RetailerMobileArticleDetailView({
                     <button className="flex items-center gap-1 hover:text-gray-600 cursor-pointer">
                       <Heart size={11} />
                       <span>{c.likes} Likes</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReportingComment(c)}
+                      className="flex items-center gap-1 hover:text-red-600 cursor-pointer text-gray-400"
+                    >
+                      <Flag size={11} />
+                      <span>Report</span>
                     </button>
                   </div>
                 </div>
@@ -333,6 +374,14 @@ export default function RetailerMobileArticleDetailView({
           ))}
         </div>
       </div>
+
+      <ReportCommentModal
+        isOpen={Boolean(reportingComment)}
+        onClose={() => setReportingComment(null)}
+        comment={reportingComment}
+        articleTitle={article?.title || ""}
+        onSubmitReport={handleReportComment}
+      />
     </div>
   );
 }

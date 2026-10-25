@@ -442,10 +442,31 @@ const MillerInfo = () => {
     archiveMillerEmployee,
     restoreMillerEmployee,
     deleteMillerEmployee,
+    resolveMillerReport,
   } =
     useMillerManagement(
       "active"
     );
+
+  const handleResolveReport = async (reportId) => {
+    try {
+      await resolveMillerReport(reportId);
+      if (userId) {
+        await getMillerViewDetails(userId);
+      }
+      showToast({
+        type: "success",
+        title: "Report Resolved",
+        message: "Miller report marked as resolved successfully.",
+      });
+    } catch (err) {
+      showToast({
+        type: "error",
+        title: "Resolution Failed",
+        message: err?.message || "Unable to resolve report.",
+      });
+    }
+  };
 
 
   // =========================================================
@@ -1687,8 +1708,26 @@ const MillerInfo = () => {
                 row.created_at
               ),
         },
+
+        {
+          key: "action",
+          label: "Action",
+          width: "12%",
+          render: (row) =>
+            (row.status || "").toLowerCase() === "pending" ? (
+              <button
+                type="button"
+                onClick={() => handleResolveReport(row.report_id || row.id)}
+                className="rounded-lg bg-[#08511f] px-3 py-1 text-[11px] font-semibold text-white hover:bg-[#063f18] transition-colors cursor-pointer"
+              >
+                Resolve
+              </button>
+            ) : (
+              <span className="text-[11px] text-gray-400 font-medium">Resolved</span>
+            ),
+        },
       ],
-      []
+      [handleResolveReport]
     );
 
 

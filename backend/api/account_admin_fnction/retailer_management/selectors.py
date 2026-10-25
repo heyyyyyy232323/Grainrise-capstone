@@ -722,3 +722,77 @@ def retailer_exists(
         row
         and row[0]
     )
+
+
+# ============================================================
+# RETAILER REPORTS
+# ============================================================
+
+def get_retailer_reports(
+    user_id,
+):
+    """
+    Return reports submitted against one Retailer account.
+    Returns [] when the support table does not exist or user_id is invalid.
+    """
+    if not _table_exists("retailer_reports"):
+        return []
+
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return []
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                rr.retailer_report_id
+                    AS report_id,
+
+                rr.retailer_user_id,
+
+                rr.reported_by_user_id,
+
+                CONCAT_WS(
+                    ' ',
+                    NULLIF(TRIM(reporter.first_name), ''),
+                    NULLIF(TRIM(reporter.middle_initial), ''),
+                    NULLIF(TRIM(reporter.last_name), ''),
+                    NULLIF(TRIM(reporter.suffix), '')
+                )
+                    AS reported_by,
+
+                reporter.email
+                    AS reporter_email,
+
+                reporter.user_role
+                    AS reporter_role,
+
+                rr.category,
+
+                rr.description,
+
+                rr.status,
+
+                rr.created_at,
+
+                rr.updated_at
+
+            FROM retailer_reports rr
+
+            INNER JOIN users reporter
+                ON reporter.user_id = rr.reported_by_user_id
+
+            WHERE
+                rr.retailer_user_id = %s
+
+            ORDER BY
+                rr.created_at DESC,
+                rr.retailer_report_id DESC
+            """,
+            [numeric_user_id],
+        )
+
+        return _rows_to_dicts(cursor)
+

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import useMillerContractMessages from "../../../Components/hooks/Miller/useMillerContractMessages";
+import { ArticleMessageContent } from "../../../Components/Minor-Components/ArticleAttachmentCard";
 
 
 // ============================================================
@@ -1700,14 +1701,11 @@ export default function MessagesTab({
                                     }
                                   `}
                                 >
-                                  <p
-                                    className="
-                                      whitespace-pre-wrap
-                                      break-words
-                                    "
-                                  >
-                                    {message.message_text}
-                                  </p>
+                                  <ArticleMessageContent
+                                    content={message.message_text || message.message_content}
+                                    attachment={message.message_attachment}
+                                    isMine={mine}
+                                  />
                                 </div>
 
 

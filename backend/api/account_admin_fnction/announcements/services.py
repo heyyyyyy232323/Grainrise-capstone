@@ -1,3 +1,7 @@
+import base64
+import re
+import uuid
+from django.conf import settings
 from django.db import (
     connection,
     transaction,
@@ -45,9 +49,34 @@ def _clean_audience(
 def _clean_image_url(
     value,
 ):
+    if not value:
+        return None
+
     cleaned = str(
-        value or ""
+        value
     ).strip()
+
+    if not cleaned or cleaned.lower() in ("null", "none", "undefined"):
+        return None
+
+    if cleaned.startswith("data:image/"):
+        try:
+            match = re.match(r"^data:image/([a-zA-Z0-9+]+);base64,(.+)$", cleaned, re.DOTALL)
+            if match:
+                ext = match.group(1).lower()
+                if ext == "jpeg":
+                    ext = "jpg"
+                b64data = match.group(2)
+                file_data = base64.b64decode(b64data)
+                ann_dir = settings.MEDIA_ROOT / "announcements"
+                ann_dir.mkdir(parents=True, exist_ok=True)
+                filename = f"announcement_{uuid.uuid4().hex[:12]}.{ext}"
+                filepath = ann_dir / filename
+                with open(filepath, "wb") as f_out:
+                    f_out.write(file_data)
+                return f"/media/announcements/{filename}"
+        except Exception:
+            pass
 
     return cleaned or None
 

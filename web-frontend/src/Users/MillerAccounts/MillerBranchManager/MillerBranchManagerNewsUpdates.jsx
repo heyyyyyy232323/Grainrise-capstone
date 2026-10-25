@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Heart, MessageSquare, ArrowRight, Calendar, ChevronDown, ChevronUp, X, RefreshCw } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
+import { stripHtmlToExcerpt } from "../../../Components/Minor-Components/RichArticleContent";
 import useToast from "../../../Components/hooks/useToast";
 import Toast from "../../../Components/Modals/Toast";
 import useFetchLatestNews from "../../../Components/hooks/NewsUpdates/useFetchLatestNews";
@@ -417,7 +418,7 @@ export default function MillerBranchManagerNewsUpdates() {
                       {news.title}
                     </h4>
                     <p className="text-sm text-gray-600 mb-4 line-clamp-2 leading-relaxed">
-                      {news.description}
+                      {stripHtmlToExcerpt(news.description)}
                     </p>
                   </div>
 

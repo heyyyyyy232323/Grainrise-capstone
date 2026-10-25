@@ -1093,6 +1093,12 @@ const useWarehouseManagement = (
     clearSelectedWarehouse,
     clearWarehouseViewDetails,
     clearError,
+
+    // REPORT ACTIONS
+    resolveWarehouseReport: async (reportId) => {
+      if (!reportId) throw new Error("Report ID is required.");
+      return await request(`/admin/warehouses/reports/${reportId}/resolve/`, { method: "POST" });
+    },
   };
 };
 

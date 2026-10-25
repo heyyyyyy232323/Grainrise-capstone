@@ -224,8 +224,38 @@ const RetailerManagement = () => {
     archiveRetailer,
     restoreRetailer,
     deleteRetailer,
+    resolveRetailerReport,
   } =
     useRetailerManagement();
+
+  const handleResolveReport = async (reportId) => {
+    try {
+      await resolveRetailerReport(reportId);
+      setSelectedRetailerDetails((prev) => {
+        if (!prev) return prev;
+        const currentReports = prev.reports || [];
+        return {
+          ...prev,
+          reports: currentReports.map((r) =>
+            (r.report_id === reportId || r.id === reportId)
+              ? { ...r, status: "resolved", updated_at: new Date().toISOString() }
+              : r
+          ),
+        };
+      });
+      showToast({
+        type: "success",
+        title: "Report Resolved",
+        message: "The retailer report has been marked as resolved.",
+      });
+    } catch (err) {
+      showToast({
+        type: "error",
+        title: "Resolution Failed",
+        message: err?.message || "Unable to resolve report.",
+      });
+    }
+  };
 
 
   // =========================================================
@@ -1798,6 +1828,9 @@ const RetailerManagement = () => {
         }
         isLoading={
           isDetailsLoading
+        }
+        onResolveReport={
+          handleResolveReport
         }
       />
 

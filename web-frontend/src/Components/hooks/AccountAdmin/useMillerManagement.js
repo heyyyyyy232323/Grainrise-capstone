@@ -1068,6 +1068,12 @@ const useMillerManagement = (
 
     // Error helper
     clearError,
+
+    // Report actions
+    resolveMillerReport: async (reportId) => {
+      if (!reportId) throw new Error("Report ID is required.");
+      return await request(`/admin/millers/reports/${reportId}/resolve/`, { method: "POST" });
+    },
   };
 };
 

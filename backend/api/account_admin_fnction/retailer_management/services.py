@@ -953,6 +953,17 @@ def delete_retailer_account(
                     [user_id],
                 )
 
+            # 2.5. Retailer reports
+            if _table_exists("retailer_reports"):
+                cursor.execute(
+                    """
+                    DELETE FROM retailer_reports
+                    WHERE retailer_user_id = %s
+                       OR reported_by_user_id = %s
+                    """,
+                    [user_id, user_id],
+                )
+
             # 3. Miller ratings / reports where retailer was reviewer / reporter
             if _table_exists("miller_ratings"):
                 cursor.execute(
@@ -1086,3 +1097,25 @@ def delete_retailer_account(
         "email": retailer_email,
         "message": "Retailer account permanently deleted successfully.",
     }
+
+
+# ============================================================
+# RESOLVE RETAILER REPORT
+# ============================================================
+
+@transaction.atomic
+def resolve_retailer_report(
+    report_id,
+    *,
+    status="resolved",
+):
+    """
+    Mark a report in retailer_reports as resolved (or dismissed).
+    """
+    from api.comment_reporting import resolve_report_by_type_and_id
+    return resolve_report_by_type_and_id(
+        "retailer",
+        report_id,
+        status=status,
+    )
+

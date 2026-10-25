@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Search, Send, Warehouse, ShieldCheck, Clock, CheckCheck } from "lucide-react";
+import { ArticleMessageContent } from "../../Components/Minor-Components/ArticleAttachmentCard";
 import Breadcrumbs from "../../Components/Minor-Components/Breadcrumbs";
 
 const CHAT_CONTACTS = [
@@ -143,7 +144,7 @@ export default function RetailerMessages() {
                       : "bg-white border border-slate-200 text-gray-800 rounded-bl-none shadow-xs"
                   }`}
                 >
-                  <p className="leading-relaxed">{msg.text}</p>
+                  <ArticleMessageContent content={msg.text} isMine={msg.sender === "me"} className="leading-relaxed" />
                 </div>
                 <span className="text-[10px] text-gray-400 mt-1 px-1 flex items-center gap-1">
                   {msg.time} {msg.sender === "me" && <CheckCheck size={12} className="text-emerald-600" />}

@@ -768,6 +768,30 @@ const useRetailerManagement = () => {
 
 
   // =========================================================
+  // RESOLVE REPORT
+  // =========================================================
+
+  const resolveRetailerReport =
+    useCallback(
+      async (reportId) => {
+        if (!reportId) {
+          throw new Error("Report ID is required.");
+        }
+
+        const response = await request(
+          `/admin/retailers/reports/${reportId}/resolve/`,
+          {
+            method: "POST",
+          }
+        );
+
+        return response;
+      },
+      [request]
+    );
+
+
+  // =========================================================
   // RETURN
   // =========================================================
 
@@ -795,6 +819,7 @@ const useRetailerManagement = () => {
     loadRetailers,
     refreshRetailers,
     getRetailerDetails,
+    resolveRetailerReport,
 
     // ACCOUNT ACTIONS
     confirmRetailer,

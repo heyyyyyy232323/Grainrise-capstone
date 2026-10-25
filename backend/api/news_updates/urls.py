@@ -84,7 +84,22 @@ urlpatterns = [
     # ========================================================
 
     # Feed
+    
+    # Combined feed for Miller Manager (Announcements FIRST, then News)
     path(
+        "combined-feed/",
+        views.combined_news_feed,
+        name="combined-news-feed",
+    ),
+
+    # Public preview for external visitors
+    path(
+        "public/<str:news_id>/",
+        views.public_news_article,
+        name="public-news-article-detail",
+    ),
+
+path(
         "",
         views.news_feed,
         name="news-feed",
@@ -93,7 +108,7 @@ urlpatterns = [
 
     # Article detail
     path(
-        "<int:news_id>/",
+        "<str:news_id>/",
         views.news_article_detail,
         name="news-article-detail",
     ),
@@ -101,7 +116,7 @@ urlpatterns = [
 
     # Like / unlike
     path(
-        "<int:news_id>/reaction/",
+        "<str:news_id>/reaction/",
         views.news_reaction,
         name="news-reaction",
     ),
@@ -109,7 +124,7 @@ urlpatterns = [
 
     # Comments / replies
     path(
-        "<int:news_id>/comments/",
+        "<str:news_id>/comments/",
         views.news_comments,
         name="news-comments",
     ),
@@ -118,7 +133,53 @@ urlpatterns = [
     # Delete own comment
     path(
         "comments/<int:comment_id>/",
-        views.delete_news_comment,
-        name="delete-news-comment",
+        views.news_comment_detail,
+        name="news-comment-detail",
+    ),
+
+
+    # ========================================================
+    # REPORT COMMENT
+    # ========================================================
+
+    path(
+        "comments/<int:comment_id>/report/",
+        views.report_news_comment,
+        name="report-news-comment",
+    ),
+
+    path(
+        "comments/<int:comment_id>/report",
+        views.report_news_comment,
+        name="report-news-comment-no-slash",
+    ),
+
+    path(
+        "report-comment/",
+        views.report_news_comment,
+        name="report-comment-generic",
+    ),
+
+    path(
+        "report-comment",
+        views.report_news_comment,
+        name="report-comment-generic-no-slash",
+    ),
+
+
+    # ========================================================
+    # COMMENTING RESTRICTION STATUS
+    # ========================================================
+
+    path(
+        "commenting-status/",
+        views.commenting_restriction_status,
+        name="commenting-restriction-status",
+    ),
+
+    path(
+        "commenting-status",
+        views.commenting_restriction_status,
+        name="commenting-restriction-status-no-slash",
     ),
 ]
