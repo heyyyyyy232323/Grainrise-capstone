@@ -27,6 +27,7 @@ import useEncoderNotifications from "../hooks/MillerEncoder/useEncoderNotificati
 import useProcurementNotifications from "../hooks/MillerProcurement/useProcurementNotifications";
 import useFinanceNotifications from "../hooks/MillerFinance/useFinanceNotifications";
 import useSalesNotifications from "../hooks/MillerSales/useSalesNotifications";
+import useLogisticsNotifications from "../hooks/MillerLogistics/useLogisticsNotifications";
 
 
 
@@ -330,6 +331,21 @@ const UserNavbar = ({
       (authenticatedUser?.position === "sales" ||
         authenticatedUser?.position === "seller"));
 
+  const isLogistics =
+    propRole === "supplier_logistics" ||
+    propRole === "miller_logistics" ||
+    propRole === "warehouse_logistics" ||
+    role === "supplier_logistics" ||
+    role === "miller_logistics" ||
+    role === "warehouse_logistics" ||
+    (authenticatedUser?.account_type === "supplier_employee" &&
+      (authenticatedUser?.position === "logistics" ||
+        authenticatedUser?.position === "fulfillment_logistics_coordinator")) ||
+    (authenticatedUser?.role === "supplier_employee" &&
+      (authenticatedUser?.position === "logistics" ||
+        authenticatedUser?.position === "fulfillment_logistics_coordinator"));
+
+
 
 
   // =========================================================
@@ -601,6 +617,44 @@ const UserNavbar = ({
   });
 
 
+  // =========================================================
+  // MILLER LOGISTICS NOTIFICATIONS
+  // =========================================================
+
+  const {
+    notifications:
+      logisticsNotifications,
+
+    unseenCount:
+      logisticsUnseenCount,
+
+    isLoading:
+      isLoadingLogisticsNotifications,
+
+    isUpdating:
+      isUpdatingLogisticsNotifications,
+
+    error:
+      logisticsNotificationError,
+
+    loadUnseenCount:
+      loadLogisticsUnseenCount,
+
+    refreshNotifications:
+      refreshLogisticsNotifications,
+
+    openNotification:
+      openLogisticsNotification,
+
+    markAllAsRead:
+      markAllLogisticsNotificationsAsRead,
+  } = useLogisticsNotifications({
+    enabled:
+      isLogistics,
+  });
+
+
+
 
   // =========================================================
   // NAVBAR STATE
@@ -679,7 +733,8 @@ const UserNavbar = ({
         !isEncoder &&
         !isProcurement &&
         !isFinance &&
-        !isSales
+        !isSales &&
+        !isLogistics
       ) {
         return undefined;
       }
@@ -699,7 +754,9 @@ const UserNavbar = ({
                       ? loadProcurementUnseenCount
                       : isFinance
                         ? loadFinanceUnseenCount
-                        : loadSalesUnseenCount;
+                        : isSales
+                          ? loadSalesUnseenCount
+                          : loadLogisticsUnseenCount;
 
 
             refreshCount().catch(
@@ -725,14 +782,17 @@ const UserNavbar = ({
       isProcurement,
       isFinance,
       isSales,
+      isLogistics,
       loadUnreadCount,
       loadFarmerUnreadCount,
       loadEncoderUnseenCount,
       loadProcurementUnseenCount,
       loadFinanceUnseenCount,
       loadSalesUnseenCount,
+      loadLogisticsUnseenCount,
     ]
   );
+
 
 
   // =========================================================
@@ -985,7 +1045,9 @@ const UserNavbar = ({
               ? financeNotifications
               : isSales
                 ? salesNotifications
-                : notifications;
+                : isLogistics
+                  ? logisticsNotifications
+                  : notifications;
 
 
   const usesDatabaseNotifications =
@@ -994,7 +1056,8 @@ const UserNavbar = ({
     isEncoder ||
     isProcurement ||
     isFinance ||
-    isSales;
+    isSales ||
+    isLogistics;
 
 
 
@@ -1011,7 +1074,9 @@ const UserNavbar = ({
               ? isLoadingFinanceNotifications
               : isSales
                 ? isLoadingSalesNotifications
-                : false;
+                : isLogistics
+                  ? isLoadingLogisticsNotifications
+                  : false;
 
 
   const isUpdatingDatabaseNotifications =
@@ -1027,7 +1092,9 @@ const UserNavbar = ({
               ? isUpdatingFinanceNotifications
               : isSales
                 ? isUpdatingSalesNotifications
-                : false;
+                : isLogistics
+                  ? isUpdatingLogisticsNotifications
+                  : false;
 
 
   const databaseNotificationError =
@@ -1043,7 +1110,9 @@ const UserNavbar = ({
               ? financeNotificationError
               : isSales
                 ? salesNotificationError
-                : "";
+                : isLogistics
+                  ? logisticsNotificationError
+                  : "";
 
 
 
@@ -1073,10 +1142,13 @@ const UserNavbar = ({
               ? financeUnseenCount
               : isSales
                 ? salesUnseenCount
-                : (
-                    notificationCount ||
-                    localUnreadCount
-                  );
+                : isLogistics
+                  ? logisticsUnseenCount
+                  : (
+                      notificationCount ||
+                      localUnreadCount
+                    );
+
 
 
 
@@ -1175,8 +1247,22 @@ const UserNavbar = ({
             // Hook already stores error.
           }
         );
+        return;
+      }
+
+      if (
+        willOpen &&
+        isLogistics
+      ) {
+        refreshLogisticsNotifications().catch(
+          () => {
+            // Hook already stores error.
+          }
+        );
+        return;
       }
     };
+
 
 
 
@@ -1278,6 +1364,24 @@ const UserNavbar = ({
 
         return;
       }
+
+      if (isLogistics) {
+        if (
+          logisticsUnseenCount <= 0 ||
+          isUpdatingLogisticsNotifications
+        ) {
+          return;
+        }
+
+        try {
+          await markAllLogisticsNotificationsAsRead();
+        } catch {
+          // Error remains available from hook.
+        }
+
+        return;
+      }
+
 
 
 
@@ -1502,6 +1606,33 @@ const UserNavbar = ({
 
         return;
       }
+
+      if (isLogistics) {
+        try {
+          const result =
+            await openLogisticsNotification(
+              item
+            );
+
+          setNotificationOpen(
+            false
+          );
+
+          const targetPath =
+            result?.targetPath ||
+            item?.action_url ||
+            "/miller-logistics/delivery-management";
+
+          navigate(
+            targetPath
+          );
+        } catch {
+          // Error displayed inside notification panel.
+        }
+
+        return;
+      }
+
 
 
 

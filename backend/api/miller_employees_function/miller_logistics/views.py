@@ -941,3 +941,33 @@ def flc_reimbursement_categories_view(request):
             {"success": False, "error": f"Failed to load reimbursement categories: {str(e)}"},
             status=500,
         )
+
+
+@require_http_methods(["GET"])
+@miller_flc_required
+def flc_dashboard_view(request):
+    """
+    GET /api/miller-employees/logistics/dashboard/
+    Return real, branch-scoped FLC dashboard metrics and summaries.
+    Does NOT generate notifications on dashboard load.
+    """
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    miller_user_id = getattr(request, "grainrise_owner_user_id", None)
+
+    try:
+        data = selectors.get_flc_dashboard_data(supplier_profile_id, miller_user_id)
+
+        return JsonResponse(
+            {
+                "success": True,
+                "data": data,
+            },
+            status=200,
+        )
+    except Exception as e:
+        logger.error(f"Error loading FLC dashboard: {e}", exc_info=True)
+        return JsonResponse(
+            {"success": False, "error": f"Failed to load dashboard data: {str(e)}"},
+            status=500,
+        )
+
