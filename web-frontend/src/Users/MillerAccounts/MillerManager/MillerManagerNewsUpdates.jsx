@@ -1,114 +1,201 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Heart, MessageSquare, ArrowRight, Calendar, ChevronDown, ChevronUp, X, RefreshCw } from "lucide-react";
+import {
+  Search,
+  Heart,
+  MessageSquare,
+  ArrowRight,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  X,
+  RefreshCw,
+  Megaphone,
+  Newspaper,
+} from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
+import {
+  stripHtmlToExcerpt,
+  resolveMediaUrl,
+  slugifyTitle,
+} from "../../../Components/Minor-Components/RichArticleContent";
 import useToast from "../../../Components/hooks/useToast";
 import Toast from "../../../Components/Modals/Toast";
-import useFetchLatestNews from "../../../Components/hooks/NewsUpdates/useFetchLatestNews";
-
-export const MILLER_NEWS_DATA = [
-  {
-    id: 1,
-    category: "MARKET UPDATES",
-    categoryColor: "bg-emerald-100 text-emerald-700 border border-emerald-200",
-    date: "August 20, 2026 · 10:00 AM",
-    isoDate: "2026-08-20",
-    title: "Palay Buying Prices Show Stable Movement This Month",
-    description:
-      "Recent market analysis indicate stable palay buying prices across selected agricultural areas, providing a predictable revenue stream for local producers...",
-    likes: 24,
-    comments: 8,
-    source: "Department of Agriculture",
-  },
-  {
-    id: 2,
-    category: "ADVISORY & BEST PRACTICES",
-    categoryColor: "bg-blue-100 text-blue-700 border border-blue-200",
-    date: "August 17, 2026 · 08:15 AM",
-    isoDate: "2026-08-17",
-    title: "El Niño Preparations: Water Management Strategies for Q4",
-    description:
-      "With projected rainfall deficits approaching in the final quarter, experts recommend immediate implementation of efficient irrigation scheduling and soil...",
-    likes: 56,
-    comments: 12,
-    source: "PAGASA",
-  },
-  {
-    id: 3,
-    category: "GRANT PROGRAMS & SUPPORT",
-    categoryColor: "bg-amber-100 text-amber-700 border border-amber-200",
-    date: "August 10, 2026 · 02:30 PM",
-    isoDate: "2026-08-10",
-    title: "New Fertilizer Discount Vouchers Available for Registration",
-    description:
-      "Eligible registered farmers can now apply for the Q3 fertilizer discount voucher program through the centralized portal to offset rising input costs for the...",
-    likes: 112,
-    comments: 45,
-    source: "National Agri Board",
-  },
-];
+import useApi from "../../../Components/hooks/useApi";
 
 const CATEGORY_OPTIONS = [
   { value: "all", label: "News Category" },
-  { value: "MARKET UPDATES", label: "Market Updates" },
-  { value: "ADVISORY & BEST PRACTICES", label: "Advisory & Best Practices" },
-  { value: "GRANT PROGRAMS & SUPPORT", label: "Grant Programs & Support" },
+  { value: "announcement_admin", label: "Announcement from the admin" },
+  { value: "market_updates", label: "Market Updates" },
+  { value: "advisory_best_practices", label: "Advisory & Best Practices" },
+  { value: "grant_programs_support", label: "Grant Programs & Support" },
+  { value: "weather_climate", label: "Weather & Climate" },
+  { value: "policy_regulation", label: "Policy & Regulation" },
+  { value: "supply_chain", label: "Supply Chain & Logistics" },
+  { value: "general_agriculture", label: "General Agriculture" },
 ];
 
 const SORT_OPTIONS = [
-  { value: "Latest", label: "Latest" },
-  { value: "Most Liked", label: "Most Liked" },
-  { value: "Most Commented", label: "Most Commented" },
+  { value: "latest", label: "Latest" },
+  { value: "most_liked", label: "Most Liked" },
+  { value: "most_commented", label: "Most Commented" },
 ];
+
+function FeedThumbnail({ item }) {
+  const [hasError, setHasError] = useState(false);
+  const resolvedUrl = resolveMediaUrl(item?.image_url);
+  const isAnnouncement = item?.item_type === "announcement";
+
+  if (!resolvedUrl || hasError) {
+    return (
+      <div
+        className={`w-full md:w-64 h-48 md:h-full min-h-[170px] flex flex-col items-center justify-center shrink-0 border-r border-slate-100 p-4 select-none ${
+          isAnnouncement ? "bg-amber-50/70 text-amber-800" : "bg-emerald-50/70 text-emerald-800"
+        }`}
+      >
+        <div
+          className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 shadow-2xs ${
+            isAnnouncement ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
+          }`}
+        >
+          {isAnnouncement ? <Megaphone size={18} /> : <Newspaper size={18} />}
+        </div>
+        <span className="text-[11px] font-extrabold tracking-wider uppercase text-center opacity-85">
+          {isAnnouncement ? "Announcement" : "GrainRise"}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full md:w-64 h-48 md:h-full min-h-[170px] bg-slate-100 flex items-center justify-center shrink-0 border-r border-slate-100 overflow-hidden relative">
+      <img
+        src={resolvedUrl}
+        alt={item.title || "Article Image"}
+        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+        loading="lazy"
+        onError={() => setHasError(true)}
+      />
+    </div>
+  );
+}
 
 export default function MillerManagerNewsUpdates() {
   const navigate = useNavigate();
   const { toasts, showToast, removeToast } = useToast();
-  const [articles, setArticles] = useState(MILLER_NEWS_DATA);
+  const { request } = useApi();
 
-  // Fetch Latest News Hook
-  const { fetchLatestNews, isFetching } = useFetchLatestNews({
-    showToast,
-    onNewsFetched: (fetched) => {
-      if (fetched && fetched.length > 0) {
-        setArticles((prev) => {
-          const formatted = fetched.map((item, idx) => ({
-            id: item.news_id || item.id || `fetched-${idx}`,
-            category: (item.category || "Market Updates").toUpperCase(),
-            categoryColor: "bg-emerald-100 text-emerald-700 border border-emerald-200",
-            date: item.published_at
-              ? new Date(item.published_at).toLocaleString()
-              : "Just now",
-            isoDate: item.published_at ? item.published_at.slice(0, 10) : "2026-08-20",
-            title: item.title,
-            description: item.description || item.snippet || item.content || "",
-            likes: item.likes_count || 0,
-            comments: item.comments_count || 0,
-            source: item.source_name || "GrainRise News",
-          }));
-          return [...formatted, ...prev.filter(p => !formatted.some(f => f.id === p.id))];
-        });
-      }
-    },
-  });
+  const [articles, setArticles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Filter States
   const [search, setSearch] = useState("");
   const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
   const [tempDateRange, setTempDateRange] = useState({ startDate: "", endDate: "" });
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [sortBy, setSortBy] = useState("Latest");
+  const [sortBy, setSortBy] = useState("latest");
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Dropdown visibility states
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
 
-  const [likedArticles, setLikedArticles] = useState({});
+  // Fetching state for "Fetch Latest News" button
+  const [isFetchingLatest, setIsFetchingLatest] = useState(false);
 
   const dateRef = useRef(null);
   const categoryRef = useRef(null);
   const sortRef = useRef(null);
+
+  // Fetch combined feed from backend
+  const fetchFeed = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+
+      if (search.trim()) params.set("search", search.trim());
+      if (selectedCategory && selectedCategory !== "all") {
+        params.set("category", selectedCategory);
+      }
+      if (dateRange.startDate) params.set("start_date", dateRange.startDate);
+      if (dateRange.endDate) params.set("end_date", dateRange.endDate);
+      params.set("sort", sortBy);
+      params.set("limit", String(itemsPerPage));
+      params.set("offset", String((currentPage - 1) * itemsPerPage));
+
+      const res = await request(`/news/combined-feed/?${params.toString()}`, {
+        method: "GET",
+      });
+
+      if (res && res.data) {
+        const items = res.data.items || [];
+        const total = res.data.pagination?.total || items.length;
+        setArticles(items);
+        setTotalCount(total);
+        return { success: true, count: items.length };
+      } else if (res && res.error) {
+        showToast({
+          type: "error",
+          title: "Error",
+          message: res.error,
+        });
+        return { success: false, count: 0 };
+      }
+      return { success: false, count: 0 };
+    } catch (err) {
+      console.error("Error fetching feed:", err);
+      showToast({
+        type: "error",
+        title: "Error",
+        message: err?.message || "Failed to load news & updates feed.",
+      });
+      return { success: false, count: 0 };
+    } finally {
+      setIsLoading(false);
+    }
+  }, [search, selectedCategory, dateRange, sortBy, currentPage, request, showToast]);
+
+  useEffect(() => {
+    fetchFeed();
+  }, [fetchFeed]);
+
+  // Fetch Latest News - Refreshes available records from Aiven without bypassing admin sync/publishing
+  const handleFetchLatestNews = async () => {
+    if (isFetchingLatest) return;
+    setIsFetchingLatest(true);
+    try {
+      const result = await fetchFeed();
+      if (result && result.success && result.count > 0) {
+        showToast({
+          type: "success",
+          title: "Success",
+          message: "Latest news fetched successfully.",
+          duration: 4000,
+        });
+      } else if (result && result.success && result.count === 0) {
+        showToast({
+          type: "warning",
+          title: "No Data",
+          message: "No latest news is currently available.",
+          duration: 4000,
+        });
+      }
+    } catch (err) {
+      showToast({
+        type: "error",
+        title: "Error",
+        message: err?.message || "Failed to fetch the latest news. Please try again.",
+        duration: 4000,
+      });
+    } finally {
+      setIsFetchingLatest(false);
+    }
+  };
 
   // Handle outside clicks to close dropdown popovers
   useEffect(() => {
@@ -127,47 +214,109 @@ export default function MillerManagerNewsUpdates() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Date Range Apply with strict validation
   const handleDateApply = () => {
+    if (
+      tempDateRange.startDate &&
+      tempDateRange.endDate &&
+      tempDateRange.endDate < tempDateRange.startDate
+    ) {
+      showToast({
+        type: "error",
+        title: "Error",
+        message: "End Date cannot precede Start Date.",
+      });
+      return;
+    }
     setDateRange(tempDateRange);
+    setCurrentPage(1);
     setShowDatePicker(false);
   };
 
   const handleDateReset = () => {
     setTempDateRange({ startDate: "", endDate: "" });
     setDateRange({ startDate: "", endDate: "" });
+    setCurrentPage(1);
     setShowDatePicker(false);
   };
 
-  const toggleLike = (e, id) => {
+  // Like / Unlike action
+  const toggleLike = async (e, item) => {
     e.stopPropagation();
-    setLikedArticles((prev) => ({ ...prev, [id]: !prev[id] }));
+
+    // Optimistic update
+    const prevArticles = [...articles];
+    setArticles((prev) =>
+      prev.map((art) => {
+        if (art.id === item.id && art.item_type === item.item_type) {
+          const nextLiked = !art.is_liked;
+          return {
+            ...art,
+            is_liked: nextLiked,
+            likes: nextLiked ? art.likes + 1 : Math.max(0, art.likes - 1),
+          };
+        }
+        return art;
+      })
+    );
+
+    try {
+      const endpoint =
+        item.item_type === "announcement"
+          ? `/announcements/${item.id}/reaction/`
+          : `/news/${item.id}/reaction/`;
+
+      const res = await request(endpoint, {
+        method: "POST",
+      });
+
+      if (res && res.data) {
+        const resData = res.data;
+        setArticles((prev) =>
+          prev.map((art) => {
+            if (art.id === item.id && art.item_type === item.item_type) {
+              return {
+                ...art,
+                is_liked:
+                  resData.is_liked !== undefined
+                    ? resData.is_liked
+                    : !art.is_liked,
+                likes:
+                  resData.reaction_count !== undefined
+                    ? resData.reaction_count
+                    : art.likes,
+              };
+            }
+            return art;
+          })
+        );
+      } else if (res && res.error) {
+        setArticles(prevArticles);
+        showToast({
+          type: "error",
+          title: "Error",
+          message: res.error || "Could not update like status.",
+        });
+      }
+    } catch (err) {
+      console.error("Like toggle failed:", err);
+      setArticles(prevArticles);
+      showToast({
+        type: "error",
+        title: "Error",
+        message: "Could not update like status.",
+      });
+    }
   };
 
-  // Filter & Sort Logic
-  const filtered = articles.filter((news) => {
-    if (search) {
-      const q = search.toLowerCase();
-      const matchTitle = news.title.toLowerCase().includes(q);
-      const matchDesc = news.description.toLowerCase().includes(q);
-      if (!matchTitle && !matchDesc) return false;
-    }
-
-    if (dateRange.startDate && news.isoDate < dateRange.startDate) return false;
-    if (dateRange.endDate && news.isoDate > dateRange.endDate) return false;
-
-    if (selectedCategory !== "all" && news.category !== selectedCategory) {
-      return false;
-    }
-
-    return true;
-  }).sort((a, b) => {
-    if (sortBy === "Most Liked") return b.likes - a.likes;
-    if (sortBy === "Most Commented") return b.comments - a.comments;
-    return b.id - a.id; // Default "Latest"
-  });
-
   const categoryLabel =
-    CATEGORY_OPTIONS.find((opt) => opt.value === selectedCategory)?.label || "News Category";
+    CATEGORY_OPTIONS.find((opt) => opt.value === selectedCategory)?.label ||
+    "News Category";
+
+  const sortLabel =
+    SORT_OPTIONS.find((opt) => opt.value === sortBy)?.label || "Latest";
+
+  const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
 
   return (
     <div className="space-y-6">
@@ -181,18 +330,18 @@ export default function MillerManagerNewsUpdates() {
             News &amp; Updates
           </h2>
           <p className="text-sm text-slate-500">
-            Stay informed with the latest agricultural news, market updates, advisories, and programs.
+            Stay informed with the latest agricultural news, market updates, advisories, and administrative announcements.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={fetchLatestNews}
-          disabled={isFetching}
+          onClick={handleFetchLatestNews}
+          disabled={isFetchingLatest || isLoading}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#00580C] hover:bg-[#00470A] text-white text-xs sm:text-sm font-semibold rounded-lg shadow-xs hover:shadow transition cursor-pointer disabled:opacity-60 whitespace-nowrap self-start sm:self-center"
         >
-          <RefreshCw size={15} className={isFetching ? "animate-spin" : ""} />
-          <span>{isFetching ? "Fetching..." : "Fetch Latest News"}</span>
+          <RefreshCw size={15} className={isFetchingLatest ? "animate-spin" : ""} />
+          <span>{isFetchingLatest ? "Fetching..." : "Fetch Latest News"}</span>
         </button>
       </div>
 
@@ -205,14 +354,20 @@ export default function MillerManagerNewsUpdates() {
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search news and updates..."
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Search news and announcements..."
               className="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
             />
             {search && (
               <button
                 type="button"
-                onClick={() => setSearch("")}
+                onClick={() => {
+                  setSearch("");
+                  setCurrentPage(1);
+                }}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
               >
                 <X size={15} />
@@ -238,7 +393,7 @@ export default function MillerManagerNewsUpdates() {
             </button>
 
             {showDatePicker && (
-              <div className="absolute top-full mt-2 left-0 sm:left-auto bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-20 w-64">
+              <div className="absolute top-full mt-2 left-0 sm:left-auto bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-20 w-64 animate-in fade-in zoom-in-95 duration-100">
                 <div className="space-y-3">
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">
@@ -303,7 +458,7 @@ export default function MillerManagerNewsUpdates() {
             </button>
 
             {showCategoryDropdown && (
-              <div className="absolute top-full mt-1.5 left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-1.5 z-30 w-60 animate-in fade-in zoom-in-95 duration-100">
+              <div className="absolute top-full mt-1.5 left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-1.5 z-30 w-64 animate-in fade-in zoom-in-95 duration-100 max-h-72 overflow-y-auto">
                 <div className="space-y-0.5">
                   {CATEGORY_OPTIONS.map((opt) => {
                     const isSelected = selectedCategory === opt.value;
@@ -313,6 +468,7 @@ export default function MillerManagerNewsUpdates() {
                         type="button"
                         onClick={() => {
                           setSelectedCategory(opt.value);
+                          setCurrentPage(1);
                           setShowCategoryDropdown(false);
                         }}
                         className={`w-full text-left px-3.5 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
@@ -337,7 +493,7 @@ export default function MillerManagerNewsUpdates() {
               onClick={() => setShowSortDropdown((prev) => !prev)}
               className="flex items-center gap-2 border border-gray-200 bg-white px-4 py-2 rounded-2xl text-sm font-medium text-slate-800 hover:bg-gray-50 transition-colors cursor-pointer h-[38px] min-w-[140px] justify-between shadow-2xs"
             >
-              <span>{sortBy}</span>
+              <span>{sortLabel}</span>
               {showSortDropdown ? (
                 <ChevronUp size={16} className="text-slate-500" />
               ) : (
@@ -356,6 +512,7 @@ export default function MillerManagerNewsUpdates() {
                         type="button"
                         onClick={() => {
                           setSortBy(opt.value);
+                          setCurrentPage(1);
                           setShowSortDropdown(false);
                         }}
                         className={`w-full text-left px-3.5 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
@@ -375,49 +532,55 @@ export default function MillerManagerNewsUpdates() {
         </div>
       </div>
 
-      {/* ── News List ──────────────────────────────────────────────────────── */}
+      {/* ── Articles List ───────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4">
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="p-12 text-center text-gray-500 border border-slate-200 rounded-xl bg-white space-y-2">
+            <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-emerald-600 border-r-transparent" />
+            <p className="text-xs font-semibold">Loading news &amp; announcements...</p>
+          </div>
+        ) : articles.length === 0 ? (
           <div className="p-8 text-center text-gray-500 border border-slate-200 rounded-xl bg-white">
-            No articles found matching your criteria.
+            No articles or announcements found matching your criteria.
           </div>
         ) : (
-          filtered.map((news) => {
-            const isLiked = likedArticles[news.id];
-            const displayLikes = isLiked ? news.likes + 1 : news.likes;
+          articles.map((item) => {
+            const isLiked = item.is_liked;
+            const targetSlug = item.slug || slugifyTitle(item.title) || item.id;
 
             return (
               <div
-                key={news.id}
-                onClick={() => navigate(`/miller-manager/news-updates/${news.id}`)}
+                key={item.feed_id || `${item.item_type}-${item.id}`}
+                onClick={() =>
+                  navigate(`/miller-manager/news-updates/${targetSlug}?type=${item.item_type}`)
+                }
                 className="border border-slate-200 rounded-xl bg-white shadow-sm flex flex-col md:flex-row overflow-hidden hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer group"
               >
-                {/* Thumbnail Placeholder */}
-                <div className="w-full md:w-64 h-48 md:h-auto bg-emerald-700/10 flex items-center justify-center shrink-0 border-r border-slate-100">
-                  <span className="text-emerald-900/40 font-bold text-sm tracking-widest uppercase">
-                    Image
-                  </span>
-                </div>
+                {/* Thumbnail Image or Placeholder */}
+                <FeedThumbnail item={item} />
 
                 {/* Content */}
                 <div className="p-5 flex flex-col justify-between w-full">
                   <div>
                     <div className="flex items-center gap-3 mb-2">
                       <span
-                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase ${news.categoryColor}`}
+                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase ${
+                          item.category_color ||
+                          "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                        }`}
                       >
-                        {news.category}
+                        {item.category}
                       </span>
                       <span className="text-[11px] text-gray-500 font-medium">
-                        {news.date}
+                        {item.date}
                       </span>
                     </div>
 
-                    <h4 className="text-lg font-bold text-gray-900 mb-2 leading-snug group-hover:text-[#0B5D1E] transition-colors">
-                      {news.title}
+                    <h4 className="text-lg font-bold text-gray-900 mb-2 leading-snug group-hover:text-[#0B5D1E] transition-colors line-clamp-2">
+                      {item.title}
                     </h4>
                     <p className="text-sm text-gray-600 mb-4 line-clamp-2 leading-relaxed">
-                      {news.description}
+                      {stripHtmlToExcerpt(item.description)}
                     </p>
                   </div>
 
@@ -425,23 +588,32 @@ export default function MillerManagerNewsUpdates() {
                     <div className="flex items-center gap-4 text-xs font-medium text-gray-500">
                       <button
                         type="button"
-                        onClick={(e) => toggleLike(e, news.id)}
-                        className={`flex items-center gap-1 ${
-                          isLiked ? "text-emerald-700 font-semibold" : "hover:text-emerald-700"
+                        onClick={(e) => toggleLike(e, item)}
+                        className={`flex items-center gap-1 transition cursor-pointer ${
+                          isLiked
+                            ? "text-emerald-700 font-semibold"
+                            : "hover:text-emerald-700"
                         }`}
                       >
-                        <Heart size={14} fill={isLiked ? "currentColor" : "none"} /> {displayLikes}
+                        <Heart
+                          size={14}
+                          className={isLiked ? "fill-emerald-700 text-emerald-700" : ""}
+                        />
+                        <span>{item.likes}</span>
                       </button>
+
                       <span className="flex items-center gap-1">
-                        <MessageSquare size={14} /> {news.comments} Comments
+                        <MessageSquare size={14} /> {item.comments} Comments
                       </span>
-                      <span className="hidden sm:inline-block">Source: {news.source}</span>
+
+                      <span className="hidden sm:inline-block">Source: {item.source}</span>
                     </div>
+
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/miller-manager/news-updates/${news.id}`);
+                        navigate(`/miller-manager/news-updates/${targetSlug}?type=${item.item_type}`);
                       }}
                       className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 transition cursor-pointer"
                     >
@@ -456,28 +628,64 @@ export default function MillerManagerNewsUpdates() {
       </div>
 
       {/* ── Pagination ───────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between border-t border-gray-200 pt-4">
-        <p className="text-sm text-gray-500">
-          Showing 1-{filtered.length} of {MILLER_NEWS_DATA.length} articles
-        </p>
-        <div className="flex gap-1">
-          <button type="button" className="px-3 py-1 border border-gray-200 text-gray-400 rounded-md text-sm cursor-not-allowed">
-            Previous
-          </button>
-          <button type="button" className="px-3 py-1 bg-[#0B5D1E] text-white font-medium rounded-md text-sm cursor-pointer">
-            1
-          </button>
-          <button type="button" className="px-3 py-1 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-md text-sm transition cursor-pointer">
-            2
-          </button>
-          <button type="button" className="px-3 py-1 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-md text-sm transition cursor-pointer">
-            3
-          </button>
-          <button type="button" className="px-3 py-1 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-md text-sm transition cursor-pointer">
-            Next
-          </button>
+      {totalCount > 0 && (
+        <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+          <p className="text-sm text-gray-500">
+            Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalCount)}-
+            {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} articles
+          </p>
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={currentPage <= 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="px-3 py-1 border border-gray-200 text-gray-700 rounded-md text-sm transition hover:bg-gray-50 disabled:text-gray-300 disabled:cursor-not-allowed cursor-pointer"
+            >
+              Previous
+            </button>
+
+            {Array.from({ length: totalPages }, (_, idx) => idx + 1)
+              .filter((page) => {
+                return (
+                  page === 1 ||
+                  page === totalPages ||
+                  Math.abs(page - currentPage) <= 1
+                );
+              })
+              .map((page, idx, arr) => {
+                const prevPage = arr[idx - 1];
+                const showEllipsis = prevPage && page - prevPage > 1;
+
+                return (
+                  <span key={page} className="flex items-center">
+                    {showEllipsis && <span className="px-1 text-gray-400">...</span>}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-1 rounded-md text-sm transition cursor-pointer ${
+                        currentPage === page
+                          ? "bg-[#0B5D1E] text-white font-medium"
+                          : "border border-gray-200 text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  </span>
+                );
+              })}
+
+            <button
+              type="button"
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="px-3 py-1 border border-gray-200 text-gray-700 rounded-md text-sm transition hover:bg-gray-50 disabled:text-gray-300 disabled:cursor-not-allowed cursor-pointer"
+            >
+              Next
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

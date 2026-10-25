@@ -285,6 +285,23 @@ def add_news_comment(
         "Comment",
     )
 
+    # ========================================================
+    # PROFANITY CHECK
+    # ========================================================
+    from api.chat_moderation import find_profanity_matches
+    matches = find_profanity_matches(comment_text)
+    if matches:
+        raise ValueError("Comment contains inappropriate or prohibited words.")
+
+    # ========================================================
+    # COMMENTING RESTRICTION CHECK (24h / 48h pending issues)
+    # ========================================================
+    from api.comment_reporting import check_user_commenting_restriction
+
+    restriction = check_user_commenting_restriction(user_id)
+    if restriction.get("restricted"):
+        raise ValueError(restriction["message"])
+
     parent_id = None
 
     if parent_comment_id not in (
@@ -480,6 +497,76 @@ def delete_own_news_comment(
         "deleted":
             deleted
     }
+
+# ============================================================
+# EDIT OWN COMMENT
+# ============================================================
+
+def edit_own_news_comment(
+    user_id,
+    comment_id,
+    comment_text,
+):
+    user_id = _positive_integer(
+        user_id,
+        "user ID",
+    )
+
+    comment_id = _positive_integer(
+        comment_id,
+        "comment ID",
+    )
+
+    comment_text = _required_text(
+        comment_text,
+        "Comment",
+    )
+
+    # Commenting restriction check
+    from api.comment_reporting import check_user_commenting_restriction
+    restriction = check_user_commenting_restriction(user_id)
+    if restriction.get("restricted"):
+        raise ValueError(restriction["message"])
+
+    # Profanity check
+    from api.chat_moderation import find_profanity_matches
+    matches = find_profanity_matches(comment_text)
+    if matches:
+        raise ValueError("Comment contains inappropriate or prohibited words.")
+
+    with transaction.atomic():
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE news_comments
+                SET
+                    comment_text = %s,
+                    comment_status = 'edited',
+                    updated_at = CURRENT_TIMESTAMP(6)
+                WHERE
+                    comment_id = %s
+                    AND user_id = %s
+                    AND comment_status != 'deleted'
+                """,
+                [
+                    comment_text,
+                    comment_id,
+                    user_id,
+                ],
+            )
+            updated = bool(cursor.rowcount > 0)
+
+    if not updated:
+        raise ValueError(
+            "Unable to edit news comment. You may only edit your own active comments."
+        )
+
+    return {
+        "updated": updated,
+        "comment_id": comment_id,
+        "comment_text": comment_text,
+    }
+
 
 
 # ============================================================

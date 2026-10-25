@@ -766,5 +766,21 @@ export default function useNewsUpdates() {
     toggleNewsLike,
     addNewsComment,
     deleteNewsComment,
+    reportNewsComment: async ({ commentId, reason, title, commentType = "news" }) => {
+      if (!commentId) throw new Error("Comment ID is required.");
+      if (!reason || !reason.trim()) throw new Error("Reason is required.");
+
+      return await request(
+        `/news/comments/${commentId}/report/`,
+        {
+          method: "POST",
+          body: {
+            reason: reason.trim(),
+            title: title ? title.trim() : undefined,
+            comment_type: commentType,
+          },
+        }
+      );
+    },
   };
 }

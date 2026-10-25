@@ -1,3 +1,4 @@
+import RichArticleContent from "../../Minor-Components/RichArticleContent";
 import {
   useEffect,
   useState,
@@ -767,20 +768,12 @@ const AdminNewsDetailsModal = ({
                     )}
 
 
-                    <p
-                      className="
-                        mt-5
-                        whitespace-pre-wrap
-                        text-sm
-                        leading-7
-                        text-gray-600
-                      "
-                    >
-                      {
-                        article.article_body ||
-                        "Full article body is not stored by the current news provider."
-                      }
-                    </p>
+                    <div className="mt-5">
+                      <RichArticleContent
+                        content={article.article_body || article.description}
+                        fallbackText="Full article body is not stored by the current news provider."
+                      />
+                    </div>
 
 
                     {article.article_url && (

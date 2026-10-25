@@ -80,4 +80,33 @@ urlpatterns = [
         views.delete_retailer_management_account,
         name="delete",
     ),
+
+
+    # ========================================================
+    # RESOLVE RETAILER REPORT
+    # ========================================================
+
+    path(
+        "reports/<int:report_id>/resolve/",
+        views.resolve_retailer_management_report,
+        name="resolve-report",
+    ),
+
+    path(
+        "reports/<int:report_id>/resolve",
+        views.resolve_retailer_management_report,
+        name="resolve-report-no-slash",
+    ),
+
+    path(
+        "<str:user_id>/reports/<int:report_id>/resolve/",
+        views.resolve_retailer_management_report,
+        name="resolve-user-report",
+    ),
+
+    path(
+        "<str:user_id>/reports/<int:report_id>/resolve",
+        views.resolve_retailer_management_report,
+        name="resolve-user-report-no-slash",
+    ),
 ]

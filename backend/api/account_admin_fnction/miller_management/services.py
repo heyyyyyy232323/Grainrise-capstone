@@ -1741,3 +1741,21 @@ def delete_miller_employee(
         "message":
             "Miller employee account permanently deleted successfully.",
     }
+
+# ============================================================
+# RESOLVE MILLER REPORT
+# ============================================================
+
+@transaction.atomic
+def resolve_miller_report(
+    report_id,
+    *,
+    status="resolved",
+):
+    from api.comment_reporting import resolve_report_by_type_and_id
+    return resolve_report_by_type_and_id(
+        "miller",
+        report_id,
+        status=status,
+    )
+

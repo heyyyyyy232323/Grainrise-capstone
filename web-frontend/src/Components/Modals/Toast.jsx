@@ -35,7 +35,7 @@ const TOAST_VARIANTS = {
     ),
   },
   error: {
-    title: "Save Failed",
+    title: "Error",
     borderColor: "border-[#ef4444]",
     accentBorder: "border-l-[#ef4444]",
     iconBg: "bg-[#ef4444]",

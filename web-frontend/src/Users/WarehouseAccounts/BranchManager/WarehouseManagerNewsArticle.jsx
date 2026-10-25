@@ -9,6 +9,7 @@ import {
   ThumbsUp,
 } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
+import RichArticleContent from "../../../Components/Minor-Components/RichArticleContent";
 import field1 from "../../../assets/field1.png";
 import field2 from "../../../assets/field2.png";
 
@@ -119,11 +120,7 @@ export default function WarehouseManagerNewsArticle() {
         </div>
 
         <div className="px-7 py-6">
-          {article.content.trim().split("\n\n").map((para, i) => (
-            <p key={i} className="text-sm md:text-base text-gray-700 leading-relaxed mb-5 last:mb-0">
-              {para.trim()}
-            </p>
-          ))}
+          <RichArticleContent content={article.content} />
         </div>
 
         <div className="px-7 py-4 border-t border-slate-100 flex items-center justify-between">

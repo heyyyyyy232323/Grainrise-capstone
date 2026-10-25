@@ -2842,3 +2842,93 @@ def admin_penalize_announcement_reply_author(
             "Unable to penalize this user.",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+# ============================================================
+# REPORT ANNOUNCEMENT COMMENT
+# ============================================================
+
+@api_view(["POST"])
+def report_announcement_comment_view(request, comment_id):
+    from api.comment_reporting import get_authenticated_user_id, report_comment
+
+    reporter_id = get_authenticated_user_id(request)
+    if not reporter_id:
+        return _error(
+            "Authentication required to report comments.",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    data = _request_data(request)
+    reason = data.get("reason")
+    title = data.get("title")
+
+    try:
+        result = report_comment(
+            reporter_id,
+            comment_id=comment_id,
+            reason=reason,
+            comment_type="announcement",
+            title=title,
+        )
+        msg = (
+            result.get("message")
+            if result.get("already_reported")
+            else "Comment report submitted successfully."
+        )
+        return _success(
+            data=result,
+            message=msg,
+        )
+    except LookupError as exc:
+        return _error(exc, status_code=status.HTTP_404_NOT_FOUND)
+    except ValueError as exc:
+        return _error(exc, status_code=status.HTTP_400_BAD_REQUEST)
+    except Exception:
+        logger.exception("Unable to report announcement comment.")
+        return _error("Unable to submit report.", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ============================================================
+# REPORT ANNOUNCEMENT REPLY
+# ============================================================
+
+@api_view(["POST"])
+def report_announcement_reply_view(request, reply_id):
+    from api.comment_reporting import get_authenticated_user_id, report_comment
+
+    reporter_id = get_authenticated_user_id(request)
+    if not reporter_id:
+        return _error(
+            "Authentication required to report replies.",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    data = _request_data(request)
+    reason = data.get("reason")
+    title = data.get("title")
+
+    try:
+        result = report_comment(
+            reporter_id,
+            comment_id=reply_id,
+            reason=reason,
+            comment_type="announcement_reply",
+            title=title,
+        )
+        msg = (
+            result.get("message")
+            if result.get("already_reported")
+            else "Reply report submitted successfully."
+        )
+        return _success(
+            data=result,
+            message=msg,
+        )
+    except LookupError as exc:
+        return _error(exc, status_code=status.HTTP_404_NOT_FOUND)
+    except ValueError as exc:
+        return _error(exc, status_code=status.HTTP_400_BAD_REQUEST)
+    except Exception:
+        logger.exception("Unable to report announcement reply.")
+        return _error("Unable to submit report.", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

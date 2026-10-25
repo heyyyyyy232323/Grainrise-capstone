@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Search, Paperclip, Send, FileText } from "lucide-react";
+import { ArticleMessageContent } from "../../../Components/Minor-Components/ArticleAttachmentCard";
 
 // ── Mock Conversation Data ──────────────────────────────────────────────────
 const INITIAL_CONVERSATIONS = [
@@ -252,7 +253,13 @@ export default function WarehouseManagerMessagesTab() {
                         : "bg-white text-gray-800 border border-slate-200/80 shadow-xs rounded-bl-xs"
                     }`}
                   >
-                    {msg.text && <p>{msg.text}</p>}
+                    {msg.text && (
+                      <ArticleMessageContent
+                        content={msg.text}
+                        attachment={msg.attachment}
+                        isMine={isMe}
+                      />
+                    )}
 
                     {/* File Attachment Bubble */}
                     {msg.attachment && (

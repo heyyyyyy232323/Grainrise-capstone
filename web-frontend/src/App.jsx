@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import React from "react";
 
+import PublicArticlePreview from "./Users/PublicView/PublicArticlePreview";
 import LandingPage from "./LandingPage";
 import Login from "./Login/UserLogin";
 import AdminLogin from "./Login/AdminLogin";
@@ -316,6 +317,10 @@ function App() {
         {/* ==================================================
               PUBLIC
           ================================================== */}
+
+                {/* Public Article Previews */}
+        <Route path="/public/news/:id" element={<PublicArticlePreview />} />
+        <Route path="/public/announcements/:id" element={<PublicArticlePreview />} />
 
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />

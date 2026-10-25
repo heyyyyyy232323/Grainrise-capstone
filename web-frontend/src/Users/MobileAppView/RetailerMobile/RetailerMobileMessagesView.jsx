@@ -299,9 +299,7 @@ export default function RetailerMobileMessagesView({ onBack }) {
                 return (
                   <div key={msg.id} className="flex flex-col items-end space-y-1">
                     <div className="bg-[#00580C] text-white rounded-2xl rounded-tr-xs p-3.5 max-w-[88%] shadow-2xs space-y-1.5">
-                      <p className="text-xs text-white leading-relaxed">
-                        {msg.text}
-                      </p>
+                      <ArticleMessageContent content={msg.text} isMine={true} className="text-xs text-white leading-relaxed" />
                       <div className="flex items-center justify-end gap-1 text-[10px] text-emerald-100">
                         <span>{msg.time}</span>
                         {msg.delivered && (

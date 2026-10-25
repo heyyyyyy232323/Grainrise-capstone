@@ -1000,7 +1000,9 @@ const ReportDetailsModal = ({
   isOpen,
   report,
   onClose,
+  onResolve,
 }) => {
+  const [isResolving, setIsResolving] = useState(false);
   if (
     !isOpen ||
     !report
@@ -1205,6 +1207,37 @@ const ReportDetailsModal = ({
           >
             Close
           </button>
+
+          {(report?.status || "").toLowerCase() === "pending" && onResolve && (
+            <button
+              type="button"
+              disabled={isResolving}
+              onClick={async () => {
+                setIsResolving(true);
+                try {
+                  await onResolve(report.id);
+                  onClose();
+                } finally {
+                  setIsResolving(false);
+                }
+              }}
+              className="
+                rounded-lg
+                bg-[#08511f]
+                px-5
+                py-2
+                text-xs
+                font-bold
+                text-white
+                hover:bg-[#063f18]
+                transition-colors
+                disabled:opacity-50
+                cursor-pointer
+              "
+            >
+              {isResolving ? "Resolving..." : "Resolve Report"}
+            </button>
+          )}
         </div>
       </div>
     </div>,
@@ -1243,7 +1276,28 @@ const WarehouseInfo = () => {
     archiveWarehouseEmployee,
     restoreWarehouseEmployee,
     deleteWarehouseEmployee,
+    resolveWarehouseReport,
   } = useWarehouseManagement();
+
+  const handleResolveReport = async (reportId) => {
+    try {
+      await resolveWarehouseReport(reportId);
+      if (userId) {
+        await getWarehouseViewDetails(userId);
+      }
+      showToast({
+        type: "success",
+        title: "Report Resolved",
+        message: "Warehouse report marked as resolved successfully.",
+      });
+    } catch (err) {
+      showToast({
+        type: "error",
+        title: "Resolution Failed",
+        message: err?.message || "Unable to resolve report.",
+      });
+    }
+  };
 
 
   const {
@@ -3340,6 +3394,7 @@ const WarehouseInfo = () => {
         report={
           selectedReport
         }
+        onResolve={handleResolveReport}
         onClose={() => {
           setReportModal(
             false

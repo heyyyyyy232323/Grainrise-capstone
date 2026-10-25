@@ -1,3 +1,4 @@
+import { stripHtmlToExcerpt } from "../../../../Components/Minor-Components/RichArticleContent";
 import {
   useEffect,
   useState,
@@ -217,7 +218,7 @@ const NewsCard = ({
         "
       >
         {
-          article.description ||
+          stripHtmlToExcerpt(article.description) ||
           "No description available."
         }
       </p>
