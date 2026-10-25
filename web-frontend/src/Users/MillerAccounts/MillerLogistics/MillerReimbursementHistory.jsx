@@ -47,6 +47,82 @@ const resolveMediaUrl = (raw) => {
   return `${backendBase}/media/${clean}`;
 };
 
+const stripHtml = (html) => (html || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").trim();
+
+const hasVisibleContent = (htmlString) => {
+  if (!htmlString || typeof htmlString !== "string") return false;
+  return stripHtml(htmlString).length > 0;
+};
+
+const sanitizeHtml = (rawHtml) => {
+  if (!rawHtml || typeof rawHtml !== "string") return "";
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(rawHtml, "text/html");
+
+    const ALLOWED_TAGS = new Set([
+      "B", "STRONG", "I", "EM", "U", "S", "STRIKE", "DEL",
+      "P", "DIV", "SPAN", "BR", "HR",
+      "H1", "H2", "H3", "H4", "H5", "H6",
+      "UL", "OL", "LI",
+      "A", "BLOCKQUOTE", "CODE", "PRE"
+    ]);
+
+    const ALLOWED_STYLES = new Set([
+      "text-align", "font-weight", "font-style", "text-decoration", "color"
+    ]);
+
+    const cleanNode = (node) => {
+      const children = Array.from(node.childNodes);
+      for (const child of children) {
+        if (child.nodeType === Node.ELEMENT_NODE) {
+          if (!ALLOWED_TAGS.has(child.tagName)) {
+            const textNode = doc.createTextNode(child.textContent);
+            child.parentNode.replaceChild(textNode, child);
+          } else {
+            const attrs = Array.from(child.attributes);
+            for (const attr of attrs) {
+              const attrName = attr.name.toLowerCase();
+              if (attrName === "style") {
+                const cleanStyles = [];
+                const styleObj = child.style;
+                for (let i = 0; i < styleObj.length; i++) {
+                  const prop = styleObj[i];
+                  if (ALLOWED_STYLES.has(prop)) {
+                    cleanStyles.push(`${prop}: ${styleObj.getPropertyValue(prop)}`);
+                  }
+                }
+                if (cleanStyles.length > 0) {
+                  child.setAttribute("style", cleanStyles.join("; "));
+                } else {
+                  child.removeAttribute("style");
+                }
+              } else if (attrName === "href" && child.tagName === "A") {
+                const href = attr.value.trim();
+                if (/^(https?:|\/|mailto:)/i.test(href)) {
+                  child.setAttribute("href", href);
+                  child.setAttribute("target", "_blank");
+                  child.setAttribute("rel", "noopener noreferrer");
+                } else {
+                  child.removeAttribute("href");
+                }
+              } else {
+                child.removeAttribute(attr.name);
+              }
+            }
+            cleanNode(child);
+          }
+        }
+      }
+    };
+
+    cleanNode(doc.body);
+    return doc.body.innerHTML;
+  } catch {
+    return rawHtml;
+  }
+};
+
 function CustomDropdown({ label, options, value, onChange, minWidth = "min-w-[140px]" }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -269,8 +345,9 @@ export default function MillerReimbursementHistory() {
     if (!Array.isArray(records)) return [];
     const q = query.trim().toLowerCase();
     let result = records.filter((r) => {
-      // 1. Search Bar: Search by category, description, requester, or reference number
-      const searchable = `${r.types || ""} ${r.category || ""} ${r.description || ""} ${r.title || ""} ${r.requested_by_name || ""} ${r.requester || ""} ${r.requestedBy || ""} ${r.request_reference_no || ""}`.toLowerCase();
+      // 1. Search Bar: Search by category, description (plain text), requester, or reference number
+      const plainDesc = stripHtml(r.description);
+      const searchable = `${r.types || ""} ${r.category || ""} ${plainDesc} ${r.title || ""} ${r.requested_by_name || ""} ${r.requester || ""} ${r.requestedBy || ""} ${r.request_reference_no || ""}`.toLowerCase();
       const matchesQuery = q === "" || searchable.includes(q);
 
       // 2. Status Filter: All, Requested, Paid (database values: requested, paid)
@@ -594,11 +671,19 @@ export default function MillerReimbursementHistory() {
 
                   <ModalDetailRow label="Title" value={selectedRecord.title} />
 
-                  {/* Description — clean bordered multiline box */}
+                  {/* Description — clean bordered multiline box with formatted rich text */}
                   <div className="py-1.5 text-xs sm:text-sm">
                     <span className="text-slate-500 font-medium block mb-1">Description</span>
-                    <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-800 text-xs sm:text-sm whitespace-pre-wrap leading-relaxed max-h-36 overflow-y-auto">
-                      {selectedRecord.description || "N/A"}
+                    <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-800 text-xs sm:text-sm leading-relaxed max-h-36 overflow-y-auto break-words space-y-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-bold [&_h3]:text-xs [&_h3]:font-semibold [&_p]:my-0.5">
+                      {hasVisibleContent(selectedRecord.description) ? (
+                        <div
+                          dangerouslySetInnerHTML={{
+                            __html: sanitizeHtml(selectedRecord.description),
+                          }}
+                        />
+                      ) : (
+                        <span className="text-slate-400 italic">No description provided</span>
+                      )}
                     </div>
                   </div>
 

@@ -16,6 +16,8 @@ from .views import (
     driver_payment_submissions_list_view,
     driver_payment_submit_view,
     driver_reimbursement_submit_view,
+    driver_reimbursement_history_view,
+    driver_reimbursement_categories_view,
 )
 
 urlpatterns = [
@@ -31,4 +33,6 @@ urlpatterns = [
     path("payments/submissions/", driver_payment_submissions_list_view, name="driver-payment-submissions-list"),
     path("payments/submit/", driver_payment_submit_view, name="driver-payment-submit"),
     path("reimbursements/submit/", driver_reimbursement_submit_view, name="driver-reimbursement-submit"),
+    path("reimbursements/history/", driver_reimbursement_history_view, name="driver-reimbursement-history"),
+    path("reimbursements/categories/", driver_reimbursement_categories_view, name="driver-reimbursement-categories"),
 ]

@@ -597,3 +597,84 @@ def driver_reimbursement_submit_view(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
+
+@api_view(["GET"])
+@miller_driver_required
+def driver_reimbursement_history_view(request):
+    """
+    GET /api/miller-employees/driver/reimbursements/history/
+    List reimbursement history records for the authenticated Miller Driver.
+    Strictly scoped to supplier_profile_id and requested_by = driver_id.
+    """
+    from api.miller_employees_function.miller_logistics import selectors as flc_selectors
+
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    driver_id = request.grainrise_driver_id
+
+    search = request.query_params.get("search", "").strip() or None
+    status_filter = request.query_params.get("status", "").strip() or None
+    category_filter = request.query_params.get("category", "").strip() or None
+    start_date = request.query_params.get("start_date", "").strip() or None
+    end_date = request.query_params.get("end_date", "").strip() or None
+    sort_by = request.query_params.get("sort_by", "").strip() or None
+
+    if start_date and end_date and start_date > end_date:
+        return Response(
+            {"success": False, "message": "Start date cannot be after end date."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        records = flc_selectors.list_flc_reimbursement_history(
+            supplier_profile_id=supplier_profile_id,
+            employee_id=driver_id,
+            search=search,
+            status_filter=status_filter,
+            category_filter=category_filter,
+            start_date=start_date,
+            end_date=end_date,
+            sort_by=sort_by,
+        )
+        return Response(
+            {
+                "success": True,
+                "count": len(records),
+                "data": records,
+            },
+            status=status.HTTP_200_OK,
+        )
+    except Exception as e:
+        logger.exception("Error fetching driver reimbursement history: %s", e)
+        return Response(
+            {"success": False, "message": f"Failed to load reimbursement history: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@api_view(["GET"])
+@miller_driver_required
+def driver_reimbursement_categories_view(request):
+    """
+    GET /api/miller-employees/driver/reimbursements/categories/
+    List all standard and custom reimbursement categories for this branch.
+    """
+    from api.miller_employees_function.miller_logistics import selectors as flc_selectors
+
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    try:
+        categories = flc_selectors.get_flc_reimbursement_categories(supplier_profile_id)
+        return Response(
+            {
+                "success": True,
+                "categories": categories,
+            },
+            status=status.HTTP_200_OK,
+        )
+    except Exception as e:
+        logger.exception("Error fetching driver reimbursement categories: %s", e)
+        return Response(
+            {"success": False, "message": f"Failed to load reimbursement categories: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
