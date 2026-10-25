@@ -380,18 +380,28 @@ export default function MillerDeliveryManagement() {
       );
 
       if (res && res.success) {
-        showToast(
-          res.message ||
+        showToast({
+          type: "success",
+          title: "Assignment Successful",
+          message:
+            res.message ||
             `Order ${selectedOrder.batch_no} successfully assigned to driver!`,
-          "success"
-        );
+        });
         handleCloseModal();
         await Promise.all([fetchOrders(), fetchDrivers()]);
       } else {
-        showToast(res?.message || "Failed to assign driver.", "error");
+        showToast({
+          type: "error",
+          title: "Assignment Failed",
+          message: res?.message || "Failed to assign driver.",
+        });
       }
     } catch (err) {
-      showToast(err?.message || "Network error while assigning driver.", "error");
+      showToast({
+        type: "error",
+        title: "Assignment Error",
+        message: err?.message || "Network error while assigning driver.",
+      });
     } finally {
       setActionLoading(false);
     }
