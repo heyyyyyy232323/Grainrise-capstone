@@ -1420,3 +1420,469 @@ def list_driver_vehicle_assigned_history(
 
     return assignments
 
+
+# ═════════════════════════════════════════════════════════════════════════════
+# DRIVER DASHBOARD SELECTOR
+# ═════════════════════════════════════════════════════════════════════════════
+
+def get_driver_dashboard_data(supplier_profile_id: int, driver_id: int) -> dict:
+    """
+    Retrieve live dashboard data for the authenticated Driver:
+    - KPI Metrics: Active Duties, Assigned Duties, Pending Payments, Unread Messages
+    - Current Active Duty: Oldest unfinished 'In transit' delivery group
+    - Load Utilization: Driver's currently assigned vehicle, actual capacity, assigned load, remaining capacity, delivered load
+    - Delivery Management Table: Recent/active deliveries preview
+    """
+    # 1. Fetch all duties currently pending for this driver
+    all_duties = get_driver_duties(supplier_profile_id=supplier_profile_id, driver_id=driver_id)
+    assigned_duties_count = len(all_duties)
+
+    # In transit duties
+    in_transit_duties = [
+        d for d in all_duties
+        if str(d.get("order_status", "")).strip().lower() == "in transit"
+    ]
+    active_duties_count = len(in_transit_duties)
+
+    # 2. Retrieve Driver's currently assigned vehicle through miller_vehicle_assignee
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                mva.assigned_id,
+                v.vehicle_id,
+                v.plate_number,
+                v.model,
+                v.type,
+                v.capacity,
+                v.status AS vehicle_status
+            FROM miller_vehicle_assignee mva
+            INNER JOIN miller_delivery_vehicle_management v
+                ON v.vehicle_id = mva.vehicle_id
+            WHERE mva.driver_id = %s
+              AND mva.supplier_profile_id = %s
+              AND mva.status = 'active'
+            ORDER BY mva.assigned_id DESC
+            LIMIT 1
+            """,
+            [driver_id, supplier_profile_id],
+        )
+        veh_row = cursor.fetchone()
+
+    has_vehicle = veh_row is not None
+    if has_vehicle:
+        assigned_id = veh_row[0]
+        vehicle_id = veh_row[1]
+        plate_number = veh_row[2] or "—"
+        model = veh_row[3] or "Vehicle"
+        vehicle_type = veh_row[4] or "Delivery Vehicle"
+        max_capacity_kg = _parse_capacity_kg_val(veh_row[5])
+    else:
+        assigned_id = None
+        vehicle_id = None
+        plate_number = "—"
+        model = ""
+        vehicle_type = ""
+        max_capacity_kg = 0.0
+
+    # Assigned Load (using effective delivery quantities including approved return replacements)
+    assigned_load_kg = sum(float(d.get("display_quantity") or 0.0) for d in all_duties)
+    remaining_capacity_kg = max(0.0, max_capacity_kg - assigned_load_kg) if has_vehicle else 0.0
+    utilization_pct = round((assigned_load_kg / max_capacity_kg) * 100, 1) if has_vehicle and max_capacity_kg > 0 else 0.0
+    percent_assigned = min(100.0, utilization_pct)
+
+    # Delivered Load (confirmed receiving records for this driver/vehicle)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT COALESCE(SUM(rh.total_received), 0.0)
+            FROM miller_online_customer_receiving_history rh
+            WHERE rh.supplier_profile_id = %s
+              AND (
+                  EXISTS (
+                      SELECT 1 FROM miller_vehicle_assignee mva
+                      WHERE mva.assigned_id = rh.vehicle_assignee_id AND mva.driver_id = %s
+                  )
+                  OR EXISTS (
+                      SELECT 1 FROM miller_driver_assignment mda
+                      INNER JOIN miller_vehicle_assignee mva2 ON mva2.vehicle_id = mda.delivery_vehicle_id
+                      WHERE mda.online_order_id = rh.online_order_id AND mva2.driver_id = %s
+                  )
+              )
+            """,
+            [supplier_profile_id, driver_id, driver_id],
+        )
+        deliv_row = cursor.fetchone()
+        delivered_load_kg = float(deliv_row[0] or 0.0) if deliv_row else 0.0
+
+    # 3. Pending Payments KPI (unique COD transactions with 'Handled' status)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT COUNT(DISTINCT COALESCE(NULLIF(cod.cod_transaction_key, ''), CONCAT('single_', cod.cod_id)))
+            FROM miller_online_customer_cash_on_delivery cod
+            WHERE cod.supplier_profile_id = %s
+              AND cod.driver_id = %s
+              AND cod.status = 'Handled'
+            """,
+            [supplier_profile_id, driver_id],
+        )
+        cod_row = cursor.fetchone()
+        pending_payments_count = int(cod_row[0] or 0) if cod_row else 0
+
+    # 4. Unread Messages KPI (unread messages from buyers with active assignments to this driver)
+    unread_messages_count = 0
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT DISTINCT moc.user_buyer_id, moc.warehouse_buyer_id
+            FROM miller_driver_assignment mda
+            INNER JOIN miller_online_customer moc ON moc.online_order_id = mda.online_order_id
+            INNER JOIN miller_vehicle_assignee mva ON mva.vehicle_id = mda.delivery_vehicle_id
+                AND mva.driver_id = %s
+                AND mva.supplier_profile_id = %s
+                AND mva.status = 'active'
+            WHERE mda.supplier_profile_id = %s
+              AND mda.status = 'Pending'
+              AND moc.status IN ('Assigned to driver', 'In transit')
+            """,
+            [driver_id, supplier_profile_id, supplier_profile_id],
+        )
+        active_buyers = cursor.fetchall()
+
+        for u_id, wh_id in active_buyers:
+            if u_id is not None:
+                cursor.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM messages
+                    WHERE receiver_supplier_profile_id = %s
+                      AND sender_user_id = %s
+                      AND seen_at IS NULL
+                    """,
+                    [supplier_profile_id, u_id],
+                )
+            elif wh_id is not None:
+                cursor.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM messages
+                    WHERE receiver_supplier_profile_id = %s
+                      AND sender_warehouse_profile_id = %s
+                      AND seen_at IS NULL
+                    """,
+                    [supplier_profile_id, wh_id],
+                )
+            else:
+                continue
+
+            cnt_row = cursor.fetchone()
+            if cnt_row:
+                unread_messages_count += int(cnt_row[0] or 0)
+
+    # 5. Current Active Duty: Oldest unfinished In transit delivery group
+    current_active_duty = None
+    most_recent_active_group_key = None
+
+    if in_transit_duties:
+        # Group In transit orders by buyer_group_key
+        # The oldest group based on assignment_id (first encountered)
+        oldest_group_key = in_transit_duties[0]["buyer_group_key"]
+        group_orders = [d for d in in_transit_duties if d["buyer_group_key"] == oldest_group_key]
+
+        distinct_batches = list(dict.fromkeys(d["batch_no"] for d in group_orders if d.get("batch_no")))
+        batch_no_display = ", ".join(distinct_batches)
+        first_order = group_orders[0]
+        customer_type = first_order.get("customer_type") or "Retailer"
+        buyer_name = first_order.get("customer_name") or "Buyer"
+        distinct_commodities = list(dict.fromkeys(d.get("product_name") or "Rice" for d in group_orders))
+        commodity_display = ", ".join(distinct_commodities)
+
+        combined_quantity = sum(float(d.get("display_quantity") or 0.0) for d in group_orders)
+        qty_formatted = f"{combined_quantity:,.0f} kg" if combined_quantity.is_integer() else f"{combined_quantity:,.2f} kg"
+
+        current_active_duty = {
+            "exists": True,
+            "buyer_group_key": oldest_group_key,
+            "batch_no": batch_no_display,
+            "batch_numbers": distinct_batches,
+            "retailer": buyer_name,
+            "customer_name": buyer_name,
+            "customer_type": customer_type,
+            "commodity": commodity_display,
+            "quantity": qty_formatted,
+            "quantity_val": combined_quantity,
+            "delivery_schedule": first_order.get("expected_arrival_date") or "—",
+            "order_ids": [d["online_order_id"] for d in group_orders],
+        }
+
+        # Most recently assigned unfinished delivery group for Active Duties KPI card click
+        most_recent_active_group_key = in_transit_duties[-1]["buyer_group_key"]
+    elif all_duties:
+        most_recent_active_group_key = all_duties[0]["buyer_group_key"]
+
+    # 6. Load Utilization Payload
+    load_utilization = {
+        "has_vehicle": has_vehicle,
+        "vehicle_id": vehicle_id,
+        "model": model,
+        "plate_number": plate_number,
+        "type": vehicle_type,
+        "max_load": f"{max_capacity_kg:,.2f} kg" if has_vehicle else "No Assigned Vehicle",
+        "assigned_load": f"{assigned_load_kg:,.2f}" if has_vehicle else "0.00",
+        "assigned_load_full": f"{assigned_load_kg:,.2f} kg" if has_vehicle else "0.00 kg",
+        "remaining_capacity": f"{remaining_capacity_kg:,.2f} kg" if has_vehicle else "0.00 kg",
+        "delivered_load": f"{delivered_load_kg:,.2f} kg" if has_vehicle else "0.00 kg",
+        "percent_assigned": percent_assigned if has_vehicle else 0.0,
+        "utilization_percentage": utilization_pct if has_vehicle else 0.0,
+        "no_vehicle_message": "No Assigned Vehicle" if not has_vehicle else None,
+    }
+
+    # 7. Delivery Management Table Preview (up to 5 actual Driver assignments)
+    delivery_preview = []
+    for d in all_duties[:5]:
+        qty_val = float(d.get("display_quantity") or 0.0)
+        qty_str = f"{qty_val:,.0f} kg" if qty_val.is_integer() else f"{qty_val:,.2f} kg"
+        delivery_preview.append({
+            "online_order_id": d.get("online_order_id"),
+            "batch_no": d.get("batch_no") or "—",
+            "retailer": d.get("customer_name") or "Retailer",
+            "customer_name": d.get("customer_name") or "Retailer",
+            "customer_type": d.get("customer_type") or "Retailer",
+            "commodity": d.get("product_name") or "Rice Product",
+            "variety": qty_str,
+            "status": d.get("order_status") or "Assigned",
+            "schedule": d.get("expected_arrival_date") or "—",
+            "buyer_group_key": d.get("buyer_group_key"),
+        })
+
+    return {
+        "kpis": {
+            "active_duties": active_duties_count,
+            "assigned_duties": assigned_duties_count,
+            "pending_payments": pending_payments_count,
+            "unread_messages": unread_messages_count,
+            "most_recent_active_group_key": most_recent_active_group_key,
+        },
+        "current_active_duty": current_active_duty,
+        "load_utilization": load_utilization,
+        "deliveries": delivery_preview,
+    }
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# DRIVER NOTIFICATIONS SELECTORS
+# ═════════════════════════════════════════════════════════════════════════════
+
+def sync_and_list_driver_notifications(
+    supplier_profile_id: int,
+    driver_id: int,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[dict]:
+    """
+    Ensure all delivery assignments belonging to this authenticated driver
+    have a notification record, then list them newest first.
+    Strictly isolated to employee_type = 'driver_{driver_id}'.
+    """
+    emp_type = f"driver_{driver_id}"
+
+    with connection.cursor() as cursor:
+        # 1. Fetch assignments belonging to this driver
+        cursor.execute(
+            """
+            SELECT
+                mda.assignment_id,
+                moc.online_order_id,
+                moc.batch_no,
+                mp.product_name,
+                moc.ordered_quantity,
+                COALESCE((
+                    SELECT SUM(moor.quantity)
+                    FROM miller_online_orders_returns moor
+                    WHERE moor.online_order_id = moc.online_order_id
+                      AND LOWER(moor.status) = 'approved'
+                ), 0) AS approved_return_qty,
+                mda.created_at,
+                u.first_name, u.last_name,
+                wp.business_name,
+                moc.warehouse_buyer_id
+            FROM miller_driver_assignment mda
+            INNER JOIN miller_online_customer moc ON moc.online_order_id = mda.online_order_id
+            INNER JOIN miller_vehicle_assignee mva ON mva.vehicle_id = mda.delivery_vehicle_id
+                AND mva.driver_id = %s
+                AND mva.supplier_profile_id = %s
+                AND mva.status = 'active'
+            LEFT JOIN miller_products mp ON mp.product_id = moc.miller_product_id
+            LEFT JOIN users u ON u.user_id = moc.user_buyer_id
+            LEFT JOIN warehouse_profiles wp ON wp.warehouse_profile_id = moc.warehouse_buyer_id
+            WHERE mda.supplier_profile_id = %s
+            ORDER BY mda.assignment_id DESC
+            """,
+            [driver_id, supplier_profile_id, supplier_profile_id],
+        )
+        assigned_rows = cursor.fetchall()
+
+        for row in assigned_rows:
+            batch_no = row[2] or f"BATCH-{row[1]}"
+            p_name = row[3] or "Rice Product"
+            app_ret_qty = float(row[5] or 0.0)
+            ord_qty = float(row[4] or 0.0)
+            effective_qty = app_ret_qty if app_ret_qty > 0 else ord_qty
+            created_at = row[6] or datetime.now()
+            buyer_name = row[9] if row[10] else f"{row[7] or ''} {row[8] or ''}".strip() or "Buyer"
+
+            # Check if notification exists
+            cursor.execute(
+                """
+                SELECT notification_id
+                FROM miller_employee_notifications
+                WHERE supplier_profile_id = %s
+                  AND employee_type = %s
+                  AND notification_title = 'New Delivery Assignment'
+                  AND notification_content LIKE %s
+                LIMIT 1
+                """,
+                [supplier_profile_id, emp_type, f"%{batch_no}%"],
+            )
+            exists = cursor.fetchone()
+            if not exists:
+                content = f"Delivery {batch_no} ({effective_qty:,.0f} kg of {p_name}) for {buyer_name} has been assigned to you."
+                cursor.execute(
+                    """
+                    INSERT INTO miller_employee_notifications (
+                        supplier_profile_id,
+                        employee_type,
+                        notification_title,
+                        notification_content,
+                        action_url,
+                        created_at,
+                        status
+                    ) VALUES (%s, %s, %s, %s, %s, %s, 'unseen')
+                    """,
+                    [
+                        supplier_profile_id,
+                        emp_type,
+                        "New Delivery Assignment",
+                        content,
+                        "/miller-driver/my-duties",
+                        created_at,
+                    ],
+                )
+
+        # 2. Query notifications for this driver
+        limit_val = max(1, min(int(limit), 100))
+        offset_val = max(0, int(offset))
+        cursor.execute(
+            """
+            SELECT
+                notification_id,
+                supplier_profile_id,
+                employee_type,
+                notification_title,
+                notification_content,
+                action_url,
+                created_at,
+                status,
+                seen_by_employee_id,
+                seen_at
+            FROM miller_employee_notifications
+            WHERE supplier_profile_id = %s
+              AND employee_type = %s
+            ORDER BY created_at DESC, notification_id DESC
+            LIMIT %s OFFSET %s
+            """,
+            [supplier_profile_id, emp_type, limit_val, offset_val],
+        )
+        notif_rows = cursor.fetchall()
+
+    notifs = []
+    for r in notif_rows:
+        created_at_dt = r[6]
+        seen_at_dt = r[9]
+        is_seen = str(r[7] or "unseen").lower() == "seen"
+        notifs.append({
+            "notification_id": r[0],
+            "id": r[0],
+            "supplier_profile_id": r[1],
+            "employee_type": r[2],
+            "notification_title": r[3],
+            "title": r[3],
+            "notification_content": r[4],
+            "message": r[4],
+            "content": r[4],
+            "action_url": r[5] or "/miller-driver/my-duties",
+            "created_at": created_at_dt.isoformat() if created_at_dt else None,
+            "status": r[7],
+            "is_seen": is_seen,
+            "is_read": is_seen,
+            "seen_by_employee_id": r[8],
+            "seen_at": seen_at_dt.isoformat() if seen_at_dt else None,
+        })
+
+    return notifs
+
+
+def count_driver_unseen_notifications(supplier_profile_id: int, driver_id: int) -> int:
+    """
+    Count unseen notifications for the authenticated Driver.
+    """
+    sync_and_list_driver_notifications(supplier_profile_id, driver_id, limit=1)
+    emp_type = f"driver_{driver_id}"
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM miller_employee_notifications
+            WHERE supplier_profile_id = %s
+              AND employee_type = %s
+              AND status = 'unseen'
+            """,
+            [supplier_profile_id, emp_type],
+        )
+        row = cursor.fetchone()
+        return int(row[0] or 0) if row else 0
+
+
+def mark_driver_notification_seen(supplier_profile_id: int, driver_id: int, notification_id: int) -> bool:
+    """
+    Mark a specific notification as seen for the authenticated Driver.
+    """
+    emp_type = f"driver_{driver_id}"
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE miller_employee_notifications
+            SET status = 'seen',
+                seen_by_employee_id = %s,
+                seen_at = NOW()
+            WHERE notification_id = %s
+              AND supplier_profile_id = %s
+              AND employee_type = %s
+            """,
+            [driver_id, notification_id, supplier_profile_id, emp_type],
+        )
+        return cursor.rowcount > 0
+
+
+def mark_all_driver_notifications_seen(supplier_profile_id: int, driver_id: int) -> bool:
+    """
+    Mark all unseen notifications as seen for the authenticated Driver.
+    """
+    emp_type = f"driver_{driver_id}"
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE miller_employee_notifications
+            SET status = 'seen',
+                seen_by_employee_id = %s,
+                seen_at = NOW()
+            WHERE supplier_profile_id = %s
+              AND employee_type = %s
+              AND status = 'unseen'
+            """,
+            [driver_id, supplier_profile_id, emp_type],
+        )
+        return True
+
+

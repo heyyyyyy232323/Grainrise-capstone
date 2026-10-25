@@ -21,9 +21,17 @@ from .views import (
     driver_fulfillment_history_view,
     driver_fulfillment_variants_view,
     driver_vehicle_assigned_history_view,
+    driver_dashboard_view,
+    driver_notifications_list_view,
+    driver_notification_seen_view,
+    driver_notifications_mark_all_seen_view,
 )
 
 urlpatterns = [
+    path("dashboard/", driver_dashboard_view, name="driver-dashboard"),
+    path("notifications/", driver_notifications_list_view, name="driver-notifications-list"),
+    path("notifications/<int:notification_id>/seen/", driver_notification_seen_view, name="driver-notification-seen"),
+    path("notifications/mark-all-seen/", driver_notifications_mark_all_seen_view, name="driver-notifications-mark-all-seen"),
     path("duties/", driver_duties_list_view, name="driver-duties-list"),
     path("live-tracking/group/", driver_buyer_group_view, name="driver-live-tracking-group"),
     path("live-tracking/start/", driver_live_tracking_start_view, name="driver-live-tracking-start"),

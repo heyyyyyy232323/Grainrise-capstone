@@ -803,4 +803,147 @@ def driver_vehicle_assigned_history_view(request):
         )
 
 
+@api_view(["GET"])
+@miller_driver_required
+def driver_dashboard_view(request):
+    """
+    GET /api/miller-employees/driver/dashboard/
+    Retrieve live dashboard KPIs, load utilization, active duty, and deliveries preview.
+    """
+    from .selectors import get_driver_dashboard_data
+
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    driver_id = request.grainrise_driver_id
+
+    try:
+        data = get_driver_dashboard_data(supplier_profile_id, driver_id)
+        return Response(
+            {
+                "success": True,
+                "data": data,
+            },
+            status=status.HTTP_200_OK,
+        )
+    except Exception as e:
+        logger.exception("Error fetching driver dashboard data: %s", e)
+        return Response(
+            {"success": False, "message": f"Failed to load dashboard data: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@api_view(["GET"])
+@miller_driver_required
+def driver_notifications_list_view(request):
+    """
+    GET /api/miller-employees/driver/notifications/
+    List navbar notifications for the authenticated Driver.
+    """
+    from .selectors import count_driver_unseen_notifications, sync_and_list_driver_notifications
+
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    driver_id = request.grainrise_driver_id
+
+    limit = request.query_params.get("limit", 50)
+    offset = request.query_params.get("offset", 0)
+
+    try:
+        notifications = sync_and_list_driver_notifications(
+            supplier_profile_id=supplier_profile_id,
+            driver_id=driver_id,
+            limit=limit,
+            offset=offset,
+        )
+        unseen_count = count_driver_unseen_notifications(
+            supplier_profile_id=supplier_profile_id,
+            driver_id=driver_id,
+        )
+        return Response(
+            {
+                "success": True,
+                "notifications": notifications,
+                "unseen_count": unseen_count,
+            },
+            status=status.HTTP_200_OK,
+        )
+    except Exception as e:
+        logger.exception("Error fetching driver notifications: %s", e)
+        return Response(
+            {"success": False, "message": f"Failed to load notifications: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@api_view(["POST"])
+@miller_driver_required
+def driver_notification_seen_view(request, notification_id):
+    """
+    POST /api/miller-employees/driver/notifications/<int:notification_id>/seen/
+    Mark a specific notification as seen for the authenticated Driver.
+    """
+    from .selectors import count_driver_unseen_notifications, mark_driver_notification_seen
+
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    driver_id = request.grainrise_driver_id
+
+    try:
+        marked = mark_driver_notification_seen(
+            supplier_profile_id=supplier_profile_id,
+            driver_id=driver_id,
+            notification_id=notification_id,
+        )
+        unseen_count = count_driver_unseen_notifications(
+            supplier_profile_id=supplier_profile_id,
+            driver_id=driver_id,
+        )
+        return Response(
+            {
+                "success": True,
+                "marked": marked,
+                "unseen_count": unseen_count,
+            },
+            status=status.HTTP_200_OK,
+        )
+    except Exception as e:
+        logger.exception("Error marking driver notification seen: %s", e)
+        return Response(
+            {"success": False, "message": f"Failed to mark notification seen: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@api_view(["POST"])
+@miller_driver_required
+def driver_notifications_mark_all_seen_view(request):
+    """
+    POST /api/miller-employees/driver/notifications/mark-all-seen/
+    Mark all unseen notifications as seen for the authenticated Driver.
+    """
+    from .selectors import mark_all_driver_notifications_seen
+
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    driver_id = request.grainrise_driver_id
+
+    try:
+        mark_all_driver_notifications_seen(
+            supplier_profile_id=supplier_profile_id,
+            driver_id=driver_id,
+        )
+        return Response(
+            {
+                "success": True,
+                "message": "All notifications marked as seen.",
+                "unseen_count": 0,
+            },
+            status=status.HTTP_200_OK,
+        )
+    except Exception as e:
+        logger.exception("Error marking all driver notifications seen: %s", e)
+        return Response(
+            {"success": False, "message": f"Failed to mark all notifications seen: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+
 
