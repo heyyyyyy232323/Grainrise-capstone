@@ -18,6 +18,9 @@ from .views import (
     driver_reimbursement_submit_view,
     driver_reimbursement_history_view,
     driver_reimbursement_categories_view,
+    driver_fulfillment_history_view,
+    driver_fulfillment_variants_view,
+    driver_vehicle_assigned_history_view,
 )
 
 urlpatterns = [
@@ -35,4 +38,7 @@ urlpatterns = [
     path("reimbursements/submit/", driver_reimbursement_submit_view, name="driver-reimbursement-submit"),
     path("reimbursements/history/", driver_reimbursement_history_view, name="driver-reimbursement-history"),
     path("reimbursements/categories/", driver_reimbursement_categories_view, name="driver-reimbursement-categories"),
+    path("fulfillment-history/", driver_fulfillment_history_view, name="driver-fulfillment-history"),
+    path("fulfillment-history/variants/", driver_fulfillment_variants_view, name="driver-fulfillment-variants"),
+    path("vehicle-assigned-history/", driver_vehicle_assigned_history_view, name="driver-vehicle-assigned-history"),
 ]

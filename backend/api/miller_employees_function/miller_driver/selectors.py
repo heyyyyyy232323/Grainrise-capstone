@@ -943,3 +943,480 @@ def get_driver_payment_submissions(
 
     return results
 
+
+def _format_person_name(first, middle, last, suffix):
+    parts = [first, f"{middle}." if middle else None, last, suffix]
+    return " ".join([p for p in parts if p]).strip()
+
+
+def _parse_capacity_kg_val(raw_val):
+    if raw_val is None:
+        return 0.0
+    cleaned = str(raw_val).lower().replace("kg", "").replace(",", "").strip()
+    try:
+        return float(cleaned)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _resolve_photo_url_val(photo_path):
+    if not photo_path:
+        return None
+    p = str(photo_path).strip()
+    if p.startswith(("http://", "https://", "//", "data:", "blob:")):
+        return p
+    clean = p.lstrip("/")
+    while clean.startswith("media/"):
+        clean = clean[6:]
+    return f"/media/{clean}"
+
+
+def list_driver_fulfillment_variants(supplier_profile_id: int, driver_id: int) -> list:
+    """
+    Retrieve distinct variants associated with receiving/fulfillment history for this driver.
+    """
+    sql = """
+        SELECT DISTINCT mp.product_name
+        FROM miller_online_customer_receiving_history rh
+        INNER JOIN miller_online_customer moc
+            ON moc.online_order_id = rh.online_order_id
+        INNER JOIN miller_products mp
+            ON mp.product_id = moc.miller_product_id
+        LEFT JOIN miller_vehicle_assignee mva
+            ON mva.assigned_id = rh.vehicle_assignee_id
+        WHERE rh.supplier_profile_id = %s
+          AND mp.product_name IS NOT NULL
+          AND (
+              mva.driver_id = %s
+              OR EXISTS (
+                  SELECT 1
+                  FROM miller_driver_assignment mda
+                  INNER JOIN miller_vehicle_assignee mva2
+                      ON mva2.vehicle_id = mda.delivery_vehicle_id
+                      AND mva2.driver_id = %s
+                  WHERE mda.online_order_id = rh.online_order_id
+              )
+          )
+        ORDER BY mp.product_name ASC
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(sql, [supplier_profile_id, driver_id, driver_id])
+        rows = cursor.fetchall()
+        variants = [r[0] for r in rows if r[0]]
+
+    if not variants:
+        sql_fallback = """
+            SELECT DISTINCT product_name
+            FROM miller_products
+            WHERE supplier_profile_id = %s
+              AND product_name IS NOT NULL
+            ORDER BY product_name ASC
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(sql_fallback, [supplier_profile_id])
+            variants = [r[0] for r in cursor.fetchall() if r[0]]
+
+    return variants
+
+
+def list_driver_fulfillment_history(
+    supplier_profile_id: int,
+    driver_id: int,
+    search: str | None = None,
+    variant_filter: str | None = None,
+    buyer_type_filter: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    sort_by: str | None = None,
+) -> list:
+    """
+    Retrieve completed fulfillment records strictly scoped to the authenticated driver.
+    Identifies the driver through direct receiving assignment (rh.vehicle_assignee_id)
+    or historical delivery assignment (miller_driver_assignment).
+    """
+    where_clauses = [
+        "rh.supplier_profile_id = %s",
+        """(
+            mva.driver_id = %s
+            OR EXISTS (
+                SELECT 1
+                FROM miller_driver_assignment mda_check
+                INNER JOIN miller_vehicle_assignee mva_check
+                    ON mva_check.vehicle_id = mda_check.delivery_vehicle_id
+                    AND mva_check.driver_id = %s
+                WHERE mda_check.online_order_id = rh.online_order_id
+            )
+        )"""
+    ]
+    params = [supplier_profile_id, driver_id, driver_id]
+
+    # Date range filter on rh.received_at
+    if start_date:
+        where_clauses.append("DATE(rh.received_at) >= %s")
+        params.append(start_date)
+
+    if end_date:
+        where_clauses.append("DATE(rh.received_at) <= %s")
+        params.append(end_date)
+
+    # Variant filter
+    if variant_filter and variant_filter.strip().lower() != "all":
+        where_clauses.append("LOWER(mp.product_name) = LOWER(%s)")
+        params.append(variant_filter.strip())
+
+    # Buyer type filter
+    if buyer_type_filter and buyer_type_filter.strip().lower() != "all":
+        b_type = buyer_type_filter.strip().lower()
+        if b_type == "retailer":
+            where_clauses.append("(rh.user_buyer_id IS NOT NULL OR moc.user_buyer_id IS NOT NULL)")
+        elif b_type == "warehouse":
+            where_clauses.append("(rh.warehouse_buyer_id IS NOT NULL OR moc.warehouse_buyer_id IS NOT NULL)")
+
+    # Search filter: receiving reference no, batch no, product name, customer name
+    if search:
+        search_like = f"%{search.strip()}%"
+        where_clauses.append(
+            """(
+                rh.receiving_reference_no LIKE %s
+                OR moc.batch_no LIKE %s
+                OR mp.product_name LIKE %s
+                OR mp.product_code LIKE %s
+                OR u.first_name LIKE %s
+                OR u.last_name LIKE %s
+                OR CONCAT(u.first_name, ' ', u.last_name) LIKE %s
+                OR wp.business_name LIKE %s
+            )"""
+        )
+        params.extend([search_like] * 8)
+
+    where_sql = " AND ".join(where_clauses)
+
+    # Sorting
+    order_by_sql = "ORDER BY rh.received_at DESC, rh.receiving_id DESC"
+    if sort_by == "variant-asc":
+        order_by_sql = "ORDER BY mp.product_name ASC, rh.received_at DESC"
+    elif sort_by == "variant-desc":
+        order_by_sql = "ORDER BY mp.product_name DESC, rh.received_at DESC"
+    elif sort_by == "customer-asc":
+        order_by_sql = "ORDER BY COALESCE(wp.business_name, u.first_name) ASC, rh.received_at DESC"
+    elif sort_by == "customer-desc":
+        order_by_sql = "ORDER BY COALESCE(wp.business_name, u.first_name) DESC, rh.received_at DESC"
+    elif sort_by == "delivered-desc":
+        order_by_sql = "ORDER BY rh.total_received DESC, rh.received_at DESC"
+    elif sort_by == "delivered-asc":
+        order_by_sql = "ORDER BY rh.total_received ASC, rh.received_at DESC"
+    elif sort_by == "passed-desc":
+        order_by_sql = "ORDER BY rh.received_good DESC, rh.received_at DESC"
+    elif sort_by == "passed-asc":
+        order_by_sql = "ORDER BY rh.received_good ASC, rh.received_at DESC"
+    elif sort_by == "failed-desc":
+        order_by_sql = "ORDER BY rh.received_bad DESC, rh.received_at DESC"
+    elif sort_by == "failed-asc":
+        order_by_sql = "ORDER BY rh.received_bad ASC, rh.received_at DESC"
+    elif sort_by == "cost-desc":
+        order_by_sql = "ORDER BY moc.total_price DESC, rh.received_at DESC"
+    elif sort_by == "cost-asc":
+        order_by_sql = "ORDER BY moc.total_price ASC, rh.received_at DESC"
+
+    sql = f"""
+        SELECT
+            rh.receiving_id,
+            rh.receiving_reference_no,
+            rh.total_received,
+            rh.received_good,
+            rh.received_bad,
+            rh.payables,
+            rh.status AS receiving_status,
+            rh.proof,
+            rh.received_at,
+            -- Order Info
+            moc.online_order_id,
+            moc.batch_no,
+            moc.ordered_quantity,
+            moc.fare_fee,
+            moc.total_price,
+            moc.expected_arrival_date,
+            moc.status AS order_status,
+            -- Product Info
+            mp.product_id,
+            mp.product_name,
+            mp.product_code,
+            mp.unit_cost,
+            -- Buyer Info
+            rh.user_buyer_id,
+            rh.warehouse_buyer_id,
+            u.first_name,
+            u.middle_initial,
+            u.last_name,
+            u.suffix,
+            wp.business_name,
+            -- Driver & Vehicle Info
+            mva.assigned_id AS vehicle_assignee_id,
+            mva.status AS assignment_status,
+            COALESCE(v.model, v_mda.model) AS vehicle_model,
+            COALESCE(v.plate_number, v_mda.plate_number) AS vehicle_plate_number,
+            COALESCE(v.type, v_mda.type) AS vehicle_type,
+            se.first_name AS driver_first_name,
+            se.middle_initial AS driver_middle_initial,
+            se.last_name AS driver_last_name,
+            se.suffix AS driver_suffix
+        FROM miller_online_customer_receiving_history rh
+        INNER JOIN miller_online_customer moc
+            ON moc.online_order_id = rh.online_order_id
+        LEFT JOIN miller_products mp
+            ON mp.product_id = moc.miller_product_id
+        LEFT JOIN users u
+            ON u.user_id = COALESCE(rh.user_buyer_id, moc.user_buyer_id)
+        LEFT JOIN warehouse_profiles wp
+            ON wp.warehouse_profile_id = COALESCE(rh.warehouse_buyer_id, moc.warehouse_buyer_id)
+        LEFT JOIN miller_vehicle_assignee mva
+            ON mva.assigned_id = rh.vehicle_assignee_id
+        LEFT JOIN miller_delivery_vehicle_management v
+            ON v.vehicle_id = mva.vehicle_id
+        LEFT JOIN supplier_employees se
+            ON se.supplier_employee_id = mva.driver_id
+        LEFT JOIN miller_driver_assignment mda
+            ON mda.online_order_id = rh.online_order_id
+        LEFT JOIN miller_delivery_vehicle_management v_mda
+            ON v_mda.vehicle_id = mda.delivery_vehicle_id
+        WHERE {where_sql}
+        {order_by_sql}
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(sql, params)
+        rows = cursor.fetchall()
+
+    history = []
+    for r in rows:
+        total_rec = float(r[2]) if r[2] is not None else 0.0
+        good_rec = float(r[3]) if r[3] is not None else 0.0
+        bad_rec = float(r[4]) if r[4] is not None else 0.0
+        ord_qty = float(r[11]) if r[11] is not None else 0.0
+        fare_fee = float(r[12]) if r[12] is not None else 0.0
+        unit_cost = float(r[19]) if r[19] is not None else 0.0
+        total_price = float(r[13]) if r[13] is not None else (ord_qty * unit_cost + fare_fee)
+
+        is_warehouse = bool(r[21])
+        if is_warehouse:
+            buyer_type = "Warehouse"
+            buyer_name = r[26] or "Warehouse Buyer"
+        else:
+            buyer_type = "Retailer"
+            buyer_name = _format_person_name(r[22], r[23], r[24], r[25]) or "Retailer Buyer"
+
+        driver_name = _format_person_name(r[32], r[33], r[34], r[35]) if r[32] else "Assigned Driver"
+
+        rec_at = r[8]
+        rec_at_iso = rec_at.isoformat() if rec_at else None
+        rec_at_formatted = rec_at.strftime("%b %d, %Y") if rec_at else "—"
+
+        exp_date = r[14]
+        exp_date_iso = exp_date.isoformat() if exp_date else None
+        exp_date_formatted = exp_date.strftime("%b %d, %Y") if exp_date else "—"
+
+        status_raw = str(r[6] or "unpaid").strip().lower()
+        status_clean = "Paid" if status_raw == "paid" else "Unpaid"
+
+        history.append({
+            "receiving_id": r[0],
+            "id": r[0],
+            "receiving_reference_no": r[1] or f"REC-{r[0]}",
+            "reference_no": r[1] or f"REC-{r[0]}",
+            "total_received": total_rec,
+            "total_received_formatted": f"{total_rec:,.0f} kg" if total_rec.is_integer() else f"{total_rec:,.2f} kg",
+            "delivered": f"{total_rec:,.0f} kg" if total_rec.is_integer() else f"{total_rec:,.2f} kg",
+            "received_good": good_rec,
+            "received_good_formatted": f"{good_rec:,.0f} kg" if good_rec.is_integer() else f"{good_rec:,.2f} kg",
+            "passed": f"{good_rec:,.0f} kg" if good_rec.is_integer() else f"{good_rec:,.2f} kg",
+            "received_bad": bad_rec,
+            "received_bad_formatted": f"{bad_rec:,.0f} kg" if bad_rec.is_integer() else f"{bad_rec:,.2f} kg",
+            "failed": f"{bad_rec:,.0f} kg" if bad_rec.is_integer() else f"{bad_rec:,.2f} kg",
+            "quantity_to_pay": good_rec,
+            "quantity_to_pay_formatted": f"{good_rec:,.0f} kg" if good_rec.is_integer() else f"{good_rec:,.2f} kg",
+            "payables": float(r[5]) if r[5] is not None else (good_rec * unit_cost),
+            "status": status_clean,
+            "status_raw": status_raw,
+            "proof": r[7],
+            "proof_url": _resolve_photo_url_val(r[7]),
+            "received_at": rec_at_iso,
+            "received_at_formatted": rec_at_formatted,
+            "isoDate": rec_at.strftime("%Y-%m-%d") if rec_at else "",
+            "online_order_id": r[9],
+            "batch_no": r[10] or "—",
+            "ordered_quantity": ord_qty,
+            "ordered_quantity_formatted": f"{ord_qty:,.0f} kg" if ord_qty.is_integer() else f"{ord_qty:,.2f} kg",
+            "fare_fee": fare_fee,
+            "fare_fee_formatted": f"₱{fare_fee:,.2f}",
+            "total_price": total_price,
+            "total_price_formatted": f"₱{total_price:,.2f}",
+            "expected_arrival_date": exp_date_iso,
+            "expected_arrival_date_formatted": exp_date_formatted,
+            "order_status": r[15],
+            "product_id": r[16],
+            "product_name": r[17] or "Variant",
+            "variant": r[17] or "Variant",
+            "product_code": r[18] or "—",
+            "unit_cost": unit_cost,
+            "unit_cost_formatted": f"₱{unit_cost:,.2f}",
+            "buyer_type": buyer_type,
+            "customer_type": buyer_type,
+            "customer_name": buyer_name,
+            "customer": buyer_name,
+            "buyer_name": buyer_name,
+            "vehicle_assignee_id": r[27],
+            "assignment_status": r[28],
+            "assigned_vehicle_model": r[29] or "—",
+            "vehicle_model": r[29] or "—",
+            "plate_number": r[30] or "—",
+            "vehicle_type": r[31] or "—",
+            "assigned_driver": driver_name,
+            "driver_name": driver_name,
+        })
+
+    return history
+
+
+def list_driver_vehicle_assigned_history(
+    supplier_profile_id: int,
+    driver_id: int,
+    search: str | None = None,
+    status_filter: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    sort_by: str | None = None,
+) -> list:
+    """
+    Retrieve all vehicle assignment records belonging to the authenticated driver.
+    Includes both active and changed assignments.
+    """
+    where_clauses = [
+        "mva.supplier_profile_id = %s",
+        "mva.driver_id = %s",
+    ]
+    params = [supplier_profile_id, driver_id]
+
+    # Status filter: All, Active, Changed
+    if status_filter and status_filter.lower() in ("active", "changed"):
+        where_clauses.append("LOWER(mva.status) = LOWER(%s)")
+        params.append(status_filter.strip())
+
+    # Date range filter on assignment creation date (created_at)
+    if start_date:
+        where_clauses.append("DATE(mva.created_at) >= %s")
+        params.append(start_date)
+
+    if end_date:
+        where_clauses.append("DATE(mva.created_at) <= %s")
+        params.append(end_date)
+
+    # Search filter: vehicle model, plate number, or vehicle type
+    if search:
+        search_like = f"%{search.strip()}%"
+        where_clauses.append(
+            """(
+                v.model LIKE %s
+                OR v.plate_number LIKE %s
+                OR v.type LIKE %s
+            )"""
+        )
+        params.extend([search_like] * 3)
+
+    where_sql = " AND ".join(where_clauses)
+
+    # Sorting
+    order_by_sql = "ORDER BY mva.created_at DESC, mva.assigned_id DESC"
+    if sort_by == "model-asc":
+        order_by_sql = "ORDER BY v.model ASC, mva.created_at DESC"
+    elif sort_by == "model-desc":
+        order_by_sql = "ORDER BY v.model DESC, mva.created_at DESC"
+    elif sort_by == "plate-asc":
+        order_by_sql = "ORDER BY v.plate_number ASC, mva.created_at DESC"
+    elif sort_by == "plate-desc":
+        order_by_sql = "ORDER BY v.plate_number DESC, mva.created_at DESC"
+    elif sort_by == "date-desc":
+        order_by_sql = "ORDER BY mva.created_at DESC, mva.assigned_id DESC"
+    elif sort_by == "date-asc":
+        order_by_sql = "ORDER BY mva.created_at ASC, mva.assigned_id ASC"
+
+    sql = f"""
+        SELECT
+            mva.assigned_id,
+            mva.status AS assignment_status,
+            mva.created_at AS assigned_on,
+            mva.updated_at,
+            -- Vehicle info
+            v.vehicle_id,
+            v.model,
+            v.plate_number,
+            v.type,
+            v.number_of_wheels,
+            v.capacity,
+            v.photo,
+            v.status AS vehicle_status,
+            v.inactive_reason,
+            v.maintenance_reason,
+            -- Driver info
+            se.supplier_employee_id AS driver_id,
+            se.first_name AS driver_first_name,
+            se.middle_initial AS driver_middle_initial,
+            se.last_name AS driver_last_name,
+            se.suffix AS driver_suffix
+        FROM miller_vehicle_assignee mva
+        INNER JOIN miller_delivery_vehicle_management v
+            ON v.vehicle_id = mva.vehicle_id
+        INNER JOIN supplier_employees se
+            ON se.supplier_employee_id = mva.driver_id
+        WHERE {where_sql}
+        {order_by_sql}
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(sql, params)
+        rows = cursor.fetchall()
+
+    assignments = []
+    for r in rows:
+        driver_name = _format_person_name(r[15], r[16], r[17], r[18])
+        cap = _parse_capacity_kg_val(r[9])
+        cap_formatted = f"{cap:,.0f} kg" if cap.is_integer() else f"{cap:,.2f} kg"
+
+        created_at_dt = r[2]
+        created_at_iso = created_at_dt.isoformat() if created_at_dt else None
+        created_at_formatted = created_at_dt.strftime("%b %d, %Y") if created_at_dt else "—"
+
+        status_raw = str(r[1] or "active").strip()
+        status_clean = "Active" if status_raw.lower() == "active" else "Changed"
+
+        assignments.append({
+            "assigned_id": r[0],
+            "id": r[0],
+            "status": status_clean,
+            "assignment_status": status_clean,
+            "status_raw": status_raw,
+            "assigned_on": created_at_formatted,
+            "assigned_on_formatted": created_at_formatted,
+            "assigned_on_iso": created_at_iso,
+            "created_at": created_at_iso,
+            "isoDate": created_at_dt.strftime("%Y-%m-%d") if created_at_dt else "",
+            # Vehicle Details
+            "vehicle_id": r[4],
+            "model": r[5] or "Vehicle",
+            "plate_number": r[6] or "—",
+            "type": r[7] or "Delivery Vehicle",
+            "number_of_wheels": r[8] or 4,
+            "capacity": cap,
+            "capacity_formatted": cap_formatted,
+            "photo": r[10],
+            "photo_url": _resolve_photo_url_val(r[10]),
+            "vehicle_status": r[11] or "active",
+            "inactive_reason": r[12],
+            "maintenance_reason": r[13],
+            # Driver Details
+            "driver_id": r[14],
+            "driver": driver_name,
+            "driver_name": driver_name,
+        })
+
+    return assignments
+
