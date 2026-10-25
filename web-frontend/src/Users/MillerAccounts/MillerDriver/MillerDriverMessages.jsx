@@ -455,14 +455,14 @@ export default function MillerDriverMessages() {
                     </div>
                     {activeBatchNumbers.length > 0 ? (
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                        <span className="text-[11px] font-semibold text-amber-900 flex items-center gap-1 shrink-0">
-                          <MapPin size={11} className="text-amber-600 shrink-0" />
+                        <span className="text-xs font-semibold text-slate-700 flex items-center gap-1 shrink-0">
+                          <MapPin size={12} className="text-amber-500 shrink-0" />
                           Delivering Batch:
                         </span>
                         {activeBatchNumbers.slice(0, 2).map((batchNo) => (
                           <span
                             key={batchNo}
-                            className="text-[10px] font-mono font-bold bg-amber-50/90 text-amber-900 border border-amber-300/80 px-1.5 py-0.5 rounded shadow-2xs"
+                            className="text-[11px] font-semibold text-amber-900 bg-amber-50 border border-amber-200/90 px-2 py-0.5 rounded-md shadow-2xs tracking-tight"
                           >
                             {batchNo}
                           </span>
@@ -472,12 +472,12 @@ export default function MillerDriverMessages() {
                             <button
                               type="button"
                               onClick={() => setShowAllBatches((prev) => !prev)}
-                              className="text-[10px] font-bold bg-amber-100/70 hover:bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded transition cursor-pointer flex items-center gap-0.5 shadow-2xs"
+                              className="text-[11px] font-semibold bg-amber-100 hover:bg-amber-200/80 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-md transition cursor-pointer flex items-center gap-1 shadow-2xs tracking-tight"
                               title="Click to view all assigned batches"
                             >
                               <span>+{activeBatchNumbers.length - 2} more</span>
                               <ChevronDown
-                                size={10}
+                                size={11}
                                 className={`transition-transform duration-150 ${showAllBatches ? "rotate-180" : ""}`}
                               />
                             </button>
@@ -488,27 +488,27 @@ export default function MillerDriverMessages() {
                                   className="fixed inset-0 z-20"
                                   onClick={() => setShowAllBatches(false)}
                                 />
-                                <div className="absolute left-0 top-full mt-1.5 z-30 bg-white border border-amber-200 rounded-xl shadow-lg p-2.5 w-64 animate-in fade-in zoom-in-95 duration-150">
-                                  <div className="flex items-center justify-between pb-1.5 border-b border-amber-100 mb-1.5">
-                                    <span className="text-[11px] font-bold text-amber-950">
+                                <div className="absolute left-0 top-full mt-1.5 z-30 bg-white border border-slate-200 rounded-xl shadow-lg p-3 w-64 animate-in fade-in zoom-in-95 duration-150">
+                                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
+                                    <span className="text-xs font-bold text-slate-800">
                                       All Assigned Batches ({activeBatchNumbers.length})
                                     </span>
                                     <button
                                       type="button"
                                       onClick={() => setShowAllBatches(false)}
-                                      className="text-amber-700 hover:text-amber-900 p-0.5 rounded cursor-pointer"
+                                      className="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer transition"
                                     >
-                                      <X size={12} />
+                                      <X size={13} />
                                     </button>
                                   </div>
-                                  <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                                  <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                                     {activeBatchNumbers.map((batchNo, idx) => (
                                       <div
                                         key={batchNo}
-                                        className="flex items-center justify-between text-[11px] font-mono bg-amber-50/60 border border-amber-200/80 px-2 py-1 rounded text-amber-900"
+                                        className="flex items-center justify-between text-xs font-medium bg-amber-50/70 border border-amber-200/60 px-2.5 py-1 rounded-md text-amber-950 tracking-tight"
                                       >
-                                        <span className="font-semibold">{batchNo}</span>
-                                        <span className="text-[9px] text-amber-600 font-sans font-semibold">#{idx + 1}</span>
+                                        <span className="font-semibold text-slate-800">{batchNo}</span>
+                                        <span className="text-[10px] text-amber-700 font-medium">#{idx + 1}</span>
                                       </div>
                                     ))}
                                   </div>
