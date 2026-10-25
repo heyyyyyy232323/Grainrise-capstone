@@ -1,9 +1,15 @@
-from django.urls import path
+from django.urls import include, path
 
 from . import views
 
 urlpatterns = [
+    path("dashboard/", views.flc_dashboard_view, name="flc-dashboard"),
+    path(
+        "notifications/",
+        include("api.miller_employees_function.miller_logistics.notifications.urls"),
+    ),
     path("vehicles/", views.flc_vehicles_list_view, name="flc-vehicles-list"),
+
     path("vehicles/<int:vehicle_id>/", views.flc_vehicle_detail_view, name="flc-vehicle-detail"),
     path(
         "vehicles/<int:vehicle_id>/update-status/",
