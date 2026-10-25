@@ -444,3 +444,156 @@ def driver_payment_submit_view(request):
             {"success": False, "message": "Failed to submit payment."},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+@api_view(["POST"])
+@miller_driver_required
+def driver_reimbursement_submit_view(request):
+    """
+    POST /api/miller-employees/driver/reimbursements/submit/
+    Submit a new reimbursement request for the authenticated Miller Driver.
+    Strictly validates branch scoping, driver employee identity, expense categories,
+    costs, non-future dates, description length, and attachment validity.
+    """
+    from api.miller_employees_function.miller_logistics.views import (
+        _save_reimbursement_attachment,
+    )
+    from api.miller_employees_function.miller_finance.reimbursements.services import (
+        submit_reimbursement_request,
+    )
+
+    supplier_profile_id = request.grainrise_supplier_profile_id
+    employee_id = request.grainrise_supplier_employee_id
+
+    # Handle multipart/form-data or JSON
+    if request.content_type and "multipart/form-data" in request.content_type:
+        category = request.POST.get("category", "").strip()
+        custom_category = request.POST.get("custom_category", "").strip()
+        cost_raw = request.POST.get("cost", "").strip()
+        expense_date_raw = request.POST.get("expense_date", "").strip()
+        description = request.POST.get("description", "").strip()
+        title = request.POST.get("title", "").strip()
+        file_obj = request.FILES.get("attachment") or request.FILES.get("file")
+        base64_str = request.POST.get("attachment_base64", "").strip()
+    else:
+        body = request.data if hasattr(request, "data") else {}
+        category = str(body.get("category", "")).strip()
+        custom_category = str(body.get("custom_category", "")).strip()
+        cost_raw = str(body.get("cost", "")).strip()
+        expense_date_raw = str(body.get("expense_date", "")).strip()
+        description = str(body.get("description", "")).strip()
+        title = str(body.get("title", "")).strip()
+        file_obj = None
+        base64_str = str(body.get("attachment", "")).strip()
+
+    valid_categories = [
+        "Transportation & Travel",
+        "Meals & Allowances",
+        "Emergency",
+        "Equipment & Repair",
+        "Communication Expenses",
+        "Logistics",
+        "Office & Operating Supplies",
+        "Others",
+    ]
+    if not category:
+        return Response(
+            {"success": False, "message": "Expense category is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if category not in valid_categories:
+        return Response(
+            {"success": False, "message": "Invalid expense category selected."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if category == "Others":
+        if not custom_category:
+            return Response(
+                {"success": False, "message": "Please specify the custom category for 'Others'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        final_category = custom_category
+    else:
+        final_category = category
+
+    # Cost validation: numbers only, max 2 decimals, > 0
+    try:
+        cost = float(cost_raw)
+        if cost <= 0:
+            return Response(
+                {"success": False, "message": "Cost must be a positive number greater than zero."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if "." in cost_raw:
+            parts = cost_raw.split(".")
+            if len(parts) > 1 and len(parts[1]) > 2:
+                return Response(
+                    {"success": False, "message": "Cost can have at most two decimal places."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+    except (TypeError, ValueError):
+        return Response(
+            {"success": False, "message": "Please enter a valid numeric cost amount."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Expense Date validation: required, non-future
+    if not expense_date_raw:
+        return Response(
+            {"success": False, "message": "Expense date is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Description validation: required, <= 1000 characters
+    if not description:
+        return Response(
+            {"success": False, "message": "Description is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if len(description) > 1000:
+        return Response(
+            {"success": False, "message": "Description cannot exceed 1,000 characters."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Attachment validation & saving
+    try:
+        photo_url = _save_reimbursement_attachment(file_obj, base64_str, supplier_profile_id)
+    except ValueError as e:
+        return Response({"success": False, "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Submit reimbursement request into database
+    try:
+        final_title = title or f"{final_category} Reimbursement"
+        result = submit_reimbursement_request(
+            supplier_profile_id=supplier_profile_id,
+            requested_by_employee_id=employee_id,
+            title=final_title,
+            description=description,
+            category=final_category,
+            price=cost,
+            photo_evidence=photo_url,
+            expense_date=expense_date_raw,
+        )
+        return Response(
+            {
+                "success": True,
+                "message": f"Reimbursement request {result.get('request_reference_no')} submitted successfully.",
+                "reimbursement": result,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+    except ValueError as e:
+        return Response({"success": False, "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.exception("Server error submitting driver reimbursement request: %s", e)
+        return Response(
+            {
+                "success": False,
+                "message": f"Server error submitting reimbursement request: {str(e)}",
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+

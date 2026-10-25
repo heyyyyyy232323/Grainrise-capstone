@@ -15,6 +15,7 @@ from .views import (
     driver_messages_thread_view,
     driver_payment_submissions_list_view,
     driver_payment_submit_view,
+    driver_reimbursement_submit_view,
 )
 
 urlpatterns = [
@@ -29,4 +30,5 @@ urlpatterns = [
     path("messages/send/", driver_messages_send_view, name="driver-messages-send"),
     path("payments/submissions/", driver_payment_submissions_list_view, name="driver-payment-submissions-list"),
     path("payments/submit/", driver_payment_submit_view, name="driver-payment-submit"),
+    path("reimbursements/submit/", driver_reimbursement_submit_view, name="driver-reimbursement-submit"),
 ]
