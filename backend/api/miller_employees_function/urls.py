@@ -21,5 +21,9 @@ urlpatterns = [
         "logistics/",
         include("api.miller_employees_function.miller_logistics.urls"),
     ),
+    path(
+        "driver/",
+        include("api.miller_employees_function.miller_driver.urls"),
+    ),
 ]
 
