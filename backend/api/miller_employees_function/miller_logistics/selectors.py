@@ -1851,4 +1851,206 @@ def list_flc_reimbursement_history(
     return results
 
 
+def get_flc_dashboard_data(supplier_profile_id: int, miller_user_id: int) -> dict:
+    """
+    Retrieve real, branch-scoped FLC dashboard metrics and dataset summaries.
+    Strictly isolated to supplier_profile_id and owner miller_user_id.
+    """
+    with connection.cursor() as cursor:
+        # 1. Orders Awaiting Assignment: Count Forwarded to Logistics orders
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM miller_online_customer
+            WHERE supplier_profile_id = %s
+              AND status = 'Forwarded to Logistics'
+            """,
+            [supplier_profile_id],
+        )
+        orders_awaiting = int(cursor.fetchone()[0] or 0)
+
+        # 2. Unassigned Vehicles: Count branch-designated vehicles without active assignee in miller_vehicle_assignee
+        cursor.execute(
+            """
+            SELECT COUNT(DISTINCT v.vehicle_id)
+            FROM miller_delivery_vehicle_management v
+            INNER JOIN miller_delivery_vehicle_branches vb
+                ON vb.vehicle_id = v.vehicle_id AND vb.supplier_profile_id = %s
+            LEFT JOIN miller_vehicle_assignee mva
+                ON mva.vehicle_id = v.vehicle_id
+               AND mva.supplier_profile_id = %s
+               AND mva.status = 'active'
+            WHERE (%s IS NULL OR v.user_id = %s)
+              AND mva.assigned_id IS NULL
+            """,
+            [supplier_profile_id, supplier_profile_id, miller_user_id, miller_user_id],
+        )
+
+        unassigned_vehicles = int(cursor.fetchone()[0] or 0)
+
+        # 3. Pending Return Issues: Count returns with status = 'Pending'
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM miller_online_orders_returns
+            WHERE supplier_profile_id = %s
+              AND status = 'Pending'
+            """,
+            [supplier_profile_id],
+        )
+        pending_returns = int(cursor.fetchone()[0] or 0)
+
+        # 4. Pending Reimbursements: Count reimbursements with status = 'requested'
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM miller_reimbursement
+            WHERE supplier_profile_id = %s
+              AND LOWER(status) = 'requested'
+            """,
+            [supplier_profile_id],
+        )
+        pending_reimbursements = int(cursor.fetchone()[0] or 0)
+
+        # 5. Driver Assignment Progress:
+        # Actual assigned orders with confirmed driver assignment
+        cursor.execute(
+            """
+            SELECT COUNT(DISTINCT moc.online_order_id)
+            FROM miller_online_customer moc
+            INNER JOIN miller_driver_assignment mda
+                ON mda.online_order_id = moc.online_order_id
+               AND mda.supplier_profile_id = moc.supplier_profile_id
+            WHERE moc.supplier_profile_id = %s
+              AND moc.status = 'Assigned to driver'
+            """,
+            [supplier_profile_id],
+        )
+        orders_assigned = int(cursor.fetchone()[0] or 0)
+
+        total_assignable = orders_awaiting + orders_assigned
+        if total_assignable > 0:
+            assignment_percentage = round((orders_assigned / total_assignable) * 100)
+            if orders_awaiting == 0:
+                assignment_summary = "All forwarded orders currently have assigned drivers."
+            else:
+                assignment_summary = f"{orders_assigned} of {total_assignable} forwarded orders currently assigned to drivers."
+        else:
+            assignment_percentage = 0
+            assignment_summary = "No forwarded orders awaiting driver assignment."
+
+        # 6. Order Status Breakdown
+        # Count Pending (Ordered), Forwarded to Logistics, Assigned to driver, Completed (in receiving history)
+        cursor.execute(
+            """
+            SELECT
+                COUNT(CASE WHEN moc.status IN ('Ordered', 'pending') THEN 1 END) AS count_pending,
+                COUNT(CASE WHEN moc.status = 'Forwarded to Logistics' THEN 1 END) AS count_forwarded,
+                COUNT(CASE WHEN moc.status = 'Assigned to driver' AND rh.receiving_id IS NULL THEN 1 END) AS count_assigned,
+                COUNT(CASE WHEN rh.receiving_id IS NOT NULL OR moc.status IN ('Delivered', 'Completed') THEN 1 END) AS count_completed
+            FROM miller_online_customer moc
+            LEFT JOIN miller_online_customer_receiving_history rh
+                ON rh.online_order_id = moc.online_order_id
+               AND rh.supplier_profile_id = moc.supplier_profile_id
+            WHERE moc.supplier_profile_id = %s
+              AND moc.status != 'Declined'
+            """,
+            [supplier_profile_id],
+        )
+        status_row = cursor.fetchone()
+        c_pending = int(status_row[0] or 0)
+        c_forwarded = int(status_row[1] or 0)
+        c_assigned = int(status_row[2] or 0)
+        c_completed = int(status_row[3] or 0)
+        total_status = c_pending + c_forwarded + c_assigned + c_completed
+
+        if total_status > 0:
+            pct_pending = round((c_pending / total_status) * 100)
+            pct_forwarded = round((c_forwarded / total_status) * 100)
+            pct_assigned = round((c_assigned / total_status) * 100)
+            pct_completed = max(0, 100 - (pct_pending + pct_forwarded + pct_assigned))
+        else:
+            pct_pending = pct_forwarded = pct_assigned = pct_completed = 0
+
+    # 7. Load Utilization
+    raw_drivers = list_flc_drivers_with_capacity(supplier_profile_id)
+    load_utilization = []
+    for d in raw_drivers:
+        driver_name = d.get("name") or f"{d.get('first_name', '')} {d.get('last_name', '')}".strip() or "Driver"
+        max_cap = float(d.get("max_capacity") or d.get("max") or 0.0)
+        curr_load = float(d.get("current_load") or d.get("capacity") or 0.0)
+        rem_cap = float(d.get("remaining_capacity") or max(0.0, max_cap - curr_load))
+        pct_used = int(d.get("pct_used") or 0)
+        status_label = d.get("status") or ("No Vehicle" if not d.get("has_vehicle") else "Available")
+
+        load_utilization.append({
+            "driver_id": d.get("driver_id") or d.get("id"),
+            "driver_name": driver_name,
+            "has_vehicle": bool(d.get("has_vehicle")),
+            "vehicle_id": d.get("vehicle_id"),
+            "plate_number": d.get("plate_number") or "",
+            "model": d.get("vehicle_model") or "",
+            "max_capacity_kg": max_cap,
+            "pending_load_kg": curr_load,
+            "remaining_capacity_kg": rem_cap,
+            "utilization_percentage": pct_used,
+            "status_label": status_label,
+            "load_display": f"{curr_load:,.0f} / {max_cap:,.0f} kg" if max_cap else "0 / 0 kg",
+        })
+
+    # 8. Delivery Management Table (top forwarded orders)
+    delivery_orders_all = list_flc_delivery_orders(supplier_profile_id)
+    delivery_table = []
+    for o in delivery_orders_all[:5]:
+        delivery_table.append({
+            "online_order_id": o.get("online_order_id") or o.get("id"),
+            "batch_no": o.get("batch_no") or o.get("batch") or "—",
+            "retailer": o.get("retailer") or o.get("buyer_name") or "Retailer",
+            "variant": o.get("product_name") or o.get("variant") or "—",
+            "qty": o.get("ordered_quantity_formatted") or f"{float(o.get('ordered_quantity') or 0):,.0f} kg",
+            "arrival": o.get("expected_arrival_date_formatted") or str(o.get("expected_arrival_date") or "—"),
+        })
+
+    # 9. Product Returns Table (top pending returns)
+    returns_all = list_flc_product_returns(supplier_profile_id)
+    returns_table = []
+    for r in returns_all[:5]:
+        returns_table.append({
+            "return_id": r.get("return_id") or r.get("id"),
+            "variant": r.get("product_name") or r.get("variant") or "—",
+            "order_no": r.get("orderNo") or r.get("batch_no") or r.get("return_reference_no") or "—",
+            "return_reference_no": r.get("return_reference_no") or "—",
+            "buyer": r.get("buyer") or r.get("buyer_name") or "Buyer",
+            "qty": r.get("quantity_formatted") or r.get("qty") or f"{float(r.get('quantity') or 0):,.0f} kg",
+        })
+
+
+    return {
+        "kpis": {
+            "orders_awaiting_assignment": orders_awaiting,
+            "unassigned_vehicles": unassigned_vehicles,
+            "pending_returns": pending_returns,
+            "pending_reimbursements": pending_reimbursements,
+        },
+        "driver_assignment": {
+            "orders_awaiting": orders_awaiting,
+            "orders_assigned": orders_assigned,
+            "total_orders": total_assignable,
+            "percentage": assignment_percentage,
+            "summary": assignment_summary,
+        },
+        "order_status_breakdown": {
+            "total": total_status,
+            "pending": {"count": c_pending, "percentage": pct_pending},
+            "forwarded": {"count": c_forwarded, "percentage": pct_forwarded},
+            "assigned": {"count": c_assigned, "percentage": pct_assigned},
+            "completed": {"count": c_completed, "percentage": pct_completed},
+        },
+        "load_utilization": load_utilization,
+        "delivery_orders": delivery_table,
+        "product_returns": returns_table,
+    }
+
+
+
 

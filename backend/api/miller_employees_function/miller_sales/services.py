@@ -762,12 +762,22 @@ def approve_miller_online_order(
 
     try:
         from .notifications.services import create_sales_notification
+        from api.miller_employees_function.miller_logistics.notifications.services import (
+            create_logistics_notification,
+        )
         qty_fmt = f"{int(ordered_quantity):,}" if ordered_quantity % 1 == 0 else f"{ordered_quantity:,.2f}"
         create_sales_notification(
             supplier_profile_id=supplier_profile_id,
             title="Order Approved",
             content=f"Online order {batch_no} for {product_name} ({qty_fmt} kg) has been approved and forwarded to logistics.",
             action_url="/miller-sales/online-orders",
+        )
+        create_logistics_notification(
+            supplier_profile_id=supplier_profile_id,
+            title="New Order Forwarded",
+            content=f"Online order {batch_no} for {product_name} ({qty_fmt} kg) has been forwarded to logistics for driver assignment.",
+            action_url="/miller-logistics/delivery-management",
+            deduplication_key=f"Online order {batch_no}",
         )
     except Exception:
         pass

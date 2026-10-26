@@ -152,6 +152,13 @@ def send_miller_message(miller_user_id, data):
         except (TypeError, ValueError):
             replied_to_id = None
 
+    # Attachment handling
+    attachment = data.get("message_attachment")
+    if attachment is not None:
+        attachment = str(attachment).strip()[:500]
+        if not attachment:
+            attachment = None
+
     # Insert into messages
     with connection.cursor() as cursor:
         cursor.execute(
@@ -169,7 +176,7 @@ def send_miller_message(miller_user_id, data):
                 seen_at,
                 replied_to_message_id
             ) VALUES (
-                %s, %s, %s, %s, NULL, %s, %s, NULL, NOW(), NULL, %s
+                %s, %s, %s, %s, NULL, %s, %s, %s, NOW(), NULL, %s
             )
             """,
             [
@@ -179,6 +186,7 @@ def send_miller_message(miller_user_id, data):
                 receiver_user_id,
                 receiver_warehouse_id,
                 content,
+                attachment,
                 replied_to_id,
             ],
         )
@@ -201,7 +209,7 @@ def send_miller_message(miller_user_id, data):
         "sender_name": "You",
         "message_content": content,
         "message_text": content,
-        "message_attachment": "",
+        "message_attachment": attachment or "",
         "created_at": _format_datetime(created_at),
         "seen_at": "",
         "is_seen": False,

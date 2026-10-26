@@ -1744,3 +1744,21 @@ def delete_warehouse_employee(
         "message":
             "Warehouse employee deleted permanently.",
     }
+
+# ============================================================
+# RESOLVE WAREHOUSE REPORT
+# ============================================================
+
+@transaction.atomic
+def resolve_warehouse_report(
+    report_id,
+    *,
+    status="resolved",
+):
+    from api.comment_reporting import resolve_report_by_type_and_id
+    return resolve_report_by_type_and_id(
+        "warehouse",
+        report_id,
+        status=status,
+    )
+

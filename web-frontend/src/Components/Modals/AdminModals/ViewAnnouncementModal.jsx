@@ -1,6 +1,7 @@
 import React, {
   useState,
 } from "react";
+import RichArticleContent from "../../Minor-Components/RichArticleContent";
 
 import {
   createPortal,
@@ -551,26 +552,10 @@ const ViewAnnouncementModal = ({
                   p-4
                 "
               >
-                {announcement?.content ? (
-                  <div
-                    className="
-                      prose
-                      prose-sm
-                      max-w-none
-                      text-gray-700
-                      leading-relaxed
-                      [&_a]:text-blue-600
-                      [&_a]:underline
-                    "
-                    dangerouslySetInnerHTML={{
-                      __html: announcement.content,
-                    }}
-                  />
-                ) : (
-                  <p className="text-sm italic text-gray-400">
-                    No announcement content provided.
-                  </p>
-                )}
+                <RichArticleContent
+                  content={announcement?.content}
+                  fallbackText="No announcement content provided."
+                />
               </div>
             </div>
           ) : (

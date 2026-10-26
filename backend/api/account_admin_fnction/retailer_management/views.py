@@ -16,6 +16,7 @@ from .selectors import (
     get_retailer_details,
     get_retailer_status_counts,
     list_retailers,
+    get_retailer_reports,
 )
 
 from .services import (
@@ -23,6 +24,7 @@ from .services import (
     confirm_retailer_application,
     delete_retailer_account,
     restore_retailer_account,
+    resolve_retailer_report,
 )
 
 
@@ -308,6 +310,20 @@ def _build_retailer_detail_response(
         # ====================================================
         # DOCUMENTS
         # ====================================================
+
+        # ====================================================
+        # REPORTS
+        # ====================================================
+
+        "reports": [
+            _serialize_row(r)
+            for r in get_retailer_reports(row.get("user_id"))
+        ],
+
+        "report_count": len(
+            get_retailer_reports(row.get("user_id"))
+        ),
+
 
         "documents": {
 
@@ -1029,3 +1045,65 @@ def delete_retailer_management_account(
             },
             status=500,
         )
+
+
+# ============================================================
+# RESOLVE RETAILER REPORT
+# ============================================================
+
+@csrf_exempt
+@require_POST
+@account_admin_required
+def resolve_retailer_management_report(
+    request,
+    report_id=None,
+    user_id=None,
+):
+    """
+    Resolve a report submitted against a Retailer.
+    """
+    try:
+        data = _read_request_data(request)
+        target_report_id = report_id or data.get("report_id")
+
+        result = resolve_retailer_report(
+            target_report_id
+        )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Retailer report marked as resolved successfully.",
+                "data": result,
+            },
+            status=200,
+        )
+
+    except LookupError as exc:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": str(exc),
+            },
+            status=404,
+        )
+
+    except ValueError as exc:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": str(exc),
+            },
+            status=400,
+        )
+
+    except Exception as exc:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Unable to resolve report.",
+                "error": str(exc),
+            },
+            status=500,
+        )
+

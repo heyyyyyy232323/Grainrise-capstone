@@ -1722,3 +1722,38 @@ def delete_warehouse_management_employee(
             },
             status=500,
         )
+
+# ============================================================
+# RESOLVE WAREHOUSE REPORT
+# ============================================================
+
+@csrf_exempt
+@require_POST
+@account_admin_required
+def resolve_warehouse_management_report(
+    request,
+    report_id=None,
+    user_id=None,
+):
+    from .services import resolve_warehouse_report
+    try:
+        data = _read_request_data(request)
+        target_report_id = report_id or data.get("report_id")
+
+        result = resolve_warehouse_report(target_report_id)
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Warehouse report marked as resolved successfully.",
+                "data": result,
+            },
+            status=200,
+        )
+    except LookupError as exc:
+        return JsonResponse({"success": False, "message": str(exc)}, status=404)
+    except ValueError as exc:
+        return JsonResponse({"success": False, "message": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "message": "Unable to resolve report.", "error": str(exc)}, status=500)
+

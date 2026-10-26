@@ -1,13 +1,17 @@
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   Heart,
   Share2,
   Bookmark,
   Send,
+  Flag,
 } from "lucide-react";
+import ReportCommentModal from "../../../Components/Modals/NewsUpdates/ReportCommentModal";
+import useNewsUpdates from "../../../Components/hooks/NewsUpdates/useNewsUpdates";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
+import RichArticleContent from "../../../Components/Minor-Components/RichArticleContent";
 import field1 from "../../../assets/field1.png";
 import field2 from "../../../assets/field2.png";
 
@@ -70,14 +74,83 @@ const ARTICLES = {
 
 export default function MillerManagerNewsArticle() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const article = ARTICLES[id] || ARTICLES[1];
-
+  const [article, setArticle] = useState(ARTICLES[id] || ARTICLES[1]);
   const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(article.likes);
+  const [likeCount, setLikeCount] = useState((ARTICLES[id] || ARTICLES[1]).likes || 0);
   const [saved, setSaved] = useState(false);
   const [comment, setComment] = useState("");
-  const [comments, setComments] = useState(article.comments);
+  const [comments, setComments] = useState((ARTICLES[id] || ARTICLES[1]).comments || []);
+
+  useEffect(() => {
+    if (!id) return;
+    const isAnnouncement =
+      searchParams.get("type") === "announcement" || String(id).startsWith("announcement");
+    const cleanId = String(id).replace(/^(announcement|news)-/, "");
+
+    const fetchRealArticle = async () => {
+      try {
+        const endpoint = isAnnouncement
+          ? `/api/admin/announcements/public/${encodeURIComponent(cleanId)}/`
+          : `/api/news/public/${encodeURIComponent(cleanId)}/`;
+
+        const res = await fetch(endpoint, { headers: { Accept: "application/json" } });
+        if (!res.ok) return;
+        const resJson = await res.json();
+        const data = resJson?.data?.article || resJson?.data;
+        if (data && data.title) {
+          setArticle({
+            id: data.news_id || data.announcement_id || cleanId,
+            category: data.category || (isAnnouncement ? "Announcement from the admin" : "General Agriculture"),
+            categoryColor: isAnnouncement
+              ? "bg-indigo-100 text-indigo-700"
+              : "bg-emerald-100 text-emerald-700",
+            source: data.source_name || (isAnnouncement ? "GrainRise Admin" : "GrainRise News"),
+            date: data.published_at || data.date_published || data.created_at || "",
+            title: data.title,
+            image: data.image_url || field1,
+            content: data.article_body || data.content || data.description || "",
+            likes: data.reaction_count || 0,
+            comments: data.comments || [],
+          });
+          setLikeCount(data.reaction_count || 0);
+          if (data.comments) setComments(data.comments);
+        }
+      } catch (err) {
+        console.debug("Falling back to local article:", err);
+      }
+    };
+
+    fetchRealArticle();
+  }, [id, searchParams]);
+
+  const [reportingComment, setReportingComment] = useState(null);
+  const [feedbackMessage, setFeedbackMessage] = useState(null);
+
+  const { reportNewsComment } = useNewsUpdates();
+
+  const handleReportComment = async (reason) => {
+    if (!reportingComment) return;
+    try {
+      await reportNewsComment({
+        commentId: reportingComment.id,
+        reason,
+        title: article.title,
+      });
+      setFeedbackMessage({
+        type: "success",
+        text: "Report submitted. Thank you for helping keep GrainRise safe.",
+      });
+      setTimeout(() => setFeedbackMessage(null), 4000);
+    } catch (err) {
+      setFeedbackMessage({
+        type: "error",
+        text: err?.message || "Unable to submit report.",
+      });
+      setTimeout(() => setFeedbackMessage(null), 4000);
+    }
+  };
 
   const handleLike = () => {
     setLiked((prev) => !prev);
@@ -141,11 +214,7 @@ export default function MillerManagerNewsArticle() {
         </div>
 
         <div className="px-7 py-6">
-          {article.content.trim().split("\n\n").map((para, i) => (
-            <p key={i} className="text-sm md:text-base text-gray-700 leading-relaxed mb-5 last:mb-0">
-              {para.trim()}
-            </p>
-          ))}
+          <RichArticleContent content={article.content} />
         </div>
 
         <div className="px-7 py-4 border-t border-slate-100 flex items-center justify-between">
@@ -176,6 +245,16 @@ export default function MillerManagerNewsArticle() {
 
       <div className="max-w-5xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm px-7 py-6 space-y-6">
         <h3 className="font-bold text-gray-900 text-base">Comments ({comments.length})</h3>
+
+        {feedbackMessage && (
+          <div className={`p-3 rounded-xl text-xs font-semibold ${
+            feedbackMessage.type === "success"
+              ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
+              : "bg-red-50 border border-red-200 text-red-800"
+          }`}>
+            {feedbackMessage.text}
+          </div>
+        )}
 
         <div className="flex gap-3">
           <div className="w-9 h-9 rounded-full bg-[#0B5D1E] text-white flex items-center justify-center shrink-0 font-bold text-sm">
@@ -208,10 +287,26 @@ export default function MillerManagerNewsArticle() {
                 <span className="text-xs text-gray-400">{c.date}</span>
               </div>
               <p className="text-sm text-gray-700">{c.text}</p>
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setReportingComment(c)}
+                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-600 transition-colors font-medium cursor-pointer"
+                >
+                  <Flag size={12} /> Report
+                </button>
+              </div>
             </div>
           ))}
         </div>
       </div>
+      <ReportCommentModal
+        isOpen={Boolean(reportingComment)}
+        onClose={() => setReportingComment(null)}
+        comment={reportingComment}
+        articleTitle={article.title}
+        onSubmitReport={handleReportComment}
+      />
     </div>
   );
 }
