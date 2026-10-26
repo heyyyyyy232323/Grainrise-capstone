@@ -13,6 +13,7 @@ from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
+from .services.email_sender import send_grainrise_email
 from django.db import connection
 from django.utils.text import get_valid_filename
 
@@ -1526,7 +1527,15 @@ def issue_forgot_password_otp(email):
     )
 
     message.attach_alternative(html_message, "text/html")
-    message.send(fail_silently=False)
+    email_sent, email_err = send_grainrise_email(
+        subject=subject,
+        text_content=text_message,
+        html_content=html_message,
+        recipient_email=normalized_email,
+    )
+
+    if not email_sent:
+        raise RuntimeError(email_err or 'Failed to send password reset email.')
 
     cache.set(
         f"forgot_pw_otp:{normalized_email}",
