@@ -1135,9 +1135,17 @@ function App() {
               path="/miller-manager/vehicle-management"
               element={<MillerVehicleManagement />}
             />
+            <Route
+              path="/miller-manager/vehicles"
+              element={<MillerVehicleManagement />}
+            />
 
             <Route
               path="/miller-manager/performance"
+              element={<MillerPerformanceMonitoring />}
+            />
+            <Route
+              path="/miller-manager/performance-monitoring"
               element={<MillerPerformanceMonitoring />}
             />
 

@@ -18,8 +18,9 @@ export default function RecentActivityCard({
   className = "",
   accentColor,
   showConnector = true,
+  emptyMessage = "Add items to render the recent activity feed.",
 }) {
-  const visibleItems = items.slice(0, 5);
+  const visibleItems = items.slice(0, 6);
 
   return (
     <article
@@ -78,7 +79,7 @@ export default function RecentActivityCard({
             })
           ) : (
             <div className="rounded-xl border border-dashed border-slate-200 px-3 py-4 text-xs text-slate-400">
-              Add items to render the recent activity feed.
+              {emptyMessage}
             </div>
           )}
         </div>
