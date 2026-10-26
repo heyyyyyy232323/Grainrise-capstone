@@ -97,7 +97,7 @@ const resolvePhotoUrl = (photoPath) => {
   const backendBase = (
     import.meta.env.VITE_API_BASE_URL ||
     import.meta.env.VITE_API_URL ||
-    "http://127.0.0.1:8000"
+    (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") ? "http://127.0.0.1:8000" : "")
   ).replace(/\/$/, "");
   return `${backendBase}/media/${clean}`;
 };
@@ -260,6 +260,17 @@ export default function MillerDriverAssignedHistory() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Lock body scroll when either detail modal is open
+  useEffect(() => {
+    if (isFulfillmentModalOpen || isVehicleModalOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [isFulfillmentModalOpen, isVehicleModalOpen]);
 
   // ═════════════════════════════════════════════════════════════════════════════
   // FETCH FULFILLMENT VARIANTS & RECORDS
@@ -929,7 +940,7 @@ export default function MillerDriverAssignedHistory() {
       {isFulfillmentModalOpen && selectedFulfillment && (
         createPortal(
           <div
-            className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
             role="dialog"
             aria-modal="true"
           >
@@ -1075,7 +1086,7 @@ export default function MillerDriverAssignedHistory() {
       {isVehicleModalOpen && selectedVehicle && (
         createPortal(
           <div
-            className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
             role="dialog"
             aria-modal="true"
           >

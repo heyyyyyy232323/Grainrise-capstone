@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -35,7 +36,7 @@ import DriverDeliverySuccessModal from "../../../Components/Modals/MillerDriver/
 const API_BASE = (
   import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_API_URL ||
-  "http://127.0.0.1:8000"
+  (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") ? "http://127.0.0.1:8000" : "")
 ).replace(/\/$/, "");
 
 export default function MillerDriverLiveTracking() {
@@ -86,6 +87,18 @@ export default function MillerDriverLiveTracking() {
   const [receiptData, setReceiptData] = useState(null);
   const [pendingCodPayload, setPendingCodPayload] = useState(null);
   const [isSubmittingDelivery, setIsSubmittingDelivery] = useState(false);
+
+  const [capturedPodPhoto, setCapturedPodPhoto] = useState(null);
+  const [activeTargetOrder, setActiveTargetOrder] = useState(null);
+  const [showOrderSelectModal, setShowOrderSelectModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successModalData, setSuccessModalData] = useState({
+    title: "Order Delivered Successfully",
+    message: "Proof of delivery has been saved to your assignment.",
+    buttonLabel: "Continue Delivery",
+    action: null,
+  });
+  const [hasRemainingDeliveries, setHasRemainingDeliveries] = useState(true);
 
   // Auth token helper
   const getAuthToken = () => {
@@ -175,6 +188,25 @@ export default function MillerDriverLiveTracking() {
     setGpsError("");
     setIsGpsActive(true);
 
+    // 1. Immediate GPS fix
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setCurrentCoords({ latitude, longitude });
+        setGpsError("");
+        sendPingToServer(latitude, longitude);
+      },
+      (err) => {
+        console.warn("Initial GPS acquisition notice:", err);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+
+    // 2. Continuous watchPosition
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
@@ -194,7 +226,7 @@ export default function MillerDriverLiveTracking() {
       {
         enableHighAccuracy: true,
         timeout: 20000,
-        maximumAge: 5000,
+        maximumAge: 1000,
       }
     );
 
@@ -299,40 +331,20 @@ export default function MillerDriverLiveTracking() {
     return [14.7984, 120.9280];
   }, []);
 
-  // High-fidelity pre-mapped road corridor for Bulacan - North Caloocan logistics path
-  // Ensures that even if external routing services are delayed or offline,
-  // the path strictly follows actual roads (MacArthur Hwy, Meycauayan, Bagumbong Rd)
-  // and NEVER degrades into a slanted vertical straight line.
-  const DEFAULT_ROAD_WAYPOINTS = [
-    [14.80926, 120.92209], [14.80732, 120.92513], [14.80559, 120.92566], [14.8039, 120.92493],
-    [14.8022, 120.92424], [14.8, 120.92346], [14.79949, 120.92368], [14.79907, 120.92412],
-    [14.7987, 120.92487], [14.79857, 120.92591], [14.79844, 120.92778], [14.79834, 120.92829],
-    [14.79783, 120.92882], [14.79726, 120.92914], [14.79583, 120.92994], [14.79381, 120.93105],
-    [14.79204, 120.93202], [14.79143, 120.93228], [14.79068, 120.93224], [14.78948, 120.93157],
-    [14.78876, 120.93134], [14.787, 120.93167], [14.78604, 120.93185], [14.78507, 120.93233],
-    [14.78302, 120.93389], [14.78157, 120.93498], [14.78036, 120.93579], [14.77838, 120.9369],
-    [14.77627, 120.93807], [14.77424, 120.93905], [14.77221, 120.93998], [14.77128, 120.94048],
-    [14.76819, 120.94218], [14.76645, 120.94313], [14.76555, 120.94389], [14.76458, 120.94506],
-    [14.76273, 120.94724], [14.76101, 120.9494], [14.75948, 120.95122], [14.75874, 120.95197],
-    [14.75705, 120.95285], [14.75622, 120.95366], [14.75646, 120.95367], [14.75664, 120.95368],
-    [14.75879, 120.95624], [14.76004, 120.95833], [14.76042, 120.95956], [14.76009, 120.96016],
-    [14.7598, 120.96112], [14.76014, 120.96183], [14.76048, 120.96277], [14.76133, 120.96447],
-    [14.76275, 120.96707], [14.76325, 120.96715], [14.76364, 120.96739], [14.76455, 120.96921],
-    [14.76545, 120.97027], [14.76565, 120.97074], [14.76587, 120.97181], [14.76669, 120.97294],
-    [14.7674, 120.97359], [14.76728, 120.97392], [14.76726, 120.97446], [14.76719, 120.97509],
-    [14.76727, 120.97638], [14.7674, 120.97745], [14.76775, 120.97818], [14.76905, 120.97986],
-    [14.76756, 120.98074], [14.76554, 120.98164], [14.76525, 120.98206], [14.76494, 120.98255],
-    [14.76535, 120.98339], [14.7659, 120.98353], [14.76689, 120.9843], [14.76727, 120.98474],
-    [14.76667, 120.98527], [14.76653, 120.98576], [14.76445, 120.98707], [14.76338, 120.98717],
-    [14.76465, 120.9885], [14.76552, 120.98919], [14.76588, 120.99206], [14.76628, 120.99637],
-    [14.76645, 120.99995], [14.76661, 121.00331], [14.76603, 121.00576], [14.76624, 121.00689],
-    [14.76743, 121.00731], [14.76731, 121.00803], [14.76718, 121.00902], [14.76723, 121.00993],
-    [14.76738, 121.01088], [14.7672, 121.01153], [14.76779, 121.01251], [14.76869, 121.01347],
-    [14.76952, 121.01446], [14.76991, 121.01543], [14.77003, 121.01639], [14.77009, 121.01797],
-    [14.77021, 121.0188], [14.77015, 121.02008], [14.77026, 121.02094], [14.76611, 121.02268],
-    [14.76554, 121.02352], [14.76512, 121.0242], [14.76446, 121.02459], [14.76365, 121.02525],
-    [14.76324, 121.02563], [14.76294, 121.02722], [14.76132, 121.0278],
-  ];
+  // Calculate Haversine distance in km between two GPS coordinates
+  const calculateHaversineDistanceKm = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Earth radius in km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
 
   // Fetch real road route geometry from OSRM and compute real distance & ETA
   const fetchAndDrawRoute = useCallback(async (map, driverLat, driverLng, destLat, destLng) => {
@@ -391,64 +403,57 @@ export default function MillerDriverLiveTracking() {
         },
       }).addTo(map);
       routeLayerRef.current = geojsonLayer;
+      routeEndpointsRef.current = { start: [driverLat, driverLng], end: [destLat, destLng] };
 
-      // Position Start & End icons EXACTLY on the actual points where the line starts and ends
-      const coords = routeData.geometry?.coordinates;
-      if (coords && coords.length > 0) {
-        // GeoJSON coordinates are [longitude, latitude]
-        const startPoint = [coords[0][1], coords[0][0]];
-        const endPoint = [coords[coords.length - 1][1], coords[coords.length - 1][0]];
-        routeEndpointsRef.current = { start: startPoint, end: endPoint };
-
-        if (driverMarkerRef.current) {
-          driverMarkerRef.current.setLatLng(startPoint);
-        }
-        if (destMarkerRef.current) {
-          destMarkerRef.current.setLatLng(endPoint);
-        }
+      if (destMarkerRef.current) {
+        destMarkerRef.current.setLatLng([destLat, destLng]);
+      }
+      if (driverMarkerRef.current) {
+        driverMarkerRef.current.setLatLng([driverLat, driverLng]);
       }
 
       map.fitBounds(geojsonLayer.getBounds(), { padding: [65, 65], maxZoom: 16 });
       return;
     }
 
-    // If both online routing endpoints failed or timed out:
-    // IMPORTANT: NEVER degrade into a straight slanted line!
-    // If a route layer was already rendered, preserve it without modifying.
-    if (routeLayerRef.current) {
-      return;
-    }
-
-    // If no route was previously drawn, render the actual road network corridor
-    const fallbackPolyline = L.polyline(DEFAULT_ROAD_WAYPOINTS, {
-      color: "#0B5D1E",
-      weight: 6,
-      opacity: 0.92,
-      lineCap: "round",
-      lineJoin: "round",
-    }).addTo(map);
-    routeLayerRef.current = fallbackPolyline;
-
-    // Position Start & End icons EXACTLY on the actual points where the line starts and ends
-    const fallbackStart = DEFAULT_ROAD_WAYPOINTS[0];
-    const fallbackEnd = DEFAULT_ROAD_WAYPOINTS[DEFAULT_ROAD_WAYPOINTS.length - 1];
-    routeEndpointsRef.current = { start: fallbackStart, end: fallbackEnd };
-
-    if (driverMarkerRef.current) {
-      driverMarkerRef.current.setLatLng(fallbackStart);
-    }
-    if (destMarkerRef.current) {
-      destMarkerRef.current.setLatLng(fallbackEnd);
-    }
+    // Fallback: If online routing services are offline or rate-limited,
+    // compute accurate driving distance estimation using Haversine with road winding factor
+    const directKm = calculateHaversineDistanceKm(driverLat, driverLng, destLat, destLng);
+    const estimatedRoadKm = (directKm * 1.3).toFixed(1); // 1.3 typical road factor
+    const durMin = Math.max(1, Math.round((parseFloat(estimatedRoadKm) / 32) * 60)); // 32 km/h city average
+    const arrivalDate = new Date(Date.now() + durMin * 60 * 1000);
+    const arrivalTime = arrivalDate.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
     setRouteStats({
-      distanceKm: "18.0",
-      durationMinutes: 25,
-      etaTimeFormatted: "Approx. 25 mins",
+      distanceKm: estimatedRoadKm,
+      durationMinutes: durMin,
+      etaTimeFormatted: `${arrivalTime} (${durMin} mins)`,
       isLoading: false,
     });
 
-    map.fitBounds(fallbackPolyline.getBounds(), { padding: [65, 65] });
+    if (routeLayerRef.current && map) {
+      map.removeLayer(routeLayerRef.current);
+    }
+
+    const directPolyline = L.polyline([[driverLat, driverLng], [destLat, destLng]], {
+      color: "#0B5D1E",
+      weight: 5,
+      opacity: 0.85,
+      dashArray: "8, 8",
+      lineCap: "round",
+      lineJoin: "round",
+    }).addTo(map);
+    routeLayerRef.current = directPolyline;
+    routeEndpointsRef.current = { start: [driverLat, driverLng], end: [destLat, destLng] };
+
+    if (driverMarkerRef.current) {
+      driverMarkerRef.current.setLatLng([driverLat, driverLng]);
+    }
+    if (destMarkerRef.current) {
+      destMarkerRef.current.setLatLng([destLat, destLng]);
+    }
+
+    map.fitBounds(directPolyline.getBounds(), { padding: [65, 65] });
   }, []);
 
   // Initialize Leaflet Map
@@ -466,8 +471,9 @@ export default function MillerDriverLiveTracking() {
       const destCoords = await resolveDestinationCoords(buyerGroup.delivery_address);
       if (!isMounted || !leafletContainerRef.current) return;
 
-      // Use route line corridor endpoints
-      const initialStart = DEFAULT_ROAD_WAYPOINTS[0];
+      const initialStart = currentCoords
+        ? [currentCoords.latitude, currentCoords.longitude]
+        : destCoords;
       const initialDest = destCoords;
 
       const map = L.map(leafletContainerRef.current, {
@@ -502,7 +508,7 @@ export default function MillerDriverLiveTracking() {
       const dMarker = L.marker(initialStart, { icon: driverIcon }).addTo(map);
       dMarker.bindPopup(`
         <div style="font-family: inherit; font-size: 12px; line-height: 1.4;">
-          <b style="color: #0B5D1E;">Driver Vehicle (Route Start)</b><br/>
+          <b style="color: #0B5D1E;">Driver Vehicle (Live Location)</b><br/>
           <span>${initialStart[0].toFixed(5)}, ${initialStart[1].toFixed(5)}</span>
         </div>
       `);
@@ -533,6 +539,7 @@ export default function MillerDriverLiveTracking() {
       destMarkerRef.current = dstMarker;
 
       mapInstanceRef.current = map;
+      routeEndpointsRef.current = { start: initialStart, end: destCoords };
 
       // Calculate real road route & ETA
       lastRouteCalcRef.current = { lat: initialStart[0], lng: initialStart[1], time: Date.now() };
@@ -552,37 +559,26 @@ export default function MillerDriverLiveTracking() {
 
   // Update driver marker & route when live GPS coords update
   useEffect(() => {
-    if (!mapInstanceRef.current || !driverMarkerRef.current) return;
+    if (!mapInstanceRef.current || !driverMarkerRef.current || !currentCoords) return;
 
-    const startPt = routeEndpointsRef.current?.start || DEFAULT_ROAD_WAYPOINTS[0];
-    const endPt = routeEndpointsRef.current?.end || DEFAULT_ROAD_WAYPOINTS[DEFAULT_ROAD_WAYPOINTS.length - 1];
+    const newPos = [currentCoords.latitude, currentCoords.longitude];
+    driverMarkerRef.current.setLatLng(newPos);
+    driverMarkerRef.current.setPopupContent(`
+      <div style="font-family: inherit; font-size: 12px; line-height: 1.4;">
+        <b style="color: #0B5D1E;">Driver Vehicle (Live Location)</b><br/>
+        <span>${newPos[0].toFixed(5)}, ${newPos[1].toFixed(5)}</span>
+      </div>
+    `);
 
-    // Always keep destination marker locked to the exact end point of the route line
-    if (destMarkerRef.current) {
-      destMarkerRef.current.setLatLng(endPt);
-    }
-
-    if (currentCoords) {
-      const newPos = [currentCoords.latitude, currentCoords.longitude];
-      const distFromStartM = L.latLng(newPos[0], newPos[1]).distanceTo(L.latLng(startPt[0], startPt[1]));
-
-      // If the device's real GPS is within 2.5km of the delivery origin/route, follow live GPS
-      // Otherwise, keep the marker anchored directly on the line's starting point
-      if (distFromStartM < 2500) {
-        driverMarkerRef.current.setLatLng(newPos);
-      } else {
-        driverMarkerRef.current.setLatLng(startPt);
-      }
-
+    const endPt = routeEndpointsRef.current?.end;
+    if (endPt) {
       const last = lastRouteCalcRef.current;
       const now = Date.now();
-      const distFromLast = L.latLng(newPos[0], newPos[1]).distanceTo(L.latLng(last.lat, last.lng));
-      if (distFromLast >= 80 && now - last.time >= 15000 && distFromStartM < 2500) {
+      const distFromLast = calculateHaversineDistanceKm(newPos[0], newPos[1], last.lat, last.lng) * 1000;
+      if ((distFromLast >= 40 && now - last.time >= 12000) || last.time === 0) {
         lastRouteCalcRef.current = { lat: newPos[0], lng: newPos[1], time: now };
         fetchAndDrawRoute(mapInstanceRef.current, newPos[0], newPos[1], endPt[0], endPt[1]);
       }
-    } else {
-      driverMarkerRef.current.setLatLng(startPt);
     }
   }, [currentCoords, fetchAndDrawRoute]);
 
@@ -621,6 +617,31 @@ export default function MillerDriverLiveTracking() {
     document.addEventListener("fullscreenchange", onFsChange);
     return () => document.removeEventListener("fullscreenchange", onFsChange);
   }, []);
+
+  // Lock body scroll whenever any live tracking modal is open
+  useEffect(() => {
+    const isAnyModalOpen =
+      showOrderSelectModal ||
+      showExitModal ||
+      showPodModal ||
+      showCodModal ||
+      showSuccessModal ||
+      showReceiptModal;
+    if (isAnyModalOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [
+    showOrderSelectModal,
+    showExitModal,
+    showPodModal,
+    showCodModal,
+    showSuccessModal,
+    showReceiptModal,
+  ]);
 
   // 3. Navigation Protection (Sidebar, Back, Messages)
   const handleRequestExit = (targetPath = "/miller-driver/my-duties") => {
@@ -667,17 +688,6 @@ export default function MillerDriverLiveTracking() {
   const prepaidOrders = orders.filter((o) => o.payment_method !== "Cash on Delivery");
   const hasPrepaidOrders = prepaidOrders.length > 0;
   const allOrdersDelivered = orders.length > 0 && orders.every((o) => o.order_status === "Delivered");
-  const [capturedPodPhoto, setCapturedPodPhoto] = useState(null);
-  const [activeTargetOrder, setActiveTargetOrder] = useState(null);
-  const [showOrderSelectModal, setShowOrderSelectModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successModalData, setSuccessModalData] = useState({
-    title: "Order Delivered Successfully",
-    message: "Proof of delivery has been saved to your assignment.",
-    buttonLabel: "Continue Delivery",
-    action: null,
-  });
-  const [hasRemainingDeliveries, setHasRemainingDeliveries] = useState(true);
 
   // Single Order Delivery Action (from order card)
   const handleStartSingleOrderDelivery = (ord) => {
@@ -998,7 +1008,7 @@ export default function MillerDriverLiveTracking() {
         <div ref={leafletContainerRef} className="w-full h-full z-0" />
 
         {/* ── Floating Dispatch HUD (Docked at Bottom-Left of Map) ─────────── */}
-        <div className="absolute bottom-4 left-4 z-[400] max-w-xs sm:max-w-sm w-full pointer-events-none">
+        <div className="absolute bottom-4 left-4 z-10 max-w-xs sm:max-w-sm w-full pointer-events-none">
           <div className="p-3.5 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 shadow-xl space-y-2.5 text-slate-900 pointer-events-auto">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1038,7 +1048,7 @@ export default function MillerDriverLiveTracking() {
         </div>
 
         {/* ── Floating Map Controls (Top-Right) ──────────────────────────────── */}
-        <div className="absolute top-4 right-4 z-[400] flex items-center gap-2">
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
           <button
             type="button"
             onClick={handleRecenterRoute}
@@ -1261,101 +1271,110 @@ export default function MillerDriverLiveTracking() {
       </div>
 
       {/* ── SELECT ORDER TO DELIVER MODAL (When mixed orders exist) ── */}
-      {showOrderSelectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-gray-900">Select Order to Deliver</h3>
-                <p className="text-xs text-gray-500">This buyer has both Online Payment and COD orders</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowOrderSelectModal(false)}
-                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="p-5 space-y-3">
-              {prepaidOrders
-                .filter((o) => o.order_status !== "Delivered")
-                .map((ord) => (
-                  <button
-                    key={ord.online_order_id}
-                    type="button"
-                    onClick={() => {
-                      setShowOrderSelectModal(false);
-                      handleStartSingleOrderDelivery(ord);
-                    }}
-                    className="w-full p-3.5 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100/60 text-left transition-all flex items-center justify-between group cursor-pointer"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[10px] font-bold">
-                          Online Payment (Prepaid)
-                        </span>
-                        <span className="text-xs font-bold text-gray-900">{ord.batch_no}</span>
-                      </div>
-                      <p className="text-xs text-gray-600">
-                        {ord.product_name} • ₱{Number(ord.total_price || 0).toLocaleString()}
-                      </p>
-                      <p className="text-[11px] text-blue-800 font-medium flex items-center gap-1">
-                        <Camera size={12} /> Requires device camera proof of delivery
-                      </p>
-                    </div>
-                    <ChevronRight size={18} className="text-blue-500 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-                ))}
-
-              {codOrders
-                .filter((o) => o.order_status !== "Delivered")
-                .map((ord) => (
-                  <button
-                    key={ord.online_order_id}
-                    type="button"
-                    onClick={() => {
-                      setShowOrderSelectModal(false);
-                      handleStartSingleOrderDelivery(ord);
-                    }}
-                    className="w-full p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/60 text-left transition-all flex items-center justify-between group cursor-pointer"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-[#0B5D1E] text-[10px] font-bold">
-                          Cash on Delivery
-                        </span>
-                        <span className="text-xs font-bold text-gray-900">{ord.batch_no}</span>
-                      </div>
-                      <p className="text-xs text-gray-600">
-                        {ord.product_name} • ₱{Number(ord.total_price || 0).toLocaleString()}
-                      </p>
-                      <p className="text-[11px] text-emerald-800 font-medium">
-                        Payable: ₱{Number(ord.total_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} (Opens Mini POS)
-                      </p>
-                    </div>
-                    <ChevronRight size={18} className="text-[#0B5D1E] group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-                ))}
-
-              <div className="pt-2">
+      {showOrderSelectModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Select Order to Deliver</h3>
+                  <p className="text-xs text-gray-500">This buyer has both Online Payment and COD orders</p>
+                </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowOrderSelectModal(false);
-                    setActiveTargetOrder(null);
-                    setShowPodModal(true);
-                  }}
-                  className="w-full py-2.5 rounded-xl bg-[#0B5D1E] hover:bg-emerald-800 text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                  onClick={() => setShowOrderSelectModal(false)}
+                  className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                 >
-                  <CheckCircle size={15} />
-                  Deliver All Orders (Proof then COD Collection)
+                  <X size={18} />
                 </button>
               </div>
+              <div className="p-5 space-y-3">
+                {prepaidOrders
+                  .filter((o) => o.order_status !== "Delivered")
+                  .map((ord) => (
+                    <button
+                      key={ord.online_order_id}
+                      type="button"
+                      onClick={() => {
+                        setShowOrderSelectModal(false);
+                        handleStartSingleOrderDelivery(ord);
+                      }}
+                      className="w-full p-3.5 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100/60 text-left transition-all flex items-center justify-between group cursor-pointer"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[10px] font-bold">
+                            Online Payment (Prepaid)
+                          </span>
+                          <span className="text-xs font-bold text-gray-900">{ord.batch_no}</span>
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          {ord.product_name} • ₱{Number(ord.total_price || 0).toLocaleString()}
+                        </p>
+                        <p className="text-[11px] text-blue-800 font-medium flex items-center gap-1">
+                          <Camera size={12} /> Requires device camera proof of delivery
+                        </p>
+                      </div>
+                      <ChevronRight size={18} className="text-blue-500 group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+                  ))}
+
+                {codOrders
+                  .filter((o) => o.order_status !== "Delivered")
+                  .map((ord) => (
+                    <button
+                      key={ord.online_order_id}
+                      type="button"
+                      onClick={() => {
+                        setShowOrderSelectModal(false);
+                        handleStartSingleOrderDelivery(ord);
+                      }}
+                      className="w-full p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/60 text-left transition-all flex items-center justify-between group cursor-pointer"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-[#0B5D1E] text-[10px] font-bold">
+                            Cash on Delivery
+                          </span>
+                          <span className="text-xs font-bold text-gray-900">{ord.batch_no}</span>
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          {ord.product_name} • ₱{Number(ord.total_price || 0).toLocaleString()}
+                        </p>
+                        <p className="text-[11px] text-emerald-800 font-medium">
+                          Payable: ₱{Number(ord.total_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} (Opens Mini POS)
+                        </p>
+                      </div>
+                      <ChevronRight size={18} className="text-[#0B5D1E] group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+                  ))}
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowOrderSelectModal(false);
+                      setActiveTargetOrder(null);
+                      setShowPodModal(true);
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-[#0B5D1E] hover:bg-emerald-800 text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <CheckCircle size={15} />
+                    Deliver All Orders (Proof then COD Collection)
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* ── MODALS ─────────────────────────────────────────────────────────── */}
       <DriverExitTrackingModal

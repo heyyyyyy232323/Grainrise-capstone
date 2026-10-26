@@ -8,7 +8,11 @@ import useToast from "../../../Components/hooks/useToast";
 import DriverSubmitPaymentModal from "../../../Components/Modals/MillerDriver/DriverSubmitPaymentModal";
 import DriverPOSReceiptModal from "../../../Components/Modals/MillerDriver/DriverPOSReceiptModal";
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = (
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") ? "http://127.0.0.1:8000" : "")
+).replace(/\/$/, "");
 
 const getAuthToken = () => {
   return (
@@ -206,6 +210,7 @@ export default function MillerDriverPaymentSubmission() {
 
   const [submissions, setSubmissions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
 
   const [query, setQuery] = useState("");
   const [method, setMethod] = useState("");
@@ -224,6 +229,7 @@ export default function MillerDriverPaymentSubmission() {
   // ── 1. Fetch Payment Submissions from Server ──────────────────────────────
   const fetchSubmissions = useCallback(async () => {
     setIsLoading(true);
+    setFetchError(null);
     try {
       const token = getAuthToken();
       const params = new URLSearchParams();
@@ -246,7 +252,9 @@ export default function MillerDriverPaymentSubmission() {
       }
 
       setSubmissions(data.submissions || []);
+      setFetchError(null);
     } catch (err) {
+      setFetchError(err.message || "Could not retrieve payment submissions.");
       showToast({
         type: "error",
         title: "Load Error",
@@ -556,9 +564,17 @@ export default function MillerDriverPaymentSubmission() {
         currentPage={safePage}
         totalPages={totalPages}
         onPageChange={setPage}
-        emptyStateTitle={isLoading ? "Loading payment records..." : "No payment records found"}
+        emptyStateTitle={
+          fetchError
+            ? "Failed to Load Payment Records"
+            : isLoading
+            ? "Loading payment records..."
+            : "No payment records found"
+        }
         emptyStateDescription={
-          isLoading
+          fetchError
+            ? `${fetchError}. Please verify your connection or try refreshing the page.`
+            : isLoading
             ? "Fetching collected COD payment records from server..."
             : "No COD payments match your selected search or filter criteria."
         }
