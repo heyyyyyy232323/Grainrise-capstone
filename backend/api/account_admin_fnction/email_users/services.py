@@ -2,6 +2,7 @@ import smtplib
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, get_connection
+from api.services.email_sender import send_grainrise_email
 from django.db import connection, transaction
 from django.utils.html import escape
 
@@ -483,92 +484,52 @@ def _send_to_recipients(
 
 
     try:
-        email_connection = (
-            get_connection(
-                fail_silently=False
+        for recipient in recipients:
+            email = recipient.get(
+                "email"
             )
-        )
 
-        email_connection.open()
+            if not email:
+                failed.append(
+                    {
+                        **recipient,
+                        "error": "Recipient email address is missing.",
+                    }
+                )
+                continue
 
-        try:
-            for recipient in recipients:
-                email = recipient.get(
-                    "email"
+            try:
+                sent, err_msg = send_grainrise_email(
+                    subject=subject,
+                    text_content=plain_body,
+                    html_content=html_body,
+                    recipient_email=email,
+                    from_email=from_email,
                 )
 
-                try:
-                    message = (
-                        EmailMultiAlternatives(
-                            subject=
-                                subject,
-
-                            body=
-                                plain_body,
-
-                            from_email=
-                                from_email,
-
-                            to=[
-                                email,
-                            ],
-
-                            connection=
-                                email_connection,
-                        )
+                if sent:
+                    successful.append(
+                        recipient
                     )
-
-                    message.attach_alternative(
-                        html_body,
-                        "text/html",
-                    )
-
-                    sent_count = (
-                        message.send(
-                            fail_silently=False
-                        )
-                    )
-
-                    if sent_count > 0:
-                        successful.append(
-                            recipient
-                        )
-
-                    else:
-                        failed.append(
-                            {
-                                **recipient,
-                                "error":
-                                    "Email was not accepted for delivery.",
-                            }
-                        )
-
-                except Exception as exc:
+                else:
                     failed.append(
                         {
                             **recipient,
-                            "error":
-                                str(exc),
+                            "error": err_msg or "Email was not accepted for delivery.",
                         }
                     )
 
-        finally:
-            email_connection.close()
+            except Exception as exc:
+                failed.append(
+                    {
+                        **recipient,
+                        "error": str(exc),
+                    }
+                )
 
-    except smtplib.SMTPAuthenticationError as exc:
+    except Exception as exc:
         raise RuntimeError(
-            "Gmail authentication failed. Check the configured "
-            "EMAIL_HOST_USER and Google App Password."
-        ) from exc
-
-    except smtplib.SMTPException as exc:
-        raise RuntimeError(
-            f"Gmail could not send the email: {exc}"
-        ) from exc
-
-    except OSError as exc:
-        raise RuntimeError(
-            "Unable to connect to the configured email server."
+            f"Unable to dispatch email: {exc}"
         ) from exc
 
 
