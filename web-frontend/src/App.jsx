@@ -206,6 +206,7 @@ import MillerSalesHistory from "./Users/MillerAccounts/MillerSales/MillerSalesHi
 
 import MillerDriverDashboard from "./Users/MillerAccounts/MillerDriver/MillerDriverDashboard";
 import MillerDriverMyDuties from "./Users/MillerAccounts/MillerDriver/MillerDriverMyDuties";
+import MillerDriverLiveTracking from "./Users/MillerAccounts/MillerDriver/MillerDriverLiveTracking";
 import MillerDriverMessages from "./Users/MillerAccounts/MillerDriver/MillerDriverMessages";
 import MillerDriverPaymentSubmission from "./Users/MillerAccounts/MillerDriver/MillerDriverPaymentSubmission";
 import MillerDriverOnlinePaymentAccounts from "./Users/MillerAccounts/MillerDriver/MillerDriverOnlinePaymentAccounts";
@@ -1034,6 +1035,11 @@ function App() {
             <Route
               path="/miller-driver/my-duties"
               element={<MillerDriverMyDuties />}
+            />
+
+            <Route
+              path="/miller-driver/live-tracking"
+              element={<MillerDriverLiveTracking />}
             />
 
             <Route

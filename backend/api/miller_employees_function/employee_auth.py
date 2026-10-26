@@ -703,3 +703,52 @@ def miller_flc_required(view_func):
         return view_func(request, *args, **kwargs)
 
     return wrapped_view
+
+
+# ============================================================
+# MILLER DRIVER GUARD DECORATOR
+# ============================================================
+
+def miller_driver_required(view_func):
+    """
+    Decorator requiring an authenticated Miller Employee with position == 'driver'.
+
+    Security rules:
+    - Never trust supplier_profile_id or driver_id from frontend / request query / body.
+    - Resolves authoritative identity and branch scoping strictly from the DB via get_authenticated_miller_employee.
+    - Requires DB employee status == 'active'.
+    - Requires DB employee position == 'driver'.
+    - Blocks non-driver positions.
+
+    Attaches to request:
+    - request.grainrise_supplier_employee
+    - request.grainrise_supplier_employee_id
+    - request.grainrise_driver_id (alias to supplier_employee_id)
+    - request.grainrise_supplier_profile_id
+    - request.grainrise_owner_user_id
+    - request.grainrise_employee_position
+    """
+    @wraps(view_func)
+    def wrapped_view(request, *args, **kwargs):
+        employee = get_authenticated_miller_employee(
+            request, required_position="driver"
+        )
+        if not employee:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Miller Driver authentication required. Please sign in again.",
+                },
+                status=401,
+            )
+
+        request.grainrise_supplier_employee = employee
+        request.grainrise_supplier_employee_id = employee["supplier_employee_id"]
+        request.grainrise_driver_id = employee["supplier_employee_id"]
+        request.grainrise_supplier_profile_id = employee["supplier_profile_id"]
+        request.grainrise_owner_user_id = employee["owner_user_id"]
+        request.grainrise_employee_position = employee["position"]
+
+        return view_func(request, *args, **kwargs)
+
+    return wrapped_view

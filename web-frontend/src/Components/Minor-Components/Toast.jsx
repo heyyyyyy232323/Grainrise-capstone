@@ -12,7 +12,8 @@ const ICONS = {
   warning: { icon: AlertTriangle, bg: "bg-amber-50",  border: "border-amber-200", icon_color: "text-amber-500", text_color: "text-amber-800" },
 };
 
-const Toast = ({ toasts, removeToast }) => {
+const Toast = ({ toasts = [], removeToast, onRemoveToast }) => {
+  const handleRemove = removeToast || onRemoveToast;
   return (
     <div
       className="fixed top-0 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"
@@ -27,7 +28,7 @@ const Toast = ({ toasts, removeToast }) => {
             toast={toast}
             config={config}
             Icon={Icon}
-            removeToast={removeToast}
+            removeToast={handleRemove}
           />
         );
       })}

@@ -1,70 +1,52 @@
-import { useMemo, useState, useRef, useEffect } from "react";
-import { Search, ChevronDown } from "lucide-react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
+import { Search, ChevronDown, RefreshCw } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
+import Toast from "../../../Components/Minor-Components/Toast";
+import useToast from "../../../Components/hooks/useToast";
+import DriverSubmitPaymentModal from "../../../Components/Modals/MillerDriver/DriverSubmitPaymentModal";
+import DriverPOSReceiptModal from "../../../Components/Modals/MillerDriver/DriverPOSReceiptModal";
 
-const TODAY = new Date();
-const YESTERDAY = new Date(TODAY); YESTERDAY.setDate(TODAY.getDate() - 1);
-const OLDER = new Date("2026-07-18");
+const API_BASE = "http://127.0.0.1:8000";
 
-const makeRows = (dateObj, count, prefix) =>
-  Array.from({ length: count }, (_, i) => ({
-    id: `${prefix}-${i}`,
-    batchNo: "BATCH 2026 - 001",
-    retailer: "Dinorado Rice",
-    qty: "500 kg",
-    paymentMethod: i % 2 === 0 ? "Online Payment" : "Cash on Delivery",
-    amount: "₱25,000.00",
-    status: i % 3 === 0 ? "Pending" : "Paid",
-    paidAt: "10:25 AM",
-    delivery_date: dateObj.toISOString(),
-    actionLabel: i % 3 === 0 ? "Submit Receipt" : "View Details",
-  }));
-
-const ALL_DATA = [
-  ...makeRows(TODAY,     3, "t"),
-  ...makeRows(YESTERDAY, 4, "y"),
-  ...makeRows(OLDER,     3, "o"),
-];
-
-function groupByDate(rows) {
-  const buckets = {};
-  rows.forEach((r) => {
-    const d = new Date(r.delivery_date);
-    const today = new Date(); today.setHours(0,0,0,0);
-    const yest  = new Date(today); yest.setDate(today.getDate()-1);
-    const dMid  = new Date(d); dMid.setHours(0,0,0,0);
-    let label;
-    if (dMid.getTime() === today.getTime()) label = "Today";
-    else if (dMid.getTime() === yest.getTime()) label = "Yesterday";
-    else label = "July 18, 2026";
-    if (!buckets[label]) buckets[label] = [];
-    buckets[label].push(r);
-  });
-  return Object.entries(buckets).map(([label, rows]) => ({ label, rows }));
-}
+const getAuthToken = () => {
+  return (
+    localStorage.getItem("grainrise_token") ||
+    sessionStorage.getItem("grainrise_token") ||
+    localStorage.getItem("access_token") ||
+    sessionStorage.getItem("access_token") ||
+    localStorage.getItem("token") ||
+    ""
+  );
+};
 
 const METHOD_BADGE = {
-  "Online Payment":   "bg-blue-100 text-blue-600",
-  "Cash on Delivery": "bg-amber-100 text-amber-700",
+  Cash: "bg-amber-100 text-amber-800 border border-amber-300/70",
+  "Cash on Delivery": "bg-amber-100 text-amber-800 border border-amber-300/70",
+  GCash: "bg-blue-100 text-blue-700 border border-blue-200",
+  Bank: "bg-purple-100 text-purple-700 border border-purple-200",
+  "Online Payment": "bg-blue-100 text-blue-700 border border-blue-200",
 };
 
 const STATUS_BADGE = {
-  Paid:    "bg-emerald-100 text-emerald-700",
-  Pending: "bg-amber-100 text-amber-700",
+  Handled: "bg-amber-100 text-amber-900 border border-amber-300 font-bold",
+  Submitted: "bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold",
+  Paid: "bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold",
+  Pending: "bg-amber-100 text-amber-900 border border-amber-300 font-bold",
 };
 
 const PAYMENT_METHOD_OPTIONS = [
-  { label: "Payment Method",   value: "" },
-  { label: "Online Payment",   value: "Online Payment" },
-  { label: "Cash on Delivery", value: "Cash on Delivery" },
+  { label: "Payment Method", value: "" },
+  { label: "Cash on Delivery", value: "Cash" },
+  { label: "GCash", value: "GCash" },
+  { label: "Bank Transfer", value: "Bank" },
 ];
 
 const STATUS_OPTIONS = [
   { label: "Payment Status", value: "" },
-  { label: "Paid",           value: "Paid" },
-  { label: "Pending",        value: "Pending" },
+  { label: "Handled", value: "Handled" },
+  { label: "Submitted", value: "Submitted" },
 ];
 
 function CustomDropdown({ label, options, value, onChange }) {
@@ -126,28 +108,285 @@ function CustomDropdown({ label, options, value, onChange }) {
   );
 }
 
-export default function MillerDriverPaymentSubmission() {
-  const [query,   setQuery]   = useState("");
-  const [method,  setMethod]  = useState("");
-  const [status,  setStatus]  = useState("");
-  const [page,    setPage]    = useState(1);
+function buildPaymentSections(submissions) {
+  if (!submissions || submissions.length === 0) return [];
 
-  const ITEMS = 10;
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return ALL_DATA.filter((r) => {
-      if (q && !(`${r.batchNo} ${r.retailer}`.toLowerCase().includes(q))) return false;
-      if (method && r.paymentMethod !== method) return false;
-      if (status && r.status.toLowerCase() !== status.toLowerCase()) return false;
-      return true;
+  // 1. Group by handled_at date
+  const dateBuckets = {};
+  submissions.forEach((item) => {
+    const rawDate = item.handled_at || item.date;
+    const d = rawDate ? new Date(rawDate) : new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yest = new Date(today);
+    yest.setDate(today.getDate() - 1);
+    const dMid = new Date(d);
+    dMid.setHours(0, 0, 0, 0);
+
+    let label;
+    if (dMid.getTime() === today.getTime()) label = "Today";
+    else if (dMid.getTime() === yest.getTime()) label = "Yesterday";
+    else {
+      label = d.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+    }
+
+    if (!dateBuckets[label]) dateBuckets[label] = [];
+    dateBuckets[label].push(item);
+  });
+
+  const sections = [];
+
+  // 2. In each date bucket, cluster consecutive rows by cod_transaction_key
+  Object.entries(dateBuckets).forEach(([dateLabel, rows]) => {
+    const clusters = [];
+    let currentCluster = [];
+
+    rows.forEach((row) => {
+      if (currentCluster.length === 0) {
+        currentCluster.push(row);
+      } else {
+        const lastInCluster = currentCluster[currentCluster.length - 1];
+        if (lastInCluster.cod_transaction_key === row.cod_transaction_key) {
+          currentCluster.push(row);
+        } else {
+          clusters.push(currentCluster);
+          currentCluster = [row];
+        }
+      }
     });
-  }, [query, method, status]);
+    if (currentCluster.length > 0) {
+      clusters.push(currentCluster);
+    }
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS));
-  const start = (page - 1) * ITEMS;
-  const paginated = filtered.slice(start, start + ITEMS);
-  const sections = groupByDate(paginated);
+    // 3. Convert clusters into sections
+    let shownDateHeaderForSingle = false;
+    clusters.forEach((cluster) => {
+      const isMultiOrder = cluster.length > 1;
 
+      // Tag items for single action button and group layout
+      const taggedRows = cluster.map((item, idx) => ({
+        ...item,
+        isLastInGroup: idx === cluster.length - 1,
+        isGroupMember: isMultiOrder,
+        groupOrderCount: cluster.length,
+        groupOrderIndex: idx,
+      }));
+
+      if (isMultiOrder) {
+        // Multi-order group gets its own dedicated divider without double-stacking date header
+        sections.push({
+          label: "These Orders Belong to the Same Payment Transaction",
+          className:
+            "bg-[#F0FDF4] border-y border-emerald-200/80 px-4 py-2 text-center text-[11px] font-bold tracking-wide uppercase text-emerald-800",
+          rows: taggedRows,
+        });
+      } else {
+        // Standalone orders get the Date divider (e.g. Yesterday, Today)
+        const label = !shownDateHeaderForSingle ? dateLabel : "";
+        shownDateHeaderForSingle = true;
+        sections.push({
+          label,
+          className:
+            "bg-[#F0FDF4] border-y border-emerald-100/70 px-4 py-1.5 text-center text-[12px] font-semibold text-emerald-700",
+          rows: taggedRows,
+        });
+      }
+    });
+  });
+
+  return sections;
+}
+
+export default function MillerDriverPaymentSubmission() {
+  const { toasts, showToast, removeToast } = useToast();
+
+  const [submissions, setSubmissions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [query, setQuery] = useState("");
+  const [method, setMethod] = useState("");
+  const [status, setStatus] = useState("");
+  const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
+  const [page, setPage] = useState(1);
+
+  // Modal States
+  const [selectedSubmissionForSubmit, setSelectedSubmissionForSubmit] = useState(null);
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [selectedReceiptData, setSelectedReceiptData] = useState(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+
+  // ── 1. Fetch Payment Submissions from Server ──────────────────────────────
+  const fetchSubmissions = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const token = getAuthToken();
+      const params = new URLSearchParams();
+      if (query.trim()) params.append("search", query.trim());
+      if (method) params.append("payment_method", method);
+      if (status) params.append("status", status);
+      if (dateRange.startDate) params.append("start_date", dateRange.startDate);
+      if (dateRange.endDate) params.append("end_date", dateRange.endDate);
+
+      const res = await fetch(`${API_BASE}/api/miller-employees/driver/payments/submissions/?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to load payment submissions.");
+      }
+
+      setSubmissions(data.submissions || []);
+    } catch (err) {
+      showToast({
+        type: "error",
+        title: "Load Error",
+        message: err.message || "Could not retrieve payment submissions.",
+      });
+      setSubmissions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [query, method, status, dateRange, showToast]);
+
+  useEffect(() => {
+    fetchSubmissions();
+  }, [fetchSubmissions]);
+
+  // ── 2. Date Range Validation ─────────────────────────────────────────────
+  const handleDateChange = (range) => {
+    if (range.startDate && range.endDate && range.startDate > range.endDate) {
+      showToast({
+        type: "error",
+        title: "Invalid Date Range",
+        message: "Start date cannot be after end date.",
+      });
+      return;
+    }
+    setDateRange(range);
+    setPage(1);
+  };
+
+  // ── 3. Grouping by Transaction for Safe Pagination ─────────────────────────
+  // Preserves complete transaction groups on the same page
+  const transactionGroups = useMemo(() => {
+    const map = new Map();
+    submissions.forEach((item) => {
+      const k = item.cod_transaction_key;
+      if (!map.has(k)) {
+        map.set(k, []);
+      }
+      map.get(k).push(item);
+    });
+    return Array.from(map.values());
+  }, [submissions]);
+
+  const GROUPS_PER_PAGE = 8;
+  const totalPages = Math.max(1, Math.ceil(transactionGroups.length / GROUPS_PER_PAGE));
+  const safePage = Math.min(page, totalPages);
+
+  const paginatedGroups = useMemo(() => {
+    const startIdx = (safePage - 1) * GROUPS_PER_PAGE;
+    return transactionGroups.slice(startIdx, startIdx + GROUPS_PER_PAGE);
+  }, [transactionGroups, safePage]);
+
+  const paginatedRows = useMemo(() => {
+    return paginatedGroups.flat();
+  }, [paginatedGroups]);
+
+  const sections = useMemo(() => {
+    return buildPaymentSections(paginatedRows);
+  }, [paginatedRows]);
+
+  // ── 4. Submit Payment Action ─────────────────────────────────────────────
+  const handleOpenSubmitModal = (row) => {
+    setSelectedSubmissionForSubmit(row);
+    setIsSubmitModalOpen(true);
+  };
+
+  const handleConfirmSubmitPayment = async (transaction) => {
+    if (!transaction || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const token = getAuthToken();
+      const res = await fetch(`${API_BASE}/api/miller-employees/driver/payments/submit/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cod_transaction_key: transaction.cod_transaction_key,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to submit payment.");
+      }
+
+      // Close Submit Payment modal
+      setIsSubmitModalOpen(false);
+      setSelectedSubmissionForSubmit(null);
+
+      // Automatically open POS receipt modal
+      const receiptPayload = data.receipt_data || transaction.receipt_data;
+      setSelectedReceiptData(receiptPayload);
+      setIsReceiptModalOpen(true);
+
+      // Refresh list
+      fetchSubmissions();
+
+      showToast({
+        type: "success",
+        title: "Payment Submitted",
+        message: "COD payment has been submitted successfully.",
+      });
+    } catch (err) {
+      showToast({
+        type: "error",
+        title: "Submission Failed",
+        message: err.message || "Failed to submit payment.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ── 5. View Details (Submitted Receipts) ──────────────────────────────────
+  const handleOpenReceiptModal = (row) => {
+    const payload = row.receipt_data || {
+      business_name: row.business_name,
+      reference_no: row.payment_reference_no,
+      transaction_date_formatted: row.handled_at ? row.handled_at.slice(0, 19).replace("T", " ") : "",
+      driver_name: row.driver_name,
+      customer_name: row.retailer,
+      buyer_type: "Retailer",
+      batch_no: row.transaction_batches_str || row.batch_no,
+      payment_method: row.payment_method,
+      external_payment_reference_no: row.external_payment_reference_no,
+      receipt_photo: row.receipt_photo,
+      items: row.transaction_items || [],
+      total_amount: row.transaction_total || row.order_total,
+      amount_paid: row.amount_paid,
+      change_amount: row.change,
+      status: row.status,
+    };
+    setSelectedReceiptData(payload);
+    setIsReceiptModalOpen(true);
+  };
+
+  // ── 6. Table Columns Definition ──────────────────────────────────────────
   const columns = [
     {
       key: "batchNo",
@@ -155,8 +394,10 @@ export default function MillerDriverPaymentSubmission() {
       width: "24%",
       renderCell: (r) => (
         <div>
-          <p className="font-bold text-gray-900 text-xs">{r.batchNo}</p>
-          <p className="text-[11px] text-gray-500 font-medium">{r.retailer}</p>
+          <p className="font-bold text-gray-900 text-xs tracking-tight">{r.batch_no || r.batchNo}</p>
+          <p className="text-[11px] text-gray-500 font-medium truncate max-w-[200px]" title={r.retailer}>
+            {r.retailer}
+          </p>
         </div>
       ),
     },
@@ -173,8 +414,12 @@ export default function MillerDriverPaymentSubmission() {
       headerClassName: "text-center",
       cellClassName: "text-center",
       renderCell: (r) => (
-        <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold ${METHOD_BADGE[r.paymentMethod] || "bg-gray-100 text-gray-600"}`}>
-          {r.paymentMethod}
+        <span
+          className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold ${
+            METHOD_BADGE[r.payment_method] || "bg-gray-100 text-gray-600"
+          }`}
+        >
+          {r.payment_method === "Cash" ? "Cash on Delivery" : r.payment_method}
         </span>
       ),
     },
@@ -191,7 +436,11 @@ export default function MillerDriverPaymentSubmission() {
       headerClassName: "text-center",
       cellClassName: "text-center",
       renderCell: (r) => (
-        <span className={`inline-block px-3 py-0.5 rounded-full text-[10px] font-bold ${STATUS_BADGE[r.status] || "bg-gray-100 text-gray-600"}`}>
+        <span
+          className={`inline-block px-3 py-0.5 rounded-full text-[10px] font-bold ${
+            STATUS_BADGE[r.status] || "bg-gray-100 text-gray-600"
+          }`}
+        >
           {r.status}
         </span>
       ),
@@ -200,7 +449,7 @@ export default function MillerDriverPaymentSubmission() {
       key: "paidAt",
       label: "Paid At",
       width: "10%",
-      renderCell: (r) => <span className="text-xs text-gray-500 font-medium">{r.paidAt}</span>,
+      renderCell: (r) => <span className="text-xs text-gray-500 font-medium">{r.paid_at || r.paidAt}</span>,
     },
     {
       key: "action",
@@ -208,19 +457,33 @@ export default function MillerDriverPaymentSubmission() {
       width: "12%",
       headerClassName: "text-center",
       cellClassName: "text-center",
-      renderCell: (r) => (
-        <button
-          type="button"
-          onClick={() => alert(`${r.actionLabel}: ${r.id}`)}
-          className={`whitespace-nowrap rounded-full px-3.5 py-1 text-xs font-semibold transition cursor-pointer ${
-            r.actionLabel === "Submit Receipt"
-              ? "bg-[#0B5D1E] hover:bg-[#094d19] text-white"
-              : "border border-slate-200 bg-white text-gray-700 hover:bg-slate-50"
-          }`}
-        >
-          {r.actionLabel}
-        </button>
-      ),
+      renderCell: (r) => {
+        // Display only one action button, positioned on the last row of the group
+        if (!r.isLastInGroup) {
+          return <span className="text-gray-300 text-xs">—</span>;
+        }
+
+        const isSubmitted = r.status === "Submitted";
+        return (
+          <button
+            type="button"
+            onClick={() => {
+              if (isSubmitted) {
+                handleOpenReceiptModal(r);
+              } else {
+                handleOpenSubmitModal(r);
+              }
+            }}
+            className={`whitespace-nowrap rounded-full px-3.5 py-1 text-xs font-semibold transition cursor-pointer shadow-2xs ${
+              isSubmitted
+                ? "border border-slate-200 bg-white text-gray-700 hover:bg-slate-50"
+                : "bg-[#0B5D1E] hover:bg-[#094d19] text-white"
+            }`}
+          >
+            {isSubmitted ? "View Details" : "Submit Payment"}
+          </button>
+        );
+      },
     },
   ];
 
@@ -244,38 +507,90 @@ export default function MillerDriverPaymentSubmission() {
           <input
             type="text"
             value={query}
-            onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(1);
+            }}
             placeholder="Search batch, retailer, or destination"
             className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-[#0B5D1E] focus:border-[#0B5D1E] outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
           />
         </div>
 
-        <DateRangePicker />
+        <DateRangePicker onDateChange={handleDateChange} />
 
         <CustomDropdown
           label="Payment Method"
           value={method}
-          onChange={(v) => { setMethod(v); setPage(1); }}
+          onChange={(v) => {
+            setMethod(v);
+            setPage(1);
+          }}
           options={PAYMENT_METHOD_OPTIONS}
         />
 
         <CustomDropdown
           label="Payment Status"
           value={status}
-          onChange={(v) => { setStatus(v); setPage(1); }}
+          onChange={(v) => {
+            setStatus(v);
+            setPage(1);
+          }}
           options={STATUS_OPTIONS}
         />
+
+        <button
+          type="button"
+          onClick={fetchSubmissions}
+          disabled={isLoading}
+          className="p-2.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 transition cursor-pointer flex items-center justify-center shrink-0 h-[38px] disabled:opacity-50"
+          title="Refresh payment records"
+        >
+          <RefreshCw size={15} className={isLoading ? "animate-spin text-[#0B5D1E]" : ""} />
+        </button>
       </div>
 
       {/* ── Payment Submission Table ────────────────────────────────────────── */}
       <SectionedTableCard
         columns={columns}
         sections={sections}
-        currentPage={page}
+        currentPage={safePage}
         totalPages={totalPages}
         onPageChange={setPage}
-        footerLabel={`Showing ${start + 1}–${Math.min(start + paginated.length, filtered.length)} of ${filtered.length} payment records`}
+        emptyStateTitle={isLoading ? "Loading payment records..." : "No payment records found"}
+        emptyStateDescription={
+          isLoading
+            ? "Fetching collected COD payment records from server..."
+            : "No COD payments match your selected search or filter criteria."
+        }
+        footerLabel={`Showing ${paginatedRows.length} of ${submissions.length} collected COD orders`}
       />
+
+      {/* ── Submit Payment Modal (Miller Manager Fulfillment History style) ── */}
+      <DriverSubmitPaymentModal
+        isOpen={isSubmitModalOpen}
+        onClose={() => {
+          if (!isSubmitting) {
+            setIsSubmitModalOpen(false);
+            setSelectedSubmissionForSubmit(null);
+          }
+        }}
+        transaction={selectedSubmissionForSubmit}
+        onSubmit={handleConfirmSubmitPayment}
+        isSubmitting={isSubmitting}
+      />
+
+      {/* ── POS Receipt Modal (View Details / After Submission) ─────────────── */}
+      <DriverPOSReceiptModal
+        isOpen={isReceiptModalOpen}
+        onClose={() => {
+          setIsReceiptModalOpen(false);
+          setSelectedReceiptData(null);
+        }}
+        receiptData={selectedReceiptData}
+      />
+
+      {/* ── Toast Notifications ────────────────────────────────────────────── */}
+      <Toast toasts={toasts} removeToast={removeToast} onRemoveToast={removeToast} />
     </div>
   );
 }

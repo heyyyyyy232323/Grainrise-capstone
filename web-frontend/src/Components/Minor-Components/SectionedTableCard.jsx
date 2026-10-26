@@ -143,13 +143,26 @@ export default function SectionedTableCard({
                       } ${typeof rowClassName === "function" ? rowClassName(row) : rowClassName || ""}`}
                     >
                       {columns.map((column) => {
+                        const cellProps =
+                          typeof column.getCellProps === "function"
+                            ? column.getCellProps(row, rowIndex, section)
+                            : null;
+
+                        if (cellProps?.skip) {
+                          return null;
+                        }
+
+                        const cellClass = `${column.cellClassName || ""} ${cellProps?.className || ""}`;
+                        const rowSpan = cellProps?.rowSpan;
+
                         if (typeof column.renderCell === "function") {
                           return (
                             <td
                               key={column.key}
-                              className={`px-3 py-3 align-middle text-[13px] font-medium text-slate-700 first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || ""}`}
+                              rowSpan={rowSpan}
+                              className={`px-3 py-3 align-middle text-[13px] font-medium text-slate-700 first:pl-4 last:pr-4 sm:px-4 ${cellClass}`}
                             >
-                              {column.renderCell(row)}
+                              {column.renderCell(row, rowIndex, section)}
                             </td>
                           );
                         }
@@ -158,9 +171,10 @@ export default function SectionedTableCard({
                           return (
                             <td
                               key={column.key}
-                              className={`px-3 py-3 align-middle text-[13px] font-medium text-slate-700 first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || ""}`}
+                              rowSpan={rowSpan}
+                              className={`px-3 py-3 align-middle text-[13px] font-medium text-slate-700 first:pl-4 last:pr-4 sm:px-4 ${cellClass}`}
                             >
-                              {column.render(row)}
+                              {column.render(row, rowIndex, section)}
                             </td>
                           );
                         }
@@ -171,7 +185,8 @@ export default function SectionedTableCard({
                           return (
                             <td
                               key={column.key}
-                              className={`whitespace-nowrap px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || ""}`}
+                              rowSpan={rowSpan}
+                              className={`whitespace-nowrap px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-4 ${cellClass}`}
                               style={column.width ? { width: column.width } : undefined}
                             >
                               <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize ${getStatusClassName(cellValue)}`}>
@@ -185,7 +200,8 @@ export default function SectionedTableCard({
                           return (
                             <td
                               key={column.key}
-                              className={`whitespace-nowrap px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || "text-center"}`}
+                              rowSpan={rowSpan}
+                              className={`whitespace-nowrap px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || "text-center"} ${cellProps?.className || ""}`}
                               style={column.width ? { width: column.width } : undefined}
                             >
                               <button
@@ -200,11 +216,12 @@ export default function SectionedTableCard({
                         }
 
                         return (
-                            <td
-                              key={column.key}
-                              className={`whitespace-nowrap overflow-hidden text-ellipsis px-3 py-4 text-[13px] font-medium text-slate-700 first:pl-4 last:pr-4 sm:px-4 ${column.cellClassName || ""}`}
-                              style={column.width ? { width: column.width } : undefined}
-                            >
+                          <td
+                            key={column.key}
+                            rowSpan={rowSpan}
+                            className={`whitespace-nowrap overflow-hidden text-ellipsis px-3 py-4 text-[13px] font-medium text-slate-700 first:pl-4 last:pr-4 sm:px-4 ${cellClass}`}
+                            style={column.width ? { width: column.width } : undefined}
+                          >
                             {defaultRenderValue(cellValue)}
                           </td>
                         );

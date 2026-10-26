@@ -28,6 +28,7 @@ import useProcurementNotifications from "../hooks/MillerProcurement/useProcureme
 import useFinanceNotifications from "../hooks/MillerFinance/useFinanceNotifications";
 import useSalesNotifications from "../hooks/MillerSales/useSalesNotifications";
 import useLogisticsNotifications from "../hooks/MillerLogistics/useLogisticsNotifications";
+import useDriverNotifications from "../hooks/MillerDriver/useDriverNotifications";
 
 
 
@@ -345,6 +346,18 @@ const UserNavbar = ({
       (authenticatedUser?.position === "logistics" ||
         authenticatedUser?.position === "fulfillment_logistics_coordinator"));
 
+  const isDriver =
+    propRole === "miller_driver" ||
+    propRole === "warehouse_driver" ||
+    role === "miller_driver" ||
+    role === "warehouse_driver" ||
+    (authenticatedUser?.account_type === "supplier_employee" &&
+      (authenticatedUser?.position === "driver" ||
+        authenticatedUser?.position === "delivery_driver")) ||
+    (authenticatedUser?.role === "supplier_employee" &&
+      (authenticatedUser?.position === "driver" ||
+        authenticatedUser?.position === "delivery_driver"));
+
 
 
 
@@ -651,6 +664,23 @@ const UserNavbar = ({
   } = useLogisticsNotifications({
     enabled:
       isLogistics,
+  });
+
+  // =========================================================
+  // DRIVER NOTIFICATIONS
+  // =========================================================
+
+  const {
+    notifications: driverNotifications,
+    unseenCount: driverUnseenCount,
+    isLoading: isLoadingDriverNotifications,
+    isUpdating: isUpdatingDriverNotifications,
+    error: driverNotificationError,
+    refreshNotifications: refreshDriverNotifications,
+    openNotification: openDriverNotification,
+    markAllAsRead: markAllDriverNotificationsAsRead,
+  } = useDriverNotifications({
+    enabled: isDriver,
   });
 
 
@@ -1047,7 +1077,9 @@ const UserNavbar = ({
                 ? salesNotifications
                 : isLogistics
                   ? logisticsNotifications
-                  : notifications;
+                  : isDriver
+                    ? driverNotifications
+                    : notifications;
 
 
   const usesDatabaseNotifications =
@@ -1057,7 +1089,8 @@ const UserNavbar = ({
     isProcurement ||
     isFinance ||
     isSales ||
-    isLogistics;
+    isLogistics ||
+    isDriver;
 
 
 
@@ -1069,14 +1102,16 @@ const UserNavbar = ({
         : isEncoder
           ? isLoadingEncoderNotifications
           : isProcurement
-            ? isLoadingProcurementNotifications
+            ? procurementNotifications
             : isFinance
               ? isLoadingFinanceNotifications
               : isSales
                 ? isLoadingSalesNotifications
                 : isLogistics
                   ? isLoadingLogisticsNotifications
-                  : false;
+                  : isDriver
+                    ? isLoadingDriverNotifications
+                    : false;
 
 
   const isUpdatingDatabaseNotifications =
@@ -1094,7 +1129,9 @@ const UserNavbar = ({
                 ? isUpdatingSalesNotifications
                 : isLogistics
                   ? isUpdatingLogisticsNotifications
-                  : false;
+                  : isDriver
+                    ? isUpdatingDriverNotifications
+                    : false;
 
 
   const databaseNotificationError =
@@ -1112,7 +1149,9 @@ const UserNavbar = ({
                 ? salesNotificationError
                 : isLogistics
                   ? logisticsNotificationError
-                  : "";
+                  : isDriver
+                    ? driverNotificationError
+                    : "";
 
 
 
@@ -1144,10 +1183,12 @@ const UserNavbar = ({
                 ? salesUnseenCount
                 : isLogistics
                   ? logisticsUnseenCount
-                  : (
-                      notificationCount ||
-                      localUnreadCount
-                    );
+                  : isDriver
+                    ? driverUnseenCount
+                    : (
+                        notificationCount ||
+                        localUnreadCount
+                      );
 
 
 
@@ -1255,6 +1296,18 @@ const UserNavbar = ({
         isLogistics
       ) {
         refreshLogisticsNotifications().catch(
+          () => {
+            // Hook already stores error.
+          }
+        );
+        return;
+      }
+
+      if (
+        willOpen &&
+        isDriver
+      ) {
+        refreshDriverNotifications().catch(
           () => {
             // Hook already stores error.
           }
@@ -1375,6 +1428,23 @@ const UserNavbar = ({
 
         try {
           await markAllLogisticsNotificationsAsRead();
+        } catch {
+          // Error remains available from hook.
+        }
+
+        return;
+      }
+
+      if (isDriver) {
+        if (
+          driverUnseenCount <= 0 ||
+          isUpdatingDriverNotifications
+        ) {
+          return;
+        }
+
+        try {
+          await markAllDriverNotificationsAsRead();
         } catch {
           // Error remains available from hook.
         }
@@ -1622,6 +1692,32 @@ const UserNavbar = ({
             result?.targetPath ||
             item?.action_url ||
             "/miller-logistics/delivery-management";
+
+          navigate(
+            targetPath
+          );
+        } catch {
+          // Error displayed inside notification panel.
+        }
+
+        return;
+      }
+
+      if (isDriver) {
+        try {
+          const result =
+            await openDriverNotification(
+              item
+            );
+
+          setNotificationOpen(
+            false
+          );
+
+          const targetPath =
+            result?.targetPath ||
+            item?.action_url ||
+            "/miller-driver/my-duties";
 
           navigate(
             targetPath
