@@ -2223,7 +2223,7 @@ export default function PartnerWithUs() {
           message={toast.message}
           duration={4500}
           onClose={() => setToast(null)}
-          position="bottom-right"
+          position="top-right"
         />,
         document.body
       )}

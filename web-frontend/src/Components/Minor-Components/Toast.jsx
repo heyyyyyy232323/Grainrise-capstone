@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { AlertCircle, CheckCircle, Info, X, AlertTriangle } from "lucide-react";
+import { createPortal } from "react-dom";
 
 /**
  * Toast component — renders a single toast notification.
@@ -14,9 +15,9 @@ const ICONS = {
 
 const Toast = ({ toasts = [], removeToast, onRemoveToast }) => {
   const handleRemove = removeToast || onRemoveToast;
-  return (
+  const toastContainer = (
     <div
-      className="fixed top-0 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"
+      className="fixed top-20 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"
       aria-live="polite"
     >
       {toasts.map((toast) => {
@@ -34,6 +35,10 @@ const Toast = ({ toasts = [], removeToast, onRemoveToast }) => {
       })}
     </div>
   );
+
+  return typeof document === "undefined"
+    ? toastContainer
+    : createPortal(toastContainer, document.body);
 };
 
 const ToastItem = ({ toast, config, Icon, removeToast }) => {

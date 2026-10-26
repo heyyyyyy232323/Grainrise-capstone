@@ -8,6 +8,7 @@ import {
   UserX,
   X,
 } from "lucide-react";
+import { createPortal } from "react-dom";
 
 /**
  * Figma-accurate Toast Notification Component for GrainRise
@@ -145,9 +146,9 @@ const TOAST_VARIANTS = {
 };
 
 const POSITION_STYLES = {
-  "top-right": "top-1 right-5",
-  "top-left": "top-1 left-5",
-  "top-center": "top-1 left-1/2 -translate-x-1/2",
+  "top-right": "top-20 right-5",
+  "top-left": "top-20 left-5",
+  "top-center": "top-20 left-1/2 -translate-x-1/2",
   "bottom-right": "bottom-5 right-5",
   "bottom-left": "bottom-5 left-5",
   "bottom-center": "bottom-5 left-1/2 -translate-x-1/2",
@@ -187,7 +188,7 @@ export const ToastNotification = ({
 
   return (
     <div
-      className={`fixed ${POSITION_STYLES[position] || POSITION_STYLES["top-right"]} z-9999 max-w-xs w-[calc(100vw-2rem)] pointer-events-none transition-all duration-300 ease-out`}
+      className={`fixed ${POSITION_STYLES[position] || POSITION_STYLES["top-right"]} z-[9999] max-w-xs w-[calc(100vw-2rem)] pointer-events-none transition-all duration-300 ease-out`}
     >
       <div
         role="alert"
@@ -285,26 +286,35 @@ export const ToastNotification = ({
   );
 };
 
-const ToastCollection = ({ toasts = [], removeToast }) => (
-  <div className="fixed top-1 right-5 z-9999 flex flex-col gap-2 pointer-events-none">
-    {toasts.map((toast) => (
-      <ToastNotification
-        key={toast.id}
-        type={toast.type}
-        title={toast.title}
-        message={toast.message}
-        onClose={() => removeToast?.(toast.id)}
-      />
-    ))}
-  </div>
-);
+const ToastCollection = ({ toasts = [], removeToast }) => {
+  const toastContainer = (
+    <div className="fixed top-20 right-5 z-[9999] flex flex-col gap-2 pointer-events-none">
+      {toasts.map((toast) => (
+        <ToastNotification
+          key={toast.id}
+          type={toast.type}
+          title={toast.title}
+          message={toast.message}
+          onClose={() => removeToast?.(toast.id)}
+        />
+      ))}
+    </div>
+  );
+
+  return typeof document === "undefined"
+    ? toastContainer
+    : createPortal(toastContainer, document.body);
+};
 
 const Toast = (props) => {
   if (Array.isArray(props.toasts)) {
     return <ToastCollection {...props} />;
   }
 
-  return <ToastNotification {...props} />;
+  const toast = <ToastNotification {...props} />;
+  return typeof document === "undefined"
+    ? toast
+    : createPortal(toast, document.body);
 };
 
 export default Toast;
