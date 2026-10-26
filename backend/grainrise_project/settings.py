@@ -714,7 +714,7 @@ else:
 
 
 
-EMAIL_TIMEOUT = 20
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", 8))
 
 
 

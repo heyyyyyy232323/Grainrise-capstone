@@ -9,6 +9,7 @@ import jwt
 from django.conf import settings
 from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
+from .email_sender import send_grainrise_email
 
 
 # ============================================================
@@ -353,12 +354,18 @@ def send_email_otp(
 
 
     # --------------------------------------------------------
-    # REAL SMTP SEND
+    # REAL SEND (GMAIL REST API HTTPS IN PROD, SMTP FALLBACK)
     # --------------------------------------------------------
 
-    email_message.send(
-        fail_silently=False
+    email_sent, email_err = send_grainrise_email(
+        subject,
+        text_message,
+        html_message,
+        normalized_email,
     )
+    if not email_sent:
+        raise RuntimeError(email_err or "Failed to send verification email.")
+
 
 
     # --------------------------------------------------------
