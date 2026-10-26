@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
+import ProfanityWarningModal from "../../../Components/Modals/ProfanityWarningModal";
 
 const API_BASE = (
   import.meta.env.VITE_API_BASE_URL ||
@@ -54,6 +55,11 @@ export default function MillerDriverMessages() {
   const [isLoadingThread, setIsLoadingThread] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [profanityModal, setProfanityModal] = useState({
+    isOpen: false,
+    message: "",
+    detectedWords: [],
+  });
 
   const messagesEndRef = useRef(null);
   const activeConvoKeyRef = useRef(null);
@@ -262,6 +268,18 @@ export default function MillerDriverMessages() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
+        if (data.code === "PROFANITY_DETECTED" || data.blocked) {
+          setThreadMessages((prev) => prev.filter((m) => m.id !== tempId));
+          setInput(text);
+          setProfanityModal({
+            isOpen: true,
+            message:
+              data.message ||
+              "Your message contains a prohibited word. Please remove it before submitting.",
+            detectedWords: data.detected_words || data.matches || [],
+          });
+          return;
+        }
         throw new Error(data.message || "Failed to send message.");
       }
 
@@ -652,6 +670,14 @@ export default function MillerDriverMessages() {
           )}
         </div>
       </div>
+
+      <ProfanityWarningModal
+        isOpen={profanityModal.isOpen}
+        onClose={() => setProfanityModal({ isOpen: false, message: "", detectedWords: [] })}
+        message={profanityModal.message}
+        detectedWords={profanityModal.detectedWords}
+        type="message"
+      />
     </div>
   );
 }

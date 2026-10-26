@@ -67,6 +67,7 @@ export default function MillerManagerNewsArticle() {
     isOpen: false,
     message: "",
     matches: [],
+    detectedWords: [],
   });
 
   // Load article & comments
@@ -212,13 +213,18 @@ export default function MillerManagerNewsArticle() {
     const msg = errData?.message || errData?.error || fallbackMsg;
 
     if (
+      code === "PROFANITY_DETECTED" ||
       code === "profanity_detected" ||
+      errData?.blocked ||
       msg?.toLowerCase().includes("prohibited") ||
       msg?.toLowerCase().includes("inappropriate")
     ) {
       setProfanityModal({
         isOpen: true,
-        message: msg || "Your comment contains prohibited words that violate GrainRise guidelines.",
+        message:
+          msg ||
+          "Your comment contains a prohibited word. Please remove it before submitting.",
+        detectedWords: errData?.detected_words || [],
         matches: errData?.matches || [],
       });
       return;
@@ -260,7 +266,7 @@ export default function MillerManagerNewsArticle() {
         body: { comment_text: trimmed },
       });
 
-      if (res && res.data) {
+      if (res && res.data && res.success !== false && !res.data?.blocked && !res?.blocked) {
         setNewCommentText("");
         showToast({
           type: "success",
@@ -299,7 +305,7 @@ export default function MillerManagerNewsArticle() {
         body: payload,
       });
 
-      if (res && res.data) {
+      if (res && res.data && res.success !== false && !res.data?.blocked && !res?.blocked) {
         setReplyingToId(null);
         setReplyText("");
         showToast({
@@ -341,7 +347,7 @@ export default function MillerManagerNewsArticle() {
         body: { comment_text: trimmed },
       });
 
-      if (res && res.data) {
+      if (res && res.data && res.success !== false && !res.data?.blocked && !res?.blocked) {
         setEditingItem(null);
         setEditText("");
         showToast({
@@ -896,9 +902,11 @@ export default function MillerManagerNewsArticle() {
 
       <ProfanityWarningModal
         isOpen={profanityModal.isOpen}
-        onClose={() => setProfanityModal({ isOpen: false, message: "", matches: [] })}
+        onClose={() => setProfanityModal({ isOpen: false, message: "", matches: [], detectedWords: [] })}
         message={profanityModal.message}
         matches={profanityModal.matches}
+        detectedWords={profanityModal.detectedWords}
+        type="comment"
       />
 
       {article && (

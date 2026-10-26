@@ -114,6 +114,8 @@ def send_message_view(request):
 
     try:
         new_msg = send_miller_message(miller_user_id, request.data)
+        if isinstance(new_msg, dict) and new_msg.get("blocked"):
+            return Response(new_msg, status=status.HTTP_400_BAD_REQUEST)
         return Response(
             {
                 "success": True,

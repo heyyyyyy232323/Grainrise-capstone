@@ -1,6 +1,8 @@
 import datetime
 from django.db import connection
 
+from api.realtime.broadcast import broadcast_messages_seen
+
 
 def _get_miller_branch_ids(miller_user_id):
     """
@@ -234,53 +236,7 @@ def list_miller_message_threads(miller_user_id, search=""):
         }
         final_threads.append(thread_obj)
 
-    # 4. Include contacts who don't have messages yet so the manager can start discussions
-    existing_thread_ids = set(raw_threads.keys())
-
-    for wh_id, meta in warehouse_dict.items():
-        tid = f"warehouse_{wh_id}"
-        if tid not in existing_thread_ids:
-            final_threads.append({
-                "thread_id": tid,
-                "participant_type": "warehouse",
-                "participant_id": wh_id,
-                "participant_user_id": meta["user_id"],
-                "participant_warehouse_id": wh_id,
-                "participant_supplier_id": None,
-                "name": meta["name"],
-                "subtitle": meta["subtitle"],
-                "role": meta["role"],
-                "latest_message": "",
-                "latest_message_at": "",
-                "is_sender_me": False,
-                "unread_count": 0,
-                "messages_count": 0,
-            })
-
-    for u_id, meta in user_dict.items():
-        tid = f"user_{u_id}"
-        if tid not in existing_thread_ids:
-            # Skip warehouse managers here because they are represented as warehouse contacts
-            if meta.get("role") == "Warehouse Manager":
-                continue
-            final_threads.append({
-                "thread_id": tid,
-                "participant_type": "user",
-                "participant_id": u_id,
-                "participant_user_id": u_id,
-                "participant_warehouse_id": None,
-                "participant_supplier_id": None,
-                "name": meta["name"],
-                "subtitle": meta["subtitle"],
-                "role": meta["role"],
-                "latest_message": "",
-                "latest_message_at": "",
-                "is_sender_me": False,
-                "unread_count": 0,
-                "messages_count": 0,
-            })
-
-    # 5. Apply search filtering if provided
+    # 4. Apply search filtering if provided (filtering ONLY existing conversations with message history)
     clean_search = (search or "").strip().lower()
     if clean_search:
         filtered = []
@@ -294,13 +250,8 @@ def list_miller_message_threads(miller_user_id, search=""):
                 filtered.append(t)
         final_threads = filtered
 
-    # 6. Sort: threads with messages first (by latest_message_at DESC), then contacts alphabetically
-    def sort_key(item):
-        has_msg = 1 if item["messages_count"] > 0 else 0
-        date_str = item["latest_message_at"] or ""
-        return (has_msg, date_str, item["name"])
-
-    final_threads.sort(key=sort_key, reverse=True)
+    # 5. Sort: conversations by their latest actual message timestamp, newest first
+    final_threads.sort(key=lambda item: item["latest_message_at"] or "", reverse=True)
     return final_threads
 
 

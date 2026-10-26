@@ -52,6 +52,15 @@ scikit-learn
 
 gunicorn
 
+# ============================================
+# Real-Time & WebSockets
+# ============================================
+
+channels>=4.1,<5
+daphne>=4.1
+channels-redis>=4.2
+websockets>=13.0
+
 rapidocr
 onnxruntime
 

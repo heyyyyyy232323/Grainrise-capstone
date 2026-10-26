@@ -602,6 +602,19 @@ def send_driver_message(
     if not trimmed:
         raise DriverDeliveryError("Message content cannot be empty.", 400)
 
+    from api.chat_moderation import find_profanity_matches
+    matches = find_profanity_matches(trimmed)
+    if matches:
+        detected_words = list(dict.fromkeys(m["prohibited_text"] for m in matches))
+        return {
+            "success": False,
+            "blocked": True,
+            "code": "PROFANITY_DETECTED",
+            "message": "Your message contains a prohibited word. Please remove it before submitting.",
+            "detected_words": detected_words,
+            "matches": matches,
+        }
+
     is_retailer = recipient_type.lower() == "retailer"
 
     with connection.cursor() as cursor:

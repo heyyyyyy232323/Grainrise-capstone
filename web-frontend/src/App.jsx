@@ -108,6 +108,13 @@ import FinanceManagementHistory from "./Users/WarehouseAccounts/WarehouseManager
 import WarehouseManagerNewsUpdates from "./Users/WarehouseAccounts/WarehouseManager/WarehouseManagerNewsUpdates";
 import WarehouseManagerNewsArticle from "./Users/WarehouseAccounts/WarehouseManager/WarehouseManagerNewsArticle";
 import WarehouseManagerMessages from "./Users/WarehouseAccounts/WarehouseManager/WarehouseManagerMessages";
+import WarehouseSupplierManagement from "./Users/WarehouseAccounts/WarehouseManager/SupplierManagement";
+import GrainriseSupplierDetails from "./Users/WarehouseAccounts/WarehouseManager/GrainriseSupplierDetails";
+import NonGrainriseSupplierDetails from "./Users/WarehouseAccounts/WarehouseManager/NonGrainriseSupplierDetails";
+import WarehouseExpenseManagement from "./Users/WarehouseAccounts/WarehouseManager/ExpenseManagement";
+import WarehouseFareFeeManagement from "./Users/WarehouseAccounts/WarehouseManager/FareFeeManagement";
+import WarehouseOnlinePaymentAccounts from "./Users/WarehouseAccounts/WarehouseManager/OnlinePaymentAccounts";
+import WarehouseVehicleManagement from "./Users/WarehouseAccounts/WarehouseManager/VehicleManagement";
 
 // ============================================================
 // BRANCH MANAGER
@@ -274,6 +281,7 @@ import RetailerManagement from "./Users/AdminAccounts/AccountAdmin/RetailerManag
 import EmailUsers from "./Users/AdminAccounts/AccountAdmin/EmailUsers";
 import AdminNewsUpdates from "./Users/AdminAccounts/AccountAdmin/AdminNewsUpdates";
 import Announcements from "./Users/AdminAccounts/AccountAdmin/Announcements";
+import ProfanityManagement from "./Users/AdminAccounts/AccountAdmin/ProfanityManagement";
 
 
 // ============================================================
@@ -638,12 +646,73 @@ function App() {
             />
 
             <Route
+              path="/warehouse-manager/suppliers"
+              element={<WarehouseSupplierManagement />}
+            />
+            <Route
+              path="/warehouse-manager/supplier-management"
+              element={<WarehouseSupplierManagement />}
+            />
+            <Route
+              path="/warehouse-manager/suppliers/grainrise/:supplierProfileId"
+              element={<GrainriseSupplierDetails />}
+            />
+            <Route
+              path="/warehouse-manager/suppliers/non-grainrise/:contactId"
+              element={<NonGrainriseSupplierDetails />}
+            />
+
+            <Route
               path="/warehouse-manager/order-approval"
               element={<OrderApproval />}
             />
 
             <Route
+              path="/warehouse-manager/expenses"
+              element={<WarehouseExpenseManagement />}
+            />
+            <Route
+              path="/warehouse-manager/expense-management"
+              element={<WarehouseExpenseManagement />}
+            />
+
+            <Route
+              path="/warehouse-manager/pass-fee"
+              element={<WarehouseFareFeeManagement />}
+            />
+            <Route
+              path="/warehouse-manager/fare-fee"
+              element={<WarehouseFareFeeManagement />}
+            />
+            <Route
+              path="/warehouse-manager/fare-fee-management"
+              element={<WarehouseFareFeeManagement />}
+            />
+
+            <Route
+              path="/warehouse-manager/payment-accounts"
+              element={<WarehouseOnlinePaymentAccounts />}
+            />
+            <Route
+              path="/warehouse-manager/online-payment-accounts"
+              element={<WarehouseOnlinePaymentAccounts />}
+            />
+
+            <Route
+              path="/warehouse-manager/vehicle-management"
+              element={<WarehouseVehicleManagement />}
+            />
+            <Route
+              path="/warehouse-manager/vehicles"
+              element={<WarehouseVehicleManagement />}
+            />
+
+            <Route
               path="/warehouse-manager/performance"
+              element={<PerformanceMonitoring />}
+            />
+            <Route
+              path="/warehouse-manager/performance-monitoring"
               element={<PerformanceMonitoring />}
             />
 
@@ -1439,6 +1508,16 @@ function App() {
             <Route
               path="/admin/announcements/management"
               element={<Announcements initialTab="management" />}
+            />
+
+            <Route
+              path="/admin/profanity"
+              element={<ProfanityManagement />}
+            />
+
+            <Route
+              path="/admin/profanity-management"
+              element={<ProfanityManagement />}
             />
 
             <Route

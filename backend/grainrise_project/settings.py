@@ -197,6 +197,7 @@ ALLOWED_HOSTS = [
 
 INSTALLED_APPS = [
 
+    "daphne",
     "django.contrib.admin",
 
     "django.contrib.auth",
@@ -217,6 +218,7 @@ INSTALLED_APPS = [
 
 
 
+    "channels",
     "api.apps.ApiConfig",
 
 ]
@@ -378,6 +380,28 @@ TEMPLATES = [
 
 
 WSGI_APPLICATION = "grainrise_project.wsgi.application"
+ASGI_APPLICATION = "grainrise_project.asgi.application"
+
+# ============================================================
+# CHANNELS / REALTIME
+# ============================================================
+
+_REDIS_URL = os.getenv("REDIS_URL") or os.getenv("CHANNEL_REDIS_URL")
+if _REDIS_URL:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [_REDIS_URL],
+            },
+        },
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        },
+    }
 
 
 

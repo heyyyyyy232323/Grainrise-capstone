@@ -96,4 +96,16 @@ urlpatterns = [
             "api.account_admin_fnction.email_users.urls"
         ),
     ),
+
+
+    # ========================================================
+    # PROFANITY MANAGEMENT
+    # ========================================================
+
+    path(
+        "profanity/",
+        include(
+            "api.account_admin_fnction.profanity_management.urls"
+        ),
+    ),
 ]

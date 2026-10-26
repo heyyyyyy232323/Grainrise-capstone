@@ -62,13 +62,17 @@ def _error(
     *,
     code="error",
     http_status=status.HTTP_400_BAD_REQUEST,
+    extra=None,
 ):
+    payload = {
+        "success": False,
+        "code": code,
+        "message": message,
+    }
+    if extra:
+        payload.update(extra)
     return Response(
-        {
-            "success": False,
-            "code": code,
-            "message": message,
-        },
+        payload,
         status=http_status,
     )
 
@@ -107,6 +111,19 @@ def _database_error_text(exc):
 # ============================================================
 
 def _handle_exception(exc):
+    from .services import ProfanityDetectedError
+    if isinstance(exc, ProfanityDetectedError):
+        return _error(
+            str(exc),
+            code="PROFANITY_DETECTED",
+            http_status=status.HTTP_400_BAD_REQUEST,
+            extra={
+                "blocked": True,
+                "detected_words": exc.detected_words,
+                "matches": exc.matches,
+            },
+        )
+
     if isinstance(
         exc,
         ValueError,
