@@ -78,8 +78,6 @@ export const resolvePostLoginDashboard = (user) => {
     }
     if (position === "branch_manager" || position === "branch manager") {
       return "/miller-branch-manager/dashboard";
-
-
     }
   }
 
@@ -250,6 +248,7 @@ const UserLogin = () => {
   return (
     <div className="dark-readable-auth min-h-screen flex flex-col animate-page-fade">
       <div className="flex flex-1 flex-col md:flex-row">
+        {/* Desktop Hero Column - Hidden on Mobile */}
         <div
           className="
             dark-readable-auth-hero
@@ -262,7 +261,8 @@ const UserLogin = () => {
             px-8
             sm:px-12
             py-10
-            flex
+            hidden
+            md:flex
             flex-col
             justify-between
             overflow-hidden
@@ -331,16 +331,21 @@ const UserLogin = () => {
           </div>
         </div>
 
+        {/* Login Form Column - Shared identical card styling for both Mobile and Desktop */}
         <div
           className="
             relative
             w-full
             md:w-1/2
+            flex-1
             flex
+            flex-col
             items-center
             justify-center
-            px-6
-            py-12
+            px-4
+            sm:px-6
+            py-8
+            sm:py-12
             overflow-hidden
           "
         >
@@ -358,6 +363,20 @@ const UserLogin = () => {
             "
           />
 
+          {/* Mobile Back to Home button */}
+          <div className="relative z-10 w-full max-w-md mb-4 flex justify-start md:hidden">
+            <CustomWhiteButton
+              icon={
+                <span className="flex items-center gap-2 px-2 text-sm font-medium whitespace-nowrap">
+                  <ArrowLeft size={18} />
+                  Back to Home
+                </span>
+              }
+              className="!rounded-full w-auto !py-2 !px-4 shadow-sm"
+              onClick={() => navigate("/")}
+            />
+          </div>
+
           <div
             className="
               dark-readable-auth-card
@@ -366,22 +385,25 @@ const UserLogin = () => {
               z-10
               w-full
               max-w-md
-              bg-white/60
+              bg-white/85
+              backdrop-blur-md
               rounded-2xl
-              shadow-xl
-              p-8
+              sm:rounded-3xl
+              shadow-2xl
+              border
+              border-white/60
+              dark:border-white/10
+              p-6
               sm:p-10
             "
           >
-            <div className="flex items-center justify-center mb-6">
-              <img src={Logo} alt="GrainRise Logo" className="h-12 object-contain" />
+            {/* Logo matching the mobile layout */}
+            <div className="flex items-center justify-center mb-4 sm:mb-5">
+              <img src={Logo} alt="GrainRise Logo" className="h-14 sm:h-16 object-contain" />
             </div>
 
-            <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">
-              Welcome Back
-            </h1>
-
-            <p className="text-center text-gray-500 text-sm mb-8">
+            {/* Subtitle directly under logo on both Desktop & Mobile */}
+            <p className="text-center text-gray-600 dark:text-gray-300 text-sm mb-6 sm:mb-8 max-w-sm mx-auto leading-relaxed">
               Sign in to continue managing your rice supply chain operations.
             </p>
 
@@ -403,7 +425,7 @@ const UserLogin = () => {
               <div className="relative">
                 <CustomTextbox
                   label="Password"
-                  placeholder="Enter your Password"
+                  placeholder="Enter your password"
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => {
@@ -456,15 +478,15 @@ const UserLogin = () => {
             </form>
 
             <p className="text-center text-sm text-gray-700 mt-6">
-              Interested in partnering with GrainRise?{" "}
+              Don’t have an account?{" "}
               <Link to="/partner-with-us" className="text-green-700 font-semibold hover:underline">
-                Partner with Us
+                Register
               </Link>
             </p>
 
             <p className="text-center text-xs text-gray-500 mt-4">
               By signing in, you agree to our{" "}
-                <a
+              <a
                 href="#"
                 onClick={(e) => { e.preventDefault(); setIsTermsModalOpen(true); }}
                 className="text-green-700 font-semibold hover:underline"
