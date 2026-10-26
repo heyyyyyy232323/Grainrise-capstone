@@ -233,6 +233,16 @@ export default function MillerDriverReimbursement() {
     setCameraError("");
   };
 
+  useEffect(() => {
+    if (isCameraModalOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [isCameraModalOpen]);
+
   const handleFlipCamera = () => {
     const newMode = facingMode === "environment" ? "user" : "environment";
     setFacingMode(newMode);
@@ -643,7 +653,7 @@ export default function MillerDriverReimbursement() {
       {isCameraModalOpen && (
         createPortal(
           <div
-            className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4"
             role="dialog"
             aria-modal="true"
           >

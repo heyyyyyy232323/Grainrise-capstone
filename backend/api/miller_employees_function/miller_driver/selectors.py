@@ -357,8 +357,20 @@ def get_driver_assigned_conversations(
     Lists buyers (Retailer and Warehouse) assigned to this driver,
     including active assignment status, latest message, and unread counts.
     """
+    # 1. First ensure all buyers from active duties are included
+    active_duties = get_driver_duties(supplier_profile_id, driver_id)
+    known_buyers = set()
+    assigned_buyers = []
+
+    for d in active_duties:
+        u_id = d.get("user_buyer_id")
+        wh_id = d.get("warehouse_buyer_id")
+        pair = (u_id, wh_id)
+        if pair not in known_buyers and (u_id is not None or wh_id is not None):
+            known_buyers.add(pair)
+            assigned_buyers.append(pair)
+
     with connection.cursor() as cursor:
-        # 1. Get all unique buyers assigned to this driver
         cursor.execute(
             """
             SELECT DISTINCT
@@ -371,12 +383,16 @@ def get_driver_assigned_conversations(
                 ON mva.vehicle_id = mda.delivery_vehicle_id
                 AND mva.driver_id = %s
                 AND mva.supplier_profile_id = %s
-                AND mva.status = 'active'
+                AND LOWER(mva.status) = 'active'
             WHERE mda.supplier_profile_id = %s
             """,
             [driver_id, supplier_profile_id, supplier_profile_id],
         )
-        assigned_buyers = cursor.fetchall()
+        for u_id, wh_id in cursor.fetchall():
+            pair = (u_id, wh_id)
+            if pair not in known_buyers and (u_id is not None or wh_id is not None):
+                known_buyers.add(pair)
+                assigned_buyers.append(pair)
 
     conversations = []
 
@@ -439,7 +455,7 @@ def get_driver_assigned_conversations(
                     ON mva.vehicle_id = mda.delivery_vehicle_id
                     AND mva.driver_id = %s
                     AND mva.supplier_profile_id = %s
-                    AND mva.status = 'active'
+                    AND LOWER(mva.status) = 'active'
                 WHERE mda.supplier_profile_id = %s
                   AND mda.status = 'Pending'
                   AND moc.status IN ('Assigned to driver', 'In transit')
@@ -600,7 +616,7 @@ def get_driver_conversation_thread(
                 ON mva.vehicle_id = mda.delivery_vehicle_id
                 AND mva.driver_id = %s
                 AND mva.supplier_profile_id = %s
-                AND mva.status = 'active'
+                AND LOWER(mva.status) = 'active'
             WHERE mda.supplier_profile_id = %s
               AND mda.status = 'Pending'
               AND moc.status IN ('Assigned to driver', 'In transit')
