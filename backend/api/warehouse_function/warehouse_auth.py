@@ -303,3 +303,161 @@ def warehouse_finance_required(view_func):
     return wrapped_view
 
 
+def get_authenticated_warehouse_sales_user(request):
+    """
+    Resolve either:
+    1. A Warehouse Manager (role='warehouse_manager', account_type='main_user')
+    2. A Warehouse Sales / Encoder / Branch Employee (role='warehouse_employee', account_type='warehouse_employee')
+
+    Returns authoritative context with JWT branch isolation:
+    - user_type: 'manager' | 'employee'
+    - user_id: int
+    - employee_id: int or None
+    - warehouse_profile_id: int
+    - business_name: str
+    - seller_name: str
+    - first_name: str
+    - last_name: str
+    - position: str
+    """
+    payload = authorization_payload(request)
+    if not payload:
+        return None
+
+    if payload.get("auth_source") != "grainrise":
+        return None
+
+    role = payload.get("role")
+    account_type = payload.get("account_type")
+    raw_sub = payload.get("sub")
+
+    try:
+        sub_id = int(raw_sub)
+    except (TypeError, ValueError):
+        return None
+
+    # Case 1: Main User Warehouse Manager
+    if role == "warehouse_manager" and account_type == "main_user":
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    u.user_id,
+                    u.first_name,
+                    u.last_name,
+                    u.email,
+                    u.status,
+                    wp.warehouse_profile_id,
+                    wp.business_name
+                FROM users u
+                INNER JOIN warehouse_profiles wp ON wp.user_id = u.user_id
+                WHERE u.user_id = %s
+                  AND u.user_role = 'warehouse_manager'
+                  AND u.status = 'active'
+                ORDER BY wp.created_at ASC
+                LIMIT 1
+                """,
+                [sub_id],
+            )
+            row = cursor.fetchone()
+
+        if not row:
+            return None
+
+        seller_name = f"{row[1] or ''} {row[2] or ''}".strip() or "Warehouse Manager"
+
+        return {
+            "user_type": "manager",
+            "user_id": row[0],
+            "employee_id": None,
+            "warehouse_profile_id": row[5],
+            "business_name": (row[6] or "GrainRise Warehouse").strip(),
+            "seller_name": seller_name,
+            "first_name": (row[1] or "").strip(),
+            "last_name": (row[2] or "").strip(),
+            "position": "Warehouse Manager",
+            "email": row[3] or "",
+        }
+
+    # Case 2: Warehouse Employee
+    if role == "warehouse_employee" or account_type == "warehouse_employee":
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    we.warehouse_employee_id,
+                    we.warehouse_profile_id,
+                    we.first_name,
+                    we.middle_initial,
+                    we.last_name,
+                    we.suffix,
+                    we.position,
+                    we.status,
+                    wp.user_id AS owner_user_id,
+                    wp.business_name,
+                    we.email
+                FROM warehouse_employees we
+                INNER JOIN warehouse_profiles wp ON wp.warehouse_profile_id = we.warehouse_profile_id
+                WHERE we.warehouse_employee_id = %s
+                  AND we.status = 'active'
+                LIMIT 1
+                """,
+                [sub_id],
+            )
+            row = cursor.fetchone()
+
+        if not row:
+            return None
+
+        first_name = (row[2] or "").strip()
+        middle_initial = (row[3] or "").strip()
+        last_name = (row[4] or "").strip()
+        suffix = (row[5] or "").strip()
+        full_name_parts = [p for p in [first_name, middle_initial, last_name, suffix] if p]
+        seller_name = " ".join(full_name_parts) or "Warehouse Seller"
+
+        return {
+            "user_type": "employee",
+            "user_id": row[8],
+            "employee_id": row[0],
+            "warehouse_profile_id": row[1],
+            "business_name": (row[9] or "GrainRise Warehouse").strip(),
+            "seller_name": seller_name,
+            "first_name": first_name,
+            "last_name": last_name,
+            "position": row[6] or "Sales",
+            "email": row[10] or "",
+        }
+
+    return None
+
+
+def warehouse_sales_required(view_func):
+    """
+    Protect Warehouse Sales & POS API endpoints.
+    Allows both authenticated Warehouse Manager and authorized Warehouse Sales employees.
+    """
+    @wraps(view_func)
+    def wrapped_view(request, *args, **kwargs):
+        sales_user = get_authenticated_warehouse_sales_user(request)
+        if not sales_user:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "detail": "Warehouse Sales or Manager authentication required. Please sign in again.",
+                },
+                status=401,
+            )
+
+        request.warehouse_sales_user = sales_user
+        request.grainrise_warehouse_profile_id = sales_user["warehouse_profile_id"]
+        request.grainrise_warehouse_employee_id = sales_user.get("employee_id")
+        request.grainrise_warehouse_business_name = sales_user.get("business_name")
+        request.grainrise_warehouse_seller_name = sales_user.get("seller_name")
+
+        return view_func(request, *args, **kwargs)
+
+    return wrapped_view
+
+
+
