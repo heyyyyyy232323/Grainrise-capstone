@@ -13,4 +13,8 @@ urlpatterns = [
         "messages/",
         include("api.warehouse_function.messages.urls"),
     ),
+    path(
+        "finance/",
+        include("api.warehouse_function.finance.urls"),
+    ),
 ]

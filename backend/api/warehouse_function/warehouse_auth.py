@@ -150,3 +150,156 @@ def warehouse_manager_required(view_func):
 
     return wrapped_view
 
+
+def get_authenticated_warehouse_finance_user(request):
+    """
+    Resolve either:
+    1. A Warehouse Manager (role='warehouse_manager', account_type='main_user')
+    2. A Warehouse Finance / Manager Employee (role='warehouse_employee', account_type='warehouse_employee')
+
+    Returns authoritative context with JWT branch isolation:
+    - user_type: 'manager' | 'employee'
+    - user_id: int
+    - employee_id: int or None
+    - warehouse_profile_ids: list of accessible warehouse_profile_ids
+    - warehouse_profile_id: primary warehouse_profile_id
+    - business_name: str
+    - payer_name: str
+    - position: str
+    """
+    payload = authorization_payload(request)
+    if not payload:
+        return None
+
+    if payload.get("auth_source") != "grainrise":
+        return None
+
+    role = payload.get("role")
+    account_type = payload.get("account_type")
+    raw_sub = payload.get("sub")
+
+    try:
+        sub_id = int(raw_sub)
+    except (TypeError, ValueError):
+        return None
+
+    # Case 1: Main User Warehouse Manager
+    if role == "warehouse_manager" and account_type == "main_user":
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    u.user_id,
+                    u.first_name,
+                    u.last_name,
+                    u.email,
+                    u.status,
+                    wp.warehouse_profile_id,
+                    wp.business_name
+                FROM users u
+                INNER JOIN warehouse_profiles wp ON wp.user_id = u.user_id
+                WHERE u.user_id = %s
+                  AND u.user_role = 'warehouse_manager'
+                  AND u.status = 'active'
+                ORDER BY wp.created_at ASC
+                """,
+                [sub_id],
+            )
+            rows = cursor.fetchall()
+
+        if not rows:
+            return None
+
+        primary = rows[0]
+        profile_ids = [r[5] for r in rows if r[5] is not None]
+        payer_name = f"{primary[1] or ''} {primary[2] or ''}".strip() or "Warehouse Manager"
+
+        return {
+            "user_type": "manager",
+            "user_id": primary[0],
+            "employee_id": None,
+            "warehouse_profile_ids": profile_ids,
+            "warehouse_profile_id": primary[5],
+            "business_name": primary[6] or "GrainRise Warehouse",
+            "payer_name": payer_name,
+            "position": "Warehouse Manager",
+            "email": primary[3],
+        }
+
+    # Case 2: Warehouse Employee (finance or manager position)
+    if role == "warehouse_employee" or account_type == "warehouse_employee":
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    we.warehouse_employee_id,
+                    we.warehouse_profile_id,
+                    we.first_name,
+                    we.last_name,
+                    we.position,
+                    we.status,
+                    wp.user_id AS owner_user_id,
+                    wp.business_name
+                FROM warehouse_employees we
+                INNER JOIN warehouse_profiles wp ON wp.warehouse_profile_id = we.warehouse_profile_id
+                WHERE we.warehouse_employee_id = %s
+                  AND we.status = 'active'
+                LIMIT 1
+                """,
+                [sub_id],
+            )
+            row = cursor.fetchone()
+
+        if not row:
+            return None
+
+        pos = str(row[4] or "").lower()
+        # Allow finance employees or managers
+        if pos not in ("finance", "manager", "encoder", "procurement"):
+            return None
+
+        payer_name = f"{row[2] or ''} {row[3] or ''}".strip() or "Warehouse Finance"
+
+        return {
+            "user_type": "employee",
+            "user_id": row[6],
+            "employee_id": row[0],
+            "warehouse_profile_ids": [row[1]],
+            "warehouse_profile_id": row[1],
+            "business_name": row[7] or "GrainRise Warehouse",
+            "payer_name": payer_name,
+            "position": row[4],
+        }
+
+    return None
+
+
+def warehouse_finance_required(view_func):
+    """
+    Protect Warehouse Finance & Payables API endpoints.
+    Allows both authenticated Warehouse Manager and Warehouse Finance employees.
+    """
+    @wraps(view_func)
+    def wrapped_view(request, *args, **kwargs):
+        finance_user = get_authenticated_warehouse_finance_user(request)
+        if not finance_user:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Warehouse Finance or Manager authentication required. Please sign in again.",
+                },
+                status=401,
+            )
+
+        request.warehouse_finance_user = finance_user
+        request.grainrise_warehouse_profile_ids = finance_user["warehouse_profile_ids"]
+        request.grainrise_warehouse_profile_id = finance_user["warehouse_profile_id"]
+        request.grainrise_warehouse_employee_id = finance_user.get("employee_id")
+        request.grainrise_warehouse_business_name = finance_user.get("business_name")
+        request.grainrise_warehouse_payer_name = finance_user.get("payer_name")
+
+        return view_func(request, *args, **kwargs)
+
+    return wrapped_view
+
+
