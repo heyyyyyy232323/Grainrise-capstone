@@ -328,6 +328,15 @@ const UserNavbar = ({
     (authenticatedUser?.role === "supplier_employee" &&
       authenticatedUser?.position === "finance");
 
+  const isWarehouseSales =
+    propRole === "warehouse_sales" ||
+    role === "warehouse_sales" ||
+    location.pathname.startsWith("/warehouse-sales") ||
+    (authenticatedUser?.account_type === "warehouse_employee" &&
+      (authenticatedUser?.position === "sales" || authenticatedUser?.position === "seller")) ||
+    (authenticatedUser?.role === "warehouse_employee" &&
+      (authenticatedUser?.position === "sales" || authenticatedUser?.position === "seller"));
+
   const isSales =
     propRole === "supplier_sales" ||
     propRole === "miller_sales" ||
@@ -335,6 +344,7 @@ const UserNavbar = ({
     role === "supplier_sales" ||
     role === "miller_sales" ||
     role === "warehouse_sales" ||
+    isWarehouseSales ||
     (authenticatedUser?.account_type === "supplier_employee" &&
       (authenticatedUser?.position === "sales" ||
         authenticatedUser?.position === "seller")) ||
@@ -641,6 +651,10 @@ const UserNavbar = ({
   } = useSalesNotifications({
     enabled:
       isSales,
+    baseUrl:
+      isWarehouseSales
+        ? "/warehouse/sales/notifications"
+        : "/miller-employees/sales/notifications",
   });
 
 
@@ -1675,7 +1689,9 @@ const UserNavbar = ({
           const targetPath =
             result?.targetPath ||
             item?.action_url ||
-            "/miller-sales/dashboard";
+            (isWarehouseSales
+              ? "/warehouse-sales/dashboard"
+              : "/miller-sales/dashboard");
 
           navigate(
             targetPath

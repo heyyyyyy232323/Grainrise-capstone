@@ -3,7 +3,8 @@ Read queries (selectors) for Warehouse Sales Point of Sale (POS).
 All queries are strictly scoped by the authenticated seller's warehouse_profile_id.
 """
 
-from datetime import datetime
+import calendar
+from datetime import datetime, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
@@ -1075,5 +1076,394 @@ def get_warehouse_online_order_detail(warehouse_profile_id: int, online_order_id
         "createdAtFormatted": created_formatted,
         "orderDate": created_iso.split("T")[0] if created_iso else "",
         "sortTimestamp": int(created_at.timestamp()) if created_at else 0,
+    }
+
+
+# ============================================================
+# WAREHOUSE SALES DASHBOARD SELECTOR
+# ============================================================
+
+def get_warehouse_sales_dashboard_data(warehouse_profile_id: int) -> dict:
+    """
+    Fetch comprehensive, live sales dashboard data for the authenticated Warehouse branch:
+    - KPIs: Today's Sales, Sales This Month, Potential Sales, Pending Online Orders
+    - Sales Trend: Weekly (Mon-Sun) and Monthly (Week 1-4) revenue series
+    - Sales Distribution: Walk-in vs Online revenue percentages
+    - Recent Order Activity: Latest in-store and online order activities
+    - Top Selling Products: Ranked by actual quantity sold (kg)
+    """
+    now_ph = datetime.now(PH_TZ)
+    today = now_ph.date()
+    current_year = today.year
+    current_month = today.month
+
+    with connection.cursor() as cur:
+        # 1. In-Store Sales (warehouse_ftf_sales)
+        # All completed in-store sales
+        cur.execute(
+            """
+            SELECT COALESCE(SUM(total_payment), 0)
+            FROM warehouse_ftf_sales
+            WHERE warehouse_profile_id = %s
+            """,
+            [warehouse_profile_id],
+        )
+        in_store_total = float(cur.fetchone()[0] or 0.0)
+
+        # In-store today
+        cur.execute(
+            """
+            SELECT COALESCE(SUM(total_payment), 0)
+            FROM warehouse_ftf_sales
+            WHERE warehouse_profile_id = %s
+              AND DATE(created_at) = %s
+            """,
+            [warehouse_profile_id, today],
+        )
+        in_store_today = float(cur.fetchone()[0] or 0.0)
+
+        # In-store this month
+        cur.execute(
+            """
+            SELECT COALESCE(SUM(total_payment), 0)
+            FROM warehouse_ftf_sales
+            WHERE warehouse_profile_id = %s
+              AND YEAR(created_at) = %s
+              AND MONTH(created_at) = %s
+            """,
+            [warehouse_profile_id, current_year, current_month],
+        )
+        in_store_month = float(cur.fetchone()[0] or 0.0)
+
+        # 2. Online Sales (warehouse_online_orders_payment + warehouse_online_customer)
+        # Count only completed / paid online sales without duplicates
+        cur.execute(
+            """
+            SELECT COALESCE(SUM(COALESCE(woop.amount, woc.total_price)), 0)
+            FROM warehouse_online_customer woc
+            LEFT JOIN warehouse_online_orders_payment woop ON woop.online_order_id = woc.online_order_id
+            WHERE woc.warehouse_profile_id = %s
+              AND (
+                  LOWER(TRIM(woop.status)) = 'paid'
+                  OR (woop.status IS NULL AND LOWER(TRIM(woc.status)) IN ('delivered', 'completed'))
+              )
+            """,
+            [warehouse_profile_id],
+        )
+        online_total = float(cur.fetchone()[0] or 0.0)
+
+        # Online today
+        cur.execute(
+            """
+            SELECT COALESCE(SUM(COALESCE(woop.amount, woc.total_price)), 0)
+            FROM warehouse_online_customer woc
+            LEFT JOIN warehouse_online_orders_payment woop ON woop.online_order_id = woc.online_order_id
+            WHERE woc.warehouse_profile_id = %s
+              AND (
+                  LOWER(TRIM(woop.status)) = 'paid'
+                  OR (woop.status IS NULL AND LOWER(TRIM(woc.status)) IN ('delivered', 'completed'))
+              )
+              AND DATE(woc.created_at) = %s
+            """,
+            [warehouse_profile_id, today],
+        )
+        online_today = float(cur.fetchone()[0] or 0.0)
+
+        # Online this month
+        cur.execute(
+            """
+            SELECT COALESCE(SUM(COALESCE(woop.amount, woc.total_price)), 0)
+            FROM warehouse_online_customer woc
+            LEFT JOIN warehouse_online_orders_payment woop ON woop.online_order_id = woc.online_order_id
+            WHERE woc.warehouse_profile_id = %s
+              AND (
+                  LOWER(TRIM(woop.status)) = 'paid'
+                  OR (woop.status IS NULL AND LOWER(TRIM(woc.status)) IN ('delivered', 'completed'))
+              )
+              AND YEAR(woc.created_at) = %s
+              AND MONTH(woc.created_at) = %s
+            """,
+            [warehouse_profile_id, current_year, current_month],
+        )
+        online_month = float(cur.fetchone()[0] or 0.0)
+
+        # 3. Potential Sales: active stock value in inventory + pending online orders total price
+        cur.execute(
+            """
+            SELECT COALESCE(SUM(stock_quantity * unit_cost), 0)
+            FROM warehouse_products
+            WHERE warehouse_profile_id = %s
+              AND LOWER(TRIM(status)) = 'active'
+              AND stock_quantity > 0
+              AND unit_cost > 0
+            """,
+            [warehouse_profile_id],
+        )
+        stock_potential = float(cur.fetchone()[0] or 0.0)
+
+        cur.execute(
+            """
+            SELECT COALESCE(SUM(total_price), 0)
+            FROM warehouse_online_customer
+            WHERE warehouse_profile_id = %s
+              AND LOWER(TRIM(status)) = 'ordered'
+            """,
+            [warehouse_profile_id],
+        )
+        pending_online_val = float(cur.fetchone()[0] or 0.0)
+        potential_sales_amount = round(stock_potential + pending_online_val, 2)
+
+        # 4. Pending Online Orders Count
+        cur.execute(
+            """
+            SELECT COUNT(*)
+            FROM warehouse_online_customer
+            WHERE warehouse_profile_id = %s
+              AND LOWER(TRIM(status)) = 'ordered'
+            """,
+            [warehouse_profile_id],
+        )
+        pending_online_count = int(cur.fetchone()[0] or 0)
+
+        # 5. Combined Revenue by Date for Trend Chart
+        cur.execute(
+            """
+            SELECT DATE(created_at), SUM(total_payment)
+            FROM warehouse_ftf_sales
+            WHERE warehouse_profile_id = %s
+            GROUP BY DATE(created_at)
+            """,
+            [warehouse_profile_id],
+        )
+        ftf_by_date = {row[0]: float(row[1] or 0.0) for row in cur.fetchall()}
+
+        cur.execute(
+            """
+            SELECT DATE(woc.created_at), SUM(COALESCE(woop.amount, woc.total_price))
+            FROM warehouse_online_customer woc
+            LEFT JOIN warehouse_online_orders_payment woop ON woop.online_order_id = woc.online_order_id
+            WHERE woc.warehouse_profile_id = %s
+              AND (
+                  LOWER(TRIM(woop.status)) = 'paid'
+                  OR (woop.status IS NULL AND LOWER(TRIM(woc.status)) IN ('delivered', 'completed'))
+              )
+            GROUP BY DATE(woc.created_at)
+            """,
+            [warehouse_profile_id],
+        )
+        online_by_date = {row[0]: float(row[1] or 0.0) for row in cur.fetchall()}
+
+        # 6. Recent Activities (Latest in-store sales & latest online orders)
+        cur.execute(
+            """
+            SELECT
+                wfs.transaction_id,
+                wfs.reference_no,
+                wfs.total_payment,
+                wfs.created_at,
+                COALESCE(wp.product_name, 'Rice Product')
+            FROM warehouse_ftf_sales wfs
+            LEFT JOIN warehouse_products wp ON wfs.warehouse_product_id = wp.product_id
+            WHERE wfs.warehouse_profile_id = %s
+            ORDER BY wfs.created_at DESC
+            LIMIT 5
+            """,
+            [warehouse_profile_id],
+        )
+        ftf_activities_raw = cur.fetchall()
+
+        cur.execute(
+            """
+            SELECT
+                woc.online_order_id,
+                woc.batch_no,
+                woc.total_price,
+                woc.status,
+                woc.created_at,
+                woc.updated_at,
+                COALESCE(wp.product_name, 'Rice Product'),
+                CONCAT_WS(' ', u.first_name, u.last_name) AS buyer_name
+            FROM warehouse_online_customer woc
+            LEFT JOIN users u ON woc.retailer_buyer_id = u.user_id
+            LEFT JOIN warehouse_products wp ON woc.warehouse_product_id = wp.product_id
+            WHERE woc.warehouse_profile_id = %s
+            ORDER BY COALESCE(woc.updated_at, woc.created_at) DESC
+            LIMIT 5
+            """,
+            [warehouse_profile_id],
+        )
+        online_activities_raw = cur.fetchall()
+
+        # 7. Top Selling Products (Rank by actual quantity sold in kg)
+        cur.execute(
+            """
+            SELECT
+                wp.product_id,
+                wp.product_name,
+                COALESCE(ftf.ftf_qty, 0) + COALESCE(online.online_qty, 0) AS total_kg
+            FROM warehouse_products wp
+            LEFT JOIN (
+                SELECT warehouse_product_id, SUM(quantity_sold) AS ftf_qty
+                FROM warehouse_ftf_sales
+                WHERE warehouse_profile_id = %s
+                GROUP BY warehouse_product_id
+            ) ftf ON wp.product_id = ftf.warehouse_product_id
+            LEFT JOIN (
+                SELECT woc.warehouse_product_id, SUM(woc.ordered_quantity) AS online_qty
+                FROM warehouse_online_customer woc
+                LEFT JOIN warehouse_online_orders_payment woop ON woop.online_order_id = woc.online_order_id
+                WHERE woc.warehouse_profile_id = %s
+                  AND (
+                      LOWER(TRIM(woop.status)) = 'paid'
+                      OR (woop.status IS NULL AND LOWER(TRIM(woc.status)) IN ('delivered', 'completed'))
+                  )
+                GROUP BY woc.warehouse_product_id
+            ) online ON wp.product_id = online.warehouse_product_id
+            WHERE wp.warehouse_profile_id = %s
+              AND (COALESCE(ftf.ftf_qty, 0) + COALESCE(online.online_qty, 0)) > 0
+            ORDER BY total_kg DESC
+            LIMIT 5
+            """,
+            [warehouse_profile_id, warehouse_profile_id, warehouse_profile_id],
+        )
+        top_selling_raw = cur.fetchall()
+
+    # Sales Distribution calculation
+    total_sales = round(in_store_total + online_total, 2)
+    if total_sales > 0:
+        in_store_pct = round((in_store_total / total_sales) * 100)
+        online_pct = 100 - in_store_pct
+    else:
+        in_store_pct = 0
+        online_pct = 0
+
+    sales_distribution = [
+        {"label": "Walk-in Sales", "value": in_store_pct, "amount": in_store_total, "color": "#0B7A2A"},
+        {"label": "Online Sales", "value": online_pct, "amount": online_total, "color": "#E0AC1C"},
+    ]
+
+    # Combined Revenue by Date mapping
+    all_rev_dates = set(ftf_by_date.keys()) | set(online_by_date.keys())
+    revenue_by_date = {d: ftf_by_date.get(d, 0.0) + online_by_date.get(d, 0.0) for d in all_rev_dates}
+
+    # Week Series (Mon - Sun of current week)
+    start_of_week = today - timedelta(days=today.weekday())
+    day_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    week_data = []
+    for i in range(7):
+        day_date = start_of_week + timedelta(days=i)
+        val = round(revenue_by_date.get(day_date, 0.0), 2)
+        week_data.append({"label": day_labels[i], "value": val})
+
+    # Month Series (Weeks 1 - 4 of current month)
+    _, days_in_month = calendar.monthrange(current_year, current_month)
+    month_data = [
+        {"label": "Week 1", "value": round(sum(v for d, v in revenue_by_date.items() if d.year == current_year and d.month == current_month and 1 <= d.day <= 7), 2)},
+        {"label": "Week 2", "value": round(sum(v for d, v in revenue_by_date.items() if d.year == current_year and d.month == current_month and 8 <= d.day <= 14), 2)},
+        {"label": "Week 3", "value": round(sum(v for d, v in revenue_by_date.items() if d.year == current_year and d.month == current_month and 15 <= d.day <= 21), 2)},
+        {"label": "Week 4", "value": round(sum(v for d, v in revenue_by_date.items() if d.year == current_year and d.month == current_month and 22 <= d.day <= days_in_month), 2)},
+    ]
+
+    max_week_val = max([item["value"] for item in week_data] + [10000.0])
+    max_month_val = max([item["value"] for item in month_data] + [50000.0])
+
+    # Recent Activities Feed
+    recent_activities = []
+    for r in ftf_activities_raw:
+        tx_id, ref_no, amount, created_at, prod_name = r
+        clean_ref = ref_no or f"TXN-{tx_id}"
+        time_str = created_at.strftime("%I:%M %p") if created_at else ""
+        if created_at and created_at.date() != today:
+            time_str = f"{created_at.strftime('%b %d')}, {time_str}"
+        recent_activities.append({
+            "id": f"ftf-{tx_id}",
+            "title": "In-Store POS Sale",
+            "description": f"Receipt #{clean_ref} — {format_display_currency(amount)} ({prod_name})",
+            "time": time_str,
+            "timestamp": int(created_at.timestamp()) if created_at else 0,
+            "type": "in-store",
+            "color": "#0B7A2A",
+        })
+
+    for r in online_activities_raw:
+        order_id, batch_no, price, status, created_at, updated_at, prod_name, buyer_name = r
+        activity_dt = updated_at or created_at
+        clean_batch = batch_no or f"BATCH-{order_id}"
+        time_str = activity_dt.strftime("%I:%M %p") if activity_dt else ""
+        if activity_dt and activity_dt.date() != today:
+            time_str = f"{activity_dt.strftime('%b %d')}, {time_str}"
+        status_label = status or "Received"
+        recent_activities.append({
+            "id": f"online-{order_id}",
+            "title": f"Online Order {status_label}",
+            "description": f"Batch #{clean_batch} from {buyer_name or 'Retailer'} — {format_display_currency(price)}",
+            "time": time_str,
+            "timestamp": int(activity_dt.timestamp()) if activity_dt else 0,
+            "type": "online",
+            "color": "#E0AC1C" if (status or "").lower() == "ordered" else "#2563EB",
+        })
+
+    recent_activities.sort(key=lambda x: x["timestamp"], reverse=True)
+    recent_activities = recent_activities[:5]
+
+    # Top Selling Products Feed
+    top_selling_products = []
+    for idx, r in enumerate(top_selling_raw):
+        p_id, p_name, qty_kg = r
+        top_selling_products.append({
+            "id": int(p_id),
+            "rank": idx + 1,
+            "product": p_name or "Rice Product",
+            "quantity": format_display_qty(qty_kg),
+            "quantityNum": float(qty_kg),
+        })
+
+    # KPIs mapping
+    today_sales_total = round(in_store_today + online_today, 2)
+    month_sales_total = round(in_store_month + online_month, 2)
+
+    kpis = {
+        "today_sales": {
+            "title": "TODAY'S SALES",
+            "amount": today_sales_total,
+            "value": format_display_currency(today_sales_total),
+            "trend": "Sales recorded today",
+            "tone": "success",
+        },
+        "month_sales": {
+            "title": "SALES THIS MONTH",
+            "amount": month_sales_total,
+            "value": format_display_currency(month_sales_total),
+            "trend": "Accumulated monthly revenue",
+            "tone": "success",
+        },
+        "potential_sales": {
+            "title": "POTENTIAL SALES",
+            "amount": potential_sales_amount,
+            "value": format_display_currency(potential_sales_amount),
+            "trend": "Estimated revenue from active inventory and pending sales",
+            "tone": "success",
+        },
+        "pending_online_orders": {
+            "title": "PENDING ONLINE ORDERS",
+            "count": pending_online_count,
+            "value": f"{pending_online_count} {'Order' if pending_online_count == 1 else 'Orders'}",
+            "trend": "Requires seller attention",
+            "tone": "warning",
+        },
+    }
+
+    return {
+        "kpis": kpis,
+        "sales_trend": {
+            "week": week_data,
+            "month": month_data,
+            "max_week": max_week_val,
+            "max_month": max_month_val,
+        },
+        "sales_distribution": sales_distribution,
+        "recent_activities": recent_activities,
+        "top_selling_products": top_selling_products,
+        "last_updated": now_ph.strftime("%I:%M %p"),
     }
 

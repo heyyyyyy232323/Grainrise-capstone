@@ -14,6 +14,7 @@ from .selectors import (
     get_pos_checkout_receipt,
     get_seller_and_branch_context,
     get_warehouse_online_order_detail,
+    get_warehouse_sales_dashboard_data,
     list_in_store_sales,
     list_online_sales,
     list_pos_payment_accounts,
@@ -396,4 +397,22 @@ def online_order_decline_view(request, order_id: int):
         },
         status=200,
     )
+
+
+@csrf_exempt
+@require_GET
+@warehouse_sales_required
+def sales_dashboard_view(request):
+    """
+    GET /api/warehouse/sales/dashboard/
+    Returns live sales dashboard data for the authenticated Warehouse branch:
+    - KPIs (Today's Sales, Month Sales, Potential Sales, Pending Online Orders)
+    - Sales Trend (Week and Month series)
+    - Sales Distribution (In-Store vs Online)
+    - Recent Activities
+    - Top Selling Products
+    """
+    warehouse_profile_id = request.grainrise_warehouse_profile_id
+    data = get_warehouse_sales_dashboard_data(warehouse_profile_id)
+    return JsonResponse(data, status=200)
 

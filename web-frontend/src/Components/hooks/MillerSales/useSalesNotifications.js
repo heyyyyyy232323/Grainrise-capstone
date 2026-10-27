@@ -9,6 +9,7 @@ const BASE_URL = "/miller-employees/sales/notifications";
 
 const useSalesNotifications = ({
   enabled = true,
+  baseUrl = BASE_URL,
 } = {}) => {
   const { request } = useApi();
 
@@ -34,7 +35,7 @@ const useSalesNotifications = ({
 
       try {
         const response = await request(
-          `${BASE_URL}/?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`,
+          `${baseUrl}/?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`,
           {
             method: "GET",
             throwOnError: true,
@@ -63,7 +64,7 @@ const useSalesNotifications = ({
         setIsLoading(false);
       }
     },
-    [enabled, request]
+    [baseUrl, enabled, request]
   );
 
   // =========================================================
@@ -86,7 +87,7 @@ const useSalesNotifications = ({
     }
 
     try {
-      const response = await request(`${BASE_URL}/?limit=1`, {
+      const response = await request(`${baseUrl}/?limit=1`, {
         method: "GET",
         throwOnError: true,
       });
@@ -98,7 +99,7 @@ const useSalesNotifications = ({
       // Silently fail badge refresh
       return 0;
     }
-  }, [enabled, request]);
+  }, [baseUrl, enabled, request]);
 
   // =========================================================
   // INITIAL LOAD
@@ -127,7 +128,7 @@ const useSalesNotifications = ({
 
       try {
         const response = await request(
-          `${BASE_URL}/${notificationId}/seen/`,
+          `${baseUrl}/${notificationId}/seen/`,
           {
             method: "POST",
             body: {},
@@ -174,7 +175,7 @@ const useSalesNotifications = ({
         setIsUpdating(false);
       }
     },
-    [enabled, request]
+    [baseUrl, enabled, request]
   );
 
   // =========================================================
@@ -187,7 +188,7 @@ const useSalesNotifications = ({
     setError("");
 
     try {
-      await request(`${BASE_URL}/mark-all-seen/`, {
+      await request(`${baseUrl}/mark-all-seen/`, {
         method: "POST",
         body: {},
         throwOnError: true,
@@ -211,7 +212,7 @@ const useSalesNotifications = ({
     } finally {
       setIsUpdating(false);
     }
-  }, [enabled, request]);
+  }, [baseUrl, enabled, request]);
 
   // =========================================================
   // OPEN NOTIFICATION
@@ -219,7 +220,10 @@ const useSalesNotifications = ({
   const openNotification = useCallback(
     async (item) => {
       const notificationId = item?.notification_id || item?.id;
-      const targetPath = item?.action_url || "/miller-sales/dashboard";
+      const defaultDashboard = baseUrl.includes("warehouse")
+        ? "/warehouse-sales/dashboard"
+        : "/miller-sales/dashboard";
+      const targetPath = item?.action_url || defaultDashboard;
 
       if (!notificationId) {
         return { targetPath };
@@ -239,7 +243,7 @@ const useSalesNotifications = ({
         targetPath,
       };
     },
-    [markAsSeen]
+    [baseUrl, markAsSeen]
   );
 
   return {

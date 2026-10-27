@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 
 from . import views
 
@@ -14,4 +14,7 @@ urlpatterns = [
     path("online-orders/<int:order_id>/", views.online_order_detail_view, name="warehouse-sales-online-order-detail"),
     path("online-orders/<int:order_id>/approve/", views.online_order_approve_view, name="warehouse-sales-online-order-approve"),
     path("online-orders/<int:order_id>/decline/", views.online_order_decline_view, name="warehouse-sales-online-order-decline"),
+    path("dashboard/", views.sales_dashboard_view, name="warehouse-sales-dashboard"),
+    path("notifications/", include("api.warehouse_function.sales.notifications.urls")),
+    path("notifications", include("api.warehouse_function.sales.notifications.urls")),
 ]
