@@ -13,6 +13,8 @@ from api.warehouse_function.warehouse_auth import warehouse_sales_required
 from .selectors import (
     get_pos_checkout_receipt,
     get_seller_and_branch_context,
+    list_in_store_sales,
+    list_online_sales,
     list_pos_payment_accounts,
     list_pos_products,
 )
@@ -213,3 +215,57 @@ def pos_receipt_detail_view(request, reference_no):
         return JsonResponse({"detail": "Receipt not found for this transaction reference."}, status=404)
 
     return JsonResponse({"receipt": receipt_data}, status=200)
+
+
+# ============================================================
+# WAREHOUSE SALES HISTORY VIEWS
+# ============================================================
+
+@csrf_exempt
+@require_GET
+@warehouse_sales_required
+def in_store_sales_history_view(request):
+    """
+    GET /api/warehouse/sales/history/in-store/
+    Returns completed in-store sales transactions for the authenticated Warehouse branch.
+    Supports query parameters: search, start_date, end_date, sort_by.
+    """
+    warehouse_profile_id = request.grainrise_warehouse_profile_id
+    search = request.GET.get("search", "").strip() or None
+    start_date = request.GET.get("start_date", "").strip() or None
+    end_date = request.GET.get("end_date", "").strip() or None
+    sort_by = request.GET.get("sort_by", "date-desc").strip()
+
+    sales = list_in_store_sales(
+        warehouse_profile_id=warehouse_profile_id,
+        search=search,
+        start_date=start_date,
+        end_date=end_date,
+        sort_by=sort_by,
+    )
+    return JsonResponse({"sales": sales, "total_count": len(sales)}, status=200)
+
+
+@csrf_exempt
+@require_GET
+@warehouse_sales_required
+def online_sales_history_view(request):
+    """
+    GET /api/warehouse/sales/history/online/
+    Returns online sales transactions for the authenticated Warehouse branch.
+    Supports query parameters: search, start_date, end_date, sort_by.
+    """
+    warehouse_profile_id = request.grainrise_warehouse_profile_id
+    search = request.GET.get("search", "").strip() or None
+    start_date = request.GET.get("start_date", "").strip() or None
+    end_date = request.GET.get("end_date", "").strip() or None
+    sort_by = request.GET.get("sort_by", "date-desc").strip()
+
+    sales = list_online_sales(
+        warehouse_profile_id=warehouse_profile_id,
+        search=search,
+        start_date=start_date,
+        end_date=end_date,
+        sort_by=sort_by,
+    )
+    return JsonResponse({"sales": sales, "total_count": len(sales)}, status=200)

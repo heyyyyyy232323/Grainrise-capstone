@@ -459,3 +459,361 @@ def get_pos_checkout_receipt(warehouse_profile_id: int, reference_no: str) -> di
         "amount_paid": float(amount_paid),
         "change_amount": float(change_amount),
     }
+
+
+# ============================================================
+# SALES HISTORY HELPERS & SELECTORS
+# ============================================================
+
+def format_display_date(d):
+    """
+    Format date/datetime as: Abbreviated month, numeric day, four-digit year.
+    Example: Oct 27, 2026.
+    """
+    if not d:
+        return "—"
+    if isinstance(d, datetime):
+        d = d.date()
+    elif isinstance(d, str):
+        try:
+            d = datetime.fromisoformat(d.split("T")[0].split(" ")[0]).date()
+        except Exception:
+            return str(d)
+    month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    return f"{month_names[d.month - 1]} {d.day}, {d.year}"
+
+
+def format_display_currency(val):
+    """Format monetary value as Philippine Peso (e.g. ₱ 45.00)."""
+    if val is None:
+        return "₱ 0.00"
+    try:
+        f_val = float(val)
+        return f"₱ {f_val:,.2f}"
+    except (ValueError, TypeError):
+        return f"₱ {val}"
+
+
+def format_display_qty(qty):
+    """Format quantity with kg unit (e.g. 10.00 kg)."""
+    if qty is None:
+        return "0.00 kg"
+    try:
+        val = float(qty)
+        if val % 1 == 0:
+            return f"{int(val):,} kg"
+        return f"{val:,.2f} kg"
+    except (ValueError, TypeError):
+        return f"{qty} kg"
+
+
+def list_in_store_sales(
+    warehouse_profile_id: int,
+    search: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    sort_by: str = "date-desc",
+) -> list[dict]:
+    """
+    Fetch completed in-store sales transactions from `warehouse_ftf_sales`
+    joined with `warehouse_products`, scoped to `warehouse_profile_id`.
+    """
+    where_clauses = ["wfs.warehouse_profile_id = %s"]
+    params = [warehouse_profile_id]
+
+    if start_date:
+        where_clauses.append("DATE(wfs.created_at) >= %s")
+        params.append(start_date)
+
+    if end_date:
+        where_clauses.append("DATE(wfs.created_at) <= %s")
+        params.append(end_date)
+
+    if search:
+        s_query = f"%{search.strip().lower()}%"
+        where_clauses.append(
+            """(
+                LOWER(wfs.reference_no) LIKE %s
+                OR LOWER(COALESCE(wp.product_name, '')) LIKE %s
+                OR LOWER(COALESCE(wp.product_code, '')) LIKE %s
+                OR LOWER(COALESCE(wfs.payment_method, '')) LIKE %s
+                OR CAST(wfs.total_payment AS CHAR) LIKE %s
+                OR CAST(wfs.quantity_sold AS CHAR) LIKE %s
+            )"""
+        )
+        params.extend([s_query, s_query, s_query, s_query, s_query, s_query])
+
+    order_by = "wfs.created_at DESC, wfs.transaction_id DESC"
+    if sort_by == "date-asc":
+        order_by = "wfs.created_at ASC, wfs.transaction_id ASC"
+    elif sort_by == "variant-asc":
+        order_by = "wp.product_name ASC, wfs.created_at DESC"
+    elif sort_by == "qty-desc":
+        order_by = "wfs.quantity_sold DESC, wfs.created_at DESC"
+    elif sort_by == "qty-asc":
+        order_by = "wfs.quantity_sold ASC, wfs.created_at DESC"
+
+    where_sql = " AND ".join(where_clauses)
+    query = f"""
+        SELECT
+            wfs.transaction_id,
+            wfs.warehouse_profile_id,
+            wfs.sold_by_employee_id,
+            wfs.warehouse_product_id,
+            wfs.quantity_sold,
+            wfs.total_payment,
+            wfs.amount_paid,
+            wfs.change_amount,
+            wfs.payment_method,
+            wfs.payment_credentials_id,
+            wfs.reference_no,
+            wfs.payment_proof_image,
+            wfs.idempotency_key,
+            wfs.created_at,
+            wp.product_name,
+            wp.product_code,
+            wp.unit_cost,
+            wp.stock_quantity
+        FROM warehouse_ftf_sales wfs
+        LEFT JOIN warehouse_products wp ON wfs.warehouse_product_id = wp.product_id
+        WHERE {where_sql}
+        ORDER BY {order_by}
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+
+    results = []
+    for r in rows:
+        tx_id = int(r[0])
+        ref_no = r[10] or f"TXN-{tx_id}"
+        qty_sold = Decimal(str(r[4] or "0.00"))
+        tot_payment = Decimal(str(r[5] or "0.00"))
+        amt_paid = Decimal(str(r[6] or "0.00"))
+        change_amt = Decimal(str(r[7] or "0.00"))
+        pay_method_raw = (r[8] or "Cash").strip()
+        created_at = r[13]
+        prod_name = r[14] or "Rice Product"
+        prod_code = r[15] or ""
+        unit_cost = Decimal(str(r[16] or "0.00"))
+
+        if pay_method_raw.lower() == "gcash":
+            pay_method = "GCash"
+        elif pay_method_raw.lower() in ("bank", "bank_transfer", "bank transfer"):
+            pay_method = "Bank Transfer"
+        elif pay_method_raw.lower() == "cash":
+            pay_method = "Cash"
+        else:
+            pay_method = pay_method_raw.capitalize()
+
+        time_str = created_at.strftime("%I:%M %p") if created_at else ""
+        date_iso = created_at.date().isoformat() if created_at else ""
+        date_str = format_display_date(created_at)
+        purchase_datetime = created_at.strftime("%b %d, %Y %I:%M %p") if created_at else "—"
+
+        results.append({
+            "id": f"txn-{tx_id}",
+            "transactionId": ref_no,
+            "referenceNo": ref_no,
+            "dbTransactionId": tx_id,
+            "time": time_str,
+            "date": date_iso,
+            "dateFormatted": date_str,
+            "purchaseDateFormatted": purchase_datetime,
+            "datetimeFormatted": purchase_datetime,
+            "variant": prod_name,
+            "productName": prod_name,
+            "productCode": prod_code,
+            "quantity": format_display_qty(qty_sold),
+            "quantityNum": float(qty_sold),
+            "unitCost": float(unit_cost),
+            "unitCostFormatted": format_display_currency(unit_cost),
+            "totalPayment": format_display_currency(tot_payment),
+            "totalPaymentNum": float(tot_payment),
+            "totalAmount": format_display_currency(tot_payment),
+            "amountPaid": format_display_currency(amt_paid),
+            "amountPaidNum": float(amt_paid),
+            "change": format_display_currency(change_amt),
+            "changeNum": float(change_amt),
+            "paymentMethod": pay_method,
+            "status": "Paid",
+            "sortTimestamp": int(created_at.timestamp()) if created_at else 0,
+        })
+
+    return results
+
+
+def list_online_sales(
+    warehouse_profile_id: int,
+    search: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    sort_by: str = "date-desc",
+) -> list[dict]:
+    """
+    Fetch online sales transactions from `warehouse_online_customer`
+    joined with `warehouse_online_orders_payment`, `users`, and `warehouse_products`,
+    scoped to `warehouse_profile_id`.
+    """
+    where_clauses = ["woc.warehouse_profile_id = %s"]
+    params = [warehouse_profile_id]
+
+    if start_date:
+        where_clauses.append("DATE(woc.created_at) >= %s")
+        params.append(start_date)
+
+    if end_date:
+        where_clauses.append("DATE(woc.created_at) <= %s")
+        params.append(end_date)
+
+    if search:
+        s_query = f"%{search.strip().lower()}%"
+        where_clauses.append(
+            """(
+                LOWER(woc.batch_no) LIKE %s
+                OR LOWER(COALESCE(wp.product_name, '')) LIKE %s
+                OR LOWER(COALESCE(wp.product_code, '')) LIKE %s
+                OR LOWER(COALESCE(CONCAT_WS(' ', u.first_name, u.last_name), '')) LIKE %s
+                OR LOWER(COALESCE(woop.payment_method, '')) LIKE %s
+                OR LOWER(COALESCE(woop.status, '')) LIKE %s
+                OR LOWER(COALESCE(woc.status, '')) LIKE %s
+                OR CAST(woc.total_price AS CHAR) LIKE %s
+            )"""
+        )
+        params.extend([s_query, s_query, s_query, s_query, s_query, s_query, s_query, s_query])
+
+    order_by = "woc.created_at DESC, woc.online_order_id DESC"
+    if sort_by == "date-asc":
+        order_by = "woc.created_at ASC, woc.online_order_id ASC"
+    elif sort_by == "variant-asc":
+        order_by = "wp.product_name ASC, woc.created_at DESC"
+    elif sort_by == "qty-desc":
+        order_by = "woc.ordered_quantity DESC, woc.created_at DESC"
+    elif sort_by == "qty-asc":
+        order_by = "woc.ordered_quantity ASC, woc.created_at DESC"
+
+    where_sql = " AND ".join(where_clauses)
+    query = f"""
+        SELECT
+            COALESCE(woop.cod_id, woc.online_order_id) AS row_id,
+            woop.cod_id,
+            woc.online_order_id,
+            woc.warehouse_profile_id,
+            woop.payment_reference,
+            woop.amount,
+            woop.payment_method,
+            woop.status AS payment_status,
+            woop.photo_of_receipt,
+            woop.proof_of_submission,
+            woc.batch_no,
+            woc.warehouse_product_id,
+            woc.retailer_buyer_id,
+            woc.expected_arrival_date,
+            woc.ordered_quantity,
+            woc.fare_fee,
+            woc.total_price,
+            woc.status AS delivery_status,
+            woc.created_at AS date_ordered,
+            woc.updated_at AS recent_update_date,
+            wp.product_name,
+            wp.product_code,
+            wp.unit_cost,
+            CONCAT_WS(' ', u.first_name, u.last_name) AS buyer_name,
+            'Retailer' AS buyer_type
+        FROM warehouse_online_customer woc
+        LEFT JOIN warehouse_online_orders_payment woop ON woop.online_order_id = woc.online_order_id
+        LEFT JOIN users u ON woc.retailer_buyer_id = u.user_id
+        LEFT JOIN warehouse_products wp ON woc.warehouse_product_id = wp.product_id
+        WHERE {where_sql}
+        ORDER BY {order_by}
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+
+    results = []
+    for r in rows:
+        cod_id = int(r[1]) if r[1] is not None else None
+        online_order_id = int(r[2]) if r[2] is not None else None
+        payment_reference = r[4] or ""
+        amount = Decimal(str(r[5] or "0.00"))
+        payment_method_raw = (r[6] or "cash/cod").strip().lower()
+        payment_status_raw = (r[7] or "pending").strip().lower()
+        batch_no = r[10] or f"BATCH-{online_order_id}"
+        expected_arrival_date = r[13]
+        ordered_qty = Decimal(str(r[14] or "0.00"))
+        fare_fee = Decimal(str(r[15] or "0.00"))
+        total_price = Decimal(str(r[16] or "0.00"))
+        delivery_status = r[17] or "Ordered"
+        date_ordered = r[18]
+        recent_update_date = r[19]
+        prod_name = r[20] or "Rice Product"
+        prod_code = r[21] or ""
+        unit_cost = Decimal(str(r[22] or "0.00"))
+        buyer_name = (r[23] or "").strip() or "Retailer Buyer"
+        buyer_type = r[24] or "Retailer"
+
+        if payment_method_raw == "gcash":
+            payment_method_label = "GCash"
+        elif payment_method_raw in ("bank", "bank_transfer", "bank transfer"):
+            payment_method_label = "Bank Transfer"
+        elif payment_method_raw in ("cash", "cod", "cash/cod"):
+            payment_method_label = "Cash / COD"
+        else:
+            payment_method_label = payment_method_raw.capitalize()
+
+        if payment_status_raw == "paid":
+            payment_status_label = "Paid"
+        elif payment_status_raw == "submitted to driver":
+            payment_status_label = "Submitted to Driver"
+        elif payment_status_raw == "failed":
+            payment_status_label = "Failed"
+        else:
+            payment_status_label = "Pending"
+
+        order_date_iso = date_ordered.date().isoformat() if date_ordered else ""
+        time_str = date_ordered.strftime("%I:%M %p") if date_ordered else ""
+        date_str = format_display_date(date_ordered)
+
+        results.append({
+            "id": f"online-order-{online_order_id}",
+            "codId": cod_id,
+            "onlineOrderId": online_order_id,
+            "batchNo": batch_no,
+            "retailer": buyer_name,
+            "buyerName": buyer_name,
+            "buyerType": buyer_type,
+            "variant": prod_name,
+            "productName": prod_name,
+            "productCode": prod_code,
+            "orderedQuantity": format_display_qty(ordered_qty),
+            "orderedQuantityFormatted": format_display_qty(ordered_qty),
+            "orderedQuantityNum": float(ordered_qty),
+            "unitCost": float(unit_cost),
+            "unitCostFormatted": format_display_currency(unit_cost),
+            "fareFee": float(fare_fee),
+            "fareFeeFormatted": format_display_currency(fare_fee),
+            "totalCost": format_display_currency(total_price),
+            "totalCostFormatted": format_display_currency(total_price),
+            "totalPrice": format_display_currency(total_price),
+            "totalPriceNum": float(total_price),
+            "paymentReference": payment_reference,
+            "paymentMethod": payment_method_label,
+            "paymentStatus": payment_status_label,
+            "deliveryStatus": delivery_status,
+            "expectedArrivalDate": format_display_date(expected_arrival_date),
+            "expectedArrivalDateFormatted": format_display_date(expected_arrival_date),
+            "recentUpdateDate": recent_update_date.strftime("%b %d, %Y %I:%M %p") if recent_update_date else "—",
+            "recentUpdateDateFormatted": recent_update_date.strftime("%b %d, %Y %I:%M %p") if recent_update_date else "—",
+            "dateOrdered": date_ordered.strftime("%b %d, %Y %I:%M %p") if date_ordered else "—",
+            "dateOrderedFormatted": date_ordered.strftime("%b %d, %Y %I:%M %p") if date_ordered else "—",
+            "date": order_date_iso,
+            "dateFormatted": date_str,
+            "time": time_str,
+            "sortTimestamp": int(date_ordered.timestamp()) if date_ordered else 0,
+        })
+
+    return results
+
