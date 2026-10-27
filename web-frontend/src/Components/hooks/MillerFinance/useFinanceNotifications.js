@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import useApi from "../useApi";
@@ -9,43 +10,55 @@ const BASE_URL = "/miller-employees/finance/notifications";
 
 const useFinanceNotifications = ({
   enabled = true,
+  baseUrl = BASE_URL,
 } = {}) => {
   const { request } = useApi();
+  const resolvedBaseUrl = baseUrl || BASE_URL;
 
   const [notifications, setNotifications] = useState([]);
   const [unseenCount, setUnseenCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState("");
+  const hasLoadedOnceRef = useRef(false);
 
   // =========================================================
   // LOAD NOTIFICATIONS
   // =========================================================
   const loadNotifications = useCallback(
-    async ({ limit = 50, offset = 0 } = {}) => {
+    async ({ limit = 50, offset = 0, silent = false } = {}) => {
       if (!enabled) {
         setNotifications([]);
         setUnseenCount(0);
         return [];
       }
 
-      setIsLoading(true);
+      // Show loader only on the very first load
+      if (!silent && !hasLoadedOnceRef.current) {
+        setIsLoading(true);
+      }
       setError("");
 
       try {
         const response = await request(
-          `${BASE_URL}/?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`,
+          `${resolvedBaseUrl}/?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`,
           {
             method: "GET",
             throwOnError: true,
           }
         );
 
+        hasLoadedOnceRef.current = true;
+
         const items = Array.isArray(response?.notifications)
           ? response.notifications
-          : [];
+          : Array.isArray(response?.data?.notifications)
+            ? response.data.notifications
+            : [];
 
-        const count = Number(response?.unseen_count || 0);
+        const count = Number(
+          response?.unseen_count ?? response?.data?.unseen_count ?? 0
+        );
 
         setNotifications(items);
         setUnseenCount(count);
@@ -63,7 +76,7 @@ const useFinanceNotifications = ({
         setIsLoading(false);
       }
     },
-    [enabled, request]
+    [enabled, request, resolvedBaseUrl]
   );
 
   // =========================================================
@@ -86,19 +99,21 @@ const useFinanceNotifications = ({
     }
 
     try {
-      const response = await request(`${BASE_URL}/?limit=1`, {
+      const response = await request(`${resolvedBaseUrl}/?limit=1`, {
         method: "GET",
         throwOnError: true,
       });
 
-      const count = Number(response?.unseen_count || 0);
+      const count = Number(
+        response?.unseen_count ?? response?.data?.unseen_count ?? 0
+      );
       setUnseenCount(count);
       return count;
     } catch {
       // Silently fail badge refresh
       return 0;
     }
-  }, [enabled, request]);
+  }, [enabled, request, resolvedBaseUrl]);
 
   // =========================================================
   // INITIAL LOAD
@@ -127,7 +142,7 @@ const useFinanceNotifications = ({
 
       try {
         const response = await request(
-          `${BASE_URL}/${notificationId}/seen/`,
+          `${resolvedBaseUrl}/${notificationId}/seen/`,
           {
             method: "POST",
             body: {},
@@ -174,7 +189,7 @@ const useFinanceNotifications = ({
         setIsUpdating(false);
       }
     },
-    [enabled, request]
+    [enabled, request, resolvedBaseUrl]
   );
 
   // =========================================================
@@ -187,7 +202,7 @@ const useFinanceNotifications = ({
     setError("");
 
     try {
-      await request(`${BASE_URL}/mark-all-seen/`, {
+      await request(`${resolvedBaseUrl}/mark-all-seen/`, {
         method: "POST",
         body: {},
         throwOnError: true,
