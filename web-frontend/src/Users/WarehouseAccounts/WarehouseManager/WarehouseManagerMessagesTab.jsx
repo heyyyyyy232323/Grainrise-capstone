@@ -171,6 +171,9 @@ export default function WarehouseManagerMessagesTab({ initialConversation = null
     sendMessage,
     refreshActiveThread,
     clearSendError,
+    isPartnerTyping,
+    emitTyping,
+    stopTyping,
   } = useWarehouseMessages();
 
   const [search, setSearch] = useState("");
@@ -248,6 +251,7 @@ export default function WarehouseManagerMessagesTab({ initialConversation = null
 
   // ── Select Thread ─────────────────────────────────────────
   const handleSelectThread = async (thread) => {
+    stopTyping();
     clearSendError();
     setInputMessage("");
     setReplyingTo(null);
@@ -594,6 +598,20 @@ export default function WarehouseManagerMessagesTab({ initialConversation = null
                 )}
               </div>
 
+              {/* TYPING INDICATOR */}
+              {isPartnerTyping && (
+                <div className="flex items-center gap-2 border-t border-slate-100 bg-white px-5 py-1.5 text-xs text-slate-500">
+                  <span className="inline-flex items-center gap-0.5" aria-hidden="true">
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.3s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.15s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400" />
+                  </span>
+                  <span className="truncate">
+                    {activeThread.name || "Participant"} is typing...
+                  </span>
+                </div>
+              )}
+
               {/* SEND ERROR */}
               {sendError && (
                 <div className="border-t border-red-100 bg-red-50 px-5 py-2.5 text-xs text-red-700">
@@ -638,6 +656,7 @@ export default function WarehouseManagerMessagesTab({ initialConversation = null
                       value={inputMessage}
                       onChange={(e) => {
                         setInputMessage(e.target.value);
+                        emitTyping(e.target.value);
                         clearSendError();
                       }}
                       onKeyDown={handleMessageKeyDown}

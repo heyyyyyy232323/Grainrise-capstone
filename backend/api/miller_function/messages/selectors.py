@@ -479,6 +479,7 @@ def get_miller_conversation(miller_user_id, thread_id=None, participant_type=Non
                 """,
                 unread_ids_to_mark,
             )
+        broadcast_messages_seen(unread_ids_to_mark)
 
     return {
         "thread": thread_info,

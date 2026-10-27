@@ -1,6 +1,8 @@
 import datetime
 from django.db import connection
 
+from api.realtime.broadcast import broadcast_messages_seen
+
 
 def _get_warehouse_branch_ids(warehouse_user_id):
     """
@@ -528,6 +530,7 @@ def get_warehouse_conversation(warehouse_user_id, thread_id=None, participant_ty
                 """,
                 unread_ids_to_mark,
             )
+        broadcast_messages_seen(unread_ids_to_mark)
 
     return {
         "thread": thread_info,

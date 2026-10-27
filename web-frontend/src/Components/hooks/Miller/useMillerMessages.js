@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import useApi from "../useApi";
+import useRealtimeMessages from "../useRealtimeMessages";
 
 export default function useMillerMessages() {
   const { request } = useApi();
@@ -18,6 +19,22 @@ export default function useMillerMessages() {
 
   const activeThreadRef = useRef(activeThread);
   activeThreadRef.current = activeThread;
+
+  const threadsRef = useRef(threads);
+  threadsRef.current = threads;
+
+  // ── Real-time (WebSocket) updates & typing indicators ─────────────────────
+  const { typingMap, connected: realtimeConnected, emitTyping, stopTyping } =
+    useRealtimeMessages({
+      request,
+      apiPrefix: "/miller",
+      activeThreadRef,
+      threadsRef,
+      setThreads,
+      setMessages,
+      getBranchId: () => null,
+    });
+  const isPartnerTyping = !!(activeThread && typingMap[activeThread.thread_id]);
 
   // ── Load Conversation Threads ──────────────────────────────────────────────
   const loadThreads = useCallback(
@@ -167,7 +184,12 @@ export default function useMillerMessages() {
           const newMsg = res.data;
 
           // Append to message history
-          setMessages((prev) => [...prev, newMsg]);
+          setMessages((prev) =>
+            prev.some((m) => String(m.message_id) === String(newMsg.message_id))
+              ? prev
+              : [...prev, newMsg]
+          );
+          stopTyping();
 
           // Update thread list latest message preview (or add newly initiated thread)
           setThreads((prevThreads) => {
@@ -251,6 +273,10 @@ export default function useMillerMessages() {
     sendMessage,
     refreshActiveThread,
     clearSendError,
+    isPartnerTyping,
+    emitTyping,
+    stopTyping,
+    realtimeConnected,
   };
 }
 

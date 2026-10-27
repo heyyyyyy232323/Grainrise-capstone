@@ -1937,23 +1937,30 @@ def admin_climate_forecast(
 
 # ============================================================
 
-_LAST_WORKING_AI_MODEL = "gemini-3.6-flash"
+# Preferred model for Admin Climate Article Generation ONLY.
+# Verified compatible with the configured OpenAI-compatible Gemini endpoint
+# (chat/completions + response_format json_object). Shared GRAINRISE_AI_*
+# settings are read but never modified.
+_ARTICLE_AI_PREFERRED_MODEL = "gemini-3.1-flash-lite"
+
+_ARTICLE_AI_MAX_ATTEMPTS = 3          # hard cap on provider calls per request
+_ARTICLE_AI_ATTEMPT_TIMEOUT = 25      # seconds per provider call
+_ARTICLE_AI_TOTAL_BUDGET = 55         # seconds across all attempts
+
 
 def _generate_with_article_ai_provider(
     *,
     system_instruction,
     user_prompt,
 ):
-    global _LAST_WORKING_AI_MODEL
     import json
+    import time
+    import socket
     import urllib.request
     import urllib.error
 
     api_key = os.getenv("GRAINRISE_AI_API_KEY")
     endpoint = os.getenv("GRAINRISE_AI_ENDPOINT")
-    model = os.getenv("GRAINRISE_AI_MODEL", "gemini-3.6-flash")
-    fallback_models_str = os.getenv("GRAINRISE_AI_FALLBACK_MODELS", "")
-    timeout = min(int(os.getenv("GRAINRISE_AI_TIMEOUT_SECONDS", "60")), 15)
 
     if not api_key or not endpoint:
         raise AnnouncementAIError(
@@ -1961,28 +1968,39 @@ def _generate_with_article_ai_provider(
             "Please configure GRAINRISE_AI_API_KEY and GRAINRISE_AI_ENDPOINT."
         )
 
+    # Candidate order: article-specific preferred model, then the shared
+    # configured model, then the first shared fallback. Each is tried once.
     candidate_models = []
-    if _LAST_WORKING_AI_MODEL:
-        candidate_models.append(_LAST_WORKING_AI_MODEL)
-    if model and model not in candidate_models:
-        candidate_models.append(model)
-    if fallback_models_str:
-        for fb in fallback_models_str.split(","):
-            fb = fb.strip()
-            if fb and fb not in candidate_models:
-                candidate_models.append(fb)
+    for name in (
+        os.getenv("GRAINRISE_ARTICLE_AI_MODEL", _ARTICLE_AI_PREFERRED_MODEL),
+        os.getenv("GRAINRISE_AI_MODEL", ""),
+        *os.getenv("GRAINRISE_AI_FALLBACK_MODELS", "").split(","),
+    ):
+        name = (name or "").strip()
+        if name and name not in candidate_models:
+            candidate_models.append(name)
+    candidate_models = candidate_models[:_ARTICLE_AI_MAX_ATTEMPTS]
 
-    for safe_model in ["gemini-3.6-flash", "gemini-3.5-flash"]:
-        if safe_model not in candidate_models:
-            candidate_models.append(safe_model)
+    try:
+        configured_timeout = int(os.getenv("GRAINRISE_AI_TIMEOUT_SECONDS", "60"))
+    except ValueError:
+        configured_timeout = 60
+    attempt_timeout = max(10, min(configured_timeout, _ARTICLE_AI_ATTEMPT_TIMEOUT))
 
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
 
-    last_error = None
+    started = time.monotonic()
+    last_kind = None
+    last_detail = ""
+
     for candidate_model in candidate_models:
+        remaining = _ARTICLE_AI_TOTAL_BUDGET - (time.monotonic() - started)
+        if remaining < 5:
+            break
+
         payload = {
             "model": candidate_model,
             "messages": [
@@ -2000,38 +2018,83 @@ def _generate_with_article_ai_provider(
                 headers=headers,
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=timeout) as response:
-                resp_bytes = response.read()
-                result = json.loads(resp_bytes.decode("utf-8", errors="replace"))
-                choices = result.get("choices", [])
-                if choices and "message" in choices[0]:
-                    _LAST_WORKING_AI_MODEL = candidate_model
-                    logger.info("AI generation succeeded with model %s", candidate_model)
-                    return choices[0]["message"].get("content", "")
-                raise AnnouncementAIError("AI provider returned empty choices.")
+            with urllib.request.urlopen(
+                req, timeout=min(attempt_timeout, remaining)
+            ) as response:
+                result = json.loads(
+                    response.read().decode("utf-8", errors="replace")
+                )
+            choices = result.get("choices", [])
+            if choices and "message" in choices[0]:
+                content = choices[0]["message"].get("content", "")
+                if content:
+                    logger.info(
+                        "Article AI generation succeeded with model %s",
+                        candidate_model,
+                    )
+                    return content
+            last_kind, last_detail = "empty", "AI provider returned an empty response."
+            logger.warning("Article AI model %s returned empty content", candidate_model)
 
         except urllib.error.HTTPError as exc:
             err_body = exc.read().decode("utf-8", errors="replace")
             logger.warning(
-                "AI provider model %s returned HTTP %s: %s",
-                candidate_model,
-                exc.code,
-                err_body[:200],
+                "Article AI model %s returned HTTP %s: %s",
+                candidate_model, exc.code, err_body[:200],
             )
-            last_error = f"HTTP {exc.code}: {err_body[:200]}"
+            last_detail = f"HTTP {exc.code}"
+            if exc.code in (401, 403):
+                # Credentials problem: other models will not help.
+                raise AnnouncementAIError(
+                    "Announcement AI provider rejected the configured API key."
+                )
+            if exc.code == 429:
+                last_kind = "rate_limit"
+                # Honor a short Retry-After once before moving on; never long waits.
+                try:
+                    wait = float(exc.headers.get("Retry-After", "0"))
+                except (TypeError, ValueError):
+                    wait = 0
+                if 0 < wait <= 2 and (
+                    _ARTICLE_AI_TOTAL_BUDGET - (time.monotonic() - started)
+                ) > wait + 10:
+                    time.sleep(wait)
+            elif exc.code in (500, 502, 503, 504):
+                last_kind = "unavailable"
+            else:
+                last_kind = "error"
+
+        except (socket.timeout, TimeoutError):
+            last_kind, last_detail = "timeout", "request timed out"
+            logger.warning("Article AI model %s timed out", candidate_model)
+
+        except urllib.error.URLError as exc:
+            if isinstance(getattr(exc, "reason", None), (socket.timeout, TimeoutError)):
+                last_kind, last_detail = "timeout", "request timed out"
+            else:
+                last_kind, last_detail = "network", str(exc.reason)[:120]
+            logger.warning(
+                "Article AI model %s network failure: %s", candidate_model, last_detail
+            )
+
+        except AnnouncementAIError:
+            raise
 
         except Exception as exc:
+            last_kind, last_detail = "error", str(exc)[:120]
             logger.warning(
-                "AI provider model %s request failed: %s",
-                candidate_model,
-                exc,
+                "Article AI model %s request failed: %s", candidate_model, exc
             )
-            last_error = str(exc)
 
-    raise AnnouncementAIError(
-        f"Announcement AI generation failed: {last_error}"
-    )
+    friendly = {
+        "rate_limit": "The AI service is rate-limited right now. Please wait a minute and try again.",
+        "unavailable": "The AI service is temporarily unavailable (high demand). Please try again shortly.",
+        "timeout": "The AI service took too long to respond. Please try again.",
+        "network": "Could not reach the AI service. Please check connectivity and try again.",
+        "empty": "The AI service returned an empty response. Please try again.",
+    }.get(last_kind, "Announcement AI generation failed.")
 
+    raise AnnouncementAIError(f"{friendly} ({last_detail})" if last_detail else friendly)
 # ============================================================
 
 # PARSE PROVIDER RESPONSE
