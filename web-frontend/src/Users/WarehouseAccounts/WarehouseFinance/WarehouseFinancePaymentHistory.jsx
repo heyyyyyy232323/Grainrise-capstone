@@ -1,291 +1,440 @@
-import { useMemo, useState, useRef, useEffect } from "react";
-import { Search, Calendar, ChevronDown, ChevronUp, X, FileText } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
+import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
+import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
+import Dropdown from "../../../Components/Minor-Components/Dropdown";
+import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
 import Tabs from "../../../Components/Minor-Components/Tabs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
+import useApi from "../../../Components/hooks/useApi";
+import GoodsReceiptReceiptModal from "../../../Components/Modals/MillerProcurement/GoodsReceiptReceiptModal";
+import WarehouseExpenseReceiptModal from "../../../Components/Modals/WarehouseFinance/WarehouseExpenseReceiptModal";
+import WarehouseReimbursementReceiptModal from "../../../Components/Modals/WarehouseFinance/WarehouseReimbursementReceiptModal";
+import { buildReimbursementReceiptSnapshot } from "../../../Components/Modals/MillerFinance/ReimbursementReceiptModal";
 
 const TABS = [
-  { id: "payables",  label: "Procurement Payables"  },
-  { id: "taxes",     label: "Tax Compliance Record"  },
-  { id: "reimburse", label: "Reimbursement"          },
-];
-
-const VARIANT_OPTIONS = [
-  { value: "all", label: "All Variants" },
-  { value: "Dinorado", label: "Dinorado" },
-  { value: "Sinandomeng", label: "Sinandomeng" },
-  { value: "Jasmine", label: "Jasmine" },
-];
-
-const SUPPLIER_OPTIONS = [
-  { value: "all", label: "All Suppliers" },
-  { value: "Supplier A", label: "Supplier A" },
-];
-
-const TAX_PERIOD_OPTIONS = [
-  { value: "all", label: "All Periods" },
-  { value: "Quarterly", label: "Quarterly" },
-  { value: "Yearly", label: "Yearly" },
-];
-
-const REIMBURSE_CAT_OPTIONS = [
-  { value: "all", label: "All Categories" },
-  { value: "Logistics / Delivery Reimbursement", label: "Logistics Reimbursement" },
-  { value: "Warehouse Operation", label: "Warehouse Operation" },
-  { value: "Payroll", label: "Payroll" },
+  { id: "payables", label: "Payables Payment" },
+  { id: "expenses", label: "Expenses Payment" },
+  { id: "reimbursements", label: "Reimbursements" },
 ];
 
 const SORT_OPTIONS = [
-  { value: "date-desc", label: "Newest First" },
-  { value: "date-asc", label: "Oldest First" },
-  { value: "cost-desc", label: "Cost/Total (High to Low)" },
-  { value: "cost-asc", label: "Cost/Total (Low to High)" },
+  { value: "date-desc", label: "Newest–Oldest" },
+  { value: "date-asc", label: "Oldest–Newest" },
+  { value: "amount-asc", label: "Lowest–Highest Amount" },
+  { value: "amount-desc", label: "Highest–Lowest Amount" },
 ];
 
-const samplePayables = Array.from({ length: 24 }, (_, i) => ({
-  id: `p-${i + 1}`,
-  batchNo: `Paid Batch 2026 - 00${(i % 12) + 1}`,
-  supplier: "Supplier A",
-  variant: i % 3 === 0 ? "Dinorado" : i % 3 === 1 ? "Sinandomeng" : "Jasmine",
-  stockQty: "200 kg",
-  unitPrice: "₱45.00",
-  total: "₱9,000.00",
-  paidAt: "Sep 30, 2026",
-  isoDate: `2026-09-${((i % 28) + 1).toString().padStart(2, "0")}`,
-}));
+const DEFAULT_EXPENSE_TYPES = [
+  "Utilities",
+  "Transportation",
+  "Machinery Maintenance & Repair",
+  "Operating Supplies",
+  "Rent & Facilities",
+  "Salaries & Wages",
+  "Taxes & Government Fees",
+  "Equipments",
+  "Administrative",
+  "Others",
+];
 
-const sampleTaxes = Array.from({ length: 24 }, (_, i) => ({
-  id: `t-${i + 1}`,
-  name: i % 2 === 0 ? "3% Percentage Tax" : "Local Business Tax",
-  desc: i % 2 === 0 ? "Tax imposed by BIR on non-VAT registered businesses..." : "Local tax imposed by the LGU...",
-  cost: i % 2 === 0 ? "₱1,250.00" : "₱10,310.20",
-  period: i % 2 === 0 ? "Quarterly" : "Yearly",
-  dueDate: "Sep 30, 2026",
-  isoDate: `2026-09-30`,
-}));
+const DEFAULT_REIMBURSEMENT_CATEGORIES = [
+  "Transportation & Travel",
+  "Meals & Allowances",
+  "Emergency",
+  "Equipment & Repair",
+  "Communication",
+  "Logistics",
+  "Office & Operating Supplies",
+  "Others",
+];
 
-const sampleReimburse = Array.from({ length: 24 }, (_, i) => ({
-  id: `r-${i + 1}`,
-  category:
-    i % 3 === 0
-      ? "Logistics / Delivery Reimbursement"
-      : i % 3 === 1
-      ? "Warehouse Operation"
-      : "Payroll",
-  description:
-    i % 3 === 0
-      ? "Fuel reimbursement for delivery truck"
-      : i % 3 === 1
-      ? "Warehouse supply expense"
-      : "Weekly salary payout",
-  cost: i % 3 === 0 ? "₱2,500.00" : "₱150.00",
-  requester: i % 3 === 0 ? "Logistics A" : i % 3 === 1 ? "Driver A" : "Finance A",
-  date: `Apr ${(i % 12) + 1}, 2026`,
-  isoDate: `2026-04-${((i % 12) + 1).toString().padStart(2, "0")}`,
-}));
-
-function CustomDropdown({ label, options, value, onChange }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const selectedOption = options.find((opt) => opt.value === value);
-  const displayLabel = selectedOption ? selectedOption.label : label;
-
-  return (
-    <div className="relative w-full sm:w-auto" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        className="flex items-center gap-2 border border-gray-200 bg-white px-3.5 py-2 rounded-xl text-sm font-medium text-slate-800 hover:bg-gray-50 transition-colors cursor-pointer h-[38px] justify-between w-full sm:w-auto min-w-[140px]"
-      >
-        <span>{displayLabel}</span>
-        {isOpen ? (
-          <ChevronUp size={16} className="text-slate-500" />
-        ) : (
-          <ChevronDown size={16} className="text-slate-500" />
-        )}
-      </button>
-
-      {isOpen && (
-        <div className="absolute top-full mt-1.5 left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-1.5 z-30 w-52 animate-in fade-in zoom-in-95 duration-100">
-          <div className="space-y-0.5">
-            {options.map((opt) => {
-              const isSelected = value === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => {
-                    onChange(opt.value);
-                    setIsOpen(false);
-                  }}
-                  className={`w-full text-left px-3.5 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
-                    isSelected
-                      ? "bg-[#EAF5ED] text-[#0B5D1E] font-semibold"
-                      : "text-slate-700 hover:bg-gray-50"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+function formatPeso(value) {
+  const num = Number(value || 0);
+  if (Number.isNaN(num)) return "₱0.00";
+  return `₱${num.toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
-export default function WarehousePaymentHistory() {
+function formatQtyKg(value) {
+  const num = Number(value || 0);
+  if (Number.isNaN(num)) return "0 kg";
+  const formatted = Number.isInteger(num)
+    ? num.toLocaleString("en-PH")
+    : num.toLocaleString("en-PH", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      });
+  return `${formatted} kg`;
+}
+
+export default function WarehouseFinancePaymentHistory() {
+  const navigate = useNavigate();
+  const { request } = useApi();
+
   const [activeTab, setActiveTab] = useState("payables");
   const [query, setQuery] = useState("");
-  const [supplierFilter, setSupplierFilter] = useState("all");
-  const [variantFilter, setVariantFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [periodFilter, setPeriodFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("date-desc");
   const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
-  const [tempDateRange, setTempDateRange] = useState({ startDate: "", endDate: "" });
+  const [sortBy, setSortBy] = useState("date-desc");
+  const [supplierFilter, setSupplierFilter] = useState("");
+  const [expenseTypeFilter, setExpenseTypeFilter] = useState("");
+  const [reimbursementCategoryFilter, setReimbursementCategoryFilter] = useState("");
   const [page, setPage] = useState(1);
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const dateRef = useRef(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [payablesData, setPayablesData] = useState([]);
+  const [expensesData, setExpensesData] = useState([]);
+  const [reimbursementsData, setReimbursementsData] = useState([]);
+  const [filterOptions, setFilterOptions] = useState({
+    suppliers: [],
+    expense_types: DEFAULT_EXPENSE_TYPES,
+    reimbursement_categories: DEFAULT_REIMBURSEMENT_CATEGORIES,
+  });
+
+  const [selectedPayableReceipt, setSelectedPayableReceipt] = useState(null);
+  const [selectedExpenseReceipt, setSelectedExpenseReceipt] = useState(null);
+  const [selectedReimbursementReceipt, setSelectedReimbursementReceipt] = useState(null);
+
+  const supplierOptions = useMemo(
+    () => ["All Suppliers", ...(filterOptions.suppliers || [])],
+    [filterOptions.suppliers]
+  );
+  const expenseTypeOptions = useMemo(
+    () => ["All Expense Types", ...(filterOptions.expense_types || [])],
+    [filterOptions.expense_types]
+  );
+  const reimbursementCategoryOptions = useMemo(
+    () => ["All Categories", ...(filterOptions.reimbursement_categories || [])],
+    [filterOptions.reimbursement_categories]
+  );
+
+  const fetchHistory = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await request("/warehouse/finance/payment-history/", {
+        method: "GET",
+        throwOnError: true,
+      });
+      const payload = res?.data ?? res ?? {};
+      setPayablesData(Array.isArray(payload.payables) ? payload.payables : []);
+      setExpensesData(Array.isArray(payload.expenses) ? payload.expenses : []);
+      setReimbursementsData(
+        Array.isArray(payload.reimbursements) ? payload.reimbursements : []
+      );
+      if (payload.filters && typeof payload.filters === "object") {
+        setFilterOptions({
+          suppliers: Array.isArray(payload.filters.suppliers)
+            ? payload.filters.suppliers
+            : [],
+          expense_types:
+            Array.isArray(payload.filters.expense_types) &&
+            payload.filters.expense_types.length > 0
+              ? payload.filters.expense_types
+              : DEFAULT_EXPENSE_TYPES,
+          reimbursement_categories:
+            Array.isArray(payload.filters.reimbursement_categories) &&
+            payload.filters.reimbursement_categories.length > 0
+              ? payload.filters.reimbursement_categories
+              : DEFAULT_REIMBURSEMENT_CATEGORIES,
+        });
+      }
+    } catch (err) {
+      setError(err?.message || "Failed to load warehouse finance payment history.");
+    } finally {
+      setLoading(false);
+    }
+  }, [request]);
 
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dateRef.current && !dateRef.current.contains(e.target)) {
-        setShowDatePicker(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    fetchHistory();
+  }, [fetchHistory]);
 
-  const handleDateApply = () => {
-    setDateRange(tempDateRange);
-    setPage(1);
-    setShowDatePicker(false);
-  };
+  const rawRows = useMemo(() => {
+    if (activeTab === "payables") {
+      return payablesData.map((item) => ({
+        ...item,
+        batchNo: item.batchNo || item.batch_code || "N/A",
+        supplier: item.supplier || item.supplier_name || "N/A",
+        variant: item.variant || item.rice_variant || "N/A",
+        stockQty: formatQtyKg(item.stockQty ?? item.good_quantity ?? 0),
+        unitPrice: formatPeso(item.unitPrice ?? item.price_per_kg ?? 0),
+        total: formatPeso(item.total ?? item.total_payable_amount ?? 0),
+        paidAt: item.paidAt || "N/A",
+        _amountValue: Number(item.total ?? item.total_payable_amount ?? 0),
+        _sortTimestamp: Number(item.sort_timestamp || 0),
+        _dateIso: item.date_iso || "",
+        _raw: item,
+      }));
+    }
 
-  const handleDateReset = () => {
-    setTempDateRange({ startDate: "", endDate: "" });
-    setDateRange({ startDate: "", endDate: "" });
-    setPage(1);
-    setShowDatePicker(false);
-  };
+    if (activeTab === "expenses") {
+      return expensesData.map((item) => ({
+        ...item,
+        expenseType: item.expenseType || item.expense_type || "N/A",
+        description: item.description || "N/A",
+        price: formatPeso(item.price_raw ?? item.price ?? 0),
+        paymentDate: item.paymentDate || "N/A",
+        _amountValue: Number(item.price_raw ?? item.price ?? 0),
+        _sortTimestamp: Number(item.sort_timestamp || 0),
+        _dateIso: item.date_iso || "",
+        _raw: item,
+      }));
+    }
 
-  const data = useMemo(() => {
-    if (activeTab === "payables") return samplePayables;
-    if (activeTab === "taxes") return sampleTaxes;
-    return sampleReimburse;
-  }, [activeTab]);
+    return reimbursementsData.map((item) => ({
+      ...item,
+      category: item.category || item.types || "Miscellaneous",
+      description: item.description || "N/A",
+      cost: formatPeso(item.cost ?? item.price ?? 0),
+      requester: item.requester || item.requested_by_name || "N/A",
+      _amountValue: Number(item.cost ?? item.price ?? 0),
+      _sortTimestamp: Number(item.sort_timestamp || 0),
+      _dateIso: item.date_iso || "",
+      _raw: item,
+    }));
+  }, [activeTab, payablesData, expensesData, reimbursementsData]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return data.filter((r) => {
-      const matchesQuery = !q || Object.values(r).some((v) => String(v).toLowerCase().includes(q));
-      const matchesStart = !dateRange.startDate || r.isoDate >= dateRange.startDate;
-      const matchesEnd = !dateRange.endDate || r.isoDate <= dateRange.endDate;
+    const { startDate, endDate } = dateRange;
 
-      let matchesSpecific = true;
-      if (activeTab === "payables") {
-        const matchesVariant = variantFilter === "all" || r.variant === variantFilter;
-        const matchesSupplier = supplierFilter === "all" || r.supplier === supplierFilter;
-        matchesSpecific = matchesVariant && matchesSupplier;
-      } else if (activeTab === "taxes") {
-        matchesSpecific = periodFilter === "all" || r.period === periodFilter;
-      } else if (activeTab === "reimburse") {
-        matchesSpecific = categoryFilter === "all" || r.category === categoryFilter;
+    let result = rawRows.filter((row) => {
+      // Tab-specific dropdown filter
+      if (activeTab === "payables" && supplierFilter) {
+        if (String(row.supplier || "").toLowerCase() !== supplierFilter.toLowerCase()) {
+          return false;
+        }
+      } else if (activeTab === "expenses" && expenseTypeFilter) {
+        if (
+          String(row.expenseType || "").toLowerCase() !==
+          expenseTypeFilter.toLowerCase()
+        ) {
+          return false;
+        }
+      } else if (activeTab === "reimbursements" && reimbursementCategoryFilter) {
+        if (
+          String(row.category || "").toLowerCase() !==
+          reimbursementCategoryFilter.toLowerCase()
+        ) {
+          return false;
+        }
       }
 
-      return matchesQuery && matchesStart && matchesEnd && matchesSpecific;
+      // Validated Date Range filter (startDate <= row._dateIso <= endDate)
+      if (startDate || endDate) {
+        if (startDate && endDate && endDate < startDate) {
+          return true;
+        }
+        const rowDate = row._dateIso;
+        if (!rowDate) return false;
+        if (startDate && rowDate < startDate) return false;
+        if (endDate && rowDate > endDate) return false;
+      }
+
+      // Search filter
+      if (!q) return true;
+      if (activeTab === "payables") {
+        return [
+          row.batchNo,
+          row.supplier,
+          row.variant,
+          row.stockQty,
+          row.unitPrice,
+          row.total,
+          row.paidAt,
+          row._raw?.receiving_reference_id,
+          row._raw?.payment_reference_id,
+        ]
+          .filter(Boolean)
+          .some((val) => String(val).toLowerCase().includes(q));
+      }
+      if (activeTab === "expenses") {
+        return [
+          row.expenseType,
+          row.description,
+          row.price,
+          row.paymentDate,
+          row._raw?.setting_reference_no,
+          row._raw?.payment_reference_no,
+          row._raw?.paid_by_name,
+        ]
+          .filter(Boolean)
+          .some((val) => String(val).toLowerCase().includes(q));
+      }
+      return [
+        row.category,
+        row.description,
+        row.cost,
+        row.requester,
+        row._raw?.title,
+        row._raw?.request_reference_no,
+        row._raw?.payment_reference_no,
+      ]
+        .filter(Boolean)
+        .some((val) => String(val).toLowerCase().includes(q));
     });
-  }, [data, query, dateRange, activeTab, variantFilter, supplierFilter, periodFilter, categoryFilter]);
+
+    // Sorting
+    result = [...result].sort((a, b) => {
+      if (sortBy === "date-desc") {
+        return b._sortTimestamp - a._sortTimestamp;
+      }
+      if (sortBy === "date-asc") {
+        return a._sortTimestamp - b._sortTimestamp;
+      }
+      if (sortBy === "amount-asc") {
+        return a._amountValue - b._amountValue;
+      }
+      if (sortBy === "amount-desc") {
+        return b._amountValue - a._amountValue;
+      }
+      return 0;
+    });
+
+    return result;
+  }, [
+    rawRows,
+    activeTab,
+    query,
+    dateRange,
+    sortBy,
+    supplierFilter,
+    expenseTypeFilter,
+    reimbursementCategoryFilter,
+  ]);
 
   const itemsPerPage = 10;
   const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
-  const startIndex = (page - 1) * itemsPerPage;
+  const safePage = Math.min(page, totalPages);
+  const startIndex = (safePage - 1) * itemsPerPage;
   const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
-
-  const columns = activeTab === "payables" ? [
-    { key: "batchNo", label: "Batch No." },
-    { key: "supplier", label: "Supplier" },
-    { key: "variant", label: "Variant" },
-    { key: "stockQty", label: "Stock Qty (KG)" },
-    { key: "unitPrice", label: "Unit Price" },
-    { key: "total", label: "Total" },
-    { key: "paidAt", label: "Paid At" },
-  ] : activeTab === "taxes" ? [
-    { key: "name", label: "Name of Tax" },
-    {
-      key: "desc",
-      label: "Description",
-      render: (row) => (
-        <span className="text-[13px] text-slate-600">
-          {row.desc}
-        </span>
-      ),
-    },
-    { key: "cost", label: "Cost Value" },
-    {
-      key: "period",
-      label: "Tax Period",
-      render: (row) => {
-        const isYearly = row.period === "Yearly";
-        return (
-          <span
-            className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold ${
-              isYearly
-                ? "bg-purple-100 text-purple-700"
-                : "bg-blue-100 text-blue-700"
-            }`}
-          >
-            {row.period}
-          </span>
-        );
-      },
-    },
-    { key: "dueDate", label: "Due Date" },
-  ] : [
-    {
-      key: "category",
-      label: "Expense Category",
-      render: (row) => {
-        const colorMap = {
-          "Logistics / Delivery Reimbursement": "bg-blue-100 text-blue-700",
-          "Warehouse Operation": "bg-amber-100 text-amber-700",
-          "Payroll": "bg-purple-100 text-purple-700",
-        };
-        const colorClass = colorMap[row.category] || "bg-slate-100 text-slate-600";
-        return (
-          <div>
-            <span className={`inline-block rounded-full px-3 py-1 text-[10px] font-bold ${colorClass}`}>
-              {row.category}
-            </span>
-            <div className="text-[11px] text-slate-400 mt-1">{row.date}</div>
-          </div>
-        );
-      },
-    },
-    { key: "description", label: "Description" },
-    { key: "cost", label: "Cost" },
-    { key: "requester", label: "Requested By" },
-  ];
-
   const sections = [{ rows: paginated }];
 
+  const handleOpenReceipt = useCallback(
+    (row) => {
+      const raw = row._raw || row;
+      if (activeTab === "payables") {
+        setSelectedPayableReceipt(raw);
+      } else if (activeTab === "expenses") {
+        setSelectedExpenseReceipt(raw);
+      } else {
+        const attempt = raw.latest_payout_attempt || null;
+        const snapshot = buildReimbursementReceiptSnapshot({
+          reimbursement: raw,
+          resultData: {
+            reimbursement: raw,
+            latest_payout_attempt: attempt,
+            payment_flow: String(raw.method || "").toUpperCase(),
+            payment_reference_no: raw.payment_reference_no,
+            processor_reference: raw.payment_reference_no,
+            is_sandbox: Boolean(raw.is_sandbox),
+            xendit_environment: raw.is_sandbox ? "test" : "live",
+          },
+          selectedMethod: raw.method,
+          latestPayoutAttempt: attempt,
+          cashReference: raw.payment_reference_no,
+          payerInfo: {
+            payer_name: raw.paid_by_name || raw.paid_by,
+            business_name: raw.business_name,
+          },
+        });
+        setSelectedReimbursementReceipt(snapshot);
+      }
+    },
+    [activeTab]
+  );
+
+  const renderReceiptAction = useCallback(
+    (row) => (
+      <div className="flex items-center justify-center w-full">
+        <button
+          type="button"
+          onClick={() => handleOpenReceipt(row)}
+          className="rounded-lg border border-gray-300 px-3.5 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 hover:border-gray-400 cursor-pointer whitespace-nowrap"
+        >
+          Get Receipt
+        </button>
+      </div>
+    ),
+    [handleOpenReceipt]
+  );
+
+  const columns = useMemo(() => {
+    if (activeTab === "payables") {
+      return [
+        { key: "batchNo", label: "Batch No." },
+        { key: "supplier", label: "Supplier" },
+        { key: "variant", label: "Variant" },
+        { key: "stockQty", label: "Stock Qty (KG)" },
+        { key: "unitPrice", label: "Unit Price" },
+        { key: "total", label: "Total" },
+        { key: "paidAt", label: "Paid At" },
+        {
+          key: "action",
+          label: "Action",
+          headerClassName: "text-center",
+          cellClassName: "!text-center",
+          render: renderReceiptAction,
+        },
+      ];
+    }
+
+    if (activeTab === "expenses") {
+      return [
+        { key: "expenseType", label: "Expense Type" },
+        { key: "description", label: "Description" },
+        { key: "price", label: "Price" },
+        { key: "paymentDate", label: "Payment Date" },
+        {
+          key: "action",
+          label: "Action",
+          headerClassName: "text-center",
+          cellClassName: "!text-center",
+          render: renderReceiptAction,
+        },
+      ];
+    }
+
+    return [
+      {
+        key: "category",
+        label: "Expense Category",
+        render: (row) => (
+          <div>
+            <span className="inline-block rounded-full bg-sky-100 text-sky-700 px-3 py-1 text-xs font-semibold">
+              {row.category}
+            </span>
+          </div>
+        ),
+      },
+      { key: "description", label: "Description" },
+      { key: "cost", label: "Cost" },
+      { key: "requester", label: "Requested By" },
+      {
+        key: "action",
+        label: "Action",
+        headerClassName: "text-center",
+        cellClassName: "!text-center",
+        render: renderReceiptAction,
+      },
+    ];
+  }, [activeTab, renderReceiptAction]);
+
+  const handleDateChange = ({ startDate, endDate }) => {
+    if (startDate && endDate && endDate < startDate) {
+      return;
+    }
+    setDateRange({ startDate: startDate || "", endDate: endDate || "" });
+    setPage(1);
+  };
+
   return (
-    <div className="space-y-6">
+    <div>
       <Breadcrumbs
         items={[
           { label: "Finance", path: "/warehouse-finance/dashboard" },
@@ -293,10 +442,12 @@ export default function WarehousePaymentHistory() {
         ]}
       />
 
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Payment History</h1>
+      <div className="mb-5">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+          Payment History
+        </h1>
         <p className="text-sm text-slate-500 mt-1">
-          All paid records across procurement, taxes, and reimbursements.
+          All paid records across procurement, expenses, and reimbursements.
         </p>
       </div>
 
@@ -307,197 +458,135 @@ export default function WarehousePaymentHistory() {
           setActiveTab(t);
           setPage(1);
           setQuery("");
-          setVariantFilter("all");
-          setSupplierFilter("all");
-          setCategoryFilter("all");
-          setPeriodFilter("all");
         }}
       />
 
-      {/* ── Filter Toolbar ────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        {/* 1. Search Filter */}
-        <div className="relative min-w-[220px] max-w-xs flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setPage(1);
-            }}
-            placeholder={
-              activeTab === "taxes"
-                ? "Search tax name, description"
-                : activeTab === "payables"
-                ? "Search batch ID, supplier, product"
-                : "Search category, description, recipient"
-            }
-            className="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => {
-                setQuery("");
+      {/* Search + Filters + Generate Financial Reports */}
+      <div className="mt-4 mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
+          <div className="w-full max-w-xs sm:w-72">
+            <SearchFilter
+              value={query}
+              onSearch={(v) => {
+                setQuery(v);
                 setPage(1);
               }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
-            >
-              <X size={15} />
-            </button>
-          )}
-        </div>
-
-        {/* 2. Date Range Picker */}
-        <div className="relative w-full sm:w-auto" ref={dateRef}>
-          <button
-            type="button"
-            onClick={() => setShowDatePicker((prev) => !prev)}
-            className={`flex items-center gap-2 border border-gray-200 bg-white px-3.5 py-2 rounded-xl text-sm font-medium text-slate-800 hover:bg-gray-50 w-full sm:w-auto justify-between transition-colors cursor-pointer h-[38px] ${
-              dateRange.startDate ? "border-emerald-500 text-emerald-700 bg-emerald-50/40" : ""
-            }`}
-          >
-            <span>
-              {dateRange.startDate
-                ? `${dateRange.startDate} - ${dateRange.endDate || "..."}`
-                : "Date Range"}
-            </span>
-            <Calendar
-              size={16}
-              className={dateRange.startDate ? "text-emerald-600" : "text-gray-500"}
+              placeholder={
+                activeTab === "expenses"
+                  ? "Search expense type, description"
+                  : activeTab === "payables"
+                  ? "Search batch ID, supplier, product"
+                  : "Search category, description, recipient"
+              }
             />
-          </button>
+          </div>
 
-          {showDatePicker && (
-            <div className="absolute top-full mt-2 left-0 sm:left-auto bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-20 w-64">
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={tempDateRange.startDate}
-                    onChange={(e) =>
-                      setTempDateRange((prev) => ({ ...prev, startDate: e.target.value }))
-                    }
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    value={tempDateRange.endDate}
-                    onChange={(e) =>
-                      setTempDateRange((prev) => ({ ...prev, endDate: e.target.value }))
-                    }
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
-                  />
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={handleDateReset}
-                    className="flex-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors cursor-pointer"
-                  >
-                    Reset
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDateApply}
-                    className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-[#0B5D1E] hover:bg-[#084b18] rounded transition-colors cursor-pointer"
-                  >
-                    Apply
-                  </button>
-                </div>
-              </div>
+          <DateRangePicker onDateChange={handleDateChange} />
+
+          <SortByDropdown
+            options={SORT_OPTIONS}
+            value={sortBy}
+            onChange={(v) => {
+              setSortBy(v);
+              setPage(1);
+            }}
+          />
+
+          {activeTab === "payables" && (
+            <div className="w-full sm:w-48">
+              <Dropdown
+                options={supplierOptions}
+                value={supplierFilter || "All Suppliers"}
+                onChange={(val) => {
+                  setSupplierFilter(val === "All Suppliers" ? "" : val);
+                  setPage(1);
+                }}
+                placeholder="All Suppliers"
+              />
+            </div>
+          )}
+
+          {activeTab === "expenses" && (
+            <div className="w-full sm:w-48">
+              <Dropdown
+                options={expenseTypeOptions}
+                value={expenseTypeFilter || "All Expense Types"}
+                onChange={(val) => {
+                  setExpenseTypeFilter(val === "All Expense Types" ? "" : val);
+                  setPage(1);
+                }}
+                placeholder="All Expense Types"
+              />
+            </div>
+          )}
+
+          {activeTab === "reimbursements" && (
+            <div className="w-full sm:w-48">
+              <Dropdown
+                options={reimbursementCategoryOptions}
+                value={reimbursementCategoryFilter || "All Categories"}
+                onChange={(val) => {
+                  setReimbursementCategoryFilter(val === "All Categories" ? "" : val);
+                  setPage(1);
+                }}
+                placeholder="All Categories"
+              />
             </div>
           )}
         </div>
 
-        {/* Tab-Specific Context Filters */}
-        {activeTab === "payables" && (
-          <>
-            <CustomDropdown
-              label="All Variants"
-              options={VARIANT_OPTIONS}
-              value={variantFilter}
-              onChange={(v) => {
-                setVariantFilter(v);
-                setPage(1);
-              }}
-            />
-            <CustomDropdown
-              label="All Suppliers"
-              options={SUPPLIER_OPTIONS}
-              value={supplierFilter}
-              onChange={(v) => {
-                setSupplierFilter(v);
-                setPage(1);
-              }}
-            />
-          </>
-        )}
-
-        {activeTab === "taxes" && (
-          <CustomDropdown
-            label="All Periods"
-            options={TAX_PERIOD_OPTIONS}
-            value={periodFilter}
-            onChange={(v) => {
-              setPeriodFilter(v);
-              setPage(1);
-            }}
-          />
-        )}
-
-        {activeTab === "reimburse" && (
-          <CustomDropdown
-            label="All Categories"
-            options={REIMBURSE_CAT_OPTIONS}
-            value={categoryFilter}
-            onChange={(v) => {
-              setCategoryFilter(v);
-              setPage(1);
-            }}
-          />
-        )}
-
-        {/* Sort Dropdown */}
-        <CustomDropdown
-          label="Sort By"
-          options={SORT_OPTIONS}
-          value={sortBy}
-          onChange={(v) => {
-            setSortBy(v);
-            setPage(1);
-          }}
-        />
-
-        {/* Action Button */}
         <button
           type="button"
-          className="inline-flex items-center gap-2 bg-[#0B5D1E] hover:bg-[#084b18] transition-colors text-white px-4 py-2 rounded-xl text-sm font-medium cursor-pointer h-[38px] ml-auto"
+          onClick={() => navigate("/warehouse-finance/payment-history/report")}
+          className="inline-flex items-center gap-2 bg-[#018311] hover:bg-[#016b0f] text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
         >
-          <FileText size={16} />
-          <span>Generate Financial Reports</span>
+          📄 Generate Financial Reports
         </button>
       </div>
+
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-700">
+          {error}
+        </div>
+      )}
 
       <SectionedTableCard
         columns={columns}
         sections={sections}
-        currentPage={page}
+        currentPage={safePage}
         totalPages={totalPages}
         onPageChange={setPage}
-        footerLabel={`Showing ${startIndex + 1}-${Math.min(
-          startIndex + itemsPerPage,
+        loading={loading}
+        loadingMessage="Loading payment records..."
+        emptyStateTitle="No paid records found"
+        emptyStateDescription="No paid records match your current filters or date range."
+        footerLabel={`Showing ${
+          filtered.length === 0 ? 0 : startIndex + 1
+        }-${Math.min(startIndex + itemsPerPage, filtered.length)} of ${
           filtered.length
-        )} of ${filtered.length} payment records`}
+        } payment records`}
+      />
+
+      {/* Payables Payment Receipt Modal */}
+      <GoodsReceiptReceiptModal
+        isOpen={Boolean(selectedPayableReceipt)}
+        onClose={() => setSelectedPayableReceipt(null)}
+        receipt={selectedPayableReceipt}
+      />
+
+      {/* Expenses Payment Receipt Modal */}
+      <WarehouseExpenseReceiptModal
+        isOpen={Boolean(selectedExpenseReceipt)}
+        onClose={() => setSelectedExpenseReceipt(null)}
+        receipt={selectedExpenseReceipt}
+      />
+
+      {/* Reimbursement Payment Receipt Modal */}
+      <WarehouseReimbursementReceiptModal
+        isOpen={Boolean(selectedReimbursementReceipt)}
+        onClose={() => setSelectedReimbursementReceipt(null)}
+        receipt={selectedReimbursementReceipt}
+        receiptData={selectedReimbursementReceipt}
       />
     </div>
   );
