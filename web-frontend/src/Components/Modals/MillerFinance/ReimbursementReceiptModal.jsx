@@ -511,6 +511,7 @@ export default function ReimbursementReceiptModal({
 
     let rowY = boxStartY + 7.2;
     rows.forEach(([label, value, isAmount], idx) => {
+      const displayVal = sanitizePdfText(value);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9.5);
       doc.setTextColor(100, 116, 139);
