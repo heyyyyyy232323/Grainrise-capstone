@@ -738,6 +738,11 @@ export const getUserSidebarConfig = (role = "admin") => {
               path: "/warehouse-manager/order-approval",
             },
             {
+              label: "Payables",
+              icon: BookOpen,
+              path: "/warehouse-manager/payables",
+            },
+            {
               label: "Expense Management",
               icon: Receipt,
               path: "/warehouse-manager/expenses",
@@ -1391,6 +1396,8 @@ const UserSidebar = ({
                     currentPath === "/warehouse-manager/expense-management") ||
                   (item.path === "/warehouse-manager/suppliers" &&
                     currentPath === "/warehouse-manager/supplier-management") ||
+                  (item.path === "/warehouse-manager/payables" &&
+                    currentPath === "/warehouse-manager/payables-management") ||
                   (item.path === "/warehouse-manager/performance" &&
                     currentPath === "/warehouse-manager/performance-monitoring");
 

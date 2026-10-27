@@ -668,6 +668,15 @@ function App() {
             />
 
             <Route
+              path="/warehouse-manager/payables"
+              element={<WarehousePayables />}
+            />
+            <Route
+              path="/warehouse-manager/payables-management"
+              element={<WarehousePayables />}
+            />
+
+            <Route
               path="/warehouse-manager/expenses"
               element={<WarehouseExpenseManagement />}
             />
