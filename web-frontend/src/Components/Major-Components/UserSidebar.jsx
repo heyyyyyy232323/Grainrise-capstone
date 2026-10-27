@@ -67,6 +67,11 @@ export const getUserSidebarConfig = (role = "admin") => {
               path: "/admin/retailers",
             },
             {
+              label: "Farmer Management",
+              icon: Tractor,
+              path: "/admin/farmers",
+            },
+            {
               label: "Profanity Management",
               icon: ShieldAlert,
               path: "/admin/profanity",

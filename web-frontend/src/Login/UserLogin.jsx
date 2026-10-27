@@ -45,6 +45,11 @@ export const resolvePostLoginDashboard = (user) => {
     return "/warehouse-manager/dashboard";
   }
 
+  // FARMER
+  if (role === "farmer") {
+    return "/farmer/dashboard";
+  }
+
   // SUPPLIER / MILLER EMPLOYEES
   const isSupplierEmployee =
     role === "supplier_employee" ||

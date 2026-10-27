@@ -32,6 +32,21 @@ import TermsPolicies from "./Support/TermsPolicies";
 
 import UserAccountProfile from "./Components/Major-Components/AccountPorfileSettings";
 
+// ============================================================
+// FARMER
+// ============================================================
+
+import FarmerDashboard from "./Users/FarmersAccounts/FarmerDashboard";
+import FarmerFarmManagement from "./Users/FarmersAccounts/FarmerFarmManagement";
+import FarmerForecasting from "./Users/FarmersAccounts/FarmerForecasting";
+import FarmerContracts from "./Users/FarmersAccounts/FarmerContracts";
+import FarmerMessages from "./Users/FarmersAccounts/FarmerMessages";
+import FarmerPointOfSale from "./Users/FarmersAccounts/FarmerPointOfSale";
+import FarmerTransactionHistory from "./Users/FarmersAccounts/FarmerTransactionHistory";
+import FarmerNewsUpdates from "./Users/FarmersAccounts/FarmerNewsUpdates";
+import FarmerNewsArticle from "./Users/FarmersAccounts/FarmerNewsArticle";
+import FarmerManagement from "./Users/AdminAccounts/AccountAdmin/FarmerManagement";
+
 
 // ============================================================
 // WAREHOUSE ENCODER
@@ -407,6 +422,8 @@ function App() {
         <Route path="/guide" element={<RegistrationGuide />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms-and-conditions" element={<TermsPolicies />} />
+        <Route path="/terms-conditions" element={<TermsPolicies />} />
         <Route path="/terms-policies" element={<TermsPolicies />} />
         <Route path="/terms-and-policies" element={<TermsPolicies />} />
         <Route path="/terms" element={<TermsPolicies />} />
@@ -429,6 +446,54 @@ function App() {
               element={<UserAccountProfile />}
             />
           </Route>
+
+          {/* ==================================================
+                FARMER
+            ================================================== */}
+
+          <Route element={<WarehouseEncoderLayout role="farmer" />}>
+            <Route
+              path="/farmer/dashboard"
+              element={<FarmerDashboard />}
+            />
+            <Route
+              path="/farmer/farm-management"
+              element={<FarmerFarmManagement />}
+            />
+            <Route
+              path="/farmer/forecasting"
+              element={<FarmerForecasting />}
+            />
+            <Route
+              path="/farmer/contracts"
+              element={<FarmerContracts />}
+            />
+            <Route
+              path="/farmer/messages"
+              element={<FarmerMessages />}
+            />
+            <Route
+              path="/farmer/point-of-sale"
+              element={<FarmerPointOfSale />}
+            />
+            <Route
+              path="/farmer/transaction-history"
+              element={<FarmerTransactionHistory />}
+            />
+            <Route
+              path="/farmer/news-updates"
+              element={<FarmerNewsUpdates />}
+            />
+            <Route
+              path="/farmer/news-updates/:id"
+              element={<FarmerNewsArticle />}
+            />
+            <Route
+              path="/farmer/profile"
+              element={<UserAccountProfile />}
+            />
+          </Route>
+
 
 
           {/* ==================================================
@@ -1470,7 +1535,7 @@ function App() {
 
             <Route
               path="/admin/farmers"
-              element={<Navigate to="/admin/dashboard" replace />}
+              element={<FarmerManagement />}
             />
 
             <Route
