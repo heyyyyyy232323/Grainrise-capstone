@@ -57,6 +57,37 @@ function EmptyState({ title = "No records found", description = "No matching rec
   );
 }
 
+function LoadingState({ message = "Loading records..." }) {
+  return (
+    <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+      <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
+        <svg
+          className="h-7 w-7 text-[#0B5D1E] animate-spin"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          ></circle>
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          ></path>
+        </svg>
+      </div>
+      <h4 className="text-[15px] font-bold text-slate-900">{message}</h4>
+      <p className="mt-1 text-xs text-slate-400">Please wait while the data is being retrieved.</p>
+    </div>
+  );
+}
+
 export default function SectionedTableCard({
   title,
   columns = [],
@@ -73,7 +104,11 @@ export default function SectionedTableCard({
   viewDetailsLabel = "View Details",
   emptyStateTitle,
   emptyStateDescription,
+  loading = false,
+  isLoading = false,
+  loadingMessage = "Loading records...",
 }) {
+  const isCurrentlyLoading = Boolean(loading || isLoading);
   const totalRows = sections.reduce((count, section) => count + (section.rows?.length || 0), 0);
   const isEmpty = totalRows === 0;
 
@@ -87,7 +122,9 @@ export default function SectionedTableCard({
         </header>
       ) : null}
 
-      {isEmpty ? (
+      {isCurrentlyLoading ? (
+        <LoadingState message={loadingMessage} />
+      ) : isEmpty ? (
         <EmptyState title={emptyStateTitle} description={emptyStateDescription} />
       ) : (
         <div className="overflow-x-auto overflow-y-auto max-h-72 sm:max-h-96 md:max-h-none -mx-4 md:mx-0">

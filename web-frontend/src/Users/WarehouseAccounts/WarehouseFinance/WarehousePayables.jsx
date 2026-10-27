@@ -28,7 +28,7 @@ export default function WarehousePayables() {
 
   const [records, setRecords] = useState([]);
   const [backendSuppliers, setBackendSuppliers] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [supplier, setSupplier] = useState("");
   const [sortBy, setSortBy] = useState("batch-asc");
@@ -294,6 +294,10 @@ export default function WarehousePayables() {
         currentPage={page}
         totalPages={totalPages}
         onPageChange={setPage}
+        isLoading={isLoading}
+        loadingMessage="Loading payable requests..."
+        emptyStateTitle="No payable requests found"
+        emptyStateDescription="No pending payables found matching your filters."
         footerLabel={`Showing ${filtered.length > 0 ? startIndex + 1 : 0}-${Math.min(
           startIndex + itemsPerPage,
           filtered.length

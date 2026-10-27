@@ -37,7 +37,7 @@ export default function WarehouseExpenses() {
 
   const [expenses, setExpenses] = useState([]);
   const [backendTypes, setBackendTypes] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("all");
   const [sortBy, setSortBy] = useState("nearest_deadline");
@@ -312,6 +312,9 @@ export default function WarehouseExpenses() {
         totalPages={totalPages}
         onPageChange={setCurrentPage}
         isLoading={isLoading}
+        loadingMessage="Loading expense records..."
+        emptyStateTitle="No pending expenses found"
+        emptyStateDescription="No pending expenses found matching your filters."
         footerLabel={
           expenses.length > 0
             ? `Showing ${(currentPage - 1) * itemsPerPage + 1}–${Math.min(

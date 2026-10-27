@@ -56,6 +56,7 @@ export default function WarehouseReimburse() {
   const [reimbursements, setReimbursements] = useState([]);
   const [backendCategories, setBackendCategories] = useState([]);
   const [payerInfo, setPayerInfo] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
@@ -170,6 +171,7 @@ export default function WarehouseReimburse() {
     async ({ silent = false } = {}) => {
       if (isFetchingRef.current) return;
       isFetchingRef.current = true;
+      if (!silent) setIsLoading(true);
       try {
         const params = new URLSearchParams();
         if (query.trim()) params.append("search", query.trim());
@@ -262,6 +264,7 @@ export default function WarehouseReimburse() {
         }
       } finally {
         isFetchingRef.current = false;
+        setIsLoading(false);
       }
     },
     [request, query, category, sortBy, enqueueReceiptSnapshot]
@@ -632,6 +635,10 @@ export default function WarehouseReimburse() {
         currentPage={safePage}
         totalPages={totalPages}
         onPageChange={setPage}
+        loading={isLoading}
+        loadingMessage="Loading reimbursement requests..."
+        emptyStateTitle="No reimbursement requests found"
+        emptyStateDescription="No pending reimbursements found matching your filters."
         footerLabel={
           filtered.length > 0
             ? `Showing ${startIndex + 1}-${Math.min(
