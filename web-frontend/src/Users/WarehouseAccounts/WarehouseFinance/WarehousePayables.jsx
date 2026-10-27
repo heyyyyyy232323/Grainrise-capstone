@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
 import Dropdown from "../../../Components/Minor-Components/Dropdown";
@@ -21,6 +22,8 @@ const SORT_OPTIONS = [
 ];
 
 export default function WarehousePayables() {
+  const location = useLocation();
+  const isManager = location.pathname.startsWith("/warehouse-manager");
   const { request } = useApi();
 
   const [records, setRecords] = useState([]);
@@ -226,10 +229,17 @@ export default function WarehousePayables() {
   return (
     <div>
       <Breadcrumbs
-        items={[
-          { label: "Finance", path: "/warehouse-manager/dashboard" },
-          { label: "Payables" },
-        ]}
+        items={
+          isManager
+            ? [
+                { label: "Management", path: "/warehouse-manager/dashboard" },
+                { label: "Payables" },
+              ]
+            : [
+                { label: "Finance", path: "/warehouse-finance/dashboard" },
+                { label: "Payables" },
+              ]
+        }
       />
 
       <div>

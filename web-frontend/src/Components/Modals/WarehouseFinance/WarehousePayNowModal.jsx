@@ -170,8 +170,87 @@ export default function WarehousePayNowModal({
 
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const [isLiveCameraOpen, setIsLiveCameraOpen] = useState(false);
 
   const isRegisteredMiller = payable?.supplier_type === "registered_miller";
+
+  const stopLiveCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setIsLiveCameraOpen(false);
+  };
+
+  const startLiveCamera = async () => {
+    setErrorMessage("");
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      cameraInputRef.current?.click();
+      return;
+    }
+
+    try {
+      stopLiveCamera();
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      }
+
+      streamRef.current = stream;
+      setIsLiveCameraOpen(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+      }, 50);
+    } catch (err) {
+      console.warn("Live camera access failed:", err);
+      cameraInputRef.current?.click();
+    }
+  };
+
+  const handleCapturePhoto = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(
+      async (blob) => {
+        if (!blob) return;
+        const capturedFile = new File([blob], `payable_camera_${Date.now()}.jpg`, {
+          type: "image/jpeg",
+        });
+        stopLiveCamera();
+
+        if (receiptPreviewUrl) {
+          URL.revokeObjectURL(receiptPreviewUrl);
+        }
+        const preview = URL.createObjectURL(capturedFile);
+        setReceiptFile(capturedFile);
+        setReceiptPreviewUrl(preview);
+        setErrorMessage("");
+
+        await processOcr(capturedFile);
+      },
+      "image/jpeg",
+      0.9
+    );
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -184,6 +263,7 @@ export default function WarehousePayNowModal({
   }, [isOpen]);
 
   useEffect(() => {
+    stopLiveCamera();
     setImageLoadError(false);
     setPaymentMethod("");
     setPaymentReference("");
@@ -197,7 +277,7 @@ export default function WarehousePayNowModal({
     } else {
       setActiveXenditSession(null);
     }
-  }, [payable?.receiving_id, payable?.id]);
+  }, [payable?.receiving_id, payable?.id, isOpen]);
 
   useEffect(() => {
     return () => {
@@ -295,6 +375,14 @@ export default function WarehousePayNowModal({
     setOcrStatusText("");
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (cameraInputRef.current) cameraInputRef.current.value = "";
+  };
+
+  const handleMethodChange = (newMethod) => {
+    setPaymentMethod(newMethod);
+    stopLiveCamera();
+    handleClearReceipt();
+    setPaymentReference("");
+    setErrorMessage("");
   };
 
   // Initiate Xendit Payment Session for Registered Millers
@@ -583,10 +671,7 @@ export default function WarehousePayNowModal({
               </span>
               <select
                 value={paymentMethod}
-                onChange={(e) => {
-                  setPaymentMethod(e.target.value);
-                  setErrorMessage("");
-                }}
+                onChange={(e) => handleMethodChange(e.target.value)}
                 className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-normal text-slate-800 focus:ring-1 focus:ring-emerald-500 outline-none cursor-pointer"
               >
                 <option value="">Select Payment Method</option>
@@ -754,7 +839,7 @@ export default function WarehousePayNowModal({
                   <div className="flex items-center gap-2 pt-1">
                     <button
                       type="button"
-                      onClick={() => cameraInputRef.current?.click()}
+                      onClick={startLiveCamera}
                       className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-slate-200 hover:border-emerald-500 bg-slate-50/70 hover:bg-emerald-50/30 rounded-xl text-xs font-semibold text-slate-700 hover:text-emerald-800 transition cursor-pointer"
                     >
                       <Camera size={15} className="text-[#0B5D1E]" />
@@ -770,6 +855,35 @@ export default function WarehousePayNowModal({
                       <span>Upload File</span>
                     </button>
                   </div>
+
+                  {isLiveCameraOpen && (
+                    <div className="relative rounded-xl overflow-hidden border-2 border-emerald-500 bg-black mt-2">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-52 object-cover"
+                      />
+                      <div className="absolute bottom-2 inset-x-0 flex items-center justify-center gap-3 px-3">
+                        <button
+                          type="button"
+                          onClick={handleCapturePhoto}
+                          className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow transition flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Camera size={13} />
+                          <span>Snap Photo</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={stopLiveCamera}
+                          className="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-900 text-white text-xs font-medium rounded-lg transition cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {receiptFile && (
                     <div className="flex items-center justify-between p-2 mt-2 bg-slate-50 rounded-xl border border-slate-200">
