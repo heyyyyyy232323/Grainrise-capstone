@@ -423,6 +423,8 @@ function App() {
         <Route path="/guide" element={<RegistrationGuide />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms-and-conditions" element={<TermsPolicies />} />
+        <Route path="/terms-conditions" element={<TermsPolicies />} />
         <Route path="/terms-policies" element={<TermsPolicies />} />
         <Route path="/terms-and-policies" element={<TermsPolicies />} />
         <Route path="/terms" element={<TermsPolicies />} />

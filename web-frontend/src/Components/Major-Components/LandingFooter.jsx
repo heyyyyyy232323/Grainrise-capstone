@@ -95,8 +95,8 @@ export default function LandingFooter() {
           <button onClick={() => navigate('/privacy-policy')} className="text-white/90 hover:text-white dark:text-gray-300 dark:hover:text-emerald-400 transition-colors cursor-pointer">
             Privacy Policy
           </button>
-          <button onClick={() => navigate('/terms-policies')} className="text-white/90 hover:text-white dark:text-gray-300 dark:hover:text-emerald-400 transition-colors cursor-pointer">
-            Terms / Policies
+          <button onClick={() => navigate('/terms-and-conditions')} className="text-white/90 hover:text-white dark:text-gray-300 dark:hover:text-emerald-400 transition-colors cursor-pointer">
+            Terms & Conditions
           </button>
         </div>
       </div>

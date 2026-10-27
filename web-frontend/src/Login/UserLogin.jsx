@@ -491,21 +491,21 @@ const UserLogin = () => {
 
             <p className="text-center text-xs text-gray-500 mt-4">
               By signing in, you agree to our{" "}
-              <a
-                href="#"
-                onClick={(e) => { e.preventDefault(); setIsTermsModalOpen(true); }}
-                className="text-green-700 font-semibold hover:underline"
+              <button
+                type="button"
+                onClick={() => setIsTermsModalOpen(true)}
+                className="text-green-700 font-semibold hover:underline cursor-pointer inline p-0 bg-transparent border-0"
               >
-                Terms
-              </a>{" "}
+                Terms and Conditions
+              </button>{" "}
               and acknowledge our{" "}
-              <a
-                href="#"
-                onClick={(e) => { e.preventDefault(); setIsPrivacyModalOpen(true); }}
-                className="text-green-700 font-semibold hover:underline"
+              <button
+                type="button"
+                onClick={() => setIsPrivacyModalOpen(true)}
+                className="text-green-700 font-semibold hover:underline cursor-pointer inline p-0 bg-transparent border-0"
               >
                 Privacy Policy.
-              </a>
+              </button>
             </p>
           </div>
         </div>
