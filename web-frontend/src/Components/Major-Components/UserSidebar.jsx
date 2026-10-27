@@ -29,6 +29,7 @@ import {
   CircleDollarSign,
   Tractor,
   Megaphone,
+  ShieldAlert,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import Logo from "../../assets/Logo.png";
@@ -64,6 +65,11 @@ export const getUserSidebarConfig = (role = "admin") => {
               label: "Retailer Management",
               icon: Store,
               path: "/admin/retailers",
+            },
+            {
+              label: "Profanity Management",
+              icon: ShieldAlert,
+              path: "/admin/profanity",
             },
           ],
         },
@@ -717,6 +723,11 @@ export const getUserSidebarConfig = (role = "admin") => {
               path: "/warehouse-manager/branches",
             },
             {
+              label: "Supplier Management",
+              icon: Truck,
+              path: "/warehouse-manager/suppliers",
+            },
+            {
               label: "Messages",
               icon: MessagesSquare,
               path: "/warehouse-manager/messages",
@@ -725,6 +736,26 @@ export const getUserSidebarConfig = (role = "admin") => {
               label: "Order Approval",
               icon: ClipboardList,
               path: "/warehouse-manager/order-approval",
+            },
+            {
+              label: "Expense Management",
+              icon: Receipt,
+              path: "/warehouse-manager/expenses",
+            },
+            {
+              label: "Fare Fee Management",
+              icon: SlidersHorizontal,
+              path: "/warehouse-manager/pass-fee",
+            },
+            {
+              label: "Online Payment Accounts",
+              icon: CreditCard,
+              path: "/warehouse-manager/payment-accounts",
+            },
+            {
+              label: "Vehicle Management",
+              icon: Car,
+              path: "/warehouse-manager/vehicle-management",
             },
           ],
         },
@@ -1345,7 +1376,23 @@ const UserSidebar = ({
               {section.items.map((item) => {
                 const Icon = item.icon;
 
-                const isActive = currentPath === item.path;
+                const isActive =
+                  currentPath === item.path ||
+                  (item.path === "/warehouse-manager/pass-fee" &&
+                    (currentPath === "/warehouse-manager/fare-fee" ||
+                      currentPath === "/warehouse-manager/fare-fee-management")) ||
+                  (item.path === "/warehouse-manager/fare-fee" &&
+                    currentPath === "/warehouse-manager/pass-fee") ||
+                  (item.path === "/warehouse-manager/vehicle-management" &&
+                    currentPath === "/warehouse-manager/vehicles") ||
+                  (item.path === "/warehouse-manager/payment-accounts" &&
+                    currentPath === "/warehouse-manager/online-payment-accounts") ||
+                  (item.path === "/warehouse-manager/expenses" &&
+                    currentPath === "/warehouse-manager/expense-management") ||
+                  (item.path === "/warehouse-manager/suppliers" &&
+                    currentPath === "/warehouse-manager/supplier-management") ||
+                  (item.path === "/warehouse-manager/performance" &&
+                    currentPath === "/warehouse-manager/performance-monitoring");
 
                 return (
                   <Link

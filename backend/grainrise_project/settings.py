@@ -197,6 +197,7 @@ ALLOWED_HOSTS = [
 
 INSTALLED_APPS = [
 
+    "daphne",
     "django.contrib.admin",
 
     "django.contrib.auth",
@@ -217,6 +218,7 @@ INSTALLED_APPS = [
 
 
 
+    "channels",
     "api.apps.ApiConfig",
 
 ]
@@ -307,28 +309,28 @@ CORS_ALLOWED_ORIGINS = list(
 
 
 
+CORS_ALLOW_ALL_ORIGINS = os.getenv(
+    "CORS_ALLOW_ALL_ORIGINS",
+    "true" if DEBUG else "false",
+).strip().lower() in {"1", "true", "yes", "on"}
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.onrender\.com$",
+    r"^http://localhost(:\d+)?$",
+    r"^http://127\.0\.0\.1(:\d+)?$",
+]
+
 CORS_ALLOW_CREDENTIALS = True
 
-
-
-
-
 CSRF_TRUSTED_ORIGINS = list(
-
     dict.fromkeys(
-
         [
-
             FRONTEND_URL,
-
             "http://localhost:5173",
-
             "http://127.0.0.1:5173",
-
+            "https://*.onrender.com",
         ]
-
     )
-
 )
 
 
@@ -378,6 +380,28 @@ TEMPLATES = [
 
 
 WSGI_APPLICATION = "grainrise_project.wsgi.application"
+ASGI_APPLICATION = "grainrise_project.asgi.application"
+
+# ============================================================
+# CHANNELS / REALTIME
+# ============================================================
+
+_REDIS_URL = os.getenv("REDIS_URL") or os.getenv("CHANNEL_REDIS_URL")
+if _REDIS_URL:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [_REDIS_URL],
+            },
+        },
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        },
+    }
 
 
 

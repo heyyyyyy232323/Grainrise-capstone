@@ -263,6 +263,14 @@ def toggle_news_like(
 # ADD COMMENT / REPLY
 # ============================================================
 
+class ProfanityDetectedError(ValueError):
+    def __init__(self, message="Your comment contains a prohibited word. Please remove it before submitting.", matches=None):
+        super().__init__(message)
+        self.message = message
+        self.matches = matches or []
+        self.detected_words = list(dict.fromkeys(m["prohibited_text"] for m in self.matches if "prohibited_text" in m))
+
+
 def add_news_comment(
     user_id,
     news_id,
@@ -291,7 +299,10 @@ def add_news_comment(
     from api.chat_moderation import find_profanity_matches
     matches = find_profanity_matches(comment_text)
     if matches:
-        raise ValueError("Comment contains inappropriate or prohibited words.")
+        raise ProfanityDetectedError(
+            "Your comment contains a prohibited word. Please remove it before submitting.",
+            matches=matches,
+        )
 
     # ========================================================
     # COMMENTING RESTRICTION CHECK (24h / 48h pending issues)
@@ -532,7 +543,10 @@ def edit_own_news_comment(
     from api.chat_moderation import find_profanity_matches
     matches = find_profanity_matches(comment_text)
     if matches:
-        raise ValueError("Comment contains inappropriate or prohibited words.")
+        raise ProfanityDetectedError(
+            "Your comment contains a prohibited word. Please remove it before submitting.",
+            matches=matches,
+        )
 
     with transaction.atomic():
         with connection.cursor() as cursor:

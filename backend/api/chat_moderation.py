@@ -233,6 +233,23 @@ def _normalize_actor_id(
 
 
 # ============================================================
+# TABLE NAME RESOLVER
+# ============================================================
+
+def get_profanity_table_name(cursor=None):
+    owns_cursor = cursor is None
+    db_cursor = connection.cursor() if owns_cursor else cursor
+    try:
+        db_cursor.execute("SHOW TABLES LIKE 'profanity_chats'")
+        if db_cursor.fetchone():
+            return "profanity_chats"
+        return "profanity_chat"
+    finally:
+        if owns_cursor:
+            db_cursor.close()
+
+
+# ============================================================
 # ACTIVE PROFANITY
 # ============================================================
 
@@ -260,13 +277,14 @@ def get_active_profanity_entries(
 
 
     try:
+        table_name = get_profanity_table_name(cursor=db_cursor)
         db_cursor.execute(
-            """
+            f"""
             SELECT
                 profanity_id,
                 prohibited_text
 
-            FROM profanity_chat
+            FROM {table_name}
 
             WHERE
                 status = 'active'

@@ -1,82 +1,139 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { AlertOctagon, ShieldAlert } from "lucide-react";
+import { AlertOctagon, X } from "lucide-react";
 
 export default function ProfanityWarningModal({
   isOpen,
+  open,
   onClose,
-  message = "Your comment contains prohibited or inappropriate language that violates GrainRise community guidelines.",
+  title = "Prohibited Word Detected",
+  message,
+  detectedWords = [],
   matches = [],
+  type = "message",
 }) {
+  const visible = Boolean(isOpen ?? open);
+
   useEffect(() => {
-    if (isOpen) {
+    if (visible) {
       document.body.style.overflow = "hidden";
+      const handleKeyDown = (e) => {
+        if (e.key === "Escape") {
+          onClose?.();
+        }
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.body.style.overflow = "";
+        window.removeEventListener("keydown", handleKeyDown);
+      };
     } else {
       document.body.style.overflow = "";
     }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isOpen]);
+  }, [visible, onClose]);
 
-  if (!isOpen) return null;
+  const wordsList = useMemo(() => {
+    const raw =
+      detectedWords && detectedWords.length > 0
+        ? detectedWords
+        : matches || [];
+    if (!Array.isArray(raw)) return [];
+    const extracted = raw
+      .map((item) => {
+        if (typeof item === "string") return item.trim();
+        return (item?.prohibited_text || item?.word || item?.text || "").trim();
+      })
+      .filter(Boolean);
+    return Array.from(new Set(extracted));
+  }, [detectedWords, matches]);
+
+  if (!visible) return null;
+
+  const headerLabel =
+    wordsList.length === 1 ? "DETECTED WORD" : "DETECTED WORDS";
+
+  const defaultDesc =
+    type === "comment"
+      ? "Your comment contains a prohibited word. Please remove it before submitting."
+      : "Your message contains a prohibited word. Please remove it before submitting.";
+
+  const displayMessage = message || defaultDesc;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs">
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-150"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="profanity-modal-title"
+    >
       <div
-        className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl animate-in fade-in zoom-in-95 duration-150 border border-red-100"
+        className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white p-6 shadow-2xl border border-red-100 transition-all zoom-in-95"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6 text-center space-y-4">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-red-600">
-            <AlertOctagon size={28} />
-          </div>
+        {/* Top-right close X */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition cursor-pointer"
+          aria-label="Close"
+        >
+          <X size={18} />
+        </button>
 
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">
-              Prohibited Content Detected
+        {/* Icon & Title Header */}
+        <div className="flex items-start gap-3.5">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600">
+            <AlertOctagon size={24} />
+          </div>
+          <div className="pr-6">
+            <h3
+              id="profanity-modal-title"
+              className="text-base font-bold text-slate-900"
+            >
+              {title}
             </h3>
-            <p className="mt-2 text-xs text-slate-600 leading-relaxed">
-              {message}
+            <p className="mt-1 text-xs text-slate-600 leading-relaxed">
+              {displayMessage}
             </p>
           </div>
+        </div>
 
-          {matches && matches.length > 0 && (
-            <div className="rounded-xl border border-red-200 bg-red-50/70 p-3 text-left">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-red-800 mb-1.5">
-                <ShieldAlert size={14} />
-                <span>Flagged keywords:</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {matches.map((m, idx) => (
-                  <span
-                    key={idx}
-                    className="inline-block rounded-md bg-red-200/80 px-2 py-0.5 text-[11px] font-semibold text-red-900"
-                  >
-                    {m.prohibited_text || m}
-                  </span>
-                ))}
-              </div>
+        {/* Visually Separated Detected Words Section */}
+        {wordsList.length > 0 && (
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50/70 p-3.5">
+            <div className="text-[11px] font-bold tracking-wider text-red-800 uppercase mb-2">
+              {headerLabel}
             </div>
-          )}
-
-          <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 text-[11px] text-slate-500 text-left">
-            Please edit your comment to remove inappropriate language before submitting. Repeated violations may result in commenting restrictions.
+            <div className="flex flex-wrap gap-2">
+              {wordsList.map((word, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center rounded-lg bg-red-100 border border-red-200 px-2.5 py-1 text-xs font-bold text-red-700"
+                >
+                  {word}
+                </span>
+              ))}
+            </div>
           </div>
+        )}
 
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-full rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-red-700 transition cursor-pointer shadow-sm"
-            >
-              I Understand, Let Me Edit
-            </button>
-          </div>
+        <div className="mt-3 text-[11px] text-slate-500">
+          Please remove the prohibited word{wordsList.length > 1 ? "s" : ""} before submitting.
+        </div>
+
+        {/* Action: Single green OK button at lower-right */}
+        <div className="mt-6 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center rounded-xl bg-[#0B5D1E] px-6 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#084b18] focus:outline-none focus:ring-2 focus:ring-[#0B5D1E] focus:ring-offset-2 cursor-pointer"
+          >
+            OK
+          </button>
         </div>
       </div>
     </div>,
     document.body
   );
 }
-

@@ -159,6 +159,13 @@ urlpatterns = [
         ),
     ),
 
+    path(
+        "profanity/",
+        include(
+            "api.account_admin_fnction.profanity_management.urls"
+        ),
+    ),
+
 
     # ========================================================
     # MILLER MANAGER FUNCTIONS
@@ -168,6 +175,23 @@ urlpatterns = [
         "miller/",
         include(
             "api.miller_function.urls"
+        ),
+    ),
+
+    # ========================================================
+    # WAREHOUSE MANAGER FUNCTIONS
+    # ========================================================
+
+    path(
+        "warehouse/",
+        include(
+            "api.warehouse_function.urls"
+        ),
+    ),
+    path(
+        "warehouse-manager/",
+        include(
+            "api.warehouse_function.urls"
         ),
     ),
 

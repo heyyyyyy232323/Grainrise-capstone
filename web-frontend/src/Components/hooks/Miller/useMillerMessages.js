@@ -169,7 +169,7 @@ export default function useMillerMessages() {
           // Append to message history
           setMessages((prev) => [...prev, newMsg]);
 
-          // Update thread list latest message preview
+          // Update thread list latest message preview (or add newly initiated thread)
           setThreads((prevThreads) => {
             const index = prevThreads.findIndex(
               (t) => t.thread_id === currentThread.thread_id
@@ -186,15 +186,36 @@ export default function useMillerMessages() {
                 (t) => t.thread_id !== currentThread.thread_id
               );
               return [updated, ...remaining];
+            } else {
+              const newThread = {
+                thread_id: currentThread.thread_id,
+                participant_type: currentThread.participant_type,
+                participant_id: currentThread.participant_id,
+                name: currentThread.name || "Contact",
+                subtitle: currentThread.subtitle || currentThread.role || "Conversation",
+                role: currentThread.role || "Contact",
+                latest_message: trimmed,
+                latest_message_at: newMsg.created_at,
+                is_sender_me: true,
+                unread_count: 0,
+                messages_count: 1,
+              };
+              return [newThread, ...prevThreads];
             }
-            return prevThreads;
           });
 
           return newMsg;
         } else {
-          const err = res?.message || "Failed to send message.";
-          setSendError(err);
-          throw new Error(err);
+          const payload = res?.data || res;
+          const errMsg = payload?.message || res?.message || "Failed to send message.";
+          const err = new Error(errMsg);
+          err.data = payload;
+          err.code = payload?.code;
+          err.blocked = payload?.blocked;
+          err.detected_words = payload?.detected_words;
+          err.matches = payload?.matches;
+          setSendError(errMsg);
+          throw err;
         }
       } catch (err) {
         console.error("Failed to send message:", err);

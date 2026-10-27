@@ -1,6 +1,8 @@
 import datetime
 from django.db import connection
 
+from api.realtime.broadcast import broadcast_message_created
+
 
 def _get_default_miller_branch(miller_user_id):
     with connection.cursor() as cursor:
@@ -35,6 +37,19 @@ def send_miller_message(miller_user_id, data):
         raise ValueError("Message content cannot be empty.")
     if len(content) > 5000:
         raise ValueError("Message content exceeds maximum limit of 5000 characters.")
+
+    from api.chat_moderation import find_profanity_matches
+    matches = find_profanity_matches(content)
+    if matches:
+        detected_words = list(dict.fromkeys(m["prohibited_text"] for m in matches))
+        return {
+            "success": False,
+            "blocked": True,
+            "code": "PROFANITY_DETECTED",
+            "message": "Your message contains a prohibited word. Please remove it before submitting.",
+            "detected_words": detected_words,
+            "matches": matches,
+        }
 
     participant_type = data.get("participant_type")
     participant_id = data.get("participant_id")
@@ -202,6 +217,8 @@ def send_miller_message(miller_user_id, data):
         )
         created_at_row = cursor.fetchone()
         created_at = created_at_row[0] if created_at_row else datetime.datetime.now()
+
+    broadcast_message_created(new_msg_id)
 
     return {
         "message_id": new_msg_id,

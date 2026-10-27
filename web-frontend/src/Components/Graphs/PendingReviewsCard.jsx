@@ -17,6 +17,7 @@ export default function PendingReviewsCard({
   onViewAll,
   viewAllLabel = "View All",
   accentColor,
+  emptyMessage = "Add items to render the pending reviews list.",
 }) {
   return (
     <article
@@ -92,7 +93,7 @@ export default function PendingReviewsCard({
             })
           ) : (
             <div className="rounded-xl border border-dashed border-slate-200 px-3 py-4 text-xs text-slate-400">
-              Add items to render the pending reviews list.
+              {emptyMessage}
             </div>
           )}
         </div>

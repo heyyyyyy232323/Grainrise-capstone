@@ -362,6 +362,8 @@ def driver_messages_send_view(request):
             recipient_type=recipient_type,
             content=content,
         )
+        if isinstance(result, dict) and result.get("blocked"):
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
         return Response(result, status=status.HTTP_201_CREATED)
     except DriverDeliveryError as e:
         return Response({"success": False, "message": e.message}, status=e.status_code)

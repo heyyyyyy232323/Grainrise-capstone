@@ -86,7 +86,12 @@ export default function DriverCODPaymentModal({
       setCapturedReceipt(null);
       setExtractedRef("");
     } else {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
       setAmountPaid(numDue ? String(numDue) : "");
+      return () => {
+        document.body.style.overflow = prev;
+      };
     }
   }, [isOpen, numDue, stopCamera]);
 
@@ -181,8 +186,15 @@ export default function DriverCODPaymentModal({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div>

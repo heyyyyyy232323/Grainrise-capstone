@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Loader2,
   MessageCircle,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import useMillerMessages from "../../../Components/hooks/Miller/useMillerMessages";
 import { ArticleMessageContent } from "../../../Components/Minor-Components/ArticleAttachmentCard";
+import ProfanityWarningModal from "../../../Components/Modals/ProfanityWarningModal";
 
 // ============================================================
 // HELPERS
@@ -168,6 +170,11 @@ export default function MessagesTab({ initialConversation = null }) {
   const [search, setSearch] = useState("");
   const [inputMessage, setInputMessage] = useState("");
   const [replyingTo, setReplyingTo] = useState(null);
+  const [profanityModal, setProfanityModal] = useState({
+    isOpen: false,
+    message: "",
+    detectedWords: [],
+  });
 
   const threadEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -184,13 +191,25 @@ export default function MessagesTab({ initialConversation = null }) {
     };
   }, [search, loadThreads]);
 
-  // ── Handle Initial Conversation Target ────────────────────
+  const location = useLocation();
+
+  // ── Handle Initial Conversation Target or Navigation State ─────
   useEffect(() => {
-    if (!initialConversation) return;
+    const targetState = initialConversation || location.state;
+    if (!targetState) return;
+
+    const pType =
+      targetState.participant_type ||
+      targetState.participantType ||
+      (targetState.recipientId ? "warehouse" : "");
+    const pId = targetState.participant_id || targetState.recipientId;
+    const pName = targetState.name || targetState.recipientName || "Contact";
+    const pRole = targetState.role || (pType === "warehouse" ? "Warehouse" : "Contact");
+
+    if (!pType || !pId) return;
 
     const targetKey =
-      initialConversation.thread_id ||
-      `${initialConversation.participant_type}_${initialConversation.participant_id}`;
+      targetState.thread_id || `${pType}_${pId}`;
 
     if (!targetKey || openedTargetRef.current === targetKey) {
       return;
@@ -203,13 +222,13 @@ export default function MessagesTab({ initialConversation = null }) {
 
     selectThread({
       thread_id: targetKey,
-      participant_type: initialConversation.participant_type,
-      participant_id: initialConversation.participant_id,
-      name: initialConversation.name || "Contact",
-      role: initialConversation.role || "Contact",
-      subtitle: initialConversation.subtitle || "",
+      participant_type: pType,
+      participant_id: pId,
+      name: pName,
+      role: pRole,
+      subtitle: targetState.subtitle || pRole,
     }).catch(() => {});
-  }, [initialConversation, selectThread, clearSendError]);
+  }, [initialConversation, location.state, selectThread, clearSendError]);
 
   // ── Auto Scroll to Latest Message ─────────────────────────
   useEffect(() => {
@@ -252,7 +271,29 @@ export default function MessagesTab({ initialConversation = null }) {
       setInputMessage("");
       setReplyingTo(null);
       textareaRef.current?.focus();
-    } catch {
+    } catch (err) {
+      const errData = err?.data || {};
+      if (
+        errData.code === "PROFANITY_DETECTED" ||
+        errData.blocked ||
+        err?.code === "PROFANITY_DETECTED" ||
+        err?.blocked
+      ) {
+        setProfanityModal({
+          isOpen: true,
+          message:
+            errData.message ||
+            err.message ||
+            "Your message contains a prohibited word. Please remove it before submitting.",
+          detectedWords:
+            errData.detected_words ||
+            err.detected_words ||
+            errData.matches ||
+            err.matches ||
+            [],
+        });
+        return;
+      }
       // Error handled by hook
     }
   };
@@ -618,6 +659,17 @@ export default function MessagesTab({ initialConversation = null }) {
           )}
         </main>
       </div>
+
+      <ProfanityWarningModal
+        isOpen={profanityModal.isOpen}
+        onClose={() => {
+          setProfanityModal({ isOpen: false, message: "", detectedWords: [] });
+          textareaRef.current?.focus();
+        }}
+        message={profanityModal.message}
+        detectedWords={profanityModal.detectedWords}
+        type="message"
+      />
     </div>
   );
 }

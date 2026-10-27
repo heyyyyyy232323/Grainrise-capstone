@@ -996,25 +996,35 @@ def complete_profile(request):
                 b_email = str(data.get("official_email") or user_email).strip()
                 b_contact = str(data.get("official_contact_number") or contact_number).strip()
 
-                cursor.execute("""
-                    UPDATE warehouse_profiles
-                    SET business_name = COALESCE(NULLIF(%s, ''), business_name),
-                        organization_name = NULLIF(%s, ''),
-                        province = COALESCE(NULLIF(%s, ''), province),
-                        municipality = COALESCE(NULLIF(%s, ''), municipality),
-                        barangay = COALESCE(NULLIF(%s, ''), barangay),
-                        street_address = COALESCE(NULLIF(%s, ''), street_address),
-                        postal_code = COALESCE(NULLIF(%s, ''), postal_code),
-                        official_email = COALESCE(NULLIF(%s, ''), official_email),
-                        official_contact_number = COALESCE(NULLIF(%s, ''), official_contact_number),
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE user_id = %s
-                """, [
-                    b_name, org_name, b_province, b_municipality, b_barangay, b_street, b_postal,
-                    b_email, b_contact, user_id
-                ])
+                target_profile_id = data.get("warehouse_profile_id")
+                if not target_profile_id:
+                    cursor.execute(
+                        "SELECT warehouse_profile_id FROM warehouse_profiles WHERE user_id = %s ORDER BY warehouse_profile_id ASC LIMIT 1",
+                        [user_id]
+                    )
+                    first_profile = cursor.fetchone()
+                    if first_profile:
+                        target_profile_id = first_profile[0]
 
-                if cursor.rowcount == 0:
+                if target_profile_id:
+                    cursor.execute("""
+                        UPDATE warehouse_profiles
+                        SET business_name = COALESCE(NULLIF(%s, ''), business_name),
+                            organization_name = NULLIF(%s, ''),
+                            province = COALESCE(NULLIF(%s, ''), province),
+                            municipality = COALESCE(NULLIF(%s, ''), municipality),
+                            barangay = COALESCE(NULLIF(%s, ''), barangay),
+                            street_address = COALESCE(NULLIF(%s, ''), street_address),
+                            postal_code = COALESCE(NULLIF(%s, ''), postal_code),
+                            official_email = COALESCE(NULLIF(%s, ''), official_email),
+                            official_contact_number = COALESCE(NULLIF(%s, ''), official_contact_number),
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE warehouse_profile_id = %s AND user_id = %s
+                    """, [
+                        b_name, org_name, b_province, b_municipality, b_barangay, b_street, b_postal,
+                        b_email, b_contact, target_profile_id, user_id
+                    ])
+                else:
                     cursor.execute("""
                         INSERT INTO warehouse_profiles (
                             user_id, business_name, organization_name,

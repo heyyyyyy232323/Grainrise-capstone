@@ -5,6 +5,9 @@ const RestoreProductModal = ({
   onClose,
   onRestore,
   productName = "Product",
+  title = "Restore Product",
+  description,
+  confirmText,
   isLoading = false,
 }) => {
   if (!isOpen) return null;
@@ -39,12 +42,12 @@ const RestoreProductModal = ({
 
         {/* Title */}
         <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">
-          Restore Product
+          {title}
         </h2>
 
         {/* Description */}
         <p className="text-center text-gray-600 mb-8">
-          Restore {productName} to the Active Products list?
+          {description || `Restore ${productName} to the Active Products list?`}
         </p>
 
         {/* Buttons */}
@@ -63,7 +66,7 @@ const RestoreProductModal = ({
             disabled={isLoading}
             className="flex-1 px-6 py-2.5 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm cursor-pointer"
           >
-            {isLoading ? "Restoring..." : "Restore"}
+            {isLoading ? "Restoring..." : (confirmText || "Restore")}
           </button>
         </div>
       </div>

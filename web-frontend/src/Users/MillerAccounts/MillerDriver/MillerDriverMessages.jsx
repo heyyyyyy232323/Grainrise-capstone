@@ -16,8 +16,13 @@ import {
   X,
 } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
+import ProfanityWarningModal from "../../../Components/Modals/ProfanityWarningModal";
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = (
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") ? "http://127.0.0.1:8000" : "")
+).replace(/\/$/, "");
 
 const getAuthToken = () => {
   return (
@@ -50,6 +55,11 @@ export default function MillerDriverMessages() {
   const [isLoadingThread, setIsLoadingThread] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [profanityModal, setProfanityModal] = useState({
+    isOpen: false,
+    message: "",
+    detectedWords: [],
+  });
 
   const messagesEndRef = useRef(null);
   const activeConvoKeyRef = useRef(null);
@@ -64,6 +74,8 @@ export default function MillerDriverMessages() {
 
   // ── 1. Fetch Conversations List ──────────────────────────────────────────
   const fetchConversations = useCallback(async (selectTargetId = null, selectTargetType = null) => {
+    setIsLoadingConversations(true);
+    setErrorMessage("");
     try {
       const token = getAuthToken();
       const res = await fetch(`${API_BASE}/api/miller-employees/driver/messages/conversations/`, {
@@ -79,6 +91,7 @@ export default function MillerDriverMessages() {
 
       const list = data.conversations || [];
       setConversations(list);
+      setErrorMessage("");
 
       // Determine selected conversation without causing unnecessary object reference flips
       if (list.length > 0) {
@@ -255,6 +268,18 @@ export default function MillerDriverMessages() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
+        if (data.code === "PROFANITY_DETECTED" || data.blocked) {
+          setThreadMessages((prev) => prev.filter((m) => m.id !== tempId));
+          setInput(text);
+          setProfanityModal({
+            isOpen: true,
+            message:
+              data.message ||
+              "Your message contains a prohibited word. Please remove it before submitting.",
+            detectedWords: data.detected_words || data.matches || [],
+          });
+          return;
+        }
         throw new Error(data.message || "Failed to send message.");
       }
 
@@ -339,6 +364,19 @@ export default function MillerDriverMessages() {
               <div className="p-8 text-center space-y-2">
                 <Loader2 className="animate-spin text-[#0B5D1E] mx-auto" size={24} />
                 <p className="text-xs text-gray-500 font-semibold">Loading conversations...</p>
+              </div>
+            ) : errorMessage ? (
+              <div className="p-8 text-center space-y-2">
+                <AlertCircle className="text-rose-500 mx-auto" size={24} />
+                <p className="text-xs font-bold text-gray-800">Failed to load conversations</p>
+                <p className="text-[11px] text-gray-500">{errorMessage}</p>
+                <button
+                  type="button"
+                  onClick={() => fetchConversations()}
+                  className="px-3 py-1.5 rounded-lg bg-[#0B5D1E] text-white text-xs font-bold hover:bg-emerald-800 transition cursor-pointer"
+                >
+                  Try Again
+                </button>
               </div>
             ) : filteredConversations.length === 0 ? (
               <div className="p-8 text-center space-y-1">
@@ -632,6 +670,14 @@ export default function MillerDriverMessages() {
           )}
         </div>
       </div>
+
+      <ProfanityWarningModal
+        isOpen={profanityModal.isOpen}
+        onClose={() => setProfanityModal({ isOpen: false, message: "", detectedWords: [] })}
+        message={profanityModal.message}
+        detectedWords={profanityModal.detectedWords}
+        type="message"
+      />
     </div>
   );
 }

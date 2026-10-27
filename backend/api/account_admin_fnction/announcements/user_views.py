@@ -338,10 +338,15 @@ def announcement_comments(request, announcement_id):
         # Profanity check
         matches = find_profanity_matches(content)
         if matches:
+            detected_words = list(dict.fromkeys(m["prohibited_text"] for m in matches))
             return _error(
-                "Your comment contains inappropriate or prohibited words.",
-                code="profanity_detected",
-                extra={"matches": matches},
+                "Your comment contains a prohibited word. Please remove it before submitting.",
+                code="PROFANITY_DETECTED",
+                extra={
+                    "blocked": True,
+                    "detected_words": detected_words,
+                    "matches": matches,
+                },
             )
 
         with transaction.atomic():
@@ -406,10 +411,15 @@ def announcement_comment_detail(request, comment_id):
 
     matches = find_profanity_matches(content)
     if matches:
+        detected_words = list(dict.fromkeys(m["prohibited_text"] for m in matches))
         return _error(
-            "Your comment contains inappropriate or prohibited words.",
-            code="profanity_detected",
-            extra={"matches": matches},
+            "Your comment contains a prohibited word. Please remove it before submitting.",
+            code="PROFANITY_DETECTED",
+            extra={
+                "blocked": True,
+                "detected_words": detected_words,
+                "matches": matches,
+            },
         )
 
     with transaction.atomic():
@@ -447,10 +457,15 @@ def announcement_comment_replies(request, comment_id):
 
     matches = find_profanity_matches(content)
     if matches:
+        detected_words = list(dict.fromkeys(m["prohibited_text"] for m in matches))
         return _error(
-            "Your reply contains inappropriate or prohibited words.",
-            code="profanity_detected",
-            extra={"matches": matches},
+            "Your comment contains a prohibited word. Please remove it before submitting.",
+            code="PROFANITY_DETECTED",
+            extra={
+                "blocked": True,
+                "detected_words": detected_words,
+                "matches": matches,
+            },
         )
 
     with connection.cursor() as cursor:
@@ -525,10 +540,15 @@ def announcement_reply_detail(request, reply_id):
 
     matches = find_profanity_matches(content)
     if matches:
+        detected_words = list(dict.fromkeys(m["prohibited_text"] for m in matches))
         return _error(
-            "Your reply contains inappropriate or prohibited words.",
-            code="profanity_detected",
-            extra={"matches": matches},
+            "Your comment contains a prohibited word. Please remove it before submitting.",
+            code="PROFANITY_DETECTED",
+            extra={
+                "blocked": True,
+                "detected_words": detected_words,
+                "matches": matches,
+            },
         )
 
     with transaction.atomic():

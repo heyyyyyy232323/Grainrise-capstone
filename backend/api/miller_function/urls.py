@@ -23,6 +23,21 @@ from django.urls import include, path
 
 
 urlpatterns = [
+    # ========================================================
+    # DASHBOARD
+    # ========================================================
+    path(
+        "dashboard/",
+        include(
+            "api.miller_function.dashboard.urls"
+        ),
+    ),
+    path(
+        "dashboard",
+        include(
+            "api.miller_function.dashboard.urls"
+        ),
+    ),
 
     # ========================================================
     # CONTRACTS

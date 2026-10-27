@@ -50,15 +50,18 @@ export default function DriverProofOfDeliveryModal({
 
   useEffect(() => {
     if (isOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
       startCamera();
+      return () => {
+        document.body.style.overflow = prev;
+        stopCamera();
+      };
     } else {
       stopCamera();
       setCapturedPhoto(null);
       setCameraError("");
     }
-    return () => {
-      stopCamera();
-    };
   }, [isOpen, startCamera, stopCamera]);
 
   const handleCapture = () => {
@@ -87,8 +90,15 @@ export default function DriverProofOfDeliveryModal({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header - Top Right X Only */}
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div>

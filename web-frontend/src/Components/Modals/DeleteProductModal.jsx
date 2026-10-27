@@ -5,6 +5,9 @@ const DeleteProductModal = ({
   onClose,
   onDelete,
   productName = "Product",
+  title = "Delete Product Permanently",
+  description,
+  confirmText,
   isLoading = false,
 }) => {
   if (!isOpen) return null;
@@ -39,12 +42,12 @@ const DeleteProductModal = ({
 
         {/* Title */}
         <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">
-          Delete Product Permanently
+          {title}
         </h2>
 
         {/* Description */}
         <p className="text-center text-gray-600 mb-8">
-          Permanently delete {productName}? This action cannot be undone.
+          {description || `Permanently delete ${productName}? This action cannot be undone.`}
         </p>
 
         {/* Buttons */}
@@ -63,7 +66,7 @@ const DeleteProductModal = ({
             disabled={isLoading}
             className="flex-1 px-6 py-2.5 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm cursor-pointer"
           >
-            {isLoading ? "Deleting..." : "Delete "}
+            {isLoading ? "Deleting..." : (confirmText || "Delete")}
           </button>
         </div>
       </div>

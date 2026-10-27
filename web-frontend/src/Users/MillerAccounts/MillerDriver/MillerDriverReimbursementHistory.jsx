@@ -43,7 +43,7 @@ const resolveMediaUrl = (raw) => {
   const backendBase = (
     import.meta.env.VITE_API_BASE_URL ||
     import.meta.env.VITE_API_URL ||
-    "http://127.0.0.1:8000"
+    (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") ? "http://127.0.0.1:8000" : "")
   ).replace(/\/$/, "");
   return `${backendBase}/media/${clean}`;
 };
@@ -557,7 +557,7 @@ const getCategoryBadgeClass = (category) => {
       {isViewModalOpen && selectedRecord && (
         createPortal(
           <div
-            className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4"
             role="dialog"
             aria-modal="true"
           >
