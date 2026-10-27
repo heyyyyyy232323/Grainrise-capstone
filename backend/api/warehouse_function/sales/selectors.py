@@ -817,3 +817,263 @@ def list_online_sales(
 
     return results
 
+
+# ============================================================
+# WAREHOUSE ONLINE ORDERS SELECTORS
+# ============================================================
+
+def list_warehouse_online_orders(
+    warehouse_profile_id: int,
+    search: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    status_filter: str = None,
+) -> dict:
+    """
+    Fetch actual warehouse_online_customer orders for the authenticated Warehouse branch,
+    displaying by default only 'Ordered' orders.
+    """
+    where_clauses = ["woc.warehouse_profile_id = %s"]
+    params = [warehouse_profile_id]
+
+    if status_filter and status_filter.strip().lower() == "all":
+        pass
+    elif status_filter:
+        where_clauses.append("TRIM(LOWER(woc.status)) = %s")
+        params.append(status_filter.strip().lower())
+    else:
+        where_clauses.append("TRIM(LOWER(woc.status)) = 'ordered'")
+
+    if start_date:
+        where_clauses.append("DATE(woc.created_at) >= %s")
+        params.append(start_date)
+
+    if end_date:
+        where_clauses.append("DATE(woc.created_at) <= %s")
+        params.append(end_date)
+
+    if search:
+        s_query = f"%{search.strip().lower()}%"
+        where_clauses.append(
+            """(
+                LOWER(woc.batch_no) LIKE %s
+                OR LOWER(COALESCE(wp.product_name, '')) LIKE %s
+                OR LOWER(COALESCE(wp.product_code, '')) LIKE %s
+                OR LOWER(COALESCE(CONCAT_WS(' ', u.first_name, u.last_name), '')) LIKE %s
+            )"""
+        )
+        params.extend([s_query, s_query, s_query, s_query])
+
+    where_sql = " AND ".join(where_clauses)
+
+    query = f"""
+        SELECT
+            woc.online_order_id,
+            woc.batch_no,
+            woc.warehouse_profile_id,
+            woc.warehouse_product_id,
+            woc.retailer_buyer_id,
+            CONCAT_WS(' ', u.first_name, u.last_name) AS buyer_name,
+            'Retailer' AS buyer_type,
+            u.email AS buyer_email,
+            u.contact_number AS buyer_contact,
+            wp.product_name,
+            wp.product_code,
+            wp.unit_cost,
+            wp.stock_quantity,
+            woc.ordered_quantity,
+            woc.fare_fee,
+            woc.total_price,
+            woc.expected_arrival_date,
+            woc.status,
+            woc.created_at,
+            woc.updated_at
+        FROM warehouse_online_customer woc
+        LEFT JOIN users u ON woc.retailer_buyer_id = u.user_id
+        LEFT JOIN warehouse_products wp ON woc.warehouse_product_id = wp.product_id
+        WHERE {where_sql}
+        ORDER BY woc.created_at DESC, woc.online_order_id DESC
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+
+    orders = []
+    for r in rows:
+        order_id = int(r[0])
+        batch_no = r[1] or f"BATCH-{order_id}"
+        product_id = int(r[3]) if r[3] is not None else None
+        retailer_buyer_id = int(r[4]) if r[4] is not None else None
+        buyer_name = (r[5] or "").strip() or "Retailer Buyer"
+        buyer_type = r[6] or "Retailer"
+        buyer_email = r[7] or ""
+        buyer_contact = r[8] or ""
+        product_name = r[9] or "Rice Product"
+        product_code = r[10] or ""
+        unit_cost = Decimal(str(r[11] or "0.00"))
+        stock_quantity = Decimal(str(r[12] or "0.00"))
+        ordered_quantity = Decimal(str(r[13] or "0.00"))
+        fare_fee = Decimal(str(r[14] or "0.00"))
+        total_price = Decimal(str(r[15] or "0.00"))
+        expected_arrival_date = r[16]
+        status = r[17] or "Ordered"
+        created_at = r[18]
+
+        created_iso = created_at.isoformat() if created_at else ""
+        created_formatted = format_display_date(created_at)
+        arrival_formatted = format_display_date(expected_arrival_date)
+        arrival_iso = expected_arrival_date.isoformat() if expected_arrival_date else ""
+
+        orders.append({
+            "id": f"order-{order_id}",
+            "orderId": order_id,
+            "onlineOrderId": order_id,
+            "batchNo": batch_no,
+            "retailerName": buyer_name,
+            "buyerName": buyer_name,
+            "buyerType": buyer_type,
+            "buyerEmail": buyer_email,
+            "buyerContact": buyer_contact,
+            "retailerBuyerId": retailer_buyer_id,
+            "variant": product_name,
+            "productName": product_name,
+            "productCode": product_code,
+            "productId": product_id,
+            "unitCost": float(unit_cost),
+            "unitCostFormatted": format_display_currency(unit_cost),
+            "stockQuantity": float(stock_quantity),
+            "stockQuantityFormatted": format_display_qty(stock_quantity),
+            "orderedQuantity": float(ordered_quantity),
+            "orderedQuantityFormatted": format_display_qty(ordered_quantity),
+            "fareFee": float(fare_fee),
+            "fareFeeFormatted": format_display_currency(fare_fee),
+            "totalPrice": format_display_currency(total_price),
+            "totalPriceFormatted": format_display_currency(total_price),
+            "totalPriceNum": float(total_price),
+            "expectedArrivalDate": arrival_iso,
+            "expectedArrivalDateFormatted": arrival_formatted,
+            "status": status,
+            "createdAt": created_iso,
+            "createdAtFormatted": created_formatted,
+            "orderDate": created_iso.split("T")[0] if created_iso else "",
+            "sortTimestamp": int(created_at.timestamp()) if created_at else 0,
+        })
+
+    # Pending orders count strictly where status is 'ordered'
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM warehouse_online_customer
+            WHERE warehouse_profile_id = %s
+              AND TRIM(LOWER(status)) = 'ordered'
+            """,
+            [warehouse_profile_id],
+        )
+        pending_count = cursor.fetchone()[0] or 0
+
+    return {
+        "orders": orders,
+        "total_count": len(orders),
+        "pending_count": pending_count,
+    }
+
+
+def get_warehouse_online_order_detail(warehouse_profile_id: int, online_order_id: int) -> dict | None:
+    """
+    Fetch comprehensive details for a single warehouse_online_customer order.
+    """
+    query = """
+        SELECT
+            woc.online_order_id,
+            woc.batch_no,
+            woc.warehouse_profile_id,
+            woc.warehouse_product_id,
+            woc.retailer_buyer_id,
+            CONCAT_WS(' ', u.first_name, u.last_name) AS buyer_name,
+            'Retailer' AS buyer_type,
+            u.email AS buyer_email,
+            u.contact_number AS buyer_contact,
+            wp.product_name,
+            wp.product_code,
+            wp.unit_cost,
+            wp.stock_quantity,
+            woc.ordered_quantity,
+            woc.fare_fee,
+            woc.total_price,
+            woc.expected_arrival_date,
+            woc.status,
+            woc.created_at,
+            woc.updated_at
+        FROM warehouse_online_customer woc
+        LEFT JOIN users u ON woc.retailer_buyer_id = u.user_id
+        LEFT JOIN warehouse_products wp ON woc.warehouse_product_id = wp.product_id
+        WHERE woc.online_order_id = %s AND woc.warehouse_profile_id = %s
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(query, [online_order_id, warehouse_profile_id])
+        r = cursor.fetchone()
+
+    if not r:
+        return None
+
+    order_id = int(r[0])
+    batch_no = r[1] or f"BATCH-{order_id}"
+    product_id = int(r[3]) if r[3] is not None else None
+    retailer_buyer_id = int(r[4]) if r[4] is not None else None
+    buyer_name = (r[5] or "").strip() or "Retailer Buyer"
+    buyer_type = r[6] or "Retailer"
+    buyer_email = r[7] or ""
+    buyer_contact = r[8] or ""
+    product_name = r[9] or "Rice Product"
+    product_code = r[10] or ""
+    unit_cost = Decimal(str(r[11] or "0.00"))
+    stock_quantity = Decimal(str(r[12] or "0.00"))
+    ordered_quantity = Decimal(str(r[13] or "0.00"))
+    fare_fee = Decimal(str(r[14] or "0.00"))
+    total_price = Decimal(str(r[15] or "0.00"))
+    expected_arrival_date = r[16]
+    status = r[17] or "Ordered"
+    created_at = r[18]
+
+    created_iso = created_at.isoformat() if created_at else ""
+    created_formatted = format_display_date(created_at)
+    arrival_formatted = format_display_date(expected_arrival_date)
+    arrival_iso = expected_arrival_date.isoformat() if expected_arrival_date else ""
+
+    return {
+        "id": f"order-{order_id}",
+        "orderId": order_id,
+        "onlineOrderId": order_id,
+        "batchNo": batch_no,
+        "retailerName": buyer_name,
+        "buyerName": buyer_name,
+        "buyerType": buyer_type,
+        "buyerEmail": buyer_email,
+        "buyerContact": buyer_contact,
+        "retailerBuyerId": retailer_buyer_id,
+        "variant": product_name,
+        "productName": product_name,
+        "productCode": product_code,
+        "productId": product_id,
+        "unitCost": float(unit_cost),
+        "unitCostFormatted": format_display_currency(unit_cost),
+        "stockQuantity": float(stock_quantity),
+        "stockQuantityFormatted": format_display_qty(stock_quantity),
+        "orderedQuantity": float(ordered_quantity),
+        "orderedQuantityFormatted": format_display_qty(ordered_quantity),
+        "fareFee": float(fare_fee),
+        "fareFeeFormatted": format_display_currency(fare_fee),
+        "totalPrice": format_display_currency(total_price),
+        "totalPriceFormatted": format_display_currency(total_price),
+        "totalPriceNum": float(total_price),
+        "expectedArrivalDate": arrival_iso,
+        "expectedArrivalDateFormatted": arrival_formatted,
+        "status": status,
+        "createdAt": created_iso,
+        "createdAtFormatted": created_formatted,
+        "orderDate": created_iso.split("T")[0] if created_iso else "",
+        "sortTimestamp": int(created_at.timestamp()) if created_at else 0,
+    }
+

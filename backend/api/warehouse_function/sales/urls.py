@@ -10,4 +10,8 @@ urlpatterns = [
     path("pos/receipt/<str:reference_no>/", views.pos_receipt_detail_view, name="warehouse-sales-pos-receipt"),
     path("history/in-store/", views.in_store_sales_history_view, name="warehouse-sales-history-in-store"),
     path("history/online/", views.online_sales_history_view, name="warehouse-sales-history-online"),
+    path("online-orders/", views.online_orders_list_view, name="warehouse-sales-online-orders"),
+    path("online-orders/<int:order_id>/", views.online_order_detail_view, name="warehouse-sales-online-order-detail"),
+    path("online-orders/<int:order_id>/approve/", views.online_order_approve_view, name="warehouse-sales-online-order-approve"),
+    path("online-orders/<int:order_id>/decline/", views.online_order_decline_view, name="warehouse-sales-online-order-decline"),
 ]
