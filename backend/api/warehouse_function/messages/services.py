@@ -1,6 +1,7 @@
 import datetime
 from django.db import connection
 from api.chat_moderation import find_profanity_matches
+from api.realtime.broadcast import broadcast_message_created
 
 
 def _get_default_warehouse_branch(warehouse_user_id):
@@ -253,6 +254,8 @@ def send_warehouse_message(warehouse_user_id, data):
         )
         created_at_row = cursor.fetchone()
         created_at = created_at_row[0] if created_at_row else datetime.datetime.now()
+
+    broadcast_message_created(new_msg_id)
 
     return {
         "message_id": new_msg_id,
