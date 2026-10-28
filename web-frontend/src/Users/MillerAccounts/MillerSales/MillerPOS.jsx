@@ -115,7 +115,12 @@ export default function MillerPOS() {
 
 			const data = await res.json().catch(() => ({}));
 			if (!res.ok) {
-				throw new Error(data.detail || "Failed to load POS products.");
+				// Auth guards return { message }, other views return { detail }.
+				throw new Error(
+					data.detail ||
+						data.message ||
+						`Failed to load POS products. (HTTP ${res.status})`
+				);
 			}
 
 			const mappedProducts = (Array.isArray(data.products) ? data.products : []).map((p) => ({
