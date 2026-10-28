@@ -19,6 +19,7 @@ from .news_moderation import (
     penalize_news_comment_author,
     update_admin_news_article_status,
 )
+from .news_auth import news_main_user_required
 
 from .news_scheduler import (
     NEWS_SYNC_ADVISORY_LOCK_ID,
@@ -323,6 +324,43 @@ def admin_fetch_latest_news(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
+    finally:
+        _release_news_sync_lock()
+
+
+@api_view(["POST"])
+@news_main_user_required
+def user_fetch_latest_news(
+    request,
+):
+    """Synchronize NewsData for an authenticated main user."""
+    try:
+        lock_acquired = _try_acquire_news_sync_lock()
+    except Exception:
+        logger.exception("Unable to acquire GrainRise News synchronization lock.")
+        return _error(
+            "Unable to start News & Updates synchronization.",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    if not lock_acquired:
+        return _error(
+            "News & Updates synchronization is already running.",
+            status.HTTP_409_CONFLICT,
+        )
+
+    try:
+        sync_result = run_newsdata_sync()
+        return _success(
+            message="Latest news synchronization completed.",
+            data={"sync_result": sync_result},
+        )
+    except Exception:
+        logger.exception("Main user NewsData synchronization failed.")
+        return _error(
+            "Unable to fetch the latest news.",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
     finally:
         _release_news_sync_lock()
 

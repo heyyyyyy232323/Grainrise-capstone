@@ -954,13 +954,18 @@ def combined_news_feed(request):
     items = []
 
     with connection.cursor() as cursor:
+        announcement_audience = {
+            "miller_manager": "miller",
+            "warehouse_manager": "warehouse",
+        }.get(user_role, user_role)
+
         # 1. FETCH ANNOUNCEMENTS (if not filtered strictly by a news-only category)
         if not is_news_category_filter:
             a_conditions = [
                 "a.status = 'active'",
                 "a.audience IN (%s, 'all')",
             ]
-            a_params = [user_role]
+            a_params = [announcement_audience]
 
             if search:
                 a_conditions.append("(LOWER(a.title) LIKE %s OR LOWER(a.content) LIKE %s)")

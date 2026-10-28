@@ -36,23 +36,17 @@ export default function useFetchLatestNews({ showToast, onNewsFetched } = {}) {
     setIsFetching(true);
 
     try {
-      // Determine user role or attempt sync / feed fetch
-      let response = null;
-      let articles = [];
+      // Synchronize the shared NewsData store, then read the user's feed.
+      await request("/news/fetch-latest/", {
+        method: "POST",
+        throwOnError: true,
+      });
 
-      // Try fetching from the news feed or admin sync endpoint
-      try {
-        response = await request("/news/?limit=20&sort_by=latest", {
-          method: "GET",
-          throwOnError: true,
-        });
-      } catch (err) {
-        // If 401 or 403, fallback to public or admin endpoint
-        const isAuthError = err?.status === 401 || err?.status === 403;
-        if (!isAuthError) {
-          throw err;
-        }
-      }
+      const response = await request("/news/?limit=20&sort=latest", {
+        method: "GET",
+        throwOnError: true,
+      });
+      let articles = [];
 
       // Unpack articles from API response
       if (response) {

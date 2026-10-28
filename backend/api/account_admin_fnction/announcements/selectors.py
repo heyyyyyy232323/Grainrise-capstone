@@ -3,6 +3,7 @@ from django.db import connection
 
 ALLOWED_AUDIENCES = {
     "all",
+    "farmer",
     "miller",
     "warehouse",
     "retailer",

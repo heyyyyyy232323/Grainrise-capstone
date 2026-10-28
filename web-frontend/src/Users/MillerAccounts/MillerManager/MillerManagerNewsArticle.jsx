@@ -462,7 +462,7 @@ export default function MillerManagerNewsArticle() {
   );
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+    <div className="space-y-6 pb-12">
       <Toast toasts={toasts} removeToast={removeToast} />
 
       {/* ── Breadcrumbs & Back ────────────────────────────────────────────── */}
