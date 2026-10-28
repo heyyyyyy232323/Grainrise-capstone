@@ -4,6 +4,30 @@ import { Share2, Copy, Check, Send, MessageCircle, X } from "lucide-react";
 import useApi from "../../../Components/hooks/useApi";
 import { slugifyTitle } from "../../Minor-Components/RichArticleContent";
 
+const getCurrentMessageApiPrefix = () => {
+  const path = typeof window !== "undefined" ? window.location.pathname : "";
+  const storedUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("grainrise_user") || "{}");
+    } catch {
+      return {};
+    }
+  })();
+
+  const role = String(
+    storedUser.user_role || storedUser.role || ""
+  )
+    .trim()
+    .toLowerCase();
+
+  if (path.startsWith("/farmer") || role.includes("farmer")) return "farmer";
+  if (path.startsWith("/warehouse") || role.includes("warehouse")) return "warehouse";
+  if (path.startsWith("/retailer") || role.includes("retailer")) return "retailer";
+  if (path.startsWith("/miller") || role.includes("miller")) return "miller";
+
+  return "";
+};
+
 export default function ShareArticleModal({
   isOpen,
   onClose,
@@ -17,6 +41,12 @@ export default function ShareArticleModal({
   const [isLoadingChats, setIsLoadingChats] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendStatus, setSendStatus] = useState(null);
+
+  const messageApiPrefix = getCurrentMessageApiPrefix();
+  const chatShareEnabled = Boolean(
+    messageApiPrefix &&
+      (localStorage.getItem("grainrise_token") || localStorage.getItem("access_token"))
+  );
 
   const articleSlug =
     article?.slug || (article?.title ? slugifyTitle(article.title) : article?.id);
@@ -35,11 +65,15 @@ export default function ShareArticleModal({
     setSendStatus(null);
     document.body.style.overflow = "hidden";
 
-    // Load recent chats
     const loadRecentChats = async () => {
+      if (!chatShareEnabled) {
+        setThreads([]);
+        return;
+      }
+
       setIsLoadingChats(true);
       try {
-        const res = await request("/miller/messages/threads/", {
+        const res = await request(`/${messageApiPrefix}/messages/threads/`, {
           method: "GET",
         });
 
@@ -65,7 +99,7 @@ export default function ShareArticleModal({
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isOpen, request]);
+  }, [isOpen, chatShareEnabled, messageApiPrefix, request]);
 
   if (!isOpen || !article) return null;
 
@@ -90,7 +124,7 @@ export default function ShareArticleModal({
 
   const handleSendToChat = async (e) => {
     e.preventDefault();
-    if (!selectedThread) return;
+    if (!chatShareEnabled || !selectedThread || !messageApiPrefix) return;
 
     const threadObj = threads.find(
       (t) => String(t.thread_id || t.id) === String(selectedThread)
@@ -113,7 +147,7 @@ export default function ShareArticleModal({
         id: article.id,
       });
 
-      const res = await request("/miller/messages/send/", {
+      const res = await request(`/${messageApiPrefix}/messages/send/`, {
         method: "POST",
         body: {
           thread_id: threadObj.thread_id || threadObj.id,
@@ -183,63 +217,67 @@ export default function ShareArticleModal({
             </h4>
           </div>
 
-          {/* Option 1: Send to Recent Chats */}
-          <div className="space-y-2">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <MessageCircle size={13} />
-              <span>Send to Recent Chat</span>
-            </label>
+          {chatShareEnabled && (
+            <>
+              {/* Option 1: Send to Recent Chats */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <MessageCircle size={13} />
+                  <span>Send to Recent Chat</span>
+                </label>
 
-            {isLoadingChats ? (
-              <div className="p-3 text-center text-xs text-slate-400">Loading recent chats...</div>
-            ) : threads.length === 0 ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-center text-xs text-slate-400">
-                No recent chat conversations available.
+                {isLoadingChats ? (
+                  <div className="p-3 text-center text-xs text-slate-400">Loading recent chats...</div>
+                ) : threads.length === 0 ? (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-center text-xs text-slate-400">
+                    No recent chat conversations available.
+                  </div>
+                ) : (
+                  <form onSubmit={handleSendToChat} className="space-y-2.5">
+                    <select
+                      value={selectedThread}
+                      onChange={(e) => setSelectedThread(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none"
+                    >
+                      {threads.map((t) => (
+                        <option key={t.thread_id || t.id} value={t.thread_id || t.id}>
+                          {t.name || t.contact_name || t.participant_name || `Chat #${t.thread_id || t.id}`}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="submit"
+                      disabled={isSending || !selectedThread}
+                      className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#08511f] py-2 text-xs font-bold text-white hover:bg-[#063f18] transition disabled:opacity-50 cursor-pointer shadow-xs"
+                    >
+                      <Send size={13} />
+                      <span>{isSending ? "Sending..." : "Send to Chat"}</span>
+                    </button>
+                  </form>
+                )}
+
+                {sendStatus && (
+                  <div
+                    className={`p-2 rounded-lg text-xs font-semibold ${
+                      sendStatus.type === "success"
+                        ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                        : "bg-red-50 text-red-800 border border-red-200"
+                    }`}
+                  >
+                    {sendStatus.message}
+                  </div>
+                )}
               </div>
-            ) : (
-              <form onSubmit={handleSendToChat} className="space-y-2.5">
-                <select
-                  value={selectedThread}
-                  onChange={(e) => setSelectedThread(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none"
-                >
-                  {threads.map((t) => (
-                    <option key={t.thread_id || t.id} value={t.thread_id || t.id}>
-                      {t.name || t.contact_name || t.participant_name || `Chat #${t.thread_id || t.id}`}
-                    </option>
-                  ))}
-                </select>
 
-                <button
-                  type="submit"
-                  disabled={isSending || !selectedThread}
-                  className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#08511f] py-2 text-xs font-bold text-white hover:bg-[#063f18] transition disabled:opacity-50 cursor-pointer shadow-xs"
-                >
-                  <Send size={13} />
-                  <span>{isSending ? "Sending..." : "Send to Chat"}</span>
-                </button>
-              </form>
-            )}
-
-            {sendStatus && (
-              <div
-                className={`p-2 rounded-lg text-xs font-semibold ${
-                  sendStatus.type === "success"
-                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                    : "bg-red-50 text-red-800 border border-red-200"
-                }`}
-              >
-                {sendStatus.message}
+              <div className="relative flex items-center justify-center">
+                <div className="border-t border-slate-200 w-full" />
+                <span className="bg-white px-2 text-[10px] uppercase font-bold text-slate-400 absolute">
+                  or
+                </span>
               </div>
-            )}
-          </div>
-
-          <div className="relative flex items-center justify-center">
-            <div className="border-t border-slate-200 w-full" />
-            <span className="bg-white px-2 text-[10px] uppercase font-bold text-slate-400 absolute">
-              or
-            </span>
-          </div>
+            </>
+          )}
 
           {/* Option 2: Copy Link */}
           <div className="space-y-2">

@@ -15,6 +15,7 @@ import {
   Tractor,
 } from "lucide-react";
 import useFarmerForecasting from "../../Components/hooks/Farmer/useFarmerForecasting";
+import { translations, useLanguagePreference } from "../../lib/translations";
 const HISTORY_YEAR_OPTIONS = [1, 3, 5];
 const MONTH_LABELS = [
   "Jan",
@@ -243,10 +244,10 @@ function ChartCardHeader({
     </div>
   );
 }
-function RainBarChart({ data }) {
+function RainBarChart({ data, emptyMessage }) {
   if (!data?.length) {
     return (
-      <EmptyChartState message="No rainfall data available yet." />
+      <EmptyChartState message={emptyMessage || "No rainfall data available yet."} />
     );
   }
   const maxValue = Math.max(
@@ -321,10 +322,10 @@ function RainBarChart({ data }) {
     </div>
   );
 }
-function TemperatureLineChart({ data }) {
+function TemperatureLineChart({ data, emptyMessage }) {
   if (!data?.length) {
     return (
-      <EmptyChartState message="No temperature data available yet." />
+      <EmptyChartState message={emptyMessage || "No temperature data available yet."} />
     );
   }
   const values = data.map(
@@ -522,6 +523,7 @@ function ForecastHelperIntro({
   onClick,
   loading,
   error,
+  t,
 }) {
   return (
     <div className="rounded-[28px] border border-green-100 bg-white p-6 md:p-7 shadow-sm">
@@ -530,12 +532,11 @@ function ForecastHelperIntro({
           <Sprout size={20} />
         </div>
         <span className="text-xl md:text-2xl">
-          GrainRise Farm Helper
+          {t?.forecasting?.climate?.farmHelperTitle || "GrainRise Farm Helper"}
         </span>
       </div>
       <p className="text-slate-500 text-center mt-8 text-lg max-w-2xl mx-auto leading-relaxed">
-        Want a simple explanation of what this weather means for your farm,
-        and what to do about it?
+        {t?.forecasting?.climate?.farmHelperIntro || "Want a simple explanation of what this weather means for your farm, and what to do about it?"}
       </p>
       <div className="flex justify-center mt-6">
         <button
@@ -552,7 +553,7 @@ function ForecastHelperIntro({
           ) : (
             <Sparkles size={18} />
           )}
-          Explain it to me
+          {t?.forecasting?.climate?.farmHelperButton || "Explain it to me"}
         </button>
       </div>
       {error ? (
@@ -569,6 +570,7 @@ function ForecastHelperExpanded({
   onRefresh,
   loading,
   error,
+  t,
 }) {
   const [showReason, setShowReason] =
     useState(false);
@@ -594,10 +596,10 @@ function ForecastHelperExpanded({
           </div>
           <div>
             <h4 className="text-xl md:text-2xl font-bold text-slate-900">
-              GrainRise Farm Helper
+              {t?.forecasting?.climate?.farmHelperTitle || "GrainRise Farm Helper"}
             </h4>
             <p className="text-sm text-slate-500 mt-1">
-              Simpleng paliwanag para sa iyong sakahan
+              {t?.forecasting?.climate?.helperSubtitle || "Simpleng paliwanag para sa iyong sakahan"}
             </p>
           </div>
         </div>
@@ -615,23 +617,23 @@ function ForecastHelperExpanded({
           ) : (
             <RefreshCw size={16} />
           )}
-          Explain again
+          {t?.forecasting?.climate?.explainAgain || "Explain again"}
         </button>
       </div>
       {}
       <div className="mt-6 rounded-2xl bg-slate-50 px-5 py-5 border border-slate-100">
         <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-          Ano ang ibig sabihin nito?
+          {t?.forecasting?.climate?.meaningTitle || "What does this mean?"}
         </p>
         <p className="mt-3 text-[16px] md:text-[17px] text-slate-700 leading-8 whitespace-pre-line break-words">
           {explanation ||
-            "Wala pang available na simpleng paliwanag."}
+            t?.forecasting?.climate?.noExplanation || "Wala pang available na simpleng paliwanag."}
         </p>
       </div>
       {}
       <div className="mt-7">
         <p className="text-sm font-bold uppercase tracking-wide text-slate-500">
-          Ano ang pwede mong gawin?
+          {t?.forecasting?.climate?.actionsTitle || "What can you do?"}
         </p>
         <div className="mt-4 space-y-3">
           {actions.length ? (
@@ -652,7 +654,7 @@ function ForecastHelperExpanded({
           ) : (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
               <p className="text-slate-500 leading-7 whitespace-pre-line break-words">
-                Walang hiwalay na recommended action na ibinalik ang Farm Helper para sa request na ito.
+                {t?.forecasting?.climate?.noAction || "Walang hiwalay na recommended action na ibinalik ang Farm Helper para sa request na ito."}
               </p>
             </div>
           )}
@@ -662,7 +664,7 @@ function ForecastHelperExpanded({
       {learningGuidance ? (
         <div className="mt-6 rounded-2xl border border-green-100 bg-[#F8FCF8] px-5 py-4">
           <p className="text-xs font-bold uppercase tracking-wide text-green-700">
-            Dagdag na gabay
+            {t?.forecasting?.climate?.extraGuidance || "Dagdag na gabay"}
           </p>
           <p className="mt-2 text-sm md:text-[15px] text-slate-700 leading-7 whitespace-pre-line break-words">
             {learningGuidance}
@@ -683,8 +685,8 @@ function ForecastHelperExpanded({
           >
             <CircleAlert size={16} />
             {showReason
-              ? "Itago ang paliwanag"
-              : "Bakit ganito ang forecast?"}
+              ? t?.forecasting?.climate?.hideExplanation || "Itago ang paliwanag"
+              : t?.forecasting?.climate?.whyForecast || "Bakit ganito ang forecast?"}
           </button>
           {showReason ? (
             <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-5 py-4">
@@ -704,7 +706,7 @@ function ForecastHelperExpanded({
           />
           <p className="text-sm text-amber-700 leading-6 whitespace-pre-line break-words">
             {climateNote ||
-              "Hindi direktang sinusukat ng GrainRise ang kondisyon ng lupa. Ang payo ay batay sa weather at climate patterns."}
+              t?.forecasting?.climate?.climateNote || "Hindi direktang sinusukat ng GrainRise ang kondisyon ng lupa. Ang payo ay batay sa weather at climate patterns."}
           </p>
         </div>
       </div>
@@ -717,6 +719,9 @@ function ForecastHelperExpanded({
   );
 }
 export default function ClimateForecasting() {
+  const [language] = useLanguagePreference();
+  const t = translations[language]?.farmer ?? translations.en.farmer;
+
   const {
     farms,
     loadForecastingFarms,
@@ -971,20 +976,20 @@ export default function ClimateForecasting() {
   const locationTitle =
     activeSelection?.displayName ||
     selectedLocation?.displayName ||
-    "Selected Location";
+    t?.forecasting?.climate?.selectedLocation || "Selected Location";
   const locationSubtitle =
     activeSelection?.subtitle ||
     selectedLocation?.subtitle ||
-    "Location details";
+    t?.forecasting?.climate?.locationDetails || "Location details";
   if (screenMode === "select") {
     return (
       <div className="flex flex-col gap-6">
         <div>
           <h3 className="font-bold text-slate-900 text-2xl">
-            Select Location
+            {t?.forecasting?.climate?.selectLocationTitle || "Select Location"}
           </h3>
           <p className="text-slate-500 mt-2">
-            Choose the farm or location that GrainRise will use for the weather forecast.
+            {t?.forecasting?.climate?.selectLocationSubtitle || "Choose the farm or location that GrainRise will use for the weather forecast."}
           </p>
         </div>
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
@@ -1003,14 +1008,14 @@ export default function ClimateForecasting() {
                       event.target.value
                     )
                   }
-                  placeholder="Search registered farms"
+                  placeholder={t?.forecasting?.climate?.searchFarms || "Search registered farms"}
                   className="w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 py-3 text-sm text-slate-700 outline-none focus:border-green-500"
                 />
               </div>
               <div className="my-4 flex items-center gap-3">
                 <div className="h-px flex-1 bg-slate-200" />
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  or
+                  {t?.forecasting?.climate?.or || "or"}
                 </span>
                 <div className="h-px flex-1 bg-slate-200" />
               </div>
@@ -1022,7 +1027,7 @@ export default function ClimateForecasting() {
                 className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-green-600 px-4 py-3 font-semibold text-green-700 hover:bg-green-50 transition"
               >
                 <Crosshair size={18} />
-                Use Current Location
+                {t?.forecasting?.climate?.useCurrentLocation || "Use Current Location"}
               </button>
               {locationMessage ? (
                 <div
@@ -1047,7 +1052,7 @@ export default function ClimateForecasting() {
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                  Registered Farms
+                  {t?.forecasting?.climate?.registeredFarms || "Registered Farms"}
                 </p>
                 {loading.farms ? (
                   <div className="inline-flex items-center gap-2 text-sm text-slate-500">
@@ -1055,7 +1060,7 @@ export default function ClimateForecasting() {
                       size={14}
                       className="animate-spin"
                     />
-                    Loading
+                    {t?.forecasting?.climate?.loading || "Loading"}
                   </div>
                 ) : null}
               </div>
@@ -1087,7 +1092,7 @@ export default function ClimateForecasting() {
                 ) : (
                   <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
                     <p className="text-sm text-slate-500">
-                      No farms found for your search.
+                      {t?.forecasting?.climate?.noFarmsFound || "No farms found for your search."}
                     </p>
                   </div>
                 )}
@@ -1103,13 +1108,13 @@ export default function ClimateForecasting() {
             <div className="rounded-[28px] border border-slate-200 bg-[#F8FBF7] p-6 md:p-7 shadow-sm min-h-[520px] flex flex-col">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                  Location Preview
+                  {t?.forecasting?.climate?.locationPreview || "Location Preview"}
                 </p>
                 <h4 className="text-2xl font-bold text-slate-900 mt-2">
-                  We’ll use this place for the climate forecast
+                  {t?.forecasting?.climate?.previewTitle || "We’ll use this place for the climate forecast"}
                 </h4>
                 <p className="text-slate-500 mt-2">
-                  This helps GrainRise know which weather data to check for your farm.
+                  {t?.forecasting?.climate?.previewSubtitle || "This helps GrainRise know which weather data to check for your farm."}
                 </p>
               </div>
               <div className="mt-6 flex-1 flex items-center">
@@ -1121,7 +1126,7 @@ export default function ClimateForecasting() {
                       </div>
                       <div className="flex-1">
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                          Selected Location
+                          {t?.forecasting?.climate?.selectedLocation || "Selected Location"}
                         </p>
                         <h5 className="text-2xl font-bold text-slate-900 mt-1">
                           {selectedLocation.displayName}
@@ -1132,7 +1137,7 @@ export default function ClimateForecasting() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
                           <div className="rounded-2xl bg-slate-50 px-4 py-4 border border-slate-100">
                             <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                              Latitude
+                              {t?.forecasting?.climate?.latitude || "Latitude"}
                             </p>
                             <p className="text-lg font-semibold text-slate-900 mt-1">
                               {formatCoordinate(
@@ -1142,7 +1147,7 @@ export default function ClimateForecasting() {
                           </div>
                           <div className="rounded-2xl bg-slate-50 px-4 py-4 border border-slate-100">
                             <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                              Longitude
+                              {t?.forecasting?.climate?.longitude || "Longitude"}
                             </p>
                             <p className="text-lg font-semibold text-slate-900 mt-1">
                               {formatCoordinate(
@@ -1153,7 +1158,7 @@ export default function ClimateForecasting() {
                         </div>
                         <div className="mt-5 rounded-2xl border border-green-100 bg-green-50 px-4 py-4">
                           <p className="text-sm text-green-700 leading-6">
-                            GrainRise will use this saved farm location or current coordinates to fetch climate data.
+                            {t?.forecasting?.climate?.previewSubtitle || "This helps GrainRise know which weather data to check for your farm."}
                           </p>
                         </div>
                       </div>
@@ -1165,10 +1170,10 @@ export default function ClimateForecasting() {
                       <MapPin size={26} />
                     </div>
                     <h5 className="text-xl font-bold text-slate-900 mt-4">
-                      No location selected yet
+                      {t?.forecasting?.climate?.noLocationSelected || "No location selected yet"}
                     </h5>
                     <p className="text-slate-500 mt-2 max-w-lg mx-auto">
-                      Choose one of your registered farms or use your current location.
+                      {t?.forecasting?.climate?.noLocationSelectedSubtitle || "Choose one of your registered farms or use your current location."}
                     </p>
                   </div>
                 )}
@@ -1196,7 +1201,7 @@ export default function ClimateForecasting() {
                       className="animate-spin"
                     />
                   ) : null}
-                  Confirm Location
+                  {t?.forecasting?.climate?.confirmLocation || "Confirm Location"}
                 </button>
               </div>
             </div>

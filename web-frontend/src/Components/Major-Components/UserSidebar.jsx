@@ -32,6 +32,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { translations, useLanguagePreference } from "../../lib/translations";
 import Logo from "../../assets/Logo.png";
 
 export const getUserSidebarConfig = (role = "admin") => {
@@ -1319,9 +1320,33 @@ const UserSidebar = ({
 }) => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const [language] = useLanguagePreference();
+  const t = translations[language]?.farmer ?? translations.en.farmer;
 
   const sidebarConfig = getUserSidebarConfig(role);
-  const resolvedSections = sections ?? sidebarConfig.sections;
+  const resolvedSections = sections ?? (
+    role === "farmer"
+      ? sidebarConfig.sections.map((section) => ({
+          ...section,
+          title: section.title === "MAIN" ? t.sidebar.main :
+                 section.title === "FARM" ? t.sidebar.farm :
+                 section.title === "BUSINESS" ? t.sidebar.business :
+                 t.sidebar.resources,
+          items: section.items.map((item) => ({
+            ...item,
+            label:
+              item.path === "/farmer/dashboard" ? t.sidebar.dashboard :
+              item.path === "/farmer/farm-management" ? t.sidebar.farmManagement :
+              item.path === "/farmer/forecasting" ? t.sidebar.forecasting :
+              item.path === "/farmer/contracts" ? t.sidebar.contracts :
+              item.path === "/farmer/messages" ? t.sidebar.messages :
+              item.path === "/farmer/point-of-sale" ? t.sidebar.pointOfSale :
+              item.path === "/farmer/transaction-history" ? t.sidebar.transactionHistory :
+              item.path === "/farmer/news-updates" ? t.sidebar.newsUpdates : item.label,
+          })),
+        }))
+      : sidebarConfig.sections
+  );
 
   return (
     <aside

@@ -24,6 +24,7 @@ import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 import FarmerFarmFormModal from "../../Components/Modals/FarmerFarmFormModal";
 
 import useFarmManagement from "../../Components/hooks/Farmer/useFarmManagement";
+import { translations, useLanguagePreference } from "../../lib/translations";
 
 
 // ============================================================
@@ -614,9 +615,31 @@ const InventoryLoading = () => {
 // ============================================================
 
 export default function FarmerFarmManagement() {
-  const navigate =
-    useNavigate();
+  const navigate = useNavigate();
+  const [language] = useLanguagePreference();
+  const t = translations[language]?.farmer ?? translations.en.farmer;
 
+  const cropStatusOptions = [
+    { value: "", label: t.farmManagement.statuses.allCropStatuses },
+    { value: "available_for_planting", label: t.farmManagement.statuses.availableForPlanting },
+    { value: "land_preparation", label: t.farmManagement.statuses.landPreparation },
+    { value: "planted_and_growing", label: t.farmManagement.statuses.plantedAndGrowing },
+    { value: "harvested", label: t.farmManagement.statuses.harvested },
+    { value: "failed_crop", label: t.farmManagement.statuses.failedCrop },
+  ];
+
+  const farmStatusOptions = [
+    { value: "", label: t.farmManagement.statuses.allFarmStatuses },
+    { value: "active", label: t.farmManagement.statuses.active },
+    { value: "inactive", label: t.farmManagement.statuses.inactive },
+  ];
+
+  const sortOptions = [
+    { value: "newest", label: t.farmManagement.statuses.newest },
+    { value: "oldest", label: t.farmManagement.statuses.oldest },
+    { value: "size_highest", label: t.farmManagement.statuses.largestArea },
+    { value: "size_lowest", label: t.farmManagement.statuses.smallestArea },
+  ];
 
   // =========================================================
   // HOOK
@@ -944,13 +967,11 @@ export default function FarmerFarmManagement() {
       <Breadcrumbs
         items={[
           {
-            label:
-              "Farm",
+            label: t.sidebar.farm,
           },
 
           {
-            label:
-              "Farm Management",
+            label: t.farmManagement.title,
           },
         ]}
       />
@@ -966,11 +987,25 @@ export default function FarmerFarmManagement() {
           flex-col
           gap-4
           sm:flex-row
-          sm:items-start
+          sm:items-end
           sm:justify-between
         "
       >
-        <div />
+        <div className="flex flex-col gap-1">
+          <h1
+            className="
+              text-[clamp(2rem,3vw,2.5rem)]
+              font-extrabold
+              tracking-[-0.03em]
+              text-slate-900
+            "
+          >
+            {t.farmManagement.title}
+          </h1>
+          <p className="text-sm text-slate-500">
+            {t.farmManagement.subtitle}
+          </p>
+        </div>
 
 
         {/* ADD NEW FARM — ONLY MY FARMS */}
@@ -985,6 +1020,7 @@ export default function FarmerFarmManagement() {
               }
               className="
                 shrink-0
+                self-end
                 rounded-lg
                 bg-green-700
                 px-5
@@ -1000,7 +1036,7 @@ export default function FarmerFarmManagement() {
                 focus:ring-offset-2
               "
             >
-              Add New Farm
+              {t.farmManagement.addFarm}
             </button>
           )
         }
@@ -1183,7 +1219,7 @@ export default function FarmerFarmManagement() {
                       text-slate-600
                     "
                   >
-                    Search Farm
+                    {t.farmManagement.details.farm}
                   </label>
 
                   <div
@@ -1218,7 +1254,7 @@ export default function FarmerFarmManagement() {
                             event.target.value
                           )
                       }
-                      placeholder="Search farm name or location"
+                      placeholder={t.farmManagement.searchPlaceholder}
                       className="
                         w-full
                         rounded-lg
@@ -1253,15 +1289,15 @@ export default function FarmerFarmManagement() {
                       text-slate-600
                     "
                   >
-                    Current Crop Status
+                    {t.farmManagement.cropStatus}
                   </label>
                   <Dropdown
-                    options={CROP_STATUS_OPTIONS}
+                    options={cropStatusOptions}
                     value={filters.cropStatus}
                     onChange={(value) =>
                       handleFilterChange("cropStatus", value)
                     }
-                    placeholder="Crop Status"
+                    placeholder={t.farmManagement.cropStatus}
                   />
                 </div>
 
@@ -1277,15 +1313,15 @@ export default function FarmerFarmManagement() {
                       text-slate-600
                     "
                   >
-                    Farm Status
+                    {t.farmManagement.farmStatus}
                   </label>
                   <Dropdown
-                    options={FARM_STATUS_OPTIONS}
+                    options={farmStatusOptions}
                     value={filters.farmStatus}
                     onChange={(value) =>
                       handleFilterChange("farmStatus", value)
                     }
-                    placeholder="Farm Status"
+                    placeholder={t.farmManagement.farmStatus}
                   />
                 </div>
 
@@ -1301,10 +1337,10 @@ export default function FarmerFarmManagement() {
                       text-slate-600
                     "
                   >
-                    Sort By
+                    {t.farmManagement.sortBy}
                   </label>
                   <SortByDropdown
-                    options={SORT_OPTIONS}
+                    options={sortOptions}
                     value={filters.sortBy}
                     onChange={(value) =>
                       handleFilterChange("sortBy", value)
@@ -1526,12 +1562,8 @@ export default function FarmerFarmManagement() {
                             >
                               {
                                 hasActiveFilters
-                                  ? (
-                                    "No farms match your filters"
-                                  )
-                                  : (
-                                    "No registered farms yet"
-                                  )
+                                  ? t.farmManagement.noResults
+                                  : t.farmManagement.noFarms
                               }
                             </h2>
 
@@ -1546,12 +1578,8 @@ export default function FarmerFarmManagement() {
                             >
                               {
                                 hasActiveFilters
-                                  ? (
-                                    "Try changing or clearing the search and filter options."
-                                  )
-                                  : (
-                                    "Add your first farm or farm lot to start managing your farm records."
-                                  )
+                                  ? t.farmManagement.tryChangingFilters
+                                  : t.farmManagement.addFirstFarm
                               }
                             </p>
 

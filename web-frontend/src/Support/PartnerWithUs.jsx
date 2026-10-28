@@ -6,6 +6,7 @@ import {
   ImageIcon, FileCheck, Mail, Clock, RefreshCw, AlertTriangle, ExternalLink,
   Camera, Plus, ChevronLeft, ChevronRight, Pencil, Smartphone, MessageSquare
 } from 'lucide-react';
+import { translations, useLanguagePreference } from '../lib/translations';
 import LandingHeader from '../Components/Major-Components/LandingHeader';
 import LandingFooter from '../Components/Major-Components/LandingFooter';
 import shakehandsImg from '../assets/shakehands2.png';
@@ -156,6 +157,8 @@ export default function PartnerWithUs() {
   const location = useLocation();
   const routeParams = useParams();
   const fileInputRef = useRef(null);
+  const [language] = useLanguagePreference();
+  const t = translations[language].partner;
 
   /* ── View Modes: 'form' | 'awaiting_verification' | 'awaiting_sms_link' | 'sms_link_landing' | 'verifying' | 'verified_success' | 'token_invalid' ── */
   const isSmsVerifyInitial = typeof window !== 'undefined' && Boolean(window.location.pathname.includes('/verify-sms'));
@@ -1233,10 +1236,10 @@ export default function PartnerWithUs() {
               type="button"
               className="inline-flex items-center gap-2 bg-transparent text-gray-600 dark:text-gray-300 text-xs sm:text-sm font-medium hover:text-[#00580C] dark:hover:text-emerald-400 px-1 py-1 rounded-md transition-colors cursor-pointer w-fit"
               onClick={() => navigate('/')}
-              aria-label="Back to GrainRise Home"
+              aria-label={t.backToHome}
             >
               <ArrowLeft size={16} strokeWidth={2} />
-              <span>Back to GrainRise Home</span>
+              <span>{t.backToHome}</span>
             </button>
           </AnimatedSection>
 
@@ -1255,13 +1258,13 @@ export default function PartnerWithUs() {
                   <Loader2 size={36} className="animate-spin text-[#00580C] dark:text-emerald-400" />
                 </div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#00580C] dark:text-emerald-400 mb-1">
-                  Verifying Email
+                  {t.verifyingEmail}
                 </span>
                 <h2 className="font-['Outfit'] text-2xl sm:text-[26px] font-extrabold text-[#00580C] dark:text-emerald-400 mb-2">
-                  Confirming Your Partnership Inquiry...
+                  {t.verifyingTitle}
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-[480px] leading-relaxed">
-                  Please wait a moment while we verify your email address.
+                  {t.verifyingDescription}
                 </p>
               </div>
             )}
@@ -1274,15 +1277,15 @@ export default function PartnerWithUs() {
                 </div>
 
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#00580C] dark:text-emerald-400 mb-1">
-                  Farmer Partner Verification
+                  {t.farmerVerificationTitle}
                 </span>
 
                 <h2 className="font-['Outfit'] text-2xl sm:text-[26px] font-bold text-gray-900 dark:text-white mb-2">
-                  Verify Your Phone Number
+                  {t.farmerVerificationSubtitle}
                 </h2>
 
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-[500px] leading-relaxed mb-6">
-                  Click the button below to verify your phone number and confirm your GrainRise Farmer Partner Application.
+                  {t.farmerVerificationDescription}
                 </p>
 
                 {smsConfirmError && (
@@ -1301,19 +1304,19 @@ export default function PartnerWithUs() {
                     {isConfirmingSms ? (
                       <>
                         <Loader2 size={16} className="animate-spin" />
-                        <span>Verifying Phone Number...</span>
+                        <span>{t.verifyingPhone}</span>
                       </>
                     ) : (
                       <>
                         <CheckCircle2 size={16} />
-                        <span>Verify Phone Number</span>
+                        <span>{t.verifyPhoneButton}</span>
                       </>
                     )}
                   </button>
 
                   <div className="flex items-center justify-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mt-1">
                     <Clock size={13} className="text-[#00580C] dark:text-emerald-400" />
-                    <span>Link valid for 24 hours · One-time verification</span>
+                    <span>{t.linkValidity}</span>
                   </div>
 
                   <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 w-full flex items-center justify-center gap-3 text-xs text-gray-500 dark:text-gray-400">
@@ -1322,7 +1325,7 @@ export default function PartnerWithUs() {
                       onClick={() => navigate('/')}
                       className="hover:text-gray-800 dark:hover:text-white cursor-pointer"
                     >
-                      Return to Home
+                      {t.returnToHome}
                     </button>
                     <span>·</span>
                     <button
@@ -1330,7 +1333,7 @@ export default function PartnerWithUs() {
                       onClick={() => setViewState('form')}
                       className="hover:text-gray-800 dark:hover:text-white cursor-pointer"
                     >
-                      Go to Partner Form
+                      {t.goToPartnerForm}
                     </button>
                   </div>
                 </div>
@@ -1344,13 +1347,13 @@ export default function PartnerWithUs() {
                   <CheckCircle2 size={38} strokeWidth={2.2} />
                 </div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#00580C] dark:text-emerald-400 mb-1">
-                  Verification Complete
+                  {t.verificationComplete}
                 </span>
                 <h2 className="font-['Outfit'] text-2xl sm:text-[26px] font-extrabold text-[#00580C] dark:text-emerald-400 mb-2">
-                  {verifiedMethod === 'sms' ? 'Mobile Number Verified Successfully!' : 'Email Verified Successfully!'}
+                  {verifiedMethod === 'sms' ? t.smsVerified : t.emailVerified}
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-[480px] leading-relaxed mb-6">
-                  Your partnership inquiry has been successfully submitted. Thank you for reaching out to us. Our operations team will review your credentials and connect with you shortly.
+                  {t.successDescription}
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <button
@@ -1358,14 +1361,14 @@ export default function PartnerWithUs() {
                     className="bg-[#00580C] hover:bg-[#014209] text-white rounded-lg px-5 py-2.5 text-xs sm:text-[12.5px] font-semibold transition-colors cursor-pointer"
                     onClick={handleStartNewInquiry}
                   >
-                    Submit Another Inquiry
+                    {t.submitAnother}
                   </button>
                   <button
                     type="button"
                     className="border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg px-5 py-2.5 text-xs sm:text-[12.5px] font-semibold transition-colors cursor-pointer"
                     onClick={() => navigate('/')}
                   >
-                    Back to GrainRise Home
+                    {t.backToHome}
                   </button>
                 </div>
               </div>
@@ -1378,13 +1381,13 @@ export default function PartnerWithUs() {
                   <AlertTriangle size={36} strokeWidth={2.2} />
                 </div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mb-1">
-                  Verification Failed
+                  {t.verificationFailed}
                 </span>
                 <h2 className="font-['Outfit'] text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  Verification Link Invalid or Expired
+                  {t.invalidLink}
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-[480px] leading-relaxed mb-6">
-                  This verification link is no longer valid. It may have already been used, or the 15-minute verification window has expired. Please request a new verification email.
+                  {t.invalidLinkDescription}
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <button
@@ -1426,15 +1429,15 @@ export default function PartnerWithUs() {
                 </div>
 
                 <h2 className="font-['Outfit'] text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  Please Verify Your Email Address
+                  {t.verifyYourEmail}
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-[520px] leading-relaxed mb-4">
-                  We sent a verification link to <strong className="text-gray-900 dark:text-white font-semibold">{formData.email}</strong>. Please check your inbox and click the link to complete your submission.
+                  {t.verifyYourEmailDescription.replace('{email}', formData.email)}
                 </p>
 
                 <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-3.5 py-1.5 rounded-full mb-6">
                   <Clock size={12} className="text-[#00580C] dark:text-emerald-400" />
-                  <span>Verification link expires in 15 minutes · One-time use only</span>
+                  <span>{t.verificationExpires}</span>
                 </div>
 
                 {/* ── Verification Email Sent Notice ── */}
@@ -1490,8 +1493,8 @@ export default function PartnerWithUs() {
                       )}
                       <span>
                         {resendCooldown > 0
-                          ? `Resend Verification Email (${resendCooldown}s)`
-                          : 'Resend Verification Email'}
+                          ? `${t.resendVerificationEmail} (${resendCooldown}s)`
+                          : t.resendVerificationEmail}
                       </span>
                     </button>
 
@@ -1500,7 +1503,7 @@ export default function PartnerWithUs() {
                       onClick={() => setViewState('form')}
                       className="px-4 py-2 text-xs font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer"
                     >
-                      Edit Form Details
+                      {t.editFormDetails}
                     </button>
                   </div>
                 </div>
@@ -1519,11 +1522,11 @@ export default function PartnerWithUs() {
                 </div>
 
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#00580C] dark:text-emerald-400 mb-1">
-                  Application Submitted
+                  {t.applicationSubmitted}
                 </span>
 
                 <h2 className="font-['Outfit'] text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  Verification Link Sent via SMS
+                  {t.verificationLinkSentViaSms}
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-[540px] leading-relaxed mb-4">
                   We sent a secure, one-time verification link to <strong className="text-gray-900 dark:text-white font-semibold">+63 {formData.contactNumber}</strong>.
@@ -1534,7 +1537,7 @@ export default function PartnerWithUs() {
                   <AlertTriangle size={18} className="shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
                   <div className="flex-1">
                     <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 mb-1">
-                      Important Notice:
+                      {t.importantNotice}
                     </p>
                     <p className="text-[12px] text-amber-800 dark:text-amber-300 leading-relaxed mb-2 font-medium">
                       Your verification link is on its way. SMS delivery may be delayed depending on mobile signal. You may safely leave this page and return through the verification link once it arrives.
@@ -1547,7 +1550,7 @@ export default function PartnerWithUs() {
                       onClick={handleSwitchToEmailVerification}
                       className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-bold text-[#00580C] dark:text-emerald-400 hover:underline cursor-pointer"
                     >
-                      <span>Switch to Email Verification instead &rarr;</span>
+                      <span dangerouslySetInnerHTML={{ __html: t.switchToEmailVerification }} />
                     </button>
                   </div>
                 </div>
@@ -1555,9 +1558,9 @@ export default function PartnerWithUs() {
                 {/* Link Expiration Indicator */}
                 <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 mb-6 bg-gray-50 dark:bg-[#163321] px-4 py-2 rounded-full border border-gray-200 dark:border-[#2d5c3c]">
                   <Clock size={13} className="text-[#00580C] dark:text-emerald-400" />
-                  <span>Link valid for 24 hours.</span>
+                  <span>{t.linkValidFor24Hours}</span>
                   <span className="text-gray-300 dark:text-gray-600">·</span>
-                  <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400">One-time use only</span>
+                  <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400">{t.oneTimeUseOnly}</span>
                 </div>
 
                 {/* Resend & Action Buttons */}
@@ -1588,7 +1591,7 @@ export default function PartnerWithUs() {
                       onClick={() => navigate('/')}
                       className="text-xs font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white cursor-pointer"
                     >
-                      Return to Home
+                      {t.returnToHome}
                     </button>
                     <span className="text-gray-300 dark:text-gray-600">·</span>
                     <button
@@ -1596,7 +1599,7 @@ export default function PartnerWithUs() {
                       onClick={() => setViewState('form')}
                       className="text-xs font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white cursor-pointer"
                     >
-                      Edit Form Details
+                      {t.editFormDetails}
                     </button>
                   </div>
                 </div>
@@ -1613,19 +1616,19 @@ export default function PartnerWithUs() {
                         PARTNERSHIP
                       </div>
                       <span className="text-xs font-semibold text-[#00580C] dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 px-2.5 py-0.5 rounded-full">
-                        Step {currentStep} of 4 — {
-                          currentStep === 1 ? 'Your Details' :
-                          currentStep === 2 ? 'Partnership Details' :
-                          currentStep === 3 ? 'Verification' :
-                          'Review & Submit'
+                        {t.stepLabel} {currentStep} of 4 — {
+                          currentStep === 1 ? t.yourDetails :
+                          currentStep === 2 ? t.partnershipDetails :
+                          currentStep === 3 ? t.verification :
+                          t.reviewSubmit
                         }
                       </span>
                     </div>
                     <h1 className="font-['Outfit'] text-2xl sm:text-[25px] font-extrabold text-[#00580C] dark:text-emerald-400 tracking-tight mb-1.5 leading-tight">
-                      Partner With GrainRise
+                      {t.partnerWithGrainRise}
                     </h1>
                     <p className="text-xs sm:text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed max-w-[620px]">
-                      Interested in connecting your organization with the GrainRise supply chain network? Send us your partnership details and our team will review your inquiry.
+                      {t.formIntro}
                     </p>
                   </div>
 

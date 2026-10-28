@@ -1,6 +1,7 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { translations, useLanguagePreference } from "../lib/translations";
 
 import CustomTextbox from "../Components/Minor-Components/CustomTextbox";
 import CustomGreenButton from "../Components/Minor-Components/CustomGreenButton";
@@ -18,10 +19,13 @@ const AdminLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [language] = useLanguagePreference();
 
   const navigate = useNavigate();
   const { request } = useApi();
   const { login } = useAuth();
+  const text = translations[language].auth.adminLogin;
+  const common = translations[language].common;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,12 +35,12 @@ const AdminLogin = () => {
     }
 
     if (!email.trim()) {
-      setLoginError("Email address is required.");
+      setLoginError(text.emailRequired);
       return;
     }
 
     if (!password) {
-      setLoginError("Password is required.");
+      setLoginError(text.passwordRequired);
       return;
     }
 
@@ -59,7 +63,7 @@ const AdminLogin = () => {
     } catch (error) {
       setLoginError(
         error?.message ||
-          "Unable to log in. Please check your credentials."
+          text.loginError
       );
     } finally {
       setIsLoggingIn(false);
@@ -83,7 +87,7 @@ const AdminLogin = () => {
           icon={
             <span className="flex items-center gap-2 px-2 text-sm font-medium whitespace-nowrap">
               <ArrowLeft size={18} />
-              Back to Home
+              {common.backToHome}
             </span>
           }
           className="absolute top-6 left-8 !rounded-full w-auto !p-2 z-10"
@@ -104,8 +108,8 @@ const AdminLogin = () => {
           <form className="space-y-3" onSubmit={handleSubmit}>
             {/* Email */}
             <CustomTextbox
-              label="Email Address"
-              placeholder="youremail@example.com"
+              label={text.emailLabel}
+              placeholder={text.emailPlaceholder}
               type="email"
               value={email}
               onChange={(e) => {
@@ -121,20 +125,20 @@ const AdminLogin = () => {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-medium text-gray-700">
-                  Password
+                  {text.passwordLabel}
                 </label>
 
                 <Link
                   to="/forgot-password"
                   className="text-sm text-green-700 font-semibold hover:underline"
                 >
-                  Forgot Password?
+                  {text.forgotPassword}
                 </Link>
               </div>
 
               <div className="relative">
                 <CustomTextbox
-                  placeholder="Enter your Password"
+                  placeholder={text.passwordPlaceholder}
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => {
@@ -175,7 +179,7 @@ const AdminLogin = () => {
 
             {/* Login Button */}
             <CustomGreenButton
-              text={isLoggingIn ? "Logging In..." : "Log In"}
+              text={isLoggingIn ? text.loggingIn : text.signIn}
               type="submit"
               className="w-full !py-3 !rounded-full mt-5"
             />

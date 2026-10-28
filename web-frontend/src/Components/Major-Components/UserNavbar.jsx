@@ -16,10 +16,12 @@ import {
   CircleUserRound,
   Moon,
   CircleHelp,
+  Languages,
   LogOut,
   AlertCircle,
 } from "lucide-react";
 
+import { translations, useLanguagePreference } from "../../lib/translations";
 import useAuth from "../hooks/useAuth";
 import useAdminNotifications from "../hooks/AccountAdmin/useAdminNotifications";
 import useFarmerNotifications from "../hooks/Farmer/UseFarmerNotifications";
@@ -40,27 +42,27 @@ export const getUserNavbarMenuItems = (
   navigate,
   onLogout
 ) => [
-  {
-    label: "Help Center",
+    {
+      label: "Help Center",
 
-    onClick: () => {
-      navigate("/admin/help-center");
+      onClick: () => {
+        navigate("/admin/help-center");
+      },
     },
-  },
 
-  {
-    label: "Logout",
+    {
+      label: "Logout",
 
-    onClick: () => {
-      if (onLogout) {
-        onLogout();
-        return;
-      }
+      onClick: () => {
+        if (onLogout) {
+          onLogout();
+          return;
+        }
 
-      navigate("/login");
+        navigate("/login");
+      },
     },
-  },
-];
+  ];
 
 
 // ============================================================
@@ -184,11 +186,10 @@ const formatNotificationTime = (
       );
 
 
-    return `${minutes} ${
-      minutes === 1
+    return `${minutes} ${minutes === 1
         ? "min"
         : "mins"
-    }`;
+      }`;
   }
 
 
@@ -202,11 +203,10 @@ const formatNotificationTime = (
       );
 
 
-    return `${hours} ${
-      hours === 1
+    return `${hours} ${hours === 1
         ? "hour"
         : "hours"
-    }`;
+      }`;
   }
 
 
@@ -220,11 +220,10 @@ const formatNotificationTime = (
       );
 
 
-    return `${days} ${
-      days === 1
+    return `${days} ${days === 1
         ? "day"
         : "days"
-    }`;
+      }`;
   }
 
 
@@ -483,29 +482,29 @@ const UserNavbar = ({
 
   const {
     notifications:
-      adminNotifications,
+    adminNotifications,
 
     unreadCount:
-      adminUnreadCount,
+    adminUnreadCount,
 
     isLoading:
-      isLoadingAdminNotifications,
+    isLoadingAdminNotifications,
 
     isUpdating:
-      isUpdatingAdminNotifications,
+    isUpdatingAdminNotifications,
 
     error:
-      adminNotificationError,
+    adminNotificationError,
 
     loadUnreadCount,
 
     refreshNotifications,
 
     openNotification:
-      openAdminNotification,
+    openAdminNotification,
 
     markAllAsRead:
-      markAllAdminNotificationsAsRead,
+    markAllAdminNotificationsAsRead,
   } = useAdminNotifications({
     enabled:
       isAdmin,
@@ -518,31 +517,31 @@ const UserNavbar = ({
 
   const {
     notifications:
-      farmerNotifications,
+    farmerNotifications,
 
     unreadCount:
-      farmerUnreadCount,
+    farmerUnreadCount,
 
     isLoading:
-      isLoadingFarmerNotifications,
+    isLoadingFarmerNotifications,
 
     isUpdating:
-      isUpdatingFarmerNotifications,
+    isUpdatingFarmerNotifications,
 
     error:
-      farmerNotificationError,
+    farmerNotificationError,
 
     loadUnreadCount:
-      loadFarmerUnreadCount,
+    loadFarmerUnreadCount,
 
     refreshNotifications:
-      refreshFarmerNotifications,
+    refreshFarmerNotifications,
 
     openNotification:
-      openFarmerNotification,
+    openFarmerNotification,
 
     markAllAsRead:
-      markAllFarmerNotificationsAsRead,
+    markAllFarmerNotificationsAsRead,
   } = useFarmerNotifications({
     enabled:
       isFarmer,
@@ -555,28 +554,28 @@ const UserNavbar = ({
 
   const {
     notifications:
-      encoderNotifications,
+    encoderNotifications,
 
     unseenCount:
-      encoderUnseenCount,
+    encoderUnseenCount,
 
     isLoading:
-      isLoadingEncoderNotifications,
+    isLoadingEncoderNotifications,
 
     isUpdating:
-      isUpdatingEncoderNotifications,
+    isUpdatingEncoderNotifications,
 
     error:
-      encoderNotificationError,
+    encoderNotificationError,
 
     loadUnseenCount:
-      loadEncoderUnseenCount,
+    loadEncoderUnseenCount,
 
     refreshNotifications:
-      refreshEncoderNotifications,
+    refreshEncoderNotifications,
 
     openNotification:
-      openEncoderNotification,
+    openEncoderNotification,
   } = useEncoderNotifications({
     enabled:
       isEncoder,
@@ -589,31 +588,31 @@ const UserNavbar = ({
 
   const {
     notifications:
-      procurementNotifications,
+    procurementNotifications,
 
     unseenCount:
-      procurementUnseenCount,
+    procurementUnseenCount,
 
     isLoading:
-      isLoadingProcurementNotifications,
+    isLoadingProcurementNotifications,
 
     isUpdating:
-      isUpdatingProcurementNotifications,
+    isUpdatingProcurementNotifications,
 
     error:
-      procurementNotificationError,
+    procurementNotificationError,
 
     loadUnseenCount:
-      loadProcurementUnseenCount,
+    loadProcurementUnseenCount,
 
     refreshNotifications:
-      refreshProcurementNotifications,
+    refreshProcurementNotifications,
 
     openNotification:
-      openProcurementNotification,
+    openProcurementNotification,
 
     markAllAsRead:
-      markAllProcurementNotificationsAsRead,
+    markAllProcurementNotificationsAsRead,
   } = useProcurementNotifications({
     enabled:
       isProcurement,
@@ -626,31 +625,31 @@ const UserNavbar = ({
 
   const {
     notifications:
-      financeNotifications,
+    financeNotifications,
 
     unseenCount:
-      financeUnseenCount,
+    financeUnseenCount,
 
     isLoading:
-      isLoadingFinanceNotifications,
+    isLoadingFinanceNotifications,
 
     isUpdating:
-      isUpdatingFinanceNotifications,
+    isUpdatingFinanceNotifications,
 
     error:
-      financeNotificationError,
+    financeNotificationError,
 
     loadUnseenCount:
-      loadFinanceUnseenCount,
+    loadFinanceUnseenCount,
 
     refreshNotifications:
-      refreshFinanceNotifications,
+    refreshFinanceNotifications,
 
     openNotification:
-      openFinanceNotification,
+    openFinanceNotification,
 
     markAllAsRead:
-      markAllFinanceNotificationsAsRead,
+    markAllFinanceNotificationsAsRead,
   } = useFinanceNotifications({
     enabled:
       isFinance,
@@ -667,31 +666,31 @@ const UserNavbar = ({
 
   const {
     notifications:
-      salesNotifications,
+    salesNotifications,
 
     unseenCount:
-      salesUnseenCount,
+    salesUnseenCount,
 
     isLoading:
-      isLoadingSalesNotifications,
+    isLoadingSalesNotifications,
 
     isUpdating:
-      isUpdatingSalesNotifications,
+    isUpdatingSalesNotifications,
 
     error:
-      salesNotificationError,
+    salesNotificationError,
 
     loadUnseenCount:
-      loadSalesUnseenCount,
+    loadSalesUnseenCount,
 
     refreshNotifications:
-      refreshSalesNotifications,
+    refreshSalesNotifications,
 
     openNotification:
-      openSalesNotification,
+    openSalesNotification,
 
     markAllAsRead:
-      markAllSalesNotificationsAsRead,
+    markAllSalesNotificationsAsRead,
   } = useSalesNotifications({
     enabled:
       isSales,
@@ -708,31 +707,31 @@ const UserNavbar = ({
 
   const {
     notifications:
-      logisticsNotifications,
+    logisticsNotifications,
 
     unseenCount:
-      logisticsUnseenCount,
+    logisticsUnseenCount,
 
     isLoading:
-      isLoadingLogisticsNotifications,
+    isLoadingLogisticsNotifications,
 
     isUpdating:
-      isUpdatingLogisticsNotifications,
+    isUpdatingLogisticsNotifications,
 
     error:
-      logisticsNotificationError,
+    logisticsNotificationError,
 
     loadUnseenCount:
-      loadLogisticsUnseenCount,
+    loadLogisticsUnseenCount,
 
     refreshNotifications:
-      refreshLogisticsNotifications,
+    refreshLogisticsNotifications,
 
     openNotification:
-      openLogisticsNotification,
+    openLogisticsNotification,
 
     markAllAsRead:
-      markAllLogisticsNotificationsAsRead,
+    markAllLogisticsNotificationsAsRead,
   } = useLogisticsNotifications({
     enabled:
       isLogistics,
@@ -787,6 +786,13 @@ const UserNavbar = ({
     darkModeEnabled,
     setDarkModeEnabled,
   ] = useState(false);
+
+  const [language, setLanguage] = useLanguagePreference();
+
+  const languageOptions = [
+    { code: "en", label: "English", flag: "🇺🇸" },
+    { code: "tl", label: "Tagalog", flag: "🇵🇭" },
+  ];
 
 
   // =========================================================
@@ -873,7 +879,7 @@ const UserNavbar = ({
       const triggerRefresh = () => {
         const refreshCount = getRefreshCount();
         if (refreshCount) {
-          refreshCount().catch(() => {});
+          refreshCount().catch(() => { });
         }
       };
 
@@ -1135,9 +1141,9 @@ const UserNavbar = ({
     menuItems.length > 0
       ? menuItems
       : getUserNavbarMenuItems(
-          navigate,
-          handleLogout
-        );
+        navigate,
+        handleLogout
+      );
 
 
   // =========================================================
@@ -1268,9 +1274,9 @@ const UserNavbar = ({
                   : isDriver
                     ? driverUnseenCount
                     : (
-                        notificationCount ||
-                        localUnreadCount
-                      );
+                      notificationCount ||
+                      localUnreadCount
+                    );
 
 
 
@@ -2017,7 +2023,7 @@ const UserNavbar = ({
 
                       {
                         usesDatabaseNotifications &&
-                        isUpdatingDatabaseNotifications
+                          isUpdatingDatabaseNotifications
                           ? "Updating..."
                           : "Mark all as read"
                       }
@@ -2036,8 +2042,8 @@ const UserNavbar = ({
 
                 {
                   usesDatabaseNotifications &&
-                  isLoadingDatabaseNotifications &&
-                  effectiveNotifications.length === 0 ? (
+                    isLoadingDatabaseNotifications &&
+                    effectiveNotifications.length === 0 ? (
 
                     <div className="flex items-center justify-center py-8">
 
@@ -2068,11 +2074,11 @@ const UserNavbar = ({
                         const itemRead =
                           usesDatabaseNotifications
                             ? Boolean(
-                                item?.is_read || item?.status === "seen"
-                              )
+                              item?.is_read || item?.status === "seen"
+                            )
                             : Boolean(
-                                item?.read
-                              );
+                              item?.read
+                            );
 
 
                         const itemTitle =
@@ -2084,16 +2090,16 @@ const UserNavbar = ({
                         const itemDescription =
                           usesDatabaseNotifications
                             ? (item?.notification_content ||
-                                item?.message ||
-                                item?.content)
+                              item?.message ||
+                              item?.content)
                             : item?.description;
 
 
                         const itemTime =
                           usesDatabaseNotifications
                             ? formatNotificationTime(
-                                item?.created_at
-                              )
+                              item?.created_at
+                            )
                             : item?.time;
 
                         const seenByName =
@@ -2110,11 +2116,10 @@ const UserNavbar = ({
                                 item
                               )
                             }
-                            className={`dark-readable-notification-item p-3 border-b border-slate-100 last:border-b-0 cursor-pointer hover:bg-slate-50 transition-colors ${
-                              itemRead
+                            className={`dark-readable-notification-item p-3 border-b border-slate-100 last:border-b-0 cursor-pointer hover:bg-slate-50 transition-colors ${itemRead
                                 ? "bg-white"
                                 : "bg-[#F0F8F1]"
-                            }`}
+                              }`}
                           >
 
                             <div className="flex items-start gap-3">
@@ -2198,9 +2203,9 @@ const UserNavbar = ({
                                     usesDatabaseNotifications
                                       ? "View"
                                       : (
-                                          item?.actionLabel ||
-                                          "View Stock"
-                                        )
+                                        item?.actionLabel ||
+                                        "View Stock"
+                                      )
                                   }
 
                                 </button>
@@ -2344,11 +2349,10 @@ const UserNavbar = ({
 
           <ChevronDown
             size={16}
-            className={`text-gray-400 transition-transform hidden sm:block ${
-              menuOpen
+            className={`text-gray-400 transition-transform hidden sm:block ${menuOpen
                 ? "rotate-180"
                 : ""
-            }`}
+              }`}
           />
 
         </button>
@@ -2407,24 +2411,54 @@ const UserNavbar = ({
                   onClick={
                     toggleTheme
                   }
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition cursor-pointer ${
-                    darkModeEnabled
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition cursor-pointer ${darkModeEnabled
                       ? "bg-[#0B7A2A]"
                       : "bg-gray-300"
-                  }`}
+                    }`}
                 >
 
                   <span
-                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition ${
-                      darkModeEnabled
+                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition ${darkModeEnabled
                         ? "translate-x-4.5"
                         : "translate-x-1"
-                    }`}
+                      }`}
                   />
 
                 </button>
 
               </div>
+
+
+              {isFarmer && (
+                <div className="w-full flex items-center justify-between px-1.5 py-1.5 text-left text-gray-500">
+                  <span className="flex items-center gap-1.5 text-sm leading-none text-gray-700">
+                    <Languages size={16} />
+                    <span className="text-sm">Language</span>
+                  </span>
+
+                  <div className="flex items-center overflow-hidden rounded-md border border-gray-200 bg-white">
+                    {languageOptions.map((option) => {
+                      const isActive = language === option.code;
+
+                      return (
+                        <button
+                          key={option.code}
+                          type="button"
+                          onClick={() => setLanguage(option.code)}
+                          className={`flex h-6 min-w-[46px] items-center justify-center gap-1 px-1.5 text-[9px] font-semibold leading-none tracking-tight transition ${
+                            isActive ? "bg-[#0B7A2A] text-white" : "bg-white text-gray-600 hover:bg-gray-100"
+                          }`}
+                          aria-label={`Switch language to ${option.label}`}
+                          title={option.label}
+                        >
+                          <span aria-hidden="true" className="text-[12px] leading-none">{option.flag}</span>
+                          <span>{option.code.toUpperCase()}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
 
               {/* =============================================
@@ -2478,11 +2512,10 @@ const UserNavbar = ({
                               false
                             );
                           }}
-                          className={`w-full flex items-center gap-1.5 px-1.5 py-1.5 text-left transition cursor-pointer ${
-                            isLogout
+                          className={`w-full flex items-center gap-1.5 px-1.5 py-1.5 text-left transition cursor-pointer ${isLogout
                               ? "mt-0.5 pt-2 border-t border-gray-300 text-red-600 hover:text-red-700"
                               : "text-gray-500 hover:text-gray-700"
-                          }`}
+                            }`}
                         >
 
                           {

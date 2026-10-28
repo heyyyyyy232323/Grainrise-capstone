@@ -16,6 +16,7 @@ import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 
 import FarmerContractDetailsModal from "../../Components/Modals/FarmerContractDetailsModal";
 import FarmerContractVoidRequestModal from "../../Components/Modals/FarmerContractVoidRequestModal";
+import { translations, useLanguagePreference } from "../../lib/translations";
 
 
 // ============================================================
@@ -222,6 +223,9 @@ const getFulfillmentStatusStyle = (
 // ============================================================
 
 export default function FarmerContractsCurrent() {
+  const [language] = useLanguagePreference();
+  const t = translations[language]?.farmer ?? translations.en.farmer;
+
   const {
     contracts,
     selectedContract,
@@ -737,7 +741,7 @@ export default function FarmerContractsCurrent() {
                   event.target.value
                 )
               }
-              placeholder="Search Contract, Miller, or Product"
+              placeholder={t.contracts.filter.searchContracts}
               className="
                 w-full
                 rounded-lg
@@ -773,15 +777,15 @@ export default function FarmerContractsCurrent() {
             <div className="w-40">
               <Dropdown
                 options={[
-                  { label: "Contract Status", value: "" },
-                  { label: "Active", value: "active" },
-                  { label: "Void Requested", value: "void_requested" },
-                  { label: "Completed", value: "completed" },
-                  { label: "Voided", value: "voided" },
+                  { label: t.contracts.filter.contractStatus, value: "" },
+                  { label: t.contracts.filter.active, value: "active" },
+                  { label: t.contracts.filter.voidRequested, value: "void_requested" },
+                  { label: t.contracts.filter.completed, value: "completed" },
+                  { label: t.contracts.filter.voided, value: "voided" },
                 ]}
                 value={statusFilter}
                 onChange={setStatusFilter}
-                placeholder="Contract Status"
+                placeholder={t.contracts.filter.contractStatus}
               />
             </div>
 
@@ -789,14 +793,14 @@ export default function FarmerContractsCurrent() {
             <div className="w-44">
               <Dropdown
                 options={[
-                  { label: "Fulfillment Status", value: "" },
-                  { label: "Pending", value: "pending" },
-                  { label: "Partially Fulfilled", value: "partially_fulfilled" },
-                  { label: "Fulfilled", value: "fulfilled" },
+                  { label: t.contracts.filter.fulfillmentStatus, value: "" },
+                  { label: t.contracts.filter.pendingFulfillment, value: "pending" },
+                  { label: t.contracts.filter.partiallyFulfilled, value: "partially_fulfilled" },
+                  { label: t.contracts.filter.fulfilled, value: "fulfilled" },
                 ]}
                 value={fulfillmentFilter}
                 onChange={setFulfillmentFilter}
-                placeholder="Fulfillment Status"
+                placeholder={t.contracts.filter.fulfillmentStatus}
               />
             </div>
 
@@ -804,12 +808,12 @@ export default function FarmerContractsCurrent() {
             <div className="w-28">
               <Dropdown
                 options={[
-                  { label: "All Years", value: "" },
+                  { label: t.contracts.filter.allYears, value: "" },
                   ...yearOptions.map((y) => ({ label: String(y), value: String(y) })),
                 ]}
                 value={yearFilter}
                 onChange={setYearFilter}
-                placeholder="Year"
+                placeholder={t.contracts.filter.year}
               />
             </div>
 
@@ -817,22 +821,22 @@ export default function FarmerContractsCurrent() {
             <div className="w-32">
               <Dropdown
                 options={[
-                  { label: "All Months", value: "" },
+                  { label: t.contracts.filter.allMonths, value: "" },
                   ...MONTHS.map((m) => ({ label: m.label, value: m.value })),
                 ]}
                 value={monthFilter}
                 onChange={setMonthFilter}
-                placeholder="Month"
+                placeholder={t.contracts.filter.month}
               />
             </div>
 
             {/* SORT */}
             <SortByDropdown
               options={[
-                { value: "newest", label: "Newest First" },
-                { value: "oldest", label: "Oldest First" },
-                { value: "highest_value", label: "Highest Value" },
-                { value: "lowest_value", label: "Lowest Value" },
+                { value: "newest", label: t.contracts.filter.newest },
+                { value: "oldest", label: t.contracts.filter.oldest },
+                { value: "highest_value", label: t.contracts.filter.highestValue },
+                { value: "lowest_value", label: t.contracts.filter.lowestValue },
               ]}
               value={sortBy}
               onChange={setSortBy}
@@ -861,7 +865,7 @@ export default function FarmerContractsCurrent() {
                 text-slate-500
               "
             >
-              Loading current contracts...
+              {t.contracts.empty.loading}
             </div>
           )}
 
