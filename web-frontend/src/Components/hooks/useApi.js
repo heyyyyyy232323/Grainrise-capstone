@@ -223,7 +223,7 @@ const useApi = () => {
               normalizedEndpoint.includes("/auth/login") ||
               normalizedEndpoint.includes("/auth/admin/login");
 
-            if (!isLoginEndpoint) {
+            if (!isLoginEndpoint && authToken) {
               const tokenActive = isTokenValid(authToken);
               const isAuthEndpoint =
                 normalizedEndpoint === "/auth/profile" ||
@@ -241,9 +241,9 @@ const useApi = () => {
                 detailMsg.includes("signature has expired") ||
                 detailMsg.includes("authentication credentials were not provided");
 
-              // Only evict the session if the token is genuinely invalid, missing, or rejected by core auth checks.
-              // Prevents valid sessions from being logged out due to unrelated or role-mismatched API 401 responses.
-              if (!authToken || !tokenActive || isAuthEndpoint || isTokenSpecificError) {
+              // Only evict the session if the token is genuinely invalid or the backend rejects a core auth check.
+              // Unauthenticated public flows and unrelated role-mismatched APIs should fail gracefully without logging the user out.
+              if (!tokenActive || isAuthEndpoint || isTokenSpecificError) {
                 try {
                   localStorage.removeItem("grainrise_token");
                   localStorage.removeItem("grainrise_user");
