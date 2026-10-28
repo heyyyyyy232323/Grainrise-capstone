@@ -363,9 +363,33 @@ urlpatterns = [
     ),
 
     path(
+        "partnership-inquiries/verify-sms/<str:token>",
+        partnership_inquiry.verify_partnership_sms_link,
+        name="partnership-inquiry-verify-sms-no-slash",
+    ),
+
+    path(
+        "partnership-inquiries/verify-sms/<str:token>/",
+        partnership_inquiry.verify_partnership_sms_link,
+        name="partnership-inquiry-verify-sms",
+    ),
+
+    path(
+        "partnership-inquiries/verify-sms/",
+        partnership_inquiry.verify_partnership_sms_link,
+        name="partnership-inquiry-verify-sms-post",
+    ),
+
+    path(
         "partnership-inquiries/resend-verification/",
         partnership_inquiry.resend_partnership_verification,
         name="partnership-inquiry-resend-verification",
+    ),
+
+    path(
+        "partnership-inquiries/verify-otp/",
+        partnership_inquiry.verify_partnership_otp,
+        name="partnership-inquiry-verify-otp",
     ),
 
 

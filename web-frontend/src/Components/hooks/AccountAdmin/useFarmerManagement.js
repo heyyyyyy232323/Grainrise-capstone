@@ -8,13 +8,14 @@ import useApi from "../useApi";
 
 
 // ============================================================
-// DEFAULTS
+// DEFAULT VALUES
 // ============================================================
 
 const DEFAULT_COUNTS = {
   to_review: 0,
   active: 0,
   inactive: 0,
+  "to-review": 0,
 };
 
 
@@ -22,18 +23,12 @@ const DEFAULT_COUNTS = {
 // HELPERS
 // ============================================================
 
-const normalizeTab = (
-  tab
-) => {
-  if (
-    tab === "active"
-  ) {
+const normalizeTab = (tab) => {
+  if (tab === "active") {
     return "active";
   }
 
-  if (
-    tab === "inactive"
-  ) {
+  if (tab === "inactive") {
     return "inactive";
   }
 
@@ -41,765 +36,404 @@ const normalizeTab = (
 };
 
 
-const normalizeCounts = (
-  counts
-) => ({
-  to_review:
-    Number(
-      counts?.to_review || 0
-    ),
+const normalizeCounts = (counts) => {
+  const toReview = Number(
+    counts?.to_review ?? counts?.["to-review"] ?? 0
+  );
+  const active = Number(counts?.active ?? 0);
+  const inactive = Number(counts?.inactive ?? 0);
 
-  active:
-    Number(
-      counts?.active || 0
-    ),
-
-  inactive:
-    Number(
-      counts?.inactive || 0
-    ),
-});
+  return {
+    to_review: toReview,
+    active,
+    inactive,
+    "to-review": toReview,
+  };
+};
 
 
-const normalizeFarmerRow = (
-  row
-) => ({
-  id:
-    row?.id,
+const normalizeFarmerRow = (row) => ({
+  id: row?.id,
+  user_id: row?.id,
 
   farmer:
-    row?.farmer_name || "",
+    row?.farmer_name ||
+    row?.farmer ||
+    "",
+
+  farmer_name:
+    row?.farmer_name ||
+    row?.farmer ||
+    "",
 
   email:
-    row?.email || "",
+    row?.email ||
+    "",
 
   contact:
-    row?.contact_number || "",
+    row?.contact_number ||
+    row?.contact ||
+    "",
+
+  contact_number:
+    row?.contact_number ||
+    row?.contact ||
+    "",
 
   username:
-    row?.username || "",
+    row?.username ||
+    "",
 
   status:
-    row?.status || "",
-
-
-  // =========================================================
-  // FARMER COMPLIANCE
-  // =========================================================
+    row?.status ||
+    "",
 
   rsbsaNumber:
-    row?.rsbsa_number || "",
+    row?.rsbsa_number ||
+    row?.rsbsaNumber ||
+    "—",
 
-  submissionMethod:
-    row?.submission_method || "",
+  rsbsa_number:
+    row?.rsbsa_number ||
+    row?.rsbsaNumber ||
+    "—",
 
+  submission_method:
+    row?.submission_method ||
+    "Online Partner Inquiry",
 
-  // =========================================================
-  // FARM SUMMARY
-  // =========================================================
+  farmCount: Number(
+    row?.farm_count ??
+    row?.farmCount ??
+    0
+  ),
 
-  farmCount:
-    Number(
-      row?.farm_count || 0
-    ),
+  farm_count: Number(
+    row?.farm_count ??
+    row?.farmCount ??
+    0
+  ),
 
-  totalFarmArea:
-    Number(
-      row?.total_farm_area || 0
-    ),
-
-
-  // =========================================================
-  // ARCHIVE INFORMATION
-  // =========================================================
+  total_farm_area:
+    row?.total_farm_area ||
+    0,
 
   archiveReason:
-    row?.archive_reason || "",
+    row?.archive_reason ||
+    row?.archiveReason ||
+    "",
+
+  archive_reason:
+    row?.archive_reason ||
+    row?.archiveReason ||
+    "",
 
   archivedAt:
-    row?.archived_at || null,
+    row?.archived_at ||
+    row?.archivedAt ||
+    null,
 
+  archived_at:
+    row?.archived_at ||
+    row?.archivedAt ||
+    null,
 
-  // =========================================================
-  // TIMESTAMPS
-  // =========================================================
+  created_at:
+    row?.created_at ||
+    null,
 
-  joined:
-    row?.created_at || null,
+  updated_at:
+    row?.updated_at ||
+    null,
 
-  updatedAt:
-    row?.updated_at || null,
+  is_partnership: Boolean(
+    row?.is_partnership
+  ),
 });
 
 
 // ============================================================
-// HOOK
+// FARMER MANAGEMENT HOOK
 // ============================================================
 
 const useFarmerManagement = () => {
-  const {
-    request,
-  } = useApi();
+  const { request } = useApi();
 
+  const [activeTab, setActiveTab] = useState("to-review");
+  const [rows, setRows] = useState([]);
+  const [counts, setCounts] = useState(DEFAULT_COUNTS);
 
-  // =========================================================
-  // TAB + DATA
-  // =========================================================
-
-  const [
-    activeTab,
-    setActiveTab,
-  ] = useState(
-    "to-review"
-  );
-
-
-  const [
-    farmers,
-    setFarmers,
-  ] = useState(
-    []
-  );
-
-
-  const [
-    counts,
-    setCounts,
-  ] = useState(
-    DEFAULT_COUNTS
-  );
-
-
-  // =========================================================
-  // LOADING STATES
-  // =========================================================
-
-  const [
-    isLoading,
-    setIsLoading,
-  ] = useState(
-    false
-  );
-
-
-  const [
-    isLoadingDetails,
-    setIsLoadingDetails,
-  ] = useState(
-    false
-  );
-
-
-  const [
-    isConfirming,
-    setIsConfirming,
-  ] = useState(
-    false
-  );
-
-
-  const [
-    isArchiving,
-    setIsArchiving,
-  ] = useState(
-    false
-  );
-
-
-  const [
-    isRestoring,
-    setIsRestoring,
-  ] = useState(
-    false
-  );
-
-
-  const [
-    isDeleting,
-    setIsDeleting,
-  ] = useState(
-    false
-  );
-
-
-  const [
-    error,
-    setError,
-  ] = useState(
-    ""
-  );
-
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState("");
 
   // =========================================================
   // LOAD FARMERS
   // =========================================================
 
   const loadFarmers = useCallback(
-    async (
-      tab = activeTab
-    ) => {
-      const normalizedTab =
-        normalizeTab(
-          tab
-        );
+    async (tab = activeTab) => {
+      const normalizedTab = normalizeTab(tab);
 
-
-      setIsLoading(
-        true
-      );
-
-      setError(
-        ""
-      );
-
+      setIsLoading(true);
+      setError("");
 
       try {
-        const response =
-          await request(
-            `/admin/farmers/?tab=${encodeURIComponent(
-              normalizedTab
-            )}`,
-            {
-              method: "GET",
-              throwOnError: true,
-            }
-          );
-
-
-        const rows =
-          Array.isArray(
-            response?.results
-          )
-            ? response.results.map(
-                normalizeFarmerRow
-              )
-            : [];
-
-
-        setFarmers(
-          rows
+        const response = await request(
+          `/admin/farmers/?tab=${encodeURIComponent(normalizedTab)}`,
+          {
+            throwOnError: true,
+          }
         );
 
+        const normalizedRows = Array.isArray(response?.results)
+          ? response.results.map(normalizeFarmerRow)
+          : [];
 
-        setCounts(
-          normalizeCounts(
-            response?.counts
-          )
-        );
+        setRows(normalizedRows);
+        setCounts(normalizeCounts(response?.counts));
 
-
-        return rows;
-
-      } catch (
-        err
-      ) {
+        return normalizedRows;
+      } catch (requestError) {
         const message =
-          err?.message ||
-          "Unable to load Farmer accounts.";
+          requestError?.message || "Unable to load Farmer accounts.";
 
-
-        setError(
-          message
-        );
-
-
-        setFarmers(
-          []
-        );
-
-
-        throw err;
-
+        setRows([]);
+        setError(message);
+        throw requestError;
       } finally {
-        setIsLoading(
-          false
-        );
+        setIsLoading(false);
       }
     },
-    [
-      activeTab,
-      request,
-    ]
+    [activeTab, request]
   );
 
+  // =========================================================
+  // CHANGE TAB
+  // =========================================================
+
+  const changeTab = useCallback((tab) => {
+    setActiveTab(normalizeTab(tab));
+  }, []);
 
   // =========================================================
-  // TAB CHANGE
+  // GET FARMER DETAILS
   // =========================================================
 
-  const changeTab = useCallback(
-    (
-      tab
-    ) => {
-      const normalizedTab =
-        normalizeTab(
-          tab
-        );
+  const getFarmerDetails = useCallback(
+    async (userId) => {
+      if (!userId) {
+        throw new Error("Farmer user ID is required.");
+      }
 
+      setIsLoadingDetails(true);
+      setError("");
 
-      setActiveTab(
-        normalizedTab
-      );
+      try {
+        const response = await request(`/admin/farmers/${userId}/`, {
+          throwOnError: true,
+        });
+
+        return response?.farmer || null;
+      } catch (requestError) {
+        const message =
+          requestError?.message || "Unable to load Farmer details.";
+        setError(message);
+        throw requestError;
+      } finally {
+        setIsLoadingDetails(false);
+      }
     },
-    []
+    [request]
   );
-
-
-  // =========================================================
-  // LOAD WHEN TAB CHANGES
-  // =========================================================
-
-  useEffect(
-    () => {
-      loadFarmers(
-        activeTab
-      ).catch(
-        () => {
-          // Error state is already handled by loadFarmers.
-        }
-      );
-    },
-    [
-      activeTab,
-      loadFarmers,
-    ]
-  );
-
-
-  // =========================================================
-  // FARMER DETAILS
-  // =========================================================
-
-  const getFarmerDetails =
-    useCallback(
-      async (
-        userId
-      ) => {
-        if (
-          !userId
-        ) {
-          throw new Error(
-            "Farmer user ID is required."
-          );
-        }
-
-
-        setIsLoadingDetails(
-          true
-        );
-
-        setError(
-          ""
-        );
-
-
-        try {
-          const response =
-            await request(
-              `/admin/farmers/${userId}/`,
-              {
-                method: "GET",
-                throwOnError: true,
-              }
-            );
-
-
-          return (
-            response?.farmer ||
-            null
-          );
-
-        } catch (
-          err
-        ) {
-          const message =
-            err?.message ||
-            "Unable to load Farmer details.";
-
-
-          setError(
-            message
-          );
-
-
-          throw err;
-
-        } finally {
-          setIsLoadingDetails(
-            false
-          );
-        }
-      },
-      [
-        request,
-      ]
-    );
-
 
   // =========================================================
   // CONFIRM FARMER
   // =========================================================
 
-  const confirmFarmer =
-    useCallback(
-      async (
-        userId
-      ) => {
-        if (
-          !userId
-        ) {
-          throw new Error(
-            "Farmer user ID is required."
-          );
-        }
+  const confirmFarmer = useCallback(
+    async (userId) => {
+      if (!userId) {
+        throw new Error("Farmer user ID is required.");
+      }
 
+      setIsConfirming(true);
+      setError("");
 
-        setIsConfirming(
-          true
+      try {
+        const response = await request(
+          `/admin/farmers/${userId}/confirm/`,
+          {
+            method: "POST",
+            throwOnError: true,
+          }
         );
 
-        setError(
-          ""
-        );
-
-
-        try {
-          const response =
-            await request(
-              `/admin/farmers/${userId}/confirm/`,
-              {
-                method: "POST",
-                throwOnError: true,
-              }
-            );
-
-
-          await loadFarmers(
-            activeTab
-          );
-
-
-          return response;
-
-        } catch (
-          err
-        ) {
-          const message =
-            err?.message ||
-            "Unable to confirm Farmer application.";
-
-
-          setError(
-            message
-          );
-
-
-          throw err;
-
-        } finally {
-          setIsConfirming(
-            false
-          );
-        }
-      },
-      [
-        activeTab,
-        loadFarmers,
-        request,
-      ]
-    );
-
+        await loadFarmers(activeTab);
+        return response;
+      } catch (requestError) {
+        const message =
+          requestError?.message ||
+          "Unable to confirm the Farmer application.";
+        setError(message);
+        throw requestError;
+      } finally {
+        setIsConfirming(false);
+      }
+    },
+    [activeTab, loadFarmers, request]
+  );
 
   // =========================================================
   // ARCHIVE FARMER
   // =========================================================
 
-  const archiveFarmer =
-    useCallback(
-      async (
-        userId,
-        reason
-      ) => {
-        if (
-          !userId
-        ) {
-          throw new Error(
-            "Farmer user ID is required."
-          );
-        }
+  const archiveFarmer = useCallback(
+    async (userId, reason = "") => {
+      if (!userId) {
+        throw new Error("Farmer user ID is required.");
+      }
 
+      setIsArchiving(true);
+      setError("");
 
-        const cleanedReason =
-          String(
-            reason || ""
-          ).trim();
-
-
-        if (
-          !cleanedReason
-        ) {
-          throw new Error(
-            "Archive reason is required."
-          );
-        }
-
-
-        setIsArchiving(
-          true
+      try {
+        const response = await request(
+          `/admin/farmers/${userId}/archive/`,
+          {
+            method: "POST",
+            body: {
+              reason: String(reason || "").trim(),
+            },
+            throwOnError: true,
+          }
         );
 
-        setError(
-          ""
-        );
-
-
-        try {
-          const response =
-            await request(
-              `/admin/farmers/${userId}/archive/`,
-              {
-                method: "POST",
-
-                body: {
-                  reason:
-                    cleanedReason,
-                },
-
-                throwOnError: true,
-              }
-            );
-
-
-          await loadFarmers(
-            activeTab
-          );
-
-
-          return response;
-
-        } catch (
-          err
-        ) {
-          const message =
-            err?.message ||
-            "Unable to archive Farmer account.";
-
-
-          setError(
-            message
-          );
-
-
-          throw err;
-
-        } finally {
-          setIsArchiving(
-            false
-          );
-        }
-      },
-      [
-        activeTab,
-        loadFarmers,
-        request,
-      ]
-    );
-
+        await loadFarmers(activeTab);
+        return response;
+      } catch (requestError) {
+        const message =
+          requestError?.message ||
+          "Unable to archive the Farmer account.";
+        setError(message);
+        throw requestError;
+      } finally {
+        setIsArchiving(false);
+      }
+    },
+    [activeTab, loadFarmers, request]
+  );
 
   // =========================================================
   // RESTORE FARMER
   // =========================================================
 
-  const restoreFarmer =
-    useCallback(
-      async (
-        userId
-      ) => {
-        if (
-          !userId
-        ) {
-          throw new Error(
-            "Farmer user ID is required."
-          );
-        }
+  const restoreFarmer = useCallback(
+    async (userId) => {
+      if (!userId) {
+        throw new Error("Farmer user ID is required.");
+      }
 
+      setIsRestoring(true);
+      setError("");
 
-        setIsRestoring(
-          true
+      try {
+        const response = await request(
+          `/admin/farmers/${userId}/restore/`,
+          {
+            method: "POST",
+            throwOnError: true,
+          }
         );
 
-        setError(
-          ""
-        );
-
-
-        try {
-          const response =
-            await request(
-              `/admin/farmers/${userId}/restore/`,
-              {
-                method: "POST",
-                throwOnError: true,
-              }
-            );
-
-
-          await loadFarmers(
-            activeTab
-          );
-
-
-          return response;
-
-        } catch (
-          err
-        ) {
-          const message =
-            err?.message ||
-            "Unable to restore Farmer account.";
-
-
-          setError(
-            message
-          );
-
-
-          throw err;
-
-        } finally {
-          setIsRestoring(
-            false
-          );
-        }
-      },
-      [
-        activeTab,
-        loadFarmers,
-        request,
-      ]
-    );
-
+        await loadFarmers(activeTab);
+        return response;
+      } catch (requestError) {
+        const message =
+          requestError?.message ||
+          "Unable to restore the Farmer account.";
+        setError(message);
+        throw requestError;
+      } finally {
+        setIsRestoring(false);
+      }
+    },
+    [activeTab, loadFarmers, request]
+  );
 
   // =========================================================
   // DELETE FARMER
   // =========================================================
 
-  const deleteFarmer =
-    useCallback(
-      async (
-        userId
-      ) => {
-        if (
-          !userId
-        ) {
-          throw new Error(
-            "Farmer user ID is required."
-          );
-        }
+  const deleteFarmer = useCallback(
+    async (userId) => {
+      if (!userId) {
+        throw new Error("Farmer user ID is required.");
+      }
 
+      setIsDeleting(true);
+      setError("");
 
-        setIsDeleting(
-          true
+      try {
+        const response = await request(
+          `/admin/farmers/${userId}/delete/`,
+          {
+            method: "POST",
+            throwOnError: true,
+          }
         );
 
-        setError(
-          ""
-        );
-
-
-        try {
-          const response =
-            await request(
-              `/admin/farmers/${userId}/delete/`,
-              {
-                method: "POST",
-                throwOnError: true,
-              }
-            );
-
-
-          await loadFarmers(
-            activeTab
-          );
-
-
-          return response;
-
-        } catch (
-          err
-        ) {
-          const message =
-            err?.message ||
-            "Unable to permanently delete Farmer account.";
-
-
-          setError(
-            message
-          );
-
-
-          throw err;
-
-        } finally {
-          setIsDeleting(
-            false
-          );
-        }
-      },
-      [
-        activeTab,
-        loadFarmers,
-        request,
-      ]
-    );
-
+        await loadFarmers(activeTab);
+        return response;
+      } catch (requestError) {
+        const message =
+          requestError?.message ||
+          "Unable to permanently delete the Farmer account.";
+        setError(message);
+        throw requestError;
+      } finally {
+        setIsDeleting(false);
+      }
+    },
+    [activeTab, loadFarmers, request]
+  );
 
   // =========================================================
-  // REFRESH
+  // REFRESH CURRENT TAB
   // =========================================================
 
-  const refreshFarmers =
-    useCallback(
-      async () => {
-        return loadFarmers(
-          activeTab
-        );
-      },
-      [
-        activeTab,
-        loadFarmers,
-      ]
-    );
-
+  const refreshFarmers = useCallback(
+    () => loadFarmers(activeTab),
+    [activeTab, loadFarmers]
+  );
 
   // =========================================================
-  // CLEAR ERROR
+  // INITIAL & TAB CHANGE AUTO-FETCH
   // =========================================================
 
-  const clearError =
-    useCallback(
-      () => {
-        setError(
-          ""
-        );
-      },
-      []
-    );
+  useEffect(() => {
+    loadFarmers(activeTab).catch(() => {
+      // Error handled within loadFarmers
+    });
+  }, [activeTab, loadFarmers]);
 
-
-  // =========================================================
-  // RETURN
-  // =========================================================
+  const clearError = useCallback(() => setError(""), []);
 
   return {
     activeTab,
     changeTab,
 
-    farmers,
+    farmers: rows,
+    rows,
     counts,
 
     isLoading,
     isLoadingDetails,
+    isDetailsLoading: isLoadingDetails,
 
     isConfirming,
     isArchiving,
@@ -820,6 +454,5 @@ const useFarmerManagement = () => {
     deleteFarmer,
   };
 };
-
 
 export default useFarmerManagement;

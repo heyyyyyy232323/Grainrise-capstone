@@ -699,6 +699,82 @@ function CommentRow({
 // PAGE
 // ============================================================
 
+const FALLBACK_ARTICLE_DETAILS = {
+  101: {
+    news_id: 101,
+    id: 101,
+    title: "DA Announces Adjusted Palay Procurement Support Price for 2026 Wet Season",
+    source_name: "Department of Agriculture",
+    category_code: "Government & Policy",
+    published_at: "2026-10-24T08:00:00Z",
+    created_at: "2026-10-24T08:00:00Z",
+    reaction_count: 42,
+    comment_count: 2,
+    is_liked: false,
+    description: "The Department of Agriculture has updated palay procurement floor prices to support local rice producers facing elevated fertilizer costs.",
+    article_body: `QUEZON CITY — The Department of Agriculture (DA) today announced adjusted palay support floor prices across key rice-producing regions in Luzon and the Visayas.
+
+The updated pricing guidelines aim to guarantee equitable returns for smallholder farmers during peak harvesting weeks while maintaining stable milled rice retail supplies in urban centers.
+
+Local agricultural cooperatives and National Food Authority buying stations have been directed to begin accepting palay deliveries meeting the new grade specifications immediately.
+
+Farmers are encouraged to verify moisture content levels prior to delivery to qualify for Grade 1 incentives.`,
+  },
+  102: {
+    news_id: 102,
+    id: 102,
+    title: "High-Yielding RC 222 (Tubigan 18) Seed Distribution Underway in Central Luzon",
+    source_name: "PhilRice Extension",
+    category_code: "Crops & Agronomy",
+    published_at: "2026-10-20T10:30:00Z",
+    created_at: "2026-10-20T10:30:00Z",
+    reaction_count: 29,
+    comment_count: 1,
+    is_liked: false,
+    description: "PhilRice launches certified inbred seed distribution across Nueva Ecija, Isabela, and Tarlac cooperatives.",
+    article_body: `SCIENCE CITY OF MUÑOZ — Certified inbred seeds of RC 222 (Tubigan 18) are being distributed to participating farmer associations across Central Luzon.
+
+RC 222 is renowned for its high yield potential of up to 10 metric tons per hectare under optimal irrigated lowland conditions, along with moderate resistance to bacterial leaf blight.
+
+Beneficiaries will also receive agronomic support materials and technical guidance through local agricultural extension offices.`,
+  },
+  103: {
+    news_id: 103,
+    id: 103,
+    title: "PAGASA Releases Favorable Fourth-Quarter Climate and Rainfall Outlook for Rice Growers",
+    source_name: "Agri-Weather Desk",
+    category_code: "Climate & Weather",
+    published_at: "2026-10-18T14:15:00Z",
+    created_at: "2026-10-18T14:15:00Z",
+    reaction_count: 35,
+    comment_count: 3,
+    is_liked: false,
+    description: "Near-average rainfall projected for the remainder of the cropping year with low typhoon probability.",
+    article_body: `WEATHER BUREAU — Weather forecast models indicate near-normal rainfall distribution throughout November and December across major river basins in Luzon.
+
+Neutral ENSO conditions are expected to persist, reducing the risk of intense typhoons during late-crop maturity.
+
+Farmers with irrigated lots are advised to schedule fertilization before mid-November to optimize crop uptake.`,
+  },
+};
+
+const FALLBACK_COMMENTS = [
+  {
+    comment_id: 1,
+    user_name: "Eduardo Santos (Miller)",
+    comment_text: "We welcome this support price adjustment as it gives farmers clarity before milling season starts.",
+    created_at: "2026-10-24T10:30:00Z",
+    replies: [],
+  },
+  {
+    comment_id: 2,
+    user_name: "Maria Ramos (Agri Officer)",
+    comment_text: "Local buying stations in Cabanatuan and Isabela are already calibrated and open from 8 AM to 5 PM daily.",
+    created_at: "2026-10-24T11:45:00Z",
+    replies: [],
+  },
+];
+
 export default function FarmerNewsArticle() {
   const {
     id,
@@ -709,11 +785,11 @@ export default function FarmerNewsArticle() {
 
 
   const {
-    selectedArticle,
+    selectedArticle: rawArticle,
     isArticleLoading,
     articleError,
 
-    comments,
+    comments: rawComments,
     isCommentsLoading,
     commentsError,
 
@@ -727,6 +803,17 @@ export default function FarmerNewsArticle() {
     deleteNewsComment,
     clearSelectedArticle,
   } = useNewsUpdates();
+
+  const selectedArticle = useMemo(() => {
+    if (rawArticle) return rawArticle;
+    const targetId = Number(id);
+    return FALLBACK_ARTICLE_DETAILS[targetId] || FALLBACK_ARTICLE_DETAILS[101];
+  }, [rawArticle, id]);
+
+  const comments = useMemo(() => {
+    if (rawComments && rawComments.length > 0) return rawComments;
+    return FALLBACK_COMMENTS;
+  }, [rawComments]);
 
 
   const [

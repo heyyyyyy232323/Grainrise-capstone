@@ -409,6 +409,9 @@ def _build_farmer_detail_response(
     rsbsa_document = row.get(
         "rsbsa_document"
     )
+    government_issued_id = row.get(
+        "government_issued_id"
+    )
 
     return {
         # ====================================================
@@ -419,6 +422,14 @@ def _build_farmer_detail_response(
             "user_id"
         ),
 
+        "is_partnership": bool(
+            row.get("is_partnership", False)
+        ),
+
+        "message": row.get(
+            "message"
+        ) or "",
+
         "status": row.get(
             "status"
         ),
@@ -426,6 +437,14 @@ def _build_farmer_detail_response(
         "user_role": row.get(
             "user_role"
         ),
+
+        "government_issued_id": {
+            "path": government_issued_id,
+            "url": _document_url(
+                request,
+                government_issued_id,
+            ),
+        } if government_issued_id else None,
 
 
         # ====================================================
@@ -538,6 +557,15 @@ def _build_farmer_detail_response(
                     rsbsa_document,
                 ),
             },
+
+            "government_issued_id": {
+                "path": government_issued_id,
+
+                "url": _document_url(
+                    request,
+                    government_issued_id,
+                ),
+            } if government_issued_id else None,
 
             "created_at": _serialize_value(
                 row.get(
@@ -890,6 +918,15 @@ def confirm_farmer_management_application(
 
                     "email_error": result.get(
                         "email_error"
+                    ),
+
+                    "sms_sent": result.get(
+                        "sms_sent",
+                        False,
+                    ),
+
+                    "sms_error": result.get(
+                        "sms_error"
                     ),
                 },
             },

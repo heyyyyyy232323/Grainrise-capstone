@@ -161,9 +161,7 @@ const buildOpportunityLocation = (
 // COMPONENT
 // ============================================================
 
-export default function FarmerContractsOpportunities({
-  onMessage,
-}) {
+export default function FarmerContractsOpportunities() {
   const {
     opportunities,
     selectedOpportunity,
@@ -463,38 +461,6 @@ export default function FarmerContractsOpportunities({
     };
 
 
-  // ==========================================================
-  // MESSAGE MILLER
-  // ==========================================================
-
-  const handleMessage =
-    () => {
-      if (
-        !selectedOpportunity ||
-        !onMessage
-      ) {
-        return;
-      }
-
-
-      setIsDetailsOpen(
-        false
-      );
-
-
-      onMessage({
-        supplierProfileId:
-          selectedOpportunity
-            .supplier_profile_id,
-
-        referenceType:
-          "posting",
-
-        referenceId:
-          selectedOpportunity
-            .posting_id,
-      });
-    };
 
 
   // ==========================================================
@@ -1259,9 +1225,6 @@ export default function FarmerContractsOpportunities({
         }
         onApply={
           handleApply
-        }
-        onMessage={
-          handleMessage
         }
       />
 

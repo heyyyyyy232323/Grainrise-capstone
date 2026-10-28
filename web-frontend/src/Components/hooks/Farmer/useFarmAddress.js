@@ -1,1078 +1,174 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-import useApi from "../useApi";
-
+import { useCallback, useMemo, useState } from "react";
 
 // ============================================================
-// HELPERS
+// STATIC PHILIPPINE REGIONS / PROVINCES DATA
 // ============================================================
 
-const sortByName = (items = []) => {
-  return [...items].sort((a, b) =>
-    String(a?.name || "").localeCompare(
-      String(b?.name || "")
-    )
-  );
+const PHILIPPINE_LOCATIONS = {
+  "Nueva Ecija": {
+    postalCode: "3100",
+    municipalities: {
+      "Cabanatuan City": ["San Jose", "San Josef Sur", "Valdefuente", "Magsaysay District", "Zulueta", "Bitas", "Sumacab"],
+      "Gapan City": ["San Nicolas", "San Vicente", "Santa Cruz", "Bayanihan", "Malimba"],
+      "San Jose City": ["Abar 1st", "Abar 2nd", "Malasin", "Palestina", "Santo Niño 1st"],
+      "Palayan City": ["Atate", "Cabaluay", "Imelda Valley", "Malate", "Singalat"],
+      "Talavera": ["Maestrang Kikay", "Pag-asa", "Sampaloc", "La Torre", "Burnay"],
+      "Guimba": ["Ayeb", "Bacayao", "Cavite", "Manacsac", "San Roque"],
+      "Muñoz (Science City)": ["Bantug", "Curva", "Maligaya", "Maragol", "Villa Nati"],
+    },
+  },
+  "Isabela": {
+    postalCode: "3300",
+    municipalities: {
+      "Cauayan City": ["Maligaya", "San Fermin", "Tagaran", "Cabaruan", "District 1"],
+      "Santiago City": ["Rizal", "Malvar", "Victory Norte", "Dubinan East", "Plaridel"],
+      "Ilagan City": ["Alibagu", "Calamagui 1st", "Guinatan", "Marana 1st", "San Vicente"],
+      "Alicia": ["Antonino", "Bagnos", "Burgos", "Mabini", "Rizal"],
+      "Roxas": ["Bantug", "Luna", "San Marcos", "Vira"],
+    },
+  },
+  "Tarlac": {
+    postalCode: "2300",
+    municipalities: {
+      "Tarlac City": ["Matatalaib", "San Sebastian", "San Nicolas", "Maliwalo", "Aguso"],
+      "Concepcion": ["Poblacion", "San Nicolas", "Alfonso", "Santa Rita", "Magao"],
+      "Capas": ["Cutcut 1st", "Cubcub", "O'Donnell", "Santo Rosario", "Cristo Rey"],
+      "Paniqui": ["Poblacion Norte", "Poblacion Sur", "Colibao", "Salumague"],
+    },
+  },
+  "Pangasinan": {
+    postalCode: "2400",
+    municipalities: {
+      "Dagupan City": ["Bonuan Gueset", "Lucao", "Pantal", "Poblacion Oeste", "Tapuac"],
+      "Urdaneta City": ["Anonas", "Bayaoas", "Camantiles", "Nancayasan", "Pinmaludpod"],
+      "San Carlos City": ["Agdao", "Balite", "Ilang", "Mabini", "Rizal"],
+      "Rosales": ["Carmen East", "Carmen West", "Poblacion", "Station District"],
+    },
+  },
+  "Pampanga": {
+    postalCode: "2000",
+    municipalities: {
+      "San Fernando City": ["Dolores", "Sindalan", "San Agustin", "San Jose", "Telabastagan"],
+      "Angeles City": ["Balibago", "Cutcut", "Malabanias", "Pandan", "Santo Rosario"],
+      "Arayat": ["Arenas", "Camba", "Mangumit", "Plazang Luma", "San Agustin Sur"],
+      "Magalang": ["San Pedro 1st", "San Nicolas 1st", "Santa Cruz", "Camias"],
+    },
+  },
+  "Bulacan": {
+    postalCode: "3000",
+    municipalities: {
+      "Malolos City": ["Bulihan", "Cofradia", "Dakila", "Mojon", "San Gabriel"],
+      "Plaridel": ["Banga 1st", "Banga 2nd", "Poblacion", "Rocka", "Tabang"],
+      "San Ildefonso": ["Anyatam", "Basuit", "Garlang", "Pala-Pala", "Sapang Dayap"],
+      "San Miguel": ["Bantog", "Camias", "Poblacion", "Salangan", "San Jose"],
+    },
+  },
+  "Iloilo": {
+    postalCode: "5000",
+    municipalities: {
+      "Iloilo City": ["Jaro", "La Paz", "Mandurriao", "Molo", "City Proper"],
+      "Pototan": ["Barangay I", "Barangay II", "Cahaguichican", "Poblacion"],
+      "Dingle": ["Poblacion", "San Matias", "Sinamay", "Tulatula-an"],
+    },
+  },
 };
 
-
-const createRecordMap = (items = []) => {
-  const records = {};
-
-  items.forEach((item) => {
-    if (!item?.name) {
-      return;
-    }
-
-    records[item.name] = item;
-  });
-
-  return records;
-};
-
-
-// ============================================================
-// HOOK
-// ============================================================
+const DEFAULT_PROVINCES = Object.keys(PHILIPPINE_LOCATIONS);
 
 const useFarmAddress = () => {
-  const {
-    request,
-  } = useApi();
+  const [province, setProvince] = useState("");
+  const [municipality, setMunicipality] = useState("");
+  const [barangay, setBarangay] = useState("");
+  const [postalCode, setPostalCode] = useState("");
 
-
-  // =========================================================
-  // SELECTED VALUES
-  // =========================================================
-
-  const [
-    province,
-    setProvince,
-  ] = useState("");
-
-
-  const [
-    municipality,
-    setMunicipality,
-  ] = useState("");
-
-
-  const [
-    barangay,
-    setBarangay,
-  ] = useState("");
-
-
-  const [
-    postalCode,
-    setPostalCode,
-  ] = useState("");
-
-
-  // =========================================================
-  // LOCATION OPTIONS
-  // =========================================================
-
-  const [
-    provinces,
-    setProvinces,
-  ] = useState([]);
-
-
-  const [
-    municipalities,
-    setMunicipalities,
-  ] = useState([]);
-
-
-  const [
-    barangays,
-    setBarangays,
-  ] = useState([]);
-
-
-  // =========================================================
-  // RECORD MAPS
-  // =========================================================
-
-  const [
-    provinceRecords,
-    setProvinceRecords,
-  ] = useState({});
-
-
-  const [
-    municipalityRecords,
-    setMunicipalityRecords,
-  ] = useState({});
-
-
-  // =========================================================
-  // MANUAL FALLBACK
-  // =========================================================
-
-  const [
-    manualMode,
-    setManualMode,
-  ] = useState(false);
-
-
-  // =========================================================
-  // LOADING
-  // =========================================================
-
-  const [
-    loading,
-    setLoading,
-  ] = useState({
+  const [manualMode, setManualMode] = useState(false);
+  const [loading, setLoading] = useState({
     provinces: false,
     municipalities: false,
     barangays: false,
-    postalCode: false,
   });
-
-
-  // =========================================================
-  // ERRORS
-  // =========================================================
-
-  const [
-    errors,
-    setErrors,
-  ] = useState({
+  const [errors, setErrors] = useState({
     provinces: "",
     municipalities: "",
     barangays: "",
-    postalCode: "",
   });
 
-
-  // =========================================================
-  // REQUEST HELPER
-  // =========================================================
-
-  const getLocation = useCallback(
-    async (endpoint) => {
-      return request(
-        endpoint,
-        {
-          method: "GET",
-          throwOnError: true,
-        }
-      );
-    },
-    [
-      request,
-    ]
-  );
-
-
-  // =========================================================
-  // LOAD PROVINCES
-  // =========================================================
-
-  const loadProvinces = useCallback(
-    async () => {
-      setLoading(
-        (current) => ({
-          ...current,
-          provinces: true,
-        })
-      );
-
-
-      setErrors(
-        (current) => ({
-          ...current,
-          provinces: "",
-        })
-      );
-
-
-      try {
-        const response =
-          await getLocation(
-            "/locations/provinces"
-          );
-
-
-        const results =
-          sortByName(
-            Array.isArray(
-              response?.results
-            )
-              ? response.results
-              : []
-          );
-
-
-        setProvinces(
-          results
-        );
-
-
-        setProvinceRecords(
-          createRecordMap(
-            results
-          )
-        );
-
-
-        if (
-          results.length === 0
-        ) {
-          setErrors(
-            (current) => ({
-              ...current,
-
-              provinces:
-                "Province list is unavailable. You may enter the address manually.",
-            })
-          );
-        }
-
-      } catch (error) {
-        setProvinces(
-          []
-        );
-
-
-        setProvinceRecords(
-          {}
-        );
-
-
-        setErrors(
-          (current) => ({
-            ...current,
-
-            provinces:
-              error?.message ||
-              "Unable to load provinces. You may enter the address manually.",
-          })
-        );
-
-      } finally {
-        setLoading(
-          (current) => ({
-            ...current,
-            provinces: false,
-          })
-        );
-      }
-    },
-    [
-      getLocation,
-    ]
-  );
-
-
-  // =========================================================
-  // INITIAL LOAD
-  // =========================================================
-
-  useEffect(
-    () => {
-      loadProvinces();
-    },
-    [
-      loadProvinces,
-    ]
-  );
-
-
-  // =========================================================
-  // SELECT PROVINCE
-  // =========================================================
-
-  const selectProvince = useCallback(
-    async (provinceName) => {
-      setProvince(
-        provinceName
-      );
-
-
-      setMunicipality(
-        ""
-      );
-
-      setBarangay(
-        ""
-      );
-
-      setPostalCode(
-        ""
-      );
-
-
-      setMunicipalities(
-        []
-      );
-
-      setBarangays(
-        []
-      );
-
-      setMunicipalityRecords(
-        {}
-      );
-
-
-      setErrors(
-        (current) => ({
-          ...current,
-          municipalities: "",
-          barangays: "",
-          postalCode: "",
-        })
-      );
-
-
-      if (
-        !provinceName
-      ) {
-        return;
-      }
-
-
-      const selectedProvince =
-        provinceRecords[
-          provinceName
-        ];
-
-
-      if (
-        !selectedProvince?.code
-      ) {
-        setErrors(
-          (current) => ({
-            ...current,
-
-            municipalities:
-              "Unable to identify this province. You may enter the address manually.",
-          })
-        );
-
-        return;
-      }
-
-
-      setLoading(
-        (current) => ({
-          ...current,
-          municipalities: true,
-        })
-      );
-
-
-      try {
-        const response =
-          await getLocation(
-            (
-              "/locations/provinces/" +
-              `${encodeURIComponent(
-                selectedProvince.code
-              )}/cities-municipalities`
-            )
-          );
-
-
-        const results =
-          sortByName(
-            Array.isArray(
-              response?.results
-            )
-              ? response.results
-              : []
-          );
-
-
-        setMunicipalities(
-          results
-        );
-
-
-        setMunicipalityRecords(
-          createRecordMap(
-            results
-          )
-        );
-
-
-        if (
-          results.length === 0
-        ) {
-          setErrors(
-            (current) => ({
-              ...current,
-
-              municipalities:
-                "No city or municipality data was found. You may enter it manually.",
-            })
-          );
-        }
-
-      } catch (error) {
-        setMunicipalities(
-          []
-        );
-
-
-        setMunicipalityRecords(
-          {}
-        );
-
-
-        setErrors(
-          (current) => ({
-            ...current,
-
-            municipalities:
-              error?.message ||
-              "Unable to load cities and municipalities. You may enter it manually.",
-          })
-        );
-
-      } finally {
-        setLoading(
-          (current) => ({
-            ...current,
-            municipalities: false,
-          })
-        );
-      }
-    },
-    [
-      getLocation,
-      provinceRecords,
-    ]
-  );
-
-
-  // =========================================================
-  // LOAD POSTAL CODE
-  // =========================================================
-
-  const loadPostalCode = useCallback(
-    async (
-      municipalityCode,
-      existingPostalCode = ""
-    ) => {
-      if (
-        existingPostalCode
-      ) {
-        setPostalCode(
-          String(
-            existingPostalCode
-          )
-        );
-
-        return;
-      }
-
-
-      if (
-        !municipalityCode
-      ) {
-        return;
-      }
-
-
-      setLoading(
-        (current) => ({
-          ...current,
-          postalCode: true,
-        })
-      );
-
-
-      try {
-        const response =
-          await getLocation(
-            (
-              "/locations/cities-municipalities/" +
-              encodeURIComponent(
-                municipalityCode
-              )
-            )
-          );
-
-
-        const value =
-          response?.postal_code
-            ? String(
-              response.postal_code
-            )
-            : "";
-
-
-        setPostalCode(
-          value
-        );
-
-
-        if (
-          !value
-        ) {
-          setErrors(
-            (current) => ({
-              ...current,
-
-              postalCode:
-                "Postal code was not found automatically. You may enter it manually.",
-            })
-          );
-        }
-
-      } catch (error) {
-        setPostalCode(
-          ""
-        );
-
-
-        setErrors(
-          (current) => ({
-            ...current,
-
-            postalCode:
-              error?.message ||
-              "Postal code could not be loaded. You may enter it manually.",
-          })
-        );
-
-      } finally {
-        setLoading(
-          (current) => ({
-            ...current,
-            postalCode: false,
-          })
-        );
-      }
-    },
-    [
-      getLocation,
-    ]
-  );
-
-
-  // =========================================================
-  // SELECT MUNICIPALITY
-  // =========================================================
-
-  const selectMunicipality = useCallback(
-    async (municipalityName) => {
-      setMunicipality(
-        municipalityName
-      );
-
-
-      setBarangay(
-        ""
-      );
-
-      setPostalCode(
-        ""
-      );
-
-
-      setBarangays(
-        []
-      );
-
-
-      setErrors(
-        (current) => ({
-          ...current,
-          barangays: "",
-          postalCode: "",
-        })
-      );
-
-
-      if (
-        !municipalityName
-      ) {
-        return;
-      }
-
-
-      const selectedMunicipality =
-        municipalityRecords[
-          municipalityName
-        ];
-
-
-      if (
-        !selectedMunicipality?.code
-      ) {
-        setErrors(
-          (current) => ({
-            ...current,
-
-            barangays:
-              "Unable to identify this city or municipality. You may enter the remaining address manually.",
-          })
-        );
-
-        return;
-      }
-
-
-      const postalFromRecord =
-        selectedMunicipality
-          .postal_code ||
-        selectedMunicipality
-          .zip_code ||
-        selectedMunicipality
-          .zipCode ||
-        "";
-
-
-      loadPostalCode(
-        selectedMunicipality.code,
-        postalFromRecord
-      );
-
-
-      setLoading(
-        (current) => ({
-          ...current,
-          barangays: true,
-        })
-      );
-
-
-      try {
-        const response =
-          await getLocation(
-            (
-              "/locations/cities-municipalities/" +
-              `${encodeURIComponent(
-                selectedMunicipality.code
-              )}/barangays`
-            )
-          );
-
-
-        const results =
-          sortByName(
-            Array.isArray(
-              response?.results
-            )
-              ? response.results
-              : []
-          );
-
-
-        setBarangays(
-          results
-        );
-
-
-        if (
-          results.length === 0
-        ) {
-          setErrors(
-            (current) => ({
-              ...current,
-
-              barangays:
-                "No barangay data was found. You may enter the barangay manually.",
-            })
-          );
-        }
-
-      } catch (error) {
-        setBarangays(
-          []
-        );
-
-
-        setErrors(
-          (current) => ({
-            ...current,
-
-            barangays:
-              error?.message ||
-              "Unable to load barangays. You may enter the barangay manually.",
-          })
-        );
-
-      } finally {
-        setLoading(
-          (current) => ({
-            ...current,
-            barangays: false,
-          })
-        );
-      }
-    },
-    [
-      getLocation,
-      loadPostalCode,
-      municipalityRecords,
-    ]
-  );
-
-
-  // =========================================================
-  // SELECT BARANGAY
-  // =========================================================
-
-  const selectBarangay = useCallback(
-    (barangayName) => {
-      setBarangay(
-        barangayName
-      );
-
-
-      setErrors(
-        (current) => ({
-          ...current,
-          barangays: "",
-        })
-      );
-    },
-    []
-  );
-
-
-  // =========================================================
-  // POSTAL CODE — ALWAYS EDITABLE
-  // =========================================================
-
-  const updatePostalCode = useCallback(
-    (value) => {
-      const cleaned =
-        String(
-          value || ""
-        )
-          .replace(
-            /\D/g,
-            ""
-          )
-          .slice(
-            0,
-            4
-          );
-
-
-      setPostalCode(
-        cleaned
-      );
-
-
-      setErrors(
-        (current) => ({
-          ...current,
-          postalCode: "",
-        })
-      );
-    },
-    []
-  );
-
-
-  // =========================================================
-  // MANUAL ADDRESS
-  // =========================================================
-
-  const updateManualProvince =
-    useCallback(
-      (value) => {
-        setProvince(
-          value
-        );
-      },
-      []
-    );
-
-
-  const updateManualMunicipality =
-    useCallback(
-      (value) => {
-        setMunicipality(
-          value
-        );
-      },
-      []
-    );
-
-
-  const updateManualBarangay =
-    useCallback(
-      (value) => {
-        setBarangay(
-          value
-        );
-      },
-      []
-    );
-
-
-  // =========================================================
-  // MANUAL MODE
-  // =========================================================
-
-  const enableManualMode =
-    useCallback(
-      () => {
-        setManualMode(
-          true
-        );
-      },
-      []
-    );
-
-
-  const enableDropdownMode =
-    useCallback(
-      () => {
-        setManualMode(
-          false
-        );
-
-
-        setProvince(
-          ""
-        );
-
-        setMunicipality(
-          ""
-        );
-
-        setBarangay(
-          ""
-        );
-
-        setPostalCode(
-          ""
-        );
-
-
-        setMunicipalities(
-          []
-        );
-
-        setBarangays(
-          []
-        );
-
-
-        setMunicipalityRecords(
-          {}
-        );
-
-
-        setErrors({
-          provinces: "",
-          municipalities: "",
-          barangays: "",
-          postalCode: "",
-        });
-
-
-        if (
-          provinces.length ===
-          0
-        ) {
-          loadProvinces();
-        }
-      },
-      [
-        loadProvinces,
-        provinces.length,
-      ]
-    );
-
-
-  // =========================================================
-  // SET INITIAL ADDRESS — EDIT FARM
-  // =========================================================
-
-  const setInitialAddress =
-    useCallback(
-      ({
-        province:
-          initialProvince = "",
-
-        municipality:
-          initialMunicipality = "",
-
-        barangay:
-          initialBarangay = "",
-
-        postalCode:
-          initialPostalCode = "",
-      } = {}) => {
-        setProvince(
-          initialProvince
-        );
-
-
-        setMunicipality(
-          initialMunicipality
-        );
-
-
-        setBarangay(
-          initialBarangay
-        );
-
-
-        setPostalCode(
-          String(
-            initialPostalCode || ""
-          )
-        );
-
-
-        /*
-         * Existing farm addresses may no longer
-         * perfectly match the external location API.
-         *
-         * Manual mode guarantees the farmer can still
-         * edit and save the registered address.
-         */
-        setManualMode(
-          true
-        );
-      },
-      []
-    );
-
-
-  // =========================================================
-  // RESET
-  // =========================================================
-
-  const resetAddress =
-    useCallback(
-      () => {
-        setProvince(
-          ""
-        );
-
-        setMunicipality(
-          ""
-        );
-
-        setBarangay(
-          ""
-        );
-
-        setPostalCode(
-          ""
-        );
-
-
-        setMunicipalities(
-          []
-        );
-
-        setBarangays(
-          []
-        );
-
-
-        setMunicipalityRecords(
-          {}
-        );
-
-
-        setManualMode(
-          false
-        );
-
-
-        setErrors({
-          provinces: "",
-          municipalities: "",
-          barangays: "",
-          postalCode: "",
-        });
-      },
-      []
-    );
-
-
-  // =========================================================
-  // OPTIONS
-  // =========================================================
-
-  const provinceOptions =
-    useMemo(
-      () =>
-        provinces.map(
-          (item) =>
-            item.name
-        ),
-      [
-        provinces,
-      ]
-    );
-
-
-  const municipalityOptions =
-    useMemo(
-      () =>
-        municipalities.map(
-          (item) =>
-            item.name
-        ),
-      [
-        municipalities,
-      ]
-    );
-
-
-  const barangayOptions =
-    useMemo(
-      () =>
-        barangays.map(
-          (item) =>
-            item.name
-        ),
-      [
-        barangays,
-      ]
-    );
-
-
-  // =========================================================
-  // RETURN
-  // =========================================================
+  const provinceOptions = useMemo(() => DEFAULT_PROVINCES, []);
+
+  const municipalityOptions = useMemo(() => {
+    if (!province || !PHILIPPINE_LOCATIONS[province]) return [];
+    return Object.keys(PHILIPPINE_LOCATIONS[province].municipalities);
+  }, [province]);
+
+  const barangayOptions = useMemo(() => {
+    if (!province || !municipality || !PHILIPPINE_LOCATIONS[province]?.municipalities[municipality]) {
+      return [];
+    }
+    return PHILIPPINE_LOCATIONS[province].municipalities[municipality];
+  }, [province, municipality]);
+
+  const selectProvince = useCallback((selected) => {
+    setProvince(selected || "");
+    setMunicipality("");
+    setBarangay("");
+    if (selected && PHILIPPINE_LOCATIONS[selected]) {
+      setPostalCode(PHILIPPINE_LOCATIONS[selected].postalCode || "");
+    }
+  }, []);
+
+  const selectMunicipality = useCallback((selected) => {
+    setMunicipality(selected || "");
+    setBarangay("");
+  }, []);
+
+  const selectBarangay = useCallback((selected) => {
+    setBarangay(selected || "");
+  }, []);
+
+  const updateManualProvince = useCallback((val) => setProvince(val || ""), []);
+  const updateManualMunicipality = useCallback((val) => setMunicipality(val || ""), []);
+  const updateManualBarangay = useCallback((val) => setBarangay(val || ""), []);
+  const updatePostalCode = useCallback((val) => setPostalCode(val || ""), []);
+
+  const enableManualMode = useCallback(() => setManualMode(true), []);
+  const enableDropdownMode = useCallback(() => setManualMode(false), []);
+
+  const setInitialAddress = useCallback(({ province: p, municipality: m, barangay: b, postalCode: pc } = {}) => {
+    if (p) setProvince(p);
+    if (m) setMunicipality(m);
+    if (b) setBarangay(b);
+    if (pc) setPostalCode(pc);
+  }, []);
+
+  const resetAddress = useCallback(() => {
+    setProvince("");
+    setMunicipality("");
+    setBarangay("");
+    setPostalCode("");
+    setManualMode(false);
+  }, []);
+
+  const loadProvinces = useCallback(async () => DEFAULT_PROVINCES, []);
 
   return {
-    // values
     province,
     municipality,
     barangay,
     postalCode,
 
-    // options
     provinceOptions,
     municipalityOptions,
     barangayOptions,
 
-    // loading / errors
     loading,
     errors,
 
-    // mode
     manualMode,
 
-    // dependent dropdowns
     selectProvince,
     selectMunicipality,
     selectBarangay,
 
-    // manual fallback
     updateManualProvince,
     updateManualMunicipality,
     updateManualBarangay,
@@ -1081,15 +177,11 @@ const useFarmAddress = () => {
     enableManualMode,
     enableDropdownMode,
 
-    // edit/reset
     setInitialAddress,
     resetAddress,
 
-    // retry
-    reloadProvinces:
-      loadProvinces,
+    reloadProvinces: loadProvinces,
   };
 };
-
 
 export default useFarmAddress;

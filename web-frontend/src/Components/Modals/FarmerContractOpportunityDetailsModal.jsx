@@ -13,7 +13,6 @@ import {
   ImageOff,
   Loader2,
   MapPin,
-  MessageSquare,
   Package,
   Send,
   X,
@@ -322,7 +321,6 @@ export default function FarmerContractOpportunityDetailsModal({
 
   onClose,
   onApply,
-  onMessage,
 }) {
 
   // ==========================================================
@@ -1177,36 +1175,6 @@ export default function FarmerContractOpportunityDetailsModal({
           "
         >
 
-          {opportunity &&
-            onMessage && (
-              <button
-                type="button"
-                onClick={onMessage}
-                className="
-                  inline-flex
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-lg
-                  border
-                  border-green-600
-                  bg-white
-                  px-4
-                  py-2.5
-                  text-sm
-                  font-semibold
-                  text-green-700
-                  transition
-                  hover:bg-green-50
-                "
-              >
-                <MessageSquare
-                  size={16}
-                />
-
-                Message Miller / Buyer
-              </button>
-            )}
 
 
           {canApply && (

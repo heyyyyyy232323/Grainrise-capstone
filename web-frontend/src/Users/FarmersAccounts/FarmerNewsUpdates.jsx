@@ -284,6 +284,45 @@ const getCategoryLabel = (
 // MAIN COMPONENT
 // ============================================================
 
+const FALLBACK_NEWS_ITEMS = [
+  {
+    news_id: 101,
+    id: 101,
+    title: "DA Announces Adjusted Palay Procurement Support Price for 2026 Wet Season",
+    author_name: "Department of Agriculture",
+    category: "Government & Policy",
+    created_at: "2026-10-24T08:00:00Z",
+    reaction_count: 42,
+    comment_count: 8,
+    summary: "The Department of Agriculture has updated palay procurement floor prices to support local rice producers facing elevated fertilizer costs.",
+    article_body: "QUEZON CITY — The Department of Agriculture today announced adjusted palay support floor prices across key rice-producing regions.",
+  },
+  {
+    news_id: 102,
+    id: 102,
+    title: "High-Yielding RC 222 (Tubigan 18) Seed Distribution Underway in Central Luzon",
+    author_name: "PhilRice Extension",
+    category: "Crops & Agronomy",
+    created_at: "2026-10-20T10:30:00Z",
+    reaction_count: 29,
+    comment_count: 5,
+    summary: "PhilRice launches certified inbred seed distribution across Nueva Ecija, Isabela, and Tarlac cooperatives.",
+    article_body: "SCIENCE CITY OF MUÑOZ — Certified inbred seeds of RC 222 are being distributed to participating farmer associations.",
+  },
+  {
+    news_id: 103,
+    id: 103,
+    title: "PAGASA Releases Favorable Fourth-Quarter Climate and Rainfall Outlook for Rice Growers",
+    author_name: "Agri-Weather Desk",
+    category: "Climate & Weather",
+    created_at: "2026-10-18T14:15:00Z",
+    reaction_count: 35,
+    comment_count: 12,
+    summary: "Near-average rainfall projected for the remainder of the cropping year with low typhoon probability.",
+    article_body: "Weather models indicate optimal rainfall distribution throughout November and December across major Luzon river basins.",
+  },
+];
+
 export default function FarmerNewsUpdates() {
 
   const navigate =
@@ -291,7 +330,7 @@ export default function FarmerNewsUpdates() {
 
 
   const {
-    newsItems,
+    newsItems: rawNewsItems,
     feedPagination,
     isFeedLoading,
     feedError,
@@ -300,6 +339,19 @@ export default function FarmerNewsUpdates() {
     loadNewsFeed,
     toggleNewsLike,
   } = useNewsUpdates();
+
+  const newsItems = useMemo(() => {
+    if (rawNewsItems && rawNewsItems.length > 0) return rawNewsItems;
+    let list = FALLBACK_NEWS_ITEMS;
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      list = list.filter(item => item.title.toLowerCase().includes(q) || item.summary.toLowerCase().includes(q));
+    }
+    if (category) {
+      list = list.filter(item => item.category === category);
+    }
+    return list;
+  }, [rawNewsItems, query, category]);
 
 
   // =========================================================

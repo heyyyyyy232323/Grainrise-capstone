@@ -1335,16 +1335,37 @@ const FarmerReviewModal = ({
                     <div
                       className="
                         mt-3
+                        space-y-3
                       "
                     >
                       <DocumentCard
-                        label="RSBSA Document"
+                        label="RSBSA Document / Verification File"
                         document={
                           compliance
                             ?.rsbsa_document
                         }
                       />
+
+                      {(compliance?.government_issued_id || farmer?.government_issued_id) && (
+                        <DocumentCard
+                          label="Government-Issued ID"
+                          document={
+                            compliance?.government_issued_id || farmer?.government_issued_id
+                          }
+                        />
+                      )}
                     </div>
+
+                    {farmer?.message && (
+                      <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50/60 p-3.5">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-blue-900">
+                          Applicant Note / Message
+                        </p>
+                        <p className="mt-1 text-xs text-blue-800 leading-relaxed whitespace-pre-line">
+                          {farmer.message}
+                        </p>
+                      </div>
+                    )}
                   </section>
 
 

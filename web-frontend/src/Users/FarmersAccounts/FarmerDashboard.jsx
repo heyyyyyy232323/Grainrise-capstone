@@ -840,6 +840,8 @@ export default function FarmerDashboard() {
     error,
 
     refreshDashboard,
+
+    farmerUser,
   } =
     useFarmerDashboard();
 
@@ -1076,7 +1078,7 @@ export default function FarmerDashboard() {
 
 
           <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-extrabold tracking-[-0.03em] text-slate-900">
-            Dashboard
+            {farmerUser?.first_name ? `Welcome, ${farmerUser.first_name}` : "Farmer Dashboard"}
           </h2>
 
 

@@ -477,7 +477,7 @@ class UserLoginSerializer(serializers.Serializer):
         if not value:
 
             raise serializers.ValidationError(
-                "Email or username is required."
+                "Email or contact number is required."
             )
 
         return value

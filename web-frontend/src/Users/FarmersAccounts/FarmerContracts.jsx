@@ -9,7 +9,6 @@ import FarmerContractsApplications from "./FarmerContractsApplications";
 import FarmerContractsOffers from "./FarmerContractsOffers";
 import FarmerContractsOpportunities from "./FarmerContractsOpportunities";
 import FarmerContractsCurrent from "./FarmerContractsCurrent";
-import FarmerContractsMessages from "./FarmerContractsMessages";
 
 
 // ============================================================
@@ -33,10 +32,6 @@ const CONTRACT_TABS = [
     id: "current",
     label: "Current Contracts",
   },
-  {
-    id: "messages",
-    label: "Messages",
-  },
 ];
 
 
@@ -54,28 +49,6 @@ export default function FarmerContracts() {
 
 
   // ==========================================================
-  // MESSAGE TARGET
-  //
-  // Used when the Farmer clicks:
-  //
-  // - Message Miller from Application
-  // - Message Miller from Offer
-  // - Message Miller from Opportunity
-  // - Message Miller from Current Contract
-  //
-  // The target is passed to FarmerContractsMessages so the
-  // correct Miller + transaction conversation opens.
-  // ==========================================================
-
-  const [
-    messageTarget,
-    setMessageTarget,
-  ] = useState(
-    null
-  );
-
-
-  // ==========================================================
   // NORMAL TAB CHANGE
   // ==========================================================
 
@@ -85,99 +58,6 @@ export default function FarmerContracts() {
     ) => {
       setActiveTab(
         tabId
-      );
-
-
-      // If the Farmer manually changes tabs,
-      // remove any previously requested
-      // conversation target.
-      setMessageTarget(
-        null
-      );
-    };
-
-
-  // ==========================================================
-  // OPEN MESSAGE CONVERSATION
-  // ==========================================================
-
-  const handleOpenMessages =
-    (
-      target
-    ) => {
-      if (!target) {
-        return;
-      }
-
-
-      const supplierProfileId =
-        target.supplierProfileId
-        ??
-        target.supplier_profile_id;
-
-
-      const referenceType =
-        target.referenceType
-        ??
-        target.reference_type;
-
-
-      const referenceId =
-        target.referenceId
-        ??
-        target.reference_id;
-
-
-      if (
-        !supplierProfileId
-        ||
-        !referenceType
-        ||
-        !referenceId
-      ) {
-        return;
-      }
-
-
-      setMessageTarget({
-        supplier_profile_id:
-          supplierProfileId,
-
-        reference_type:
-          referenceType,
-
-        reference_id:
-          referenceId,
-
-        // Optional information.
-        // Existing buttons do not need to provide these,
-        // but FarmerContractsMessages can use them when
-        // available.
-        miller_name:
-          target.millerName
-          ??
-          target.miller_name
-          ??
-          null,
-
-        business_name:
-          target.businessName
-          ??
-          target.business_name
-          ??
-          null,
-
-        reference_code:
-          target.referenceCode
-          ??
-          target.reference_code
-          ??
-          null,
-      });
-
-
-      setActiveTab(
-        "messages"
       );
     };
 
@@ -262,11 +142,7 @@ export default function FarmerContracts() {
 
       {activeTab ===
         "applications" && (
-        <FarmerContractsApplications
-          onMessage={
-            handleOpenMessages
-          }
-        />
+        <FarmerContractsApplications />
       )}
 
 
@@ -276,11 +152,7 @@ export default function FarmerContracts() {
 
       {activeTab ===
         "offers" && (
-        <FarmerContractsOffers
-          onMessage={
-            handleOpenMessages
-          }
-        />
+        <FarmerContractsOffers />
       )}
 
 
@@ -290,11 +162,7 @@ export default function FarmerContracts() {
 
       {activeTab ===
         "opportunities" && (
-        <FarmerContractsOpportunities
-          onMessage={
-            handleOpenMessages
-          }
-        />
+        <FarmerContractsOpportunities />
       )}
 
 
@@ -304,25 +172,7 @@ export default function FarmerContracts() {
 
       {activeTab ===
         "current" && (
-        <FarmerContractsCurrent
-          onMessage={
-            handleOpenMessages
-          }
-        />
-      )}
-
-
-      {/* ====================================================
-          MESSAGES
-      ==================================================== */}
-
-      {activeTab ===
-        "messages" && (
-        <FarmerContractsMessages
-          initialConversation={
-            messageTarget
-          }
-        />
+        <FarmerContractsCurrent />
       )}
 
     </div>

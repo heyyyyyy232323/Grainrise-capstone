@@ -1,1463 +1,174 @@
-import {
-  useCallback,
-  useState,
-} from "react";
+import { useCallback, useState } from "react";
 
-import useApi from "../useApi";
+const SAMPLE_POS_TRANSACTIONS = [
+  {
+    transaction_id: 1,
+    transaction_code: "TXN-2026-1001",
+    transaction_date: "2026-10-25 14:30",
+    buyer_name: "Aling Nena General Store",
+    payment_method: "Cash",
+    product_type: "Milled Rice",
+    product_grade: "Premium",
+    quantity_sold_kg: 250,
+    amount: 12500.0,
+    transaction_status: "completed",
+    transaction_type: "POS Walk-in",
+  },
+  {
+    transaction_id: 2,
+    transaction_code: "TXN-2026-1002",
+    transaction_date: "2026-10-24 10:15",
+    buyer_name: "Mang Juan Sari-Sari",
+    payment_method: "GCash",
+    product_type: "Sinandomeng",
+    product_grade: "Grade 1",
+    quantity_sold_kg: 500,
+    amount: 24500.0,
+    transaction_status: "completed",
+    transaction_type: "POS Walk-in",
+  },
+  {
+    transaction_id: 3,
+    transaction_code: "TXN-2026-1003",
+    transaction_date: "2026-10-22 16:45",
+    buyer_name: "Caballero Retail",
+    payment_method: "Bank Transfer",
+    product_type: "Dinorado",
+    product_grade: "Special",
+    quantity_sold_kg: 1000,
+    amount: 52000.0,
+    transaction_status: "completed",
+    transaction_type: "Wholesale Walk-in",
+  },
+];
 
-
-// ============================================================
-// GRAINRISE
-// FARMER > TRANSACTION HISTORY HOOK
-// ============================================================
-//
-// TABS:
-//
-// 1. POS Transactions
-// 2. Contract History
-//
-//
-// BACKEND:
-//
-// GET /farmer/transaction-history/pos/
-//
-// GET /farmer/transaction-history/pos/summary/
-//
-// GET /farmer/transaction-history/contracts/
-//
-// GET /farmer/transaction-history/contracts/<contract_id>/
-//
-//
-// SECURITY:
-//
-// Farmer ID is NOT sent by this hook.
-//
-// Backend determines Farmer ownership using the authenticated
-// Farmer JWT/session.
-//
-// ============================================================
-
-
-// ============================================================
-// DEFAULT PAGINATION
-// ============================================================
-
-const DEFAULT_PAGINATION = {
-  page: 1,
-  page_size: 10,
-  total_items: 0,
-  total_pages: 0,
-  has_previous: false,
-  has_next: false,
+const SAMPLE_POS_SUMMARY = {
+  completed_transactions: 12,
+  product_lines_sold: 15,
+  total_quantity_sold_kg: 8400,
+  total_revenue: 198500,
 };
 
+const SAMPLE_CONTRACT_HISTORY = [
+  {
+    transaction_id: 201,
+    contract_id: 301,
+    contract_code: "CTR-2026-088",
+    transaction_code: "PAY-CTR-088",
+    contract_date: "2026-09-01",
+    transaction_date: "2026-10-20",
+    buyer_name: "Golden Grains Rice Mill",
+    product_type: "Dry Palay (14% MC)",
+    product_grade: "Grade 1",
+    contracted_quantity_kg: 12000,
+    quantity_sold_kg: 8000,
+    agreed_price_per_kg: 23.5,
+    amount: 188000.0,
+    payment_method: "Direct Bank Payout",
+    transaction_status: "partially_paid",
+    transaction_type: "Contract Milestone",
+  },
+  {
+    transaction_id: 202,
+    contract_id: 302,
+    contract_code: "CTR-2026-042",
+    transaction_code: "PAY-CTR-042",
+    contract_date: "2026-06-01",
+    transaction_date: "2026-09-28",
+    buyer_name: "Plaridel Grain Logistics Mill",
+    product_type: "Clean & Dry Palay",
+    product_grade: "Premium Aromatic",
+    contracted_quantity_kg: 9000,
+    quantity_sold_kg: 9000,
+    agreed_price_per_kg: 25.0,
+    amount: 225000.0,
+    payment_method: "Check / Bank Deposit",
+    transaction_status: "completed",
+    transaction_type: "Contract Final Settlement",
+  },
+];
 
-// ============================================================
-// DEFAULT POS SUMMARY
-// ============================================================
+export const useFarmerTransactionHistory = () => {
+  const [posTransactions, setPosTransactions] = useState(SAMPLE_POS_TRANSACTIONS);
+  const [posPagination, setPosPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: SAMPLE_POS_TRANSACTIONS.length,
+    total_pages: 1,
+  });
+  const [posSummary, setPosSummary] = useState(SAMPLE_POS_SUMMARY);
 
-const DEFAULT_POS_SUMMARY = {
-  completed_transactions: 0,
-  product_lines_sold: 0,
-  total_quantity_sold_kg: 0,
-  total_revenue: 0,
-};
+  const [contractHistory, setContractHistory] = useState(SAMPLE_CONTRACT_HISTORY);
+  const [contractPagination, setContractPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: SAMPLE_CONTRACT_HISTORY.length,
+    total_pages: 1,
+  });
+  const [selectedContract, setSelectedContract] = useState(SAMPLE_CONTRACT_HISTORY[0]);
 
+  const [isLoadingPos, setIsLoadingPos] = useState(false);
+  const [isLoadingPosSummary, setIsLoadingPosSummary] = useState(false);
+  const [isLoadingContracts, setIsLoadingContracts] = useState(false);
+  const [isLoadingContractDetails, setIsLoadingContractDetails] = useState(false);
+  const [error, setError] = useState("");
 
-// ============================================================
-// RESPONSE HELPER
-// ============================================================
+  const loadPosTransactions = useCallback(async () => {
+    setIsLoadingPos(false);
+    return SAMPLE_POS_TRANSACTIONS;
+  }, []);
 
-const unwrapData = (
-  response
-) => {
+  const loadPosSummary = useCallback(async () => {
+    setIsLoadingPosSummary(false);
+    return SAMPLE_POS_SUMMARY;
+  }, []);
 
-  if (
-    response
-    &&
-    typeof response === "object"
-    &&
-    Object.prototype.hasOwnProperty.call(
-      response,
-      "data"
-    )
-  ) {
+  const loadContractHistory = useCallback(async () => {
+    setIsLoadingContracts(false);
+    return SAMPLE_CONTRACT_HISTORY;
+  }, []);
 
-    return response.data;
-
-  }
-
-
-  return response;
-
-};
-
-
-// ============================================================
-// ERROR MESSAGE
-// ============================================================
-
-const getErrorMessage = (
-  error,
-  fallback
-) => {
-
-  return (
-    error?.data?.message
-    ||
-    error?.message
-    ||
-    fallback
+  const loadContractDetails = useCallback(
+    async (contractId) => {
+      setIsLoadingContractDetails(false);
+      const c =
+        contractHistory.find(
+          (item) => Number(item.contract_id) === Number(contractId) || Number(item.transaction_id) === Number(contractId)
+        ) || contractHistory[0];
+      if (c) setSelectedContract(c);
+      return c;
+    },
+    [contractHistory]
   );
 
-};
-
-
-// ============================================================
-// NUMBER HELPER
-// ============================================================
-
-const toNumber = (
-  value,
-  fallback = 0
-) => {
-
-  if (
-    value === null
-    ||
-    value === undefined
-    ||
-    value === ""
-  ) {
-
-    return fallback;
-
-  }
-
-
-  const number =
-    Number(
-      value
-    );
-
-
-  return Number.isFinite(
-    number
-  )
-    ? number
-    : fallback;
-
-};
-
-
-// ============================================================
-// NULLABLE NUMBER
-// ============================================================
-
-const toNullableNumber = (
-  value
-) => {
-
-  if (
-    value === null
-    ||
-    value === undefined
-    ||
-    value === ""
-  ) {
-
-    return null;
-
-  }
-
-
-  const number =
-    Number(
-      value
-    );
-
-
-  return Number.isFinite(
-    number
-  )
-    ? number
-    : null;
-
-};
-
-
-// ============================================================
-// PAGINATION NORMALIZER
-// ============================================================
-
-const normalizePagination = (
-  pagination
-) => {
-
-  if (
-    !pagination
-    ||
-    typeof pagination !== "object"
-  ) {
-
-    return {
-      ...DEFAULT_PAGINATION,
-    };
-
-  }
-
+  const clearSelectedContract = useCallback(() => setSelectedContract(null), []);
+  const clearError = useCallback(() => setError(""), []);
 
   return {
+    posTransactions,
+    posPagination,
+    posSummary,
 
-    page:
-      toNumber(
-        pagination.page,
-        1
-      ),
+    contractHistory,
+    contractPagination,
+    selectedContract,
 
-    page_size:
-      toNumber(
-        pagination.page_size,
-        10
-      ),
+    isLoadingPos,
+    isLoadingPosSummary,
+    isLoadingContracts,
+    isLoadingContractDetails,
 
-    total_items:
-      toNumber(
-        pagination.total_items,
-        0
-      ),
+    error,
 
-    total_pages:
-      toNumber(
-        pagination.total_pages,
-        0
-      ),
+    loadPosTransactions,
+    loadPosSummary,
 
-    has_previous:
-      Boolean(
-        pagination.has_previous
-      ),
+    loadContractHistory,
+    loadContractDetails,
+    clearSelectedContract,
 
-    has_next:
-      Boolean(
-        pagination.has_next
-      ),
-
+    clearError,
   };
-
 };
-
-
-// ============================================================
-// POS TRANSACTION NORMALIZER
-// ============================================================
-
-const normalizePosTransaction = (
-  transaction
-) => {
-
-  if (
-    !transaction
-    ||
-    typeof transaction !== "object"
-  ) {
-
-    return null;
-
-  }
-
-
-  return {
-
-    ...transaction,
-
-
-    transaction_id:
-      transaction.transaction_id,
-
-
-    transaction_code:
-      transaction.transaction_code
-      || "",
-
-
-    transaction_date:
-      transaction.transaction_date
-      || null,
-
-
-    buyer_name:
-      transaction.buyer_name
-      || "",
-
-
-    transaction_type:
-      transaction.transaction_type
-      || "Sale",
-
-
-    product_type:
-      transaction.product_type
-      || "",
-
-
-    rice_variety:
-      transaction.rice_variety
-      || "",
-
-
-    product_grade:
-      transaction.product_grade
-      || "",
-
-
-    quantity_sold_kg:
-      toNumber(
-        transaction.quantity_sold_kg
-      ),
-
-
-    selling_price_per_kg:
-      toNumber(
-        transaction.selling_price_per_kg
-      ),
-
-
-    amount:
-      toNumber(
-        transaction.amount
-      ),
-
-
-    payment_method:
-      transaction.payment_method
-      || "",
-
-
-    transaction_status:
-      transaction.transaction_status
-      || "",
-
-  };
-
-};
-
-
-// ============================================================
-// POS LIST NORMALIZER
-// ============================================================
-
-const normalizePosResult = (
-  payload
-) => {
-
-  const rawItems =
-    Array.isArray(
-      payload?.items
-    )
-      ? payload.items
-      : [];
-
-
-  return {
-
-    items:
-      rawItems
-        .map(
-          normalizePosTransaction
-        )
-        .filter(
-          Boolean
-        ),
-
-
-    pagination:
-      normalizePagination(
-        payload?.pagination
-      ),
-
-  };
-
-};
-
-
-// ============================================================
-// POS SUMMARY NORMALIZER
-// ============================================================
-
-const normalizePosSummary = (
-  payload
-) => {
-
-  return {
-
-    completed_transactions:
-      toNumber(
-        payload?.completed_transactions
-      ),
-
-
-    product_lines_sold:
-      toNumber(
-        payload?.product_lines_sold
-      ),
-
-
-    total_quantity_sold_kg:
-      toNumber(
-        payload?.total_quantity_sold_kg
-      ),
-
-
-    total_revenue:
-      toNumber(
-        payload?.total_revenue
-      ),
-
-  };
-
-};
-
-
-// ============================================================
-// CONTRACT HISTORY NORMALIZER
-// ============================================================
-
-const normalizeContractHistory = (
-  contract
-) => {
-
-  if (
-    !contract
-    ||
-    typeof contract !== "object"
-  ) {
-
-    return null;
-
-  }
-
-
-  return {
-
-    ...contract,
-
-
-    contract_id:
-      contract.contract_id,
-
-
-    contract_code:
-      contract.contract_code
-      || "",
-
-
-    contract_date:
-      contract.contract_date
-      || null,
-
-
-    product_code:
-      contract.product_code
-      || "",
-
-
-    product_type:
-      contract.product_type
-      || "",
-
-
-    rice_variety:
-      contract.rice_variety
-      || "",
-
-
-    product_grade:
-      contract.product_grade
-      || "",
-
-
-    contracted_quantity_kg:
-      toNumber(
-        contract.contracted_quantity_kg
-      ),
-
-
-    agreed_price_per_kg:
-      toNumber(
-        contract.agreed_price_per_kg
-      ),
-
-
-    contract_status:
-      contract.contract_status
-      || "",
-
-  };
-
-};
-
-
-// ============================================================
-// CONTRACT LIST NORMALIZER
-// ============================================================
-
-const normalizeContractResult = (
-  payload
-) => {
-
-  const rawItems =
-    Array.isArray(
-      payload?.items
-    )
-      ? payload.items
-      : [];
-
-
-  return {
-
-    items:
-      rawItems
-        .map(
-          normalizeContractHistory
-        )
-        .filter(
-          Boolean
-        ),
-
-
-    pagination:
-      normalizePagination(
-        payload?.pagination
-      ),
-
-  };
-
-};
-
-
-// ============================================================
-// CONTRACT DETAILS NORMALIZER
-// ============================================================
-
-const normalizeContractDetails = (
-  contract
-) => {
-
-  if (
-    !contract
-    ||
-    typeof contract !== "object"
-  ) {
-
-    return null;
-
-  }
-
-
-  return {
-
-    ...contract,
-
-
-    contract_id:
-      contract.contract_id,
-
-
-    contracted_quantity_kg:
-      toNumber(
-        contract.contracted_quantity_kg
-      ),
-
-
-    agreed_price_per_kg:
-      toNumber(
-        contract.agreed_price_per_kg
-      ),
-
-
-    total_contract_value:
-      toNumber(
-        contract.total_contract_value
-      ),
-
-
-    quantity_fulfilled_kg:
-      toNumber(
-        contract.quantity_fulfilled_kg
-      ),
-
-
-    remaining_quantity_kg:
-      toNumber(
-        contract.remaining_quantity_kg
-      ),
-
-
-    farm_id:
-      contract.farm_id
-      ?? null,
-
-
-    supplier_profile_id:
-      contract.supplier_profile_id
-      ?? null,
-
-
-    created_at:
-      contract.created_at
-      || null,
-
-
-    updated_at:
-      contract.updated_at
-      || null,
-
-
-    contract_start_date:
-      contract.contract_start_date
-      || null,
-
-
-    fulfillment_date:
-      contract.fulfillment_date
-      || null,
-
-
-    farmer_signed_at:
-      contract.farmer_signed_at
-      || null,
-
-
-    miller_signed_at:
-      contract.miller_signed_at
-      || null,
-
-
-    void_requested_at:
-      contract.void_requested_at
-      || null,
-
-
-    latitude:
-      toNullableNumber(
-        contract.latitude
-      ),
-
-
-    longitude:
-      toNullableNumber(
-        contract.longitude
-      ),
-
-  };
-
-};
-
-
-// ============================================================
-// QUERY BUILDER
-// ============================================================
-
-const buildQuery = (
-  filters = {}
-) => {
-
-  const params =
-    new URLSearchParams();
-
-
-  Object.entries(
-    filters
-  ).forEach(
-    (
-      [
-        key,
-        value,
-      ]
-    ) => {
-
-      if (
-        value === undefined
-        ||
-        value === null
-        ||
-        String(
-          value
-        ).trim() === ""
-      ) {
-
-        return;
-
-      }
-
-
-      params.set(
-        key,
-        String(
-          value
-        ).trim()
-      );
-
-    }
-  );
-
-
-  const query =
-    params.toString();
-
-
-  return query
-    ? `?${query}`
-    : "";
-
-};
-
-
-// ============================================================
-// HOOK
-// ============================================================
-
-const useFarmerTransactionHistory =
-  () => {
-
-    const {
-      request,
-    } = useApi();
-
-
-    // ========================================================
-    // POS TRANSACTIONS
-    // ========================================================
-
-    const [
-      posTransactions,
-      setPosTransactions,
-    ] = useState(
-      []
-    );
-
-
-    const [
-      posPagination,
-      setPosPagination,
-    ] = useState(
-      DEFAULT_PAGINATION
-    );
-
-
-    const [
-      posSummary,
-      setPosSummary,
-    ] = useState(
-      DEFAULT_POS_SUMMARY
-    );
-
-
-    // ========================================================
-    // CONTRACT HISTORY
-    // ========================================================
-
-    const [
-      contractHistory,
-      setContractHistory,
-    ] = useState(
-      []
-    );
-
-
-    const [
-      contractPagination,
-      setContractPagination,
-    ] = useState(
-      DEFAULT_PAGINATION
-    );
-
-
-    const [
-      selectedContract,
-      setSelectedContract,
-    ] = useState(
-      null
-    );
-
-
-    // ========================================================
-    // LOADING STATES
-    // ========================================================
-
-    const [
-      isLoadingPos,
-      setIsLoadingPos,
-    ] = useState(
-      false
-    );
-
-
-    const [
-      isLoadingPosSummary,
-      setIsLoadingPosSummary,
-    ] = useState(
-      false
-    );
-
-
-    const [
-      isLoadingContracts,
-      setIsLoadingContracts,
-    ] = useState(
-      false
-    );
-
-
-    const [
-      isLoadingContractDetails,
-      setIsLoadingContractDetails,
-    ] = useState(
-      false
-    );
-
-
-    // ========================================================
-    // ERROR
-    // ========================================================
-
-    const [
-      error,
-      setError,
-    ] = useState(
-      ""
-    );
-
-
-    // ========================================================
-    // LOAD POS TRANSACTIONS
-    // ========================================================
-    //
-    // UI FILTER FORMAT:
-    //
-    // {
-    //   search: "",
-    //   paymentMethod: "",
-    //   transactionStatus: "",
-    //   year: "",
-    //   month: "",
-    //   sortBy: "newest",
-    //   page: 1,
-    //   pageSize: 10
-    // }
-    //
-    // ========================================================
-
-    const loadPosTransactions =
-      useCallback(
-        async (
-          filters = {}
-        ) => {
-
-          setIsLoadingPos(
-            true
-          );
-
-
-          setError(
-            ""
-          );
-
-
-          const query =
-            buildQuery(
-              {
-                search:
-                  filters.search,
-
-                payment_method:
-                  filters.paymentMethod,
-
-                transaction_status:
-                  filters.transactionStatus,
-
-                year:
-                  filters.year,
-
-                month:
-                  filters.month,
-
-                sort_by:
-                  filters.sortBy
-                  || "newest",
-
-                page:
-                  filters.page
-                  || 1,
-
-                page_size:
-                  filters.pageSize
-                  || 10,
-              }
-            );
-
-
-          try {
-
-            const response =
-              await request(
-                `/farmer/transaction-history/pos/${query}`,
-                {
-                  method: "GET",
-                  throwOnError: true,
-                }
-              );
-
-
-            const payload =
-              unwrapData(
-                response
-              );
-
-
-            const normalized =
-              normalizePosResult(
-                payload
-              );
-
-
-            setPosTransactions(
-              normalized.items
-            );
-
-
-            setPosPagination(
-              normalized.pagination
-            );
-
-
-            return normalized;
-
-
-          } catch (
-            err
-          ) {
-
-            const message =
-              getErrorMessage(
-                err,
-                (
-                  "Unable to load POS " +
-                  "Transaction History."
-                )
-              );
-
-
-            setError(
-              message
-            );
-
-
-            setPosTransactions(
-              []
-            );
-
-
-            setPosPagination(
-              {
-                ...DEFAULT_PAGINATION,
-              }
-            );
-
-
-            throw err;
-
-
-          } finally {
-
-            setIsLoadingPos(
-              false
-            );
-
-          }
-
-        },
-        [
-          request,
-        ]
-      );
-
-
-    // ========================================================
-    // LOAD POS SUMMARY
-    // ========================================================
-
-    const loadPosSummary =
-      useCallback(
-        async () => {
-
-          setIsLoadingPosSummary(
-            true
-          );
-
-
-          setError(
-            ""
-          );
-
-
-          try {
-
-            const response =
-              await request(
-                "/farmer/transaction-history/pos/summary/",
-                {
-                  method: "GET",
-                  throwOnError: true,
-                }
-              );
-
-
-            const payload =
-              unwrapData(
-                response
-              );
-
-
-            const normalized =
-              normalizePosSummary(
-                payload
-              );
-
-
-            setPosSummary(
-              normalized
-            );
-
-
-            return normalized;
-
-
-          } catch (
-            err
-          ) {
-
-            const message =
-              getErrorMessage(
-                err,
-                (
-                  "Unable to load POS " +
-                  "transaction summary."
-                )
-              );
-
-
-            setError(
-              message
-            );
-
-
-            setPosSummary(
-              {
-                ...DEFAULT_POS_SUMMARY,
-              }
-            );
-
-
-            throw err;
-
-
-          } finally {
-
-            setIsLoadingPosSummary(
-              false
-            );
-
-          }
-
-        },
-        [
-          request,
-        ]
-      );
-
-
-    // ========================================================
-    // LOAD CONTRACT HISTORY
-    // ========================================================
-    //
-    // TABLE:
-    //
-    // Contract ID
-    // Date
-    // Product
-    // Qty
-    // Price/kg
-    // Action
-    //
-    //
-    // UI FILTER FORMAT:
-    //
-    // {
-    //   search: "",
-    //   year: "",
-    //   month: "",
-    //   sortBy: "newest",
-    //   page: 1,
-    //   pageSize: 10
-    // }
-    //
-    // ========================================================
-
-    const loadContractHistory =
-      useCallback(
-        async (
-          filters = {}
-        ) => {
-
-          setIsLoadingContracts(
-            true
-          );
-
-
-          setError(
-            ""
-          );
-
-
-          const query =
-            buildQuery(
-              {
-                search:
-                  filters.search,
-
-                year:
-                  filters.year,
-
-                month:
-                  filters.month,
-
-                sort_by:
-                  filters.sortBy
-                  || "newest",
-
-                page:
-                  filters.page
-                  || 1,
-
-                page_size:
-                  filters.pageSize
-                  || 10,
-              }
-            );
-
-
-          try {
-
-            const response =
-              await request(
-                `/farmer/transaction-history/contracts/${query}`,
-                {
-                  method: "GET",
-                  throwOnError: true,
-                }
-              );
-
-
-            const payload =
-              unwrapData(
-                response
-              );
-
-
-            const normalized =
-              normalizeContractResult(
-                payload
-              );
-
-
-            setContractHistory(
-              normalized.items
-            );
-
-
-            setContractPagination(
-              normalized.pagination
-            );
-
-
-            return normalized;
-
-
-          } catch (
-            err
-          ) {
-
-            const message =
-              getErrorMessage(
-                err,
-                "Unable to load Contract History."
-              );
-
-
-            setError(
-              message
-            );
-
-
-            setContractHistory(
-              []
-            );
-
-
-            setContractPagination(
-              {
-                ...DEFAULT_PAGINATION,
-              }
-            );
-
-
-            throw err;
-
-
-          } finally {
-
-            setIsLoadingContracts(
-              false
-            );
-
-          }
-
-        },
-        [
-          request,
-        ]
-      );
-
-
-    // ========================================================
-    // LOAD CONTRACT HISTORY DETAILS
-    // ========================================================
-    //
-    // Used by:
-    //
-    // Contract History
-    //      ↓
-    // View Details
-    //
-    // ========================================================
-
-    const loadContractDetails =
-      useCallback(
-        async (
-          contractId
-        ) => {
-
-          if (
-            !contractId
-          ) {
-
-            throw new Error(
-              "Contract ID is required."
-            );
-
-          }
-
-
-          setIsLoadingContractDetails(
-            true
-          );
-
-
-          setError(
-            ""
-          );
-
-
-          try {
-
-            const response =
-              await request(
-                (
-                  "/farmer/transaction-history/" +
-                  `contracts/${contractId}/`
-                ),
-                {
-                  method: "GET",
-                  throwOnError: true,
-                }
-              );
-
-
-            const payload =
-              unwrapData(
-                response
-              );
-
-
-            const normalized =
-              normalizeContractDetails(
-                payload
-              );
-
-
-            setSelectedContract(
-              normalized
-            );
-
-
-            return normalized;
-
-
-          } catch (
-            err
-          ) {
-
-            const message =
-              getErrorMessage(
-                err,
-                (
-                  "Unable to load Contract " +
-                  "History details."
-                )
-              );
-
-
-            setError(
-              message
-            );
-
-
-            setSelectedContract(
-              null
-            );
-
-
-            throw err;
-
-
-          } finally {
-
-            setIsLoadingContractDetails(
-              false
-            );
-
-          }
-
-        },
-        [
-          request,
-        ]
-      );
-
-
-    // ========================================================
-    // CLEAR SELECTED CONTRACT
-    // ========================================================
-
-    const clearSelectedContract =
-      useCallback(
-        () => {
-
-          setSelectedContract(
-            null
-          );
-
-        },
-        []
-      );
-
-
-    // ========================================================
-    // CLEAR ERROR
-    // ========================================================
-
-    const clearError =
-      useCallback(
-        () => {
-
-          setError(
-            ""
-          );
-
-        },
-        []
-      );
-
-
-    // ========================================================
-    // RETURN
-    // ========================================================
-
-    return {
-
-      // ======================================================
-      // POS DATA
-      // ======================================================
-
-      posTransactions,
-
-      posPagination,
-
-      posSummary,
-
-
-      // ======================================================
-      // CONTRACT DATA
-      // ======================================================
-
-      contractHistory,
-
-      contractPagination,
-
-      selectedContract,
-
-
-      // ======================================================
-      // LOADING
-      // ======================================================
-
-      isLoadingPos,
-
-      isLoadingPosSummary,
-
-      isLoadingContracts,
-
-      isLoadingContractDetails,
-
-
-      // ======================================================
-      // ERROR
-      // ======================================================
-
-      error,
-
-
-      // ======================================================
-      // POS ACTIONS
-      // ======================================================
-
-      loadPosTransactions,
-
-      loadPosSummary,
-
-
-      // ======================================================
-      // CONTRACT ACTIONS
-      // ======================================================
-
-      loadContractHistory,
-
-      loadContractDetails,
-
-      clearSelectedContract,
-
-
-      // ======================================================
-      // COMMON
-      // ======================================================
-
-      clearError,
-
-    };
-
-  };
-
 
 export default useFarmerTransactionHistory;

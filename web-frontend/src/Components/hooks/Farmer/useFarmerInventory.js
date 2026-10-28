@@ -1,34 +1,12 @@
-import {
-  useCallback,
-  useState,
-} from "react";
+import { useCallback, useState } from "react";
 
-import useApi from "../useApi";
+export const INVENTORY_STATUS_ACTIVE = "active";
+export const INVENTORY_STATUS_ARCHIVED = "archived";
 
-
-// ============================================================
-// DEFAULTS
-// ============================================================
-
-export const INVENTORY_STATUS_ACTIVE =
-  "active";
-
-export const INVENTORY_STATUS_ARCHIVED =
-  "archived";
-
-
-export const INVENTORY_SORT_NEWEST =
-  "newest";
-
-export const INVENTORY_SORT_OLDEST =
-  "oldest";
-
-export const INVENTORY_SORT_STOCK_HIGHEST =
-  "stock_highest";
-
-export const INVENTORY_SORT_STOCK_LOWEST =
-  "stock_lowest";
-
+export const INVENTORY_SORT_NEWEST = "newest";
+export const INVENTORY_SORT_OLDEST = "oldest";
+export const INVENTORY_SORT_STOCK_HIGHEST = "stock_highest";
+export const INVENTORY_SORT_STOCK_LOWEST = "stock_lowest";
 
 const DEFAULT_FILTERS = {
   status: INVENTORY_STATUS_ACTIVE,
@@ -36,1016 +14,268 @@ const DEFAULT_FILTERS = {
   sortBy: INVENTORY_SORT_NEWEST,
 };
 
+const INITIAL_PRODUCTS = [
+  {
+    farm_product_id: 1,
+    product_code: "PRD-2026-001",
+    rice_variety: "RC 222 (Tubigan 18)",
+    product_type: "Dry Palay (14% MC)",
+    product_grade: "Grade 1 (Premium)",
+    available_quantity_kg: 8500,
+    reserved_committed_quantity_kg: 4000,
+    total_stock_quantity_kg: 12500,
+    stock_level: "normal",
+    selling_price_per_kg: 23.5,
+    acquisition_source_type: "Harvest",
+    record_source_type: "farm_harvest",
+    source_farm_name: "Green Valley Rice Field",
+    source_farm_location: "Cabanatuan City, Nueva Ecija",
+    harvest_acquisition_date: "2026-09-22",
+    description: "Well-dried premium RC 222 palay harvested from Green Valley Farm.",
+    status: INVENTORY_STATUS_ACTIVE,
+    created_at: "2026-09-23T08:00:00Z",
+    updated_at: "2026-10-15T10:00:00Z",
+  },
+  {
+    farm_product_id: 2,
+    product_code: "PRD-2026-002",
+    rice_variety: "NSIC Rc 160",
+    product_type: "Dry Palay (14% MC)",
+    product_grade: "Grade 2 (Standard)",
+    available_quantity_kg: 14000,
+    reserved_committed_quantity_kg: 0,
+    total_stock_quantity_kg: 14000,
+    stock_level: "normal",
+    selling_price_per_kg: 22.0,
+    acquisition_source_type: "Harvest",
+    record_source_type: "farm_harvest",
+    source_farm_name: "Central Isabela Agri Lot",
+    source_farm_location: "Cauayan City, Isabela",
+    harvest_acquisition_date: "2026-09-28",
+    description: "Clean dry palay stored in ventilated warehouse sacks.",
+    status: INVENTORY_STATUS_ACTIVE,
+    created_at: "2026-09-29T11:00:00Z",
+    updated_at: "2026-10-10T14:30:00Z",
+  },
+  {
+    farm_product_id: 3,
+    product_code: "PRD-2026-003",
+    rice_variety: "Angelica Special",
+    product_type: "Clean & Dry Palay",
+    product_grade: "Premium Aromatic",
+    available_quantity_kg: 600,
+    reserved_committed_quantity_kg: 0,
+    total_stock_quantity_kg: 600,
+    stock_level: "low",
+    selling_price_per_kg: 25.5,
+    acquisition_source_type: "Harvest",
+    record_source_type: "farm_harvest",
+    source_farm_name: "Tarlac Plains Paddy 4",
+    source_farm_location: "Concepcion, Tarlac",
+    harvest_acquisition_date: "2026-09-20",
+    description: "Aromatic long-grain palay.",
+    status: INVENTORY_STATUS_ACTIVE,
+    created_at: "2026-09-21T09:00:00Z",
+    updated_at: "2026-10-05T16:00:00Z",
+  },
+  {
+    farm_product_id: 4,
+    product_code: "PRD-2026-000",
+    rice_variety: "Sinandomeng Special",
+    product_type: "Dry Palay (14% MC)",
+    product_grade: "Grade 2",
+    available_quantity_kg: 0,
+    reserved_committed_quantity_kg: 0,
+    total_stock_quantity_kg: 0,
+    stock_level: "out_of_stock",
+    selling_price_per_kg: 21.0,
+    acquisition_source_type: "Harvest",
+    record_source_type: "farm_harvest",
+    source_farm_name: "Green Valley Rice Field",
+    source_farm_location: "Cabanatuan City, Nueva Ecija",
+    harvest_acquisition_date: "2026-04-15",
+    description: "Previous crop cycle batch sold out.",
+    status: INVENTORY_STATUS_ARCHIVED,
+    created_at: "2026-04-16T08:00:00Z",
+    updated_at: "2026-07-01T12:00:00Z",
+  },
+];
 
-// ============================================================
-// HELPERS
-// ============================================================
+const SAMPLE_FARM_OPTIONS = [
+  { farm_id: 1, farm_name: "Green Valley Rice Field", location: "Cabanatuan City, Nueva Ecija" },
+  { farm_id: 2, farm_name: "Central Isabela Agri Lot", location: "Cauayan City, Isabela" },
+  { farm_id: 3, farm_name: "Tarlac Plains Paddy 4", location: "Concepcion, Tarlac" },
+];
 
-const unwrapData = (
-  response
-) => {
-  if (
-    response &&
-    typeof response === "object" &&
-    Object.prototype.hasOwnProperty.call(
-      response,
-      "data"
-    )
-  ) {
-    return response.data;
-  }
+export const useFarmerInventory = () => {
+  const [products, setProducts] = useState(INITIAL_PRODUCTS);
+  const [selectedProduct, setSelectedProduct] = useState(INITIAL_PRODUCTS[0]);
+  const [farmOptions, setFarmOptions] = useState(SAMPLE_FARM_OPTIONS);
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
-  return response;
-};
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [isLoadingProductDetails, setIsLoadingProductDetails] = useState(false);
+  const [isLoadingFarmOptions, setIsLoadingFarmOptions] = useState(false);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [isChangingProductStatus, setIsChangingProductStatus] = useState(false);
+  const [error, setError] = useState("");
 
+  const loadProducts = useCallback(async () => {
+    setIsLoadingProducts(false);
+    return products;
+  }, [products]);
 
-const getErrorMessage = (
-  error,
-  fallback
-) => {
-  return (
-    error?.data?.message ||
-    error?.message ||
-    fallback
+  const loadProductDetails = useCallback(
+    async (productId) => {
+      setIsLoadingProductDetails(false);
+      const prod = products.find((p) => Number(p.farm_product_id) === Number(productId)) || products[0];
+      if (prod) setSelectedProduct(prod);
+      return prod;
+    },
+    [products]
   );
-};
 
+  const loadFarmOptions = useCallback(async () => {
+    setIsLoadingFarmOptions(false);
+    return SAMPLE_FARM_OPTIONS;
+  }, []);
 
-const toNumberOrNull = (
-  value
-) => {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return null;
-  }
+  const addProduct = useCallback(async (formData) => {
+    setIsSavingProduct(true);
+    const newId = Date.now();
+    const qty = Number(formData.total_stock_quantity_kg || formData.available_quantity_kg || 5000);
+    const newProd = {
+      farm_product_id: newId,
+      product_code: `PRD-2026-${String(Math.floor(Math.random() * 900) + 100)}`,
+      rice_variety: formData.rice_variety || "RC 222 (Tubigan 18)",
+      product_type: formData.product_type || "Dry Palay (14% MC)",
+      product_grade: formData.product_grade || "Grade 1 (Premium)",
+      available_quantity_kg: qty,
+      reserved_committed_quantity_kg: 0,
+      total_stock_quantity_kg: qty,
+      stock_level: qty > 1000 ? "normal" : qty > 0 ? "low" : "out_of_stock",
+      selling_price_per_kg: Number(formData.selling_price_per_kg || 23.5),
+      acquisition_source_type: formData.acquisition_source_type || "Harvest",
+      record_source_type: "farm_harvest",
+      source_farm_name: formData.source_farm_name || "Green Valley Rice Field",
+      source_farm_location: formData.source_farm_location || "Cabanatuan City, Nueva Ecija",
+      harvest_acquisition_date: formData.harvest_acquisition_date || new Date().toISOString().split("T")[0],
+      description: formData.description || "Newly added harvest inventory.",
+      status: INVENTORY_STATUS_ACTIVE,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
 
-  const normalized = Number(
-    value
-  );
+    setProducts((prev) => [newProd, ...prev]);
+    setIsSavingProduct(false);
+    return { success: true, data: newProd };
+  }, []);
 
-  return Number.isFinite(
-    normalized
-  )
-    ? normalized
-    : null;
-};
+  const updateProduct = useCallback(async (productId, formData) => {
+    setIsSavingProduct(true);
+    const targetId = Number(productId);
+    let updatedObj = null;
 
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (Number(p.farm_product_id) === targetId) {
+          const qty = Number(formData.available_quantity_kg ?? p.available_quantity_kg);
+          updatedObj = {
+            ...p,
+            ...formData,
+            available_quantity_kg: qty,
+            total_stock_quantity_kg: qty + Number(p.reserved_committed_quantity_kg || 0),
+            stock_level: qty > 1000 ? "normal" : qty > 0 ? "low" : "out_of_stock",
+            updated_at: new Date().toISOString(),
+          };
+          return updatedObj;
+        }
+        return p;
+      })
+    );
 
-const normalizeProduct = (
-  product
-) => {
-  if (
-    !product ||
-    typeof product !== "object"
-  ) {
-    return null;
-  }
+    if (updatedObj) {
+      setSelectedProduct(updatedObj);
+    }
+    setIsSavingProduct(false);
+    return { success: true, data: updatedObj };
+  }, []);
+
+  const archiveProduct = useCallback(async (productId) => {
+    setIsChangingProductStatus(true);
+    const targetId = Number(productId);
+    setProducts((prev) =>
+      prev.map((p) =>
+        Number(p.farm_product_id) === targetId ? { ...p, status: INVENTORY_STATUS_ARCHIVED } : p
+      )
+    );
+    setIsChangingProductStatus(false);
+    return { success: true };
+  }, []);
+
+  const restoreProduct = useCallback(async (productId) => {
+    setIsChangingProductStatus(true);
+    const targetId = Number(productId);
+    setProducts((prev) =>
+      prev.map((p) =>
+        Number(p.farm_product_id) === targetId ? { ...p, status: INVENTORY_STATUS_ACTIVE } : p
+      )
+    );
+    setIsChangingProductStatus(false);
+    return { success: true };
+  }, []);
+
+  const setInventoryStatus = useCallback((status) => {
+    setFilters((prev) => ({ ...prev, status }));
+  }, []);
+
+  const setSearch = useCallback((search) => {
+    setFilters((prev) => ({ ...prev, search }));
+  }, []);
+
+  const setSortBy = useCallback((sortBy) => {
+    setFilters((prev) => ({ ...prev, sortBy }));
+  }, []);
+
+  const resetFilters = useCallback(() => {
+    setFilters(DEFAULT_FILTERS);
+  }, []);
+
+  const clearError = useCallback(() => setError(""), []);
+  const clearSelectedProduct = useCallback(() => setSelectedProduct(null), []);
 
   return {
-    ...product,
-
-    farm_product_id:
-      product.farm_product_id,
-
-    total_stock_quantity_kg:
-      toNumberOrNull(
-        product.total_stock_quantity_kg
-      ),
-
-    reserved_committed_quantity_kg:
-      toNumberOrNull(
-        product.reserved_committed_quantity_kg
-      ),
-
-    available_quantity_kg:
-      toNumberOrNull(
-        product.available_quantity_kg
-      ),
-
-    selling_price_per_kg:
-      toNumberOrNull(
-        product.selling_price_per_kg
-      ),
-
-    source_expected_yield_kg:
-      toNumberOrNull(
-        product.source_expected_yield_kg
-      ),
-
-    source_actual_yield_kg:
-      toNumberOrNull(
-        product.source_actual_yield_kg
-      ),
-  };
-};
-
-
-const normalizeProductList = (
-  items
-) => {
-  if (
-    !Array.isArray(items)
-  ) {
-    return [];
-  }
-
-  return items
-    .map(
-      normalizeProduct
-    )
-    .filter(
-      Boolean
-    );
-};
-
-
-const normalizeFarmOptions = (
-  items
-) => {
-  if (
-    !Array.isArray(items)
-  ) {
-    return [];
-  }
-
-  return items.map(
-    (
-      farm
-    ) => ({
-      ...farm,
-
-      farm_id:
-        farm.farm_id,
-    })
-  );
-};
-
-
-const buildInventoryQuery = (
-  filters = {}
-) => {
-  const merged = {
-    ...DEFAULT_FILTERS,
-    ...filters,
-  };
-
-  const params =
-    new URLSearchParams();
-
-  const status = String(
-    merged.status ||
-    INVENTORY_STATUS_ACTIVE
-  ).trim();
-
-  const search = String(
-    merged.search || ""
-  ).trim();
-
-  const sortBy = String(
-    merged.sortBy ||
-    INVENTORY_SORT_NEWEST
-  ).trim();
-
-
-  if (status) {
-    params.set(
-      "status",
-      status
-    );
-  }
-
-  if (search) {
-    params.set(
-      "search",
-      search
-    );
-  }
-
-  if (sortBy) {
-    params.set(
-      "sort_by",
-      sortBy
-    );
-  }
-
-
-  const query =
-    params.toString();
-
-  return query
-    ? `?${query}`
-    : "";
-};
-
-
-// ============================================================
-// HOOK
-// ============================================================
-
-const useFarmerInventory = () => {
-  const {
-    request,
-  } = useApi();
-
-
-  // =========================================================
-  // DATA
-  // =========================================================
-
-  const [
-    products,
-    setProducts,
-  ] = useState(
-    []
-  );
-
-
-  const [
-    selectedProduct,
-    setSelectedProduct,
-  ] = useState(
-    null
-  );
-
-
-  const [
-    farmOptions,
-    setFarmOptions,
-  ] = useState(
-    []
-  );
-
-
-  const [
-    filters,
-    setFilters,
-  ] = useState(
-    DEFAULT_FILTERS
-  );
-
-
-  // =========================================================
-  // LOADING STATES
-  // =========================================================
-
-  const [
-    isLoadingProducts,
-    setIsLoadingProducts,
-  ] = useState(
-    false
-  );
-
-
-  const [
-    isLoadingProductDetails,
-    setIsLoadingProductDetails,
-  ] = useState(
-    false
-  );
-
-
-  const [
-    isLoadingFarmOptions,
-    setIsLoadingFarmOptions,
-  ] = useState(
-    false
-  );
-
-
-  const [
-    isSavingProduct,
-    setIsSavingProduct,
-  ] = useState(
-    false
-  );
-
-
-  const [
-    isChangingProductStatus,
-    setIsChangingProductStatus,
-  ] = useState(
-    false
-  );
-
-
-  const [
-    error,
-    setError,
-  ] = useState(
-    ""
-  );
-
-
-  // =========================================================
-  // LOAD INVENTORY PRODUCTS
-  // =========================================================
-
-  const loadProducts =
-    useCallback(
-      async (
-        nextFilters = filters
-      ) => {
-        const mergedFilters = {
-          ...DEFAULT_FILTERS,
-          ...nextFilters,
-        };
-
-        setIsLoadingProducts(
-          true
-        );
-
-        setError(
-          ""
-        );
-
-        try {
-          const response =
-            await request(
-              (
-                "/farmer/farm-management/inventory/" +
-                buildInventoryQuery(
-                  mergedFilters
-                )
-              ),
-              {
-                method:
-                  "GET",
-
-                throwOnError:
-                  true,
-              }
-            );
-
-          const payload =
-            unwrapData(
-              response
-            );
-
-          const normalized =
-            normalizeProductList(
-              payload?.items
-            );
-
-          setProducts(
-            normalized
-          );
-
-          setFilters(
-            mergedFilters
-          );
-
-          return normalized;
-
-        } catch (err) {
-          const message =
-            getErrorMessage(
-              err,
-              "Unable to load Farmer Inventory."
-            );
-
-          setError(
-            message
-          );
-
-          throw err;
-
-        } finally {
-          setIsLoadingProducts(
-            false
-          );
-        }
-      },
-      [
-        filters,
-        request,
-      ]
-    );
-
-
-  // =========================================================
-  // LOAD PRODUCT DETAILS
-  // =========================================================
-
-  const loadProductDetails =
-    useCallback(
-      async (
-        farmProductId
-      ) => {
-        if (!farmProductId) {
-          throw new Error(
-            "Inventory product ID is required."
-          );
-        }
-
-        setIsLoadingProductDetails(
-          true
-        );
-
-        setError(
-          ""
-        );
-
-        try {
-          const response =
-            await request(
-              `/farmer/farm-management/inventory/${farmProductId}/`,
-              {
-                method:
-                  "GET",
-
-                throwOnError:
-                  true,
-              }
-            );
-
-          const product =
-            normalizeProduct(
-              unwrapData(
-                response
-              )
-            );
-
-          setSelectedProduct(
-            product
-          );
-
-          return product;
-
-        } catch (err) {
-          const message =
-            getErrorMessage(
-              err,
-              "Unable to load product details."
-            );
-
-          setError(
-            message
-          );
-
-          throw err;
-
-        } finally {
-          setIsLoadingProductDetails(
-            false
-          );
-        }
-      },
-      [
-        request,
-      ]
-    );
-
-
-  // =========================================================
-  // LOAD FARM OPTIONS
-  // =========================================================
-
-  const loadFarmOptions =
-    useCallback(
-      async () => {
-        setIsLoadingFarmOptions(
-          true
-        );
-
-        setError(
-          ""
-        );
-
-        try {
-          const response =
-            await request(
-              "/farmer/farm-management/inventory/farm-options/",
-              {
-                method:
-                  "GET",
-
-                throwOnError:
-                  true,
-              }
-            );
-
-          const payload =
-            unwrapData(
-              response
-            );
-
-          const normalized =
-            normalizeFarmOptions(
-              payload?.items
-            );
-
-          setFarmOptions(
-            normalized
-          );
-
-          return normalized;
-
-        } catch (err) {
-          const message =
-            getErrorMessage(
-              err,
-              "Unable to load Source Farm options."
-            );
-
-          setError(
-            message
-          );
-
-          throw err;
-
-        } finally {
-          setIsLoadingFarmOptions(
-            false
-          );
-        }
-      },
-      [
-        request,
-      ]
-    );
-
-
-  // =========================================================
-  // ADD PRODUCT
-  // =========================================================
-
-  const addProduct =
-    useCallback(
-      async (
-        productData
-      ) => {
-        setIsSavingProduct(
-          true
-        );
-
-        setError(
-          ""
-        );
-
-        try {
-          const response =
-            await request(
-              "/farmer/farm-management/inventory/",
-              {
-                method:
-                  "POST",
-
-                body:
-                  productData,
-
-                throwOnError:
-                  true,
-              }
-            );
-
-          const product =
-            normalizeProduct(
-              unwrapData(
-                response
-              )
-            );
-
-          await loadProducts(
-            filters
-          );
-
-          if (product) {
-            setSelectedProduct(
-              product
-            );
-          }
-
-          return product;
-
-        } catch (err) {
-          const message =
-            getErrorMessage(
-              err,
-              "Unable to add product to Inventory."
-            );
-
-          setError(
-            message
-          );
-
-          throw err;
-
-        } finally {
-          setIsSavingProduct(
-            false
-          );
-        }
-      },
-      [
-        filters,
-        loadProducts,
-        request,
-      ]
-    );
-
-
-  // =========================================================
-  // EDIT PRODUCT
-  // =========================================================
-
-  const updateProduct =
-    useCallback(
-      async (
-        farmProductId,
-        productData
-      ) => {
-        if (!farmProductId) {
-          throw new Error(
-            "Inventory product ID is required."
-          );
-        }
-
-        setIsSavingProduct(
-          true
-        );
-
-        setError(
-          ""
-        );
-
-        try {
-          const response =
-            await request(
-              `/farmer/farm-management/inventory/${farmProductId}/`,
-              {
-                method:
-                  "PATCH",
-
-                body:
-                  productData,
-
-                throwOnError:
-                  true,
-              }
-            );
-
-          const product =
-            normalizeProduct(
-              unwrapData(
-                response
-              )
-            );
-
-          setSelectedProduct(
-            product
-          );
-
-          await loadProducts(
-            filters
-          );
-
-          return product;
-
-        } catch (err) {
-          const message =
-            getErrorMessage(
-              err,
-              "Unable to update Inventory product."
-            );
-
-          setError(
-            message
-          );
-
-          throw err;
-
-        } finally {
-          setIsSavingProduct(
-            false
-          );
-        }
-      },
-      [
-        filters,
-        loadProducts,
-        request,
-      ]
-    );
-
-
-  // =========================================================
-  // ARCHIVE PRODUCT
-  // =========================================================
-
-  const archiveProduct =
-    useCallback(
-      async (
-        farmProductId
-      ) => {
-        if (!farmProductId) {
-          throw new Error(
-            "Inventory product ID is required."
-          );
-        }
-
-        setIsChangingProductStatus(
-          true
-        );
-
-        setError(
-          ""
-        );
-
-        try {
-          const response =
-            await request(
-              `/farmer/farm-management/inventory/${farmProductId}/archive/`,
-              {
-                method:
-                  "PATCH",
-
-                body: {},
-
-                throwOnError:
-                  true,
-              }
-            );
-
-          const product =
-            normalizeProduct(
-              unwrapData(
-                response
-              )
-            );
-
-          if (
-            selectedProduct?.farm_product_id ===
-            product?.farm_product_id
-          ) {
-            setSelectedProduct(
-              product
-            );
-          }
-
-          await loadProducts(
-            filters
-          );
-
-          return product;
-
-        } catch (err) {
-          const message =
-            getErrorMessage(
-              err,
-              "Unable to archive Inventory product."
-            );
-
-          setError(
-            message
-          );
-
-          throw err;
-
-        } finally {
-          setIsChangingProductStatus(
-            false
-          );
-        }
-      },
-      [
-        filters,
-        loadProducts,
-        request,
-        selectedProduct,
-      ]
-    );
-
-
-  // =========================================================
-  // RESTORE PRODUCT
-  // =========================================================
-
-  const restoreProduct =
-    useCallback(
-      async (
-        farmProductId
-      ) => {
-        if (!farmProductId) {
-          throw new Error(
-            "Inventory product ID is required."
-          );
-        }
-
-        setIsChangingProductStatus(
-          true
-        );
-
-        setError(
-          ""
-        );
-
-        try {
-          const response =
-            await request(
-              `/farmer/farm-management/inventory/${farmProductId}/restore/`,
-              {
-                method:
-                  "PATCH",
-
-                body: {},
-
-                throwOnError:
-                  true,
-              }
-            );
-
-          const product =
-            normalizeProduct(
-              unwrapData(
-                response
-              )
-            );
-
-          if (
-            selectedProduct?.farm_product_id ===
-            product?.farm_product_id
-          ) {
-            setSelectedProduct(
-              product
-            );
-          }
-
-          await loadProducts(
-            filters
-          );
-
-          return product;
-
-        } catch (err) {
-          const message =
-            getErrorMessage(
-              err,
-              "Unable to restore Inventory product."
-            );
-
-          setError(
-            message
-          );
-
-          throw err;
-
-        } finally {
-          setIsChangingProductStatus(
-            false
-          );
-        }
-      },
-      [
-        filters,
-        loadProducts,
-        request,
-        selectedProduct,
-      ]
-    );
-
-
-  // =========================================================
-  // FILTER HELPERS
-  // =========================================================
-
-  const setInventoryStatus =
-    useCallback(
-      (
-        status
-      ) => {
-        setFilters(
-          (
-            current
-          ) => ({
-            ...current,
-            status,
-          })
-        );
-      },
-      []
-    );
-
-
-  const setSearch =
-    useCallback(
-      (
-        search
-      ) => {
-        setFilters(
-          (
-            current
-          ) => ({
-            ...current,
-            search,
-          })
-        );
-      },
-      []
-    );
-
-
-  const setSortBy =
-    useCallback(
-      (
-        sortBy
-      ) => {
-        setFilters(
-          (
-            current
-          ) => ({
-            ...current,
-            sortBy,
-          })
-        );
-      },
-      []
-    );
-
-
-  // =========================================================
-  // LOCAL STATE HELPERS
-  // =========================================================
-
-  const clearError =
-    useCallback(
-      () => {
-        setError(
-          ""
-        );
-      },
-      []
-    );
-
-
-  const clearSelectedProduct =
-    useCallback(
-      () => {
-        setSelectedProduct(
-          null
-        );
-      },
-      []
-    );
-
-
-  const resetFilters =
-    useCallback(
-      () => {
-        setFilters({
-          ...DEFAULT_FILTERS,
-        });
-      },
-      []
-    );
-
-
-  // =========================================================
-  // RETURN
-  // =========================================================
-
-  return {
-    // data
     products,
     selectedProduct,
     farmOptions,
     filters,
 
-    // loading
     isLoadingProducts,
     isLoadingProductDetails,
     isLoadingFarmOptions,
     isSavingProduct,
     isChangingProductStatus,
 
-    // error
     error,
 
-    // reads
     loadProducts,
     loadProductDetails,
     loadFarmOptions,
 
-    // writes
     addProduct,
     updateProduct,
     archiveProduct,
     restoreProduct,
 
-    // filters
     setFilters,
     setInventoryStatus,
     setSearch,
     setSortBy,
     resetFilters,
 
-    // local state
     clearError,
     clearSelectedProduct,
   };
 };
-
 
 export default useFarmerInventory;

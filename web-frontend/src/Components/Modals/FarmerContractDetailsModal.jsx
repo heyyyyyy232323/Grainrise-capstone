@@ -15,7 +15,6 @@ import {
   FileText,
   Loader2,
   MapPin,
-  MessageSquare,
   Package,
   X,
 } from "lucide-react";
@@ -486,7 +485,6 @@ export default function FarmerContractDetailsModal({
   error = "",
 
   onClose,
-  onMessage,
   onRequestVoid,
   onDownload,
   onSign,
@@ -1566,38 +1564,6 @@ export default function FarmerContractDetailsModal({
             )}
 
 
-          {/* MESSAGE */}
-
-          {contract &&
-            onMessage && (
-              <button
-                type="button"
-                onClick={onMessage}
-                className="
-                  inline-flex
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-lg
-                  border
-                  border-green-600
-                  bg-white
-                  px-4
-                  py-2.5
-                  text-sm
-                  font-semibold
-                  text-green-700
-                  transition
-                  hover:bg-green-50
-                "
-              >
-                <MessageSquare
-                  size={16}
-                />
-
-                Message Miller / Buyer
-              </button>
-            )}
 
 
           {/* E-SIGN */}

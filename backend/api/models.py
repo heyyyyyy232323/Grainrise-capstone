@@ -87,6 +87,7 @@ class PartnershipInquiry(models.Model):
         MILLER = "miller", "Miller / Supplier"
         WAREHOUSE = "warehouse", "Warehouse Manager"
         RETAILER = "retailer", "Retailer"
+        FARMER = "farmer", "Farmer"
 
     class Status(models.TextChoices):
         TO_REVIEW = "to_review", "To Review"
@@ -100,7 +101,7 @@ class PartnershipInquiry(models.Model):
     )
 
     name = models.CharField(max_length=255)
-    email = models.EmailField(max_length=255)
+    email = models.EmailField(max_length=255, blank=True, null=True)
     organization_company = models.CharField(max_length=255)
     partner_role = models.CharField(
         max_length=50,
@@ -129,6 +130,7 @@ class PartnershipInquiry(models.Model):
     )
 
     email_verified = models.BooleanField(default=False)
+    contact_number_verified = models.BooleanField(default=False)
 
     # SHA-256 hash of raw verification token
     verification_token_hash = models.CharField(
@@ -173,7 +175,7 @@ class ContactSupportMessage(models.Model):
 
     support_id = models.BigAutoField(primary_key=True)
     full_name = models.CharField(max_length=255)
-    email = models.EmailField(max_length=255)
+    email = models.EmailField(max_length=255, blank=True, null=True)
     user_role = models.CharField(
         max_length=100,
         blank=True,

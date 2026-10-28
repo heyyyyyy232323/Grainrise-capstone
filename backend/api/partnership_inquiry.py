@@ -29,7 +29,7 @@ from .models import PartnershipInquiry
 logger = logging.getLogger(__name__)
 
 
-ALLOWED_PARTNER_ROLES = {"miller", "warehouse", "retailer"}
+ALLOWED_PARTNER_ROLES = {"miller", "warehouse", "retailer", "farmer"}
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".pdf"}
 MAX_FILE_BYTES = 5 * 1024 * 1024
 MAX_MESSAGE_LENGTH = 2000
@@ -40,7 +40,12 @@ ROLE_LABELS = {
     "miller": "Miller / Supplier",
     "warehouse": "Warehouse Owner",
     "retailer": "Retailer",
+    "farmer": "Farmer",
 }
+
+SMS_OTP_TTL_SECONDS = 24 * 3600  # Exactly 24 hours (86,400 seconds)
+SMS_RESEND_COOLDOWN_SECONDS = 60
+MAX_SMS_RESEND_COUNT = 5
 
 def _validate_and_normalize_phone(raw_phone):
     if not raw_phone:
@@ -623,6 +628,70 @@ GrainRise Team"""
     logger.info("Verification email sent via Django email backend to %s", email)
     return True
 
+def _send_sms_via_textbee(recipient_phone, message_text):
+    """
+    Sends an SMS using Textbee API gateway.
+    POST https://api.textbee.dev/api/v1/gateway/send-sms
+    Uses x-api-key, recipients, message, deviceId, and configured simSubscriptionId.
+    Normalizes Philippine phone numbers to +63 format.
+    OTP codes and API credentials are kept strictly out of logs.
+    """
+    api_key = (os.getenv("TEXTBEE_API_KEY") or "").strip()
+    device_id = (os.getenv("TEXTBEE_DEVICE_ID") or "").strip()
+    base_url = (os.getenv("TEXTBEE_BASE_URL") or "https://api.textbee.dev/api/v1").strip()
+    sim_sub_id = os.getenv("TEXTBEE_SIM_SUBSCRIPTION_ID")
+
+    if not api_key:
+        logger.error("TEXTBEE_API_KEY is not configured in backend environment.")
+        raise RuntimeError("SMS gateway configuration error: API key missing.")
+
+    url = f"{base_url.rstrip('/')}/gateway/send-sms"
+    payload = {
+        "recipients": [recipient_phone],
+        "message": message_text,
+    }
+    if device_id:
+        payload["deviceId"] = device_id
+    if sim_sub_id is not None and str(sim_sub_id).strip() != "":
+        try:
+            payload["simSubscriptionId"] = int(sim_sub_id)
+        except (ValueError, TypeError):
+            pass
+
+    headers = {
+        "x-api-key": api_key,
+        "Content-Type": "application/json",
+        "User-Agent": "GrainRise-Backend/1.0 (Windows NT 10.0; Win64; x64)",
+    }
+
+    data_bytes = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data_bytes, headers=headers, method="POST")
+
+    try:
+        with urllib.request.urlopen(req, timeout=20) as response:
+            status_code = response.status
+            if status_code not in (200, 201):
+                logger.error("Textbee API returned status %s", status_code)
+                raise RuntimeError(f"Textbee API returned status {status_code}")
+
+            masked_phone = recipient_phone[:5] + "***" + recipient_phone[-2:] if len(recipient_phone) >= 7 else "***"
+            logger.info("Textbee SMS successfully accepted for recipient %s", masked_phone)
+            return True
+    except urllib.error.HTTPError as exc:
+        logger.error("Textbee HTTPError: status %s", exc.code)
+        raise RuntimeError(f"SMS delivery failed (HTTP {exc.code})") from exc
+    except Exception as exc:
+        logger.error("Textbee connection error: %s", exc)
+        raise RuntimeError(f"SMS gateway connection error: {exc}") from exc
+
+
+def _generate_sms_otp():
+    """Generates a secure 6-digit numeric OTP and its SHA-256 hash."""
+    otp_code = str(secrets.randbelow(900000) + 100000)
+    otp_hash = hashlib.sha256(otp_code.encode("utf-8")).hexdigest()
+    return otp_code, otp_hash
+
+
 
 def _check_email_used(email):
     norm_email = (email or "").strip().lower()
@@ -822,15 +891,27 @@ def verify_partnership_id(request):
 def submit_partnership_inquiry(request):
     """
     POST /api/partnership-inquiries/
-    Submits application with duplicate validation and multi-file document upload support.
+    Submits application with duplicate validation, multi-file document upload support,
+    and selectable verification method for Farmers (SMS OTP or Email Verification).
     """
     data = request.data
     name = (data.get("name") or "").strip()
     email = (data.get("email") or "").strip().lower()
     organization_company = (data.get("organization") or data.get("organization_company") or "").strip()
     partner_role = (data.get("partner_role") or data.get("role") or "").strip().lower()
+    verification_method = (data.get("verification_method") or "").strip().lower()
     raw_phone = data.get("contact_number") or data.get("contact")
     raw_message = data.get("message")
+
+    # Only Farmer can select SMS OTP; Miller, Warehouse, Retailer always use Email Verification
+    if not partner_role or partner_role not in ALLOWED_PARTNER_ROLES:
+        partner_role = "retailer"
+
+    if partner_role != "farmer":
+        verification_method = "email"
+    else:
+        if verification_method not in ("sms", "email"):
+            verification_method = "sms"
 
     # Two required single-file uploads: government_issued_id and business_verification_document
     uploaded_gov_id = request.FILES.get("government_issued_id")
@@ -846,26 +927,37 @@ def submit_partnership_inquiry(request):
         if name_used:
             errors["name"] = name_err
 
-    if not email:
-        errors["email"] = "Email is required."
-    elif not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
-        errors["email"] = "Please enter a valid email address."
+    # Email requirement depends on role and verification method
+    if partner_role == "farmer" and verification_method == "sms":
+        # Email is optional when SMS OTP is chosen for Farmer
+        if email:
+            if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+                errors["email"] = "Please enter a valid email address."
+            else:
+                email_used, email_err = _check_email_used(email)
+                if email_used:
+                    errors["email"] = email_err
     else:
-        email_used, email_err = _check_email_used(email)
-        if email_used:
-            errors["email"] = email_err
+        # Email is required for Email Verification (all non-farmers, or farmer choosing email)
+        if not email:
+            errors["email"] = "Email is required."
+        elif not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+            errors["email"] = "Please enter a valid email address."
+        else:
+            email_used, email_err = _check_email_used(email)
+            if email_used:
+                errors["email"] = email_err
 
+    # Organization / Company
     if not organization_company:
-        errors["organization"] = "Organization or company name is required."
+        if partner_role == "farmer":
+            organization_company = "Independent Farmer"
+        else:
+            errors["organization"] = "Organization or company name is required."
     else:
         org_used, org_err = _check_organization_used(organization_company)
         if org_used:
             errors["organization"] = org_err
-
-    if not partner_role:
-        partner_role = "retailer"
-    elif partner_role not in ALLOWED_PARTNER_ROLES:
-        partner_role = "retailer"
 
     normalized_phone = _validate_and_normalize_phone(raw_phone)
     if not normalized_phone:
@@ -938,67 +1030,142 @@ def submit_partnership_inquiry(request):
         logger.exception("Failed to save documents: %s", exc)
         return Response({"detail": "Failed to store uploaded document."}, status=http_status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # Save temporary inquiry for email verification
-    raw_token, token_hash = _generate_verification_token()
-    expires_at = timezone.now() + timedelta(seconds=VERIFICATION_TOKEN_TTL_SECONDS)
+    # Handle Verification according to selected method
+    if verification_method == "sms":
+        raw_token, token_hash = _generate_verification_token()
+        expires_at = timezone.now() + timedelta(seconds=VERIFICATION_TOKEN_TTL_SECONDS)
 
-    try:
-        inquiry = PartnershipInquiry.objects.create(
-            partnership_inquiry_id=app_uuid,
-            name=name,
-            email=email,
-            organization_company=organization_company,
-            partner_role=partner_role,
-            contact_number=normalized_phone,
-            message=clean_msg,
-            government_issued_id=gov_id_path,
-            business_verification_document=biz_doc_path,
-            status=PartnershipInquiry.Status.TO_REVIEW,
-            email_verified=False,
-            verification_token_hash=token_hash,
-            verification_expires_at=expires_at,
+        # SAVE Farmer's inquiry BEFORE requesting the SMS
+        try:
+            inquiry = PartnershipInquiry.objects.create(
+                partnership_inquiry_id=app_uuid,
+                name=name,
+                email=email if email else None,
+                organization_company=organization_company if organization_company else "Independent Farmer",
+                partner_role=partner_role,
+                contact_number=normalized_phone,
+                message=clean_msg,
+                government_issued_id=gov_id_path,
+                business_verification_document=biz_doc_path,
+                status=PartnershipInquiry.Status.TO_REVIEW,
+                email_verified=False,
+                contact_number_verified=False,
+                verification_token_hash=token_hash,
+                verification_expires_at=expires_at,
+                resend_count=0,
+            )
+        except Exception as exc:
+            logger.exception("Error creating partnership inquiry with SMS verification link: %s", exc)
+            return Response(
+                {"success": False, "detail": "Unable to save partnership application."},
+                status=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        frontend_base = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
+        verify_url = f"{frontend_base.rstrip('/')}/partner-with-us/verify-sms/{raw_token}"
+        sms_message = (
+            f"Verify your GrainRise Farmer application by clicking this link: {verify_url}\n"
+            f"Link valid for 24 hours. Do not share this link."
         )
-    except Exception as exc:
-        logger.exception("Error creating partnership inquiry: %s", exc)
+
+        try:
+            _send_sms_via_textbee(normalized_phone, sms_message)
+        except Exception as exc:
+            logger.warning("Could not send verification SMS: %s", exc)
+            return Response(
+                {
+                    "success": False,
+                    "validation_status": "MATCH",
+                    "verification_method": "sms",
+                    "sms_sent": False,
+                    "inquiry_id": str(app_uuid),
+                    "contact_number": normalized_phone,
+                    "detail": (
+                        "Your partnership inquiry was recorded, but the verification SMS could not be "
+                        "delivered immediately. SMS delivery may be delayed depending on mobile signal. "
+                        "You may click Resend Verification Link or choose Email Verification instead."
+                    ),
+                },
+                status=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
         return Response(
             {
-                "success": False,
-                "detail": "Unable to save partnership application.",
-            },
-            status=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-        )
-
-    # Send verification email.
-    # The inquiry has already been saved, so return its ID even if delivery fails.
-    try:
-        _send_verification_email(name, email, partner_role, raw_token)
-    except Exception as exc:
-        logger.warning("Could not send verification email: %s", exc)
-        return Response(
-            {
-                "success": False,
+                "success": True,
                 "validation_status": "MATCH",
+                "verification_method": "sms",
+                "sms_sent": True,
+                "inquiry_id": str(app_uuid),
+                "contact_number": normalized_phone,
+                "message": "Your partnership inquiry has been received. A verification link has been sent to your mobile phone.",
+            },
+            status=http_status.HTTP_201_CREATED,
+        )
+
+    else:
+        # Email Verification Flow (Standard for Miller, Warehouse, Retailer, and Farmer who chose Email)
+        raw_token, token_hash = _generate_verification_token()
+        expires_at = timezone.now() + timedelta(seconds=VERIFICATION_TOKEN_TTL_SECONDS)
+
+        try:
+            inquiry = PartnershipInquiry.objects.create(
+                partnership_inquiry_id=app_uuid,
+                name=name,
+                email=email,
+                organization_company=organization_company,
+                partner_role=partner_role,
+                contact_number=normalized_phone,
+                message=clean_msg,
+                government_issued_id=gov_id_path,
+                business_verification_document=biz_doc_path,
+                status=PartnershipInquiry.Status.TO_REVIEW,
+                email_verified=False,
+                contact_number_verified=False,
+                verification_token_hash=token_hash,
+                verification_expires_at=expires_at,
+                resend_count=0,
+            )
+        except Exception as exc:
+            logger.exception("Error creating partnership inquiry: %s", exc)
+            return Response(
+                {"success": False, "detail": "Unable to save partnership application."},
+                status=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        try:
+            _send_verification_email(name, email, partner_role, raw_token)
+        except Exception as exc:
+            logger.warning("Could not send verification email: %s", exc)
+            return Response(
+                {
+                    "success": False,
+                    "validation_status": "MATCH",
+                    "requires_email_verification": True,
+                    "verification_method": "email",
+                    "email_sent": False,
+                    "inquiry_id": str(app_uuid),
+                    "email": email,
+                    "detail": (
+                        "Your partnership application was saved, but the verification "
+                        "email could not be delivered immediately. Please click Resend Verification below."
+                    ),
+                },
+                status=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        return Response(
+            {
+                "success": True,
+                "validation_status": "MATCH",
+                "verification_method": "email",
+                "message": "Your partnership application has been received. Please verify your email address.",
                 "requires_email_verification": True,
-                "email_sent": False,
+                "email_sent": True,
                 "inquiry_id": str(app_uuid),
                 "email": email,
-                "detail": (
-                    "Your partnership application was saved, but the verification "
-                    "email could not be delivered immediately. Please click Resend Verification below."
-                ),
             },
-            status=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+            status=http_status.HTTP_201_CREATED,
         )
-
-    return Response({
-        "success": True,
-        "validation_status": "MATCH",
-        "message": "Your partnership application has been received. Please verify your email address.",
-        "requires_email_verification": True,
-        "email_sent": True,
-        "inquiry_id": str(app_uuid),
-        "email": email,
-    }, status=http_status.HTTP_201_CREATED)
 
 
 @api_view(["GET"])
@@ -1006,6 +1173,9 @@ def submit_partnership_inquiry(request):
 def verify_partnership_email(request, token):
     """
     GET /api/partnership-inquiries/verify-email/<token>/
+    Verifies partnership inquiry email.
+    METHOD ISOLATION: Updates email_verified ONLY. Never modifies contact_number_verified.
+    Inquiry remains in to_review status awaiting Admin approval.
     """
     token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
 
@@ -1032,7 +1202,8 @@ def verify_partnership_email(request, token):
                 {
                     "success": True,
                     "already_verified": True,
-                    "message": "This email address has already been verified.",
+                    "verification_type": "email",
+                    "message": "This partnership inquiry email has already been verified.",
                 },
                 status=http_status.HTTP_200_OK,
             )
@@ -1055,6 +1226,7 @@ def verify_partnership_email(request, token):
                 status=http_status.HTTP_410_GONE,
             )
 
+        # METHOD ISOLATION: Update email_verified ONLY
         inquiry.email_verified = True
         inquiry.verified_at = timezone.now()
         inquiry.save(
@@ -1065,10 +1237,13 @@ def verify_partnership_email(request, token):
             ]
         )
 
+        logger.info("Partnership inquiry %s email verified", inquiry.partnership_inquiry_id)
+
         return Response(
             {
                 "success": True,
                 "already_verified": False,
+                "verification_type": "email",
                 "message": (
                     "Email verified successfully! "
                     "Your application is now in review."
@@ -1079,7 +1254,6 @@ def verify_partnership_email(request, token):
 
     except Exception as exc:
         logger.exception("Verification error: %s", exc)
-
         return Response(
             {
                 "success": False,
@@ -1091,20 +1265,230 @@ def verify_partnership_email(request, token):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
-def resend_partnership_verification(request):
-    data = request.data
+def verify_partnership_sms_link(request, token=None):
+    """
+    POST /api/partnership-inquiries/verify-sms/<str:token>/
+    or POST /api/partnership-inquiries/verify-sms/ with body {"token": "..."}
+    Requires explicit user action (button click) via POST.
+    METHOD ISOLATION: Updates contact_number_verified ONLY. Never modifies email_verified.
+    Inquiry remains in to_review status awaiting Admin approval.
+    Works across devices and browsers; one-time verification valid for 24 hours.
+    """
+    raw_token = (token or request.data.get("token") or "").strip()
+    if not raw_token:
+        return Response(
+            {"success": False, "detail": "Verification token is required."},
+            status=http_status.HTTP_400_BAD_REQUEST,
+        )
 
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+    try:
+        inquiry = PartnershipInquiry.objects.filter(
+            verification_token_hash=token_hash
+        ).first()
+
+        if inquiry is None:
+            return Response(
+                {
+                    "success": False,
+                    "error_code": "INVALID_VERIFICATION_TOKEN",
+                    "detail": (
+                        "This verification link is invalid or has already "
+                        "been replaced by a newer verification link."
+                    ),
+                },
+                status=http_status.HTTP_400_BAD_REQUEST,
+            )
+
+        if inquiry.contact_number_verified:
+            return Response(
+                {
+                    "success": True,
+                    "already_verified": True,
+                    "verification_type": "sms",
+                    "message": "This mobile number has already been verified.",
+                },
+                status=http_status.HTTP_200_OK,
+            )
+
+        if (
+            inquiry.verification_expires_at
+            and timezone.now() > inquiry.verification_expires_at
+        ):
+            return Response(
+                {
+                    "success": False,
+                    "error_code": "VERIFICATION_LINK_EXPIRED",
+                    "inquiry_id": str(inquiry.partnership_inquiry_id),
+                    "detail": (
+                        "This verification link has expired. "
+                        "Please request a new verification link."
+                    ),
+                },
+                status=http_status.HTTP_410_GONE,
+            )
+
+        # METHOD ISOLATION: Update contact_number_verified ONLY
+        inquiry.contact_number_verified = True
+        inquiry.verified_at = timezone.now()
+        inquiry.save(
+            update_fields=[
+                "contact_number_verified",
+                "verified_at",
+                "updated_at",
+            ]
+        )
+
+        logger.info("Partnership inquiry %s verified via explicit SMS link POST confirmation", inquiry.partnership_inquiry_id)
+
+        return Response(
+            {
+                "success": True,
+                "already_verified": False,
+                "verification_type": "sms",
+                "message": "Mobile number verified successfully! Your application is now in review.",
+            },
+            status=http_status.HTTP_200_OK,
+        )
+
+    except Exception as exc:
+        logger.exception("SMS link verification error: %s", exc)
+        return Response(
+            {
+                "success": False,
+                "detail": "Unable to verify this mobile number at this time.",
+            },
+            status=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def verify_partnership_otp(request):
+    """
+    POST /api/partnership-inquiries/verify-otp/
+    Body: {"inquiry_id": "...", "otp": "..."}
+    Verifies SMS OTP code against stored SHA-256 hash.
+    Preserves inquiry status as to_review (Admin approval still required).
+    Never marks verified on acceptance of SMS request; only on valid user-entered code.
+    """
+    inquiry_id = str(request.data.get("inquiry_id") or "").strip()
+    raw_otp = str(request.data.get("otp") or "").strip()
+
+    if not inquiry_id:
+        return Response(
+            {"success": False, "detail": "Inquiry ID is required."},
+            status=http_status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not raw_otp or not re.match(r"^\d{6}$", raw_otp):
+        return Response(
+            {
+                "success": False,
+                "error_code": "INVALID_OTP",
+                "detail": "Please enter a valid 6-digit verification code.",
+            },
+            status=http_status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        inquiry = PartnershipInquiry.objects.filter(
+            partnership_inquiry_id=inquiry_id
+        ).first()
+
+        if inquiry is None:
+            return Response(
+                {
+                    "success": False,
+                    "error_code": "INQUIRY_NOT_FOUND",
+                    "detail": "Partnership inquiry was not found.",
+                },
+                status=http_status.HTTP_404_NOT_FOUND,
+            )
+
+        if inquiry.contact_number_verified or inquiry.email_verified:
+            return Response(
+                {
+                    "success": True,
+                    "already_verified": True,
+                    "message": "This partnership inquiry has already been verified.",
+                },
+                status=http_status.HTTP_200_OK,
+            )
+
+        if inquiry.verification_expires_at and timezone.now() > inquiry.verification_expires_at:
+            return Response(
+                {
+                    "success": False,
+                    "error_code": "OTP_EXPIRED",
+                    "inquiry_id": str(inquiry.partnership_inquiry_id),
+                    "detail": "This verification code has expired. Please request a new code.",
+                },
+                status=http_status.HTTP_410_GONE,
+            )
+
+        input_hash = hashlib.sha256(raw_otp.encode("utf-8")).hexdigest()
+        if not inquiry.verification_token_hash or not hmac.compare_digest(input_hash, inquiry.verification_token_hash):
+            return Response(
+                {
+                    "success": False,
+                    "error_code": "INVALID_OTP",
+                    "detail": "Incorrect verification code. Please check your SMS and try again.",
+                },
+                status=http_status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Successfully verified! Set contact_number_verified and verified_at.
+        # Preserve status as TO_REVIEW for Admin approval!
+        inquiry.contact_number_verified = True
+        inquiry.verified_at = timezone.now()
+        inquiry.save(
+            update_fields=[
+                "contact_number_verified",
+                "verified_at",
+                "updated_at",
+            ]
+        )
+
+        logger.info("Partnership inquiry %s verified via SMS OTP", inquiry.partnership_inquiry_id)
+
+        return Response(
+            {
+                "success": True,
+                "already_verified": False,
+                "message": "Mobile number verified successfully! Your application is now in review.",
+            },
+            status=http_status.HTTP_200_OK,
+        )
+
+    except Exception as exc:
+        logger.exception("OTP verification error: %s", exc)
+        return Response(
+            {"success": False, "detail": "Unable to verify code at this time."},
+            status=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def resend_partnership_verification(request):
+    """
+    POST /api/partnership-inquiries/resend-verification/
+    Body: {"inquiry_id": "...", "method": "sms" | "email", "email": "..."}
+    Handles resending verification code/link with cooldown and rate limit restrictions.
+    """
+    data = request.data
     inquiry_id = str(data.get("inquiry_id") or "").strip()
     email = (data.get("email") or "").strip().lower()
+    method = (data.get("method") or "").strip().lower()
 
     inquiry = None
-
     if inquiry_id:
         inquiry = PartnershipInquiry.objects.filter(
             partnership_inquiry_id=inquiry_id
         ).first()
 
-    # Compatibility fallback for any older frontend/client still sending email.
     if inquiry is None and email:
         inquiry = PartnershipInquiry.objects.filter(
             email=email
@@ -1119,64 +1503,166 @@ def resend_partnership_verification(request):
             status=http_status.HTTP_404_NOT_FOUND,
         )
 
-    if inquiry.email_verified:
+    if inquiry.contact_number_verified or inquiry.email_verified:
         return Response(
             {
                 "success": False,
-                "detail": "This email address has already been verified.",
+                "detail": "This partnership inquiry has already been verified.",
             },
             status=http_status.HTTP_400_BAD_REQUEST,
         )
 
-    raw_token, token_hash = _generate_verification_token()
+    # Cooldown check (60 seconds)
+    if inquiry.last_resend_at:
+        elapsed = (timezone.now() - inquiry.last_resend_at).total_seconds()
+        if elapsed < RESEND_COOLDOWN_SECONDS:
+            retry_after = int(RESEND_COOLDOWN_SECONDS - elapsed)
+            return Response(
+                {
+                    "success": False,
+                    "error_code": "RATE_LIMITED",
+                    "retry_after": retry_after,
+                    "detail": f"Please wait {retry_after} seconds before requesting another code.",
+                },
+                status=http_status.HTTP_429_TOO_MANY_REQUESTS,
+            )
 
-    inquiry.verification_token_hash = token_hash
-    inquiry.verification_expires_at = (
-        timezone.now() + timedelta(seconds=VERIFICATION_TOKEN_TTL_SECONDS)
-    )
-    inquiry.save(
-        update_fields=[
-            "verification_token_hash",
-            "verification_expires_at",
-            "updated_at",
-        ]
-    )
-
-    try:
-        _send_verification_email(
-            inquiry.name,
-            inquiry.email,
-            inquiry.partner_role,
-            raw_token,
-        )
-    except Exception as exc:
-        logger.exception(
-            "Could not resend partnership verification email for inquiry %s: %s",
-            inquiry.partnership_inquiry_id,
-            exc,
-        )
+    # Max resend attempts check (5 attempts)
+    if (inquiry.resend_count or 0) >= MAX_SMS_RESEND_COUNT:
         return Response(
             {
                 "success": False,
-                "inquiry_id": str(inquiry.partnership_inquiry_id),
-                "email": inquiry.email,
-                "detail": (
-                    "Verification email could not be sent. "
-                    "Please try again in a moment."
-                ),
+                "error_code": "MAX_RESENDS_EXCEEDED",
+                "detail": "Maximum resend attempts reached. Please contact support or try again later.",
             },
-            status=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+            status=http_status.HTTP_429_TOO_MANY_REQUESTS,
         )
 
-    return Response(
-        {
-            "success": True,
-            "inquiry_id": str(inquiry.partnership_inquiry_id),
-            "email": inquiry.email,
-            "message": "A new verification email has been sent.",
-        },
-        status=http_status.HTTP_200_OK,
-    )
+    # Determine method
+    if not method:
+        if inquiry.partner_role == "farmer" and not inquiry.email and inquiry.contact_number:
+            method = "sms"
+        else:
+            method = "email"
+
+    if method == "sms":
+        if inquiry.partner_role != "farmer":
+            return Response(
+                {"success": False, "detail": "SMS verification is only available for Farmer inquiries."},
+                status=http_status.HTTP_400_BAD_REQUEST,
+            )
+
+        raw_token, token_hash = _generate_verification_token()
+        inquiry.verification_token_hash = token_hash
+        inquiry.verification_expires_at = timezone.now() + timedelta(seconds=VERIFICATION_TOKEN_TTL_SECONDS)
+        inquiry.resend_count = (inquiry.resend_count or 0) + 1
+        inquiry.last_resend_at = timezone.now()
+        inquiry.save(
+            update_fields=[
+                "verification_token_hash",
+                "verification_expires_at",
+                "resend_count",
+                "last_resend_at",
+                "updated_at",
+            ]
+        )
+
+        frontend_base = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
+        verify_url = f"{frontend_base.rstrip('/')}/partner-with-us/verify-sms/{raw_token}"
+        sms_message = (
+            f"Verify your GrainRise Farmer application by clicking this link: {verify_url}\n"
+            f"Link valid for 24 hours. Do not share this link."
+        )
+        try:
+            _send_sms_via_textbee(inquiry.contact_number, sms_message)
+        except Exception as exc:
+            logger.exception("Could not resend SMS link for inquiry %s: %s", inquiry.partnership_inquiry_id, exc)
+            return Response(
+                {
+                    "success": False,
+                    "inquiry_id": str(inquiry.partnership_inquiry_id),
+                    "verification_method": "sms",
+                    "detail": (
+                        "Verification SMS could not be sent immediately. SMS delivery may be delayed depending on mobile signal. "
+                        "You may try again in a moment, or switch to Email Verification."
+                    ),
+                },
+                status=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        return Response(
+            {
+                "success": True,
+                "inquiry_id": str(inquiry.partnership_inquiry_id),
+                "verification_method": "sms",
+                "message": "A new verification link has been sent via SMS.",
+            },
+            status=http_status.HTTP_200_OK,
+        )
+
+    else:
+        # Email Verification
+        target_email = email or inquiry.email
+        if not target_email:
+            return Response(
+                {"success": False, "detail": "Email address is required for email verification."},
+                status=http_status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not inquiry.email and target_email:
+            inquiry.email = target_email
+
+        raw_token, token_hash = _generate_verification_token()
+        inquiry.verification_token_hash = token_hash
+        inquiry.verification_expires_at = timezone.now() + timedelta(seconds=VERIFICATION_TOKEN_TTL_SECONDS)
+        inquiry.resend_count = (inquiry.resend_count or 0) + 1
+        inquiry.last_resend_at = timezone.now()
+        inquiry.save(
+            update_fields=[
+                "email",
+                "verification_token_hash",
+                "verification_expires_at",
+                "resend_count",
+                "last_resend_at",
+                "updated_at",
+            ]
+        )
+
+        try:
+            _send_verification_email(
+                inquiry.name,
+                inquiry.email,
+                inquiry.partner_role,
+                raw_token,
+            )
+        except Exception as exc:
+            logger.exception(
+                "Could not resend partnership verification email for inquiry %s: %s",
+                inquiry.partnership_inquiry_id,
+                exc,
+            )
+            return Response(
+                {
+                    "success": False,
+                    "inquiry_id": str(inquiry.partnership_inquiry_id),
+                    "email": inquiry.email,
+                    "verification_method": "email",
+                    "detail": "Verification email could not be sent. Please try again in a moment.",
+                },
+                status=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        return Response(
+            {
+                "success": True,
+                "inquiry_id": str(inquiry.partnership_inquiry_id),
+                "email": inquiry.email,
+                "verification_method": "email",
+                "message": "A new verification email has been sent.",
+            },
+            status=http_status.HTTP_200_OK,
+        )
+
 
 # Stubs for backwards compatibility if called
 @api_view(["GET"])

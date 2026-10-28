@@ -4,7 +4,7 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Users, CheckCircle2, Loader2, UploadCloud, X,
   ImageIcon, FileCheck, Mail, Clock, RefreshCw, AlertTriangle, ExternalLink,
-  Camera, Plus, ChevronLeft, ChevronRight, Pencil
+  Camera, Plus, ChevronLeft, ChevronRight, Pencil, Smartphone, MessageSquare
 } from 'lucide-react';
 import LandingHeader from '../Components/Major-Components/LandingHeader';
 import LandingFooter from '../Components/Major-Components/LandingFooter';
@@ -157,12 +157,23 @@ export default function PartnerWithUs() {
   const routeParams = useParams();
   const fileInputRef = useRef(null);
 
-  /* ── View Modes: 'form' | 'awaiting_verification' | 'verified_success' | 'token_invalid' ── */
+  /* ── View Modes: 'form' | 'awaiting_verification' | 'awaiting_sms_link' | 'sms_link_landing' | 'verifying' | 'verified_success' | 'token_invalid' ── */
+  const isSmsVerifyInitial = typeof window !== 'undefined' && Boolean(window.location.pathname.includes('/verify-sms'));
   const isDirectVerify = typeof window !== 'undefined' && Boolean(window.location.pathname.includes('/verify-email') || new URLSearchParams(window.location.search).get('token'));
-  const [viewState, setViewState] = useState(isDirectVerify ? 'verifying' : 'form');
+  const [viewState, setViewState] = useState(isSmsVerifyInitial ? 'sms_link_landing' : (isDirectVerify ? 'verifying' : 'form'));
+  const [smsVerificationToken, setSmsVerificationToken] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    const match = window.location.pathname.match(/\/(?:verify-sms)\/([^/?#]+)/);
+    return match ? match[1] : (new URLSearchParams(window.location.search).get('token') || '');
+  });
+  const [isConfirmingSms, setIsConfirmingSms] = useState(false);
+  const [smsConfirmError, setSmsConfirmError] = useState('');
 
   /* ── Form state ── */
-  const [formData, setFormData] = useState({ name: '', email: '', organization: '', partnerRole: '', contactNumber: '', message: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', organization: '', partnerRole: '', contactNumber: '', message: '', verificationMethod: 'sms' });
+  const [verifiedMethod, setVerifiedMethod] = useState('email');
+
+
   const [errors, setErrors] = useState({ name: '', email: '', organization: '', partnerRole: '', contactNumber: '', message: '' });
   const [touched, setTouched] = useState({ name: false, email: false, organization: false, partnerRole: false, contactNumber: false, message: false });
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -217,17 +228,29 @@ export default function PartnerWithUs() {
 
   const replaceDocIndexRef = useRef(null);
 
-  /* -- Check for token in URL path or query parameter on mount/change -- calls real API -- */
+  /* -- Check for token in URL path or query parameter on mount/change -- */
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const queryToken = params.get('token');
-    const pathToken = routeParams?.token || (location.pathname.match(/\/verify-email\/([^/?#]+)/)?.[1]);
+    const pathToken = routeParams?.token || (location.pathname.match(/\/(?:verify-email|verify-sms|verify)\/([^/?#]+)/)?.[1]);
     const tokenParam = queryToken || pathToken;
 
     if (!tokenParam) {
-      if (viewState === 'verifying') setViewState('form');
+      if (viewState === 'verifying' || viewState === 'sms_link_landing') setViewState('form');
       return;
     }
+
+    const isSmsLink = location.pathname.includes('/verify-sms') || params.get('type') === 'sms';
+
+    if (isSmsLink) {
+      // SECURITY REQUIREMENT: Opening the SMS verification URL must NOT automatically mark the inquiry as verified.
+      // Shows a verification landing page with a "Verify Phone Number" button.
+      setSmsVerificationToken(tokenParam);
+      setViewState('sms_link_landing');
+      return;
+    }
+
+    // Email Verification Flow (GET) - Updates email_verified ONLY
     if (verifyingRef.current) return;
     verifyingRef.current = true;
     setViewState('verifying');
@@ -236,6 +259,7 @@ export default function PartnerWithUs() {
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (res.ok && data.success) {
+          setVerifiedMethod('email');
           setViewState('verified_success');
           try {
             window.history.replaceState({}, document.title, '/partner-with-us');
@@ -264,18 +288,27 @@ export default function PartnerWithUs() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
+
+
   /* ── Validation dispatch ── */
   const validate = useCallback((name, value) => {
     switch (name) {
       case 'name': return validateName(value);
-      case 'email': return validateEmail(value, touched.email);
-      case 'organization': return validateOrg(value);
+      case 'email': {
+        const isFarmerSms = formData.partnerRole === 'farmer' && formData.verificationMethod === 'sms';
+        if (isFarmerSms && !value?.trim()) return '';
+        return validateEmail(value, touched.email);
+      }
+      case 'organization': {
+        if (formData.partnerRole === 'farmer' && !value?.trim()) return '';
+        return validateOrg(value);
+      }
       case 'partnerRole': return validateRole(value);
       case 'contactNumber': return validatePhone(value);
       case 'message': return validateMessage(value);
       default: return '';
     }
-  }, [touched.email]);
+  }, [touched.email, formData.partnerRole, formData.verificationMethod]);
 
 
   /* ── Live Availability Check (Name, Email, Organization) ── */
@@ -306,10 +339,12 @@ export default function PartnerWithUs() {
     }
   };
 
+  const isFarmerSms = formData.partnerRole === 'farmer' && formData.verificationMethod === 'sms';
+  const isFarmer = formData.partnerRole === 'farmer';
   const isFormValid =
     formData.name.trim() && !validateName(formData.name) &&
-    formData.email.trim() && !validateEmail(formData.email, true) &&
-    formData.organization.trim() && !validateOrg(formData.organization) &&
+    (isFarmerSms || (formData.email.trim() && !validateEmail(formData.email, true))) &&
+    (isFarmer || (formData.organization.trim() && !validateOrg(formData.organization))) &&
     Boolean(formData.partnerRole) && !validateRole(formData.partnerRole) &&
     formData.contactNumber && !validatePhone(formData.contactNumber) &&
     formData.message.trim() && !validateMessage(formData.message) &&
@@ -761,24 +796,28 @@ export default function PartnerWithUs() {
 
   /* ── Step Validation & Navigation ── */
   const validateStep1 = () => {
+    const isFarmerSms = formData.partnerRole === 'farmer' && formData.verificationMethod === 'sms';
+    const errRole = validateRole(formData.partnerRole);
     const errName = validateName(formData.name);
-    const errEmail = validateEmail(formData.email, true);
+    const errEmail = (isFarmerSms && !formData.email.trim()) ? '' : validateEmail(formData.email, true);
     const errPhone = validatePhone(formData.contactNumber);
 
     setErrors(prev => ({
       ...prev,
+      partnerRole: errRole,
       name: errName,
       email: errEmail,
       contactNumber: errPhone,
     }));
     setTouched(prev => ({
       ...prev,
+      partnerRole: true,
       name: true,
       email: true,
       contactNumber: true,
     }));
 
-    if (errName || errEmail || errPhone || errors.name || errors.email) {
+    if (errRole || errName || errEmail || errPhone || errors.name || (errEmail && errors.email)) {
       showToast('Please fill in all required fields in Step 1 correctly.', 'error');
       return false;
     }
@@ -787,7 +826,8 @@ export default function PartnerWithUs() {
 
   const validateStep2 = () => {
     const errRole = validateRole(formData.partnerRole);
-    const errOrg = validateOrg(formData.organization);
+    const isFarmer = formData.partnerRole === 'farmer';
+    const errOrg = (isFarmer && !formData.organization.trim()) ? '' : validateOrg(formData.organization);
     const errMessage = validateMessage(formData.message);
 
     setErrors(prev => ({
@@ -869,30 +909,33 @@ export default function PartnerWithUs() {
     }
   };
 
-  /* ── Submit (Initiates Email Verification) — calls real backend API ── */
+  /* ── Submit (Initiates SMS OTP or Email Verification) — calls real backend API ── */
   const handleSubmit = async (e) => {
     e?.preventDefault?.();
     setSubmitAttempted(true);
 
+    const isFarmerSms = formData.partnerRole === 'farmer' && formData.verificationMethod === 'sms';
+    const isFarmer = formData.partnerRole === 'farmer';
+
     // Validate Step 1
+    const errRole = validateRole(formData.partnerRole);
     const errName = validateName(formData.name);
-    const errEmail = validateEmail(formData.email, true);
+    const errEmail = (isFarmerSms && !formData.email.trim()) ? '' : validateEmail(formData.email, true);
     const errPhone = validatePhone(formData.contactNumber);
-    if (errName || errEmail || errPhone || errors.name || errors.email) {
-      setErrors(prev => ({ ...prev, name: errName, email: errEmail, contactNumber: errPhone }));
-      setTouched(prev => ({ ...prev, name: true, email: true, contactNumber: true }));
+    if (errRole || errName || errEmail || errPhone || errors.name || (errEmail && errors.email)) {
+      setErrors(prev => ({ ...prev, partnerRole: errRole, name: errName, email: errEmail, contactNumber: errPhone }));
+      setTouched(prev => ({ ...prev, partnerRole: true, name: true, email: true, contactNumber: true }));
       setCurrentStep(1);
       showToast('Please resolve the errors in Step 1 (Your Details).', 'error');
       return;
     }
 
     // Validate Step 2
-    const errRole = validateRole(formData.partnerRole);
-    const errOrg = validateOrg(formData.organization);
+    const errOrg = (isFarmer && !formData.organization.trim()) ? '' : validateOrg(formData.organization);
     const errMessage = validateMessage(formData.message);
-    if (errRole || errOrg || errMessage || errors.organization) {
-      setErrors(prev => ({ ...prev, partnerRole: errRole, organization: errOrg, message: errMessage }));
-      setTouched(prev => ({ ...prev, partnerRole: true, organization: true, message: true }));
+    if (errOrg || errMessage || errors.organization) {
+      setErrors(prev => ({ ...prev, organization: errOrg, message: errMessage }));
+      setTouched(prev => ({ ...prev, organization: true, message: true }));
       setCurrentStep(2);
       showToast('Please resolve the errors in Step 2 (Partnership Details).', 'error');
       return;
@@ -928,9 +971,12 @@ export default function PartnerWithUs() {
     try {
       const fd = new FormData();
       fd.append('name', formData.name.trim());
-      fd.append('email', formData.email.trim().toLowerCase());
-      fd.append('organization_company', formData.organization.trim());
+      if (formData.email.trim()) {
+        fd.append('email', formData.email.trim().toLowerCase());
+      }
+      fd.append('organization_company', formData.organization.trim() || (isFarmer ? 'Independent Farmer' : ''));
       fd.append('partner_role', formData.partnerRole);
+      fd.append('verification_method', isFarmer ? formData.verificationMethod : 'email');
       const phoneToSend = formData.contactNumber.startsWith('0')
         ? formData.contactNumber
         : `+63${formData.contactNumber}`;
@@ -952,21 +998,36 @@ export default function PartnerWithUs() {
       const data = await res.json().catch(() => ({}));
 
       if (res.status === 201 && data.success) {
-        // Happy path: inquiry saved & verification email sent
-        showToast('Partnership inquiry submitted! Please verify your email.', 'success');
         setInquiryId(data.inquiry_id || '');
-        setViewState('awaiting_verification');
-        setResendCooldown(60);
-        setResendMessage('');
+        if (data.verification_method === 'sms') {
+          showToast('Verification link sent to your mobile phone!', 'success');
+          setVerifiedMethod('sms');
+          setViewState('awaiting_sms_link');
+          setResendCooldown(60);
+          setResendMessage('');
+        } else {
+          showToast('Partnership inquiry submitted! Please verify your email.', 'success');
+          setVerifiedMethod('email');
+          setViewState('awaiting_verification');
+          setResendCooldown(60);
+          setResendMessage('');
+        }
       } else if (res.status === 503 && data.inquiry_id) {
-        // Inquiry saved but email send failed — still show awaiting screen
-        showToast('Inquiry recorded, but email delivery is delayed.', 'info');
         setInquiryId(data.inquiry_id);
-        setViewState('awaiting_verification');
-        setResendCooldown(0);
-        setResendMessage(data.detail || 'Verification email could not be sent. Please use Resend below.');
+        if (data.verification_method === 'sms') {
+          showToast('Inquiry recorded, but SMS delivery was delayed.', 'info');
+          setVerifiedMethod('sms');
+          setViewState('awaiting_sms_link');
+          setResendCooldown(0);
+          setResendMessage(data.detail || 'Your verification link is on its way. SMS delivery may be delayed depending on mobile signal. You may safely leave this page and return through the verification link once it arrives.');
+        } else {
+          showToast('Inquiry recorded, but email delivery is delayed.', 'info');
+          setVerifiedMethod('email');
+          setViewState('awaiting_verification');
+          setResendCooldown(0);
+          setResendMessage(data.detail || 'Verification email could not be sent. Please use Resend below.');
+        }
       } else if (res.status === 400 && typeof data === 'object') {
-        // Field validation errors from backend — map to form errors
         const backendErrors = {};
         if (data.name) backendErrors.name = data.name;
         if (data.email) backendErrors.email = data.email;
@@ -979,8 +1040,8 @@ export default function PartnerWithUs() {
         if (data.business_verification_document) setImageError(data.business_verification_document);
         setErrors(prev => ({ ...prev, ...backendErrors }));
         showToast(data.detail || 'Please correct the highlighted fields.', 'error');
-        if (data.name || data.email || data.contact_number) setCurrentStep(1);
-        else if (data.organization || data.organization_company || data.partner_role || data.message) setCurrentStep(2);
+        if (data.partner_role || data.name || data.email || data.contact_number) setCurrentStep(1);
+        else if (data.organization || data.organization_company || data.message) setCurrentStep(2);
         else if (data.government_issued_id || data.business_verification_document) setCurrentStep(3);
       } else if (res.status === 422 && typeof data === 'object') {
         const errMsg = data.detail || 'The full legal name does not match the name detected on your government-issued ID.';
@@ -990,7 +1051,6 @@ export default function PartnerWithUs() {
         setCurrentStep(3);
         showToast(errMsg, 'error');
       } else {
-        // Generic server error
         const errMsg = data.detail || 'Server error. Please try again.';
         showToast(errMsg, 'error');
         setErrors(prev => ({ ...prev, name: errMsg }));
@@ -1003,6 +1063,93 @@ export default function PartnerWithUs() {
     }
   };
 
+  /* ── Confirm SMS Verification on Explicit Button Click (POST) ── */
+  const handleConfirmSmsVerification = async () => {
+    if (!smsVerificationToken || isConfirmingSms) return;
+
+    setIsConfirmingSms(true);
+    setSmsConfirmError('');
+
+    try {
+      const res = await fetch(`${API_BASE}/partnership-inquiries/verify-sms/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: smsVerificationToken }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
+        setVerifiedMethod('sms');
+        setViewState('verified_success');
+        try {
+          window.history.replaceState({}, document.title, '/partner-with-us');
+        } catch { }
+      } else if (res.status === 410) {
+        setSmsConfirmError(data.detail || 'This verification link has expired. Please request a new verification link.');
+        setViewState('token_invalid');
+      } else {
+        setSmsConfirmError(data.detail || 'This verification link is invalid or has already been used.');
+        setViewState('token_invalid');
+      }
+    } catch {
+      setSmsConfirmError('Network error. Please check your connection and try again.');
+    } finally {
+      setIsConfirmingSms(false);
+    }
+  };
+
+  /* ── Resend SMS Verification Link ── */
+  const handleResendSmsLink = async () => {
+    if (resendCooldown > 0 || isResending || !inquiryId) return;
+
+    setIsResending(true);
+    setResendMessage('');
+
+    try {
+      const res = await fetch(`${API_BASE}/partnership-inquiries/resend-verification/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          inquiry_id: inquiryId,
+          method: 'sms',
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
+        setResendCooldown(60);
+        showToast(data.message || 'A new verification link has been sent via SMS.', 'success');
+        setResendMessage(data.message || 'A new verification link has been sent via SMS.');
+      } else if (res.status === 429) {
+        const retryAfter = data.retry_after || 60;
+        setResendCooldown(retryAfter);
+        const msg = data.detail || `Please wait ${retryAfter} seconds before requesting another link.`;
+        setResendMessage(msg);
+        showToast(msg, 'error');
+      } else {
+        const msg = data.detail || 'Could not send verification SMS. Mobile signal may be delayed.';
+        setResendMessage(msg);
+        showToast(msg, 'error');
+      }
+    } catch {
+      const msg = 'Network error. Please try again.';
+      setResendMessage(msg);
+      showToast(msg, 'error');
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleSwitchToEmailVerification = () => {
+    setFormData(prev => ({
+      ...prev,
+      verificationMethod: 'email',
+    }));
+    setViewState('form');
+    setCurrentStep(1);
+    showToast('Switched to Email Verification. Please ensure your email is provided.', 'info');
+  };
+
   /* ── Resend Verification Email — calls real backend API ── */
   const handleResendVerification = async () => {
     if (resendCooldown > 0 || isResending || !inquiryId) return;
@@ -1013,7 +1160,7 @@ export default function PartnerWithUs() {
       const res = await fetch(`${API_BASE}/partnership-inquiries/resend-verification/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inquiry_id: inquiryId }),
+        body: JSON.stringify({ inquiry_id: inquiryId, method: 'email' }),
       });
       const data = await res.json().catch(() => ({}));
 
@@ -1021,7 +1168,6 @@ export default function PartnerWithUs() {
         setResendCooldown(60);
         setResendMessage(data.message || `A new verification email has been sent to ${formData.email}.`);
       } else if (res.status === 429) {
-        // Rate limit — apply cooldown from server if available
         const retryAfter = data.retry_after || 60;
         setResendCooldown(retryAfter);
         setResendMessage(data.detail || 'Please wait before requesting another email.');
@@ -1037,7 +1183,15 @@ export default function PartnerWithUs() {
 
   /* ── Start a completely new inquiry (Reset) ── */
   const handleStartNewInquiry = () => {
-    setFormData({ name: '', email: '', organization: '', partnerRole: '', contactNumber: '', message: '' });
+    setFormData({
+      name: '',
+      email: '',
+      organization: '',
+      partnerRole: '',
+      contactNumber: '',
+      message: '',
+      verificationMethod: 'sms',
+    });
     setErrors({ name: '', email: '', organization: '', partnerRole: '', contactNumber: '', message: '' });
     setTouched({ name: false, email: false, organization: false, partnerRole: false, contactNumber: false, message: false });
     setSubmitAttempted(false);
@@ -1050,6 +1204,10 @@ export default function PartnerWithUs() {
     setGovIdVerified(false);
     setGovIdVerifying(false);
     setGovIdVerificationError('');
+    setSmsVerificationToken('');
+    setSmsConfirmError('');
+
+
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (govIdInputRef.current) govIdInputRef.current.value = '';
     if (govIdCameraInputRef.current) govIdCameraInputRef.current.value = '';
@@ -1108,6 +1266,77 @@ export default function PartnerWithUs() {
               </div>
             )}
 
+            {/* ────── STATE: SMS VERIFICATION LANDING PAGE ────── */}
+            {viewState === 'sms_link_landing' && (
+              <div className="w-full py-10 px-4 sm:px-6 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-200">
+                <div className="relative w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-[#00580C] dark:text-emerald-400 flex items-center justify-center mb-4 ring-8 ring-emerald-50/70 dark:ring-emerald-950/30">
+                  <Smartphone size={32} strokeWidth={2} />
+                </div>
+
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#00580C] dark:text-emerald-400 mb-1">
+                  Farmer Partner Verification
+                </span>
+
+                <h2 className="font-['Outfit'] text-2xl sm:text-[26px] font-bold text-gray-900 dark:text-white mb-2">
+                  Verify Your Phone Number
+                </h2>
+
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-[500px] leading-relaxed mb-6">
+                  Click the button below to verify your phone number and confirm your GrainRise Farmer Partner Application.
+                </p>
+
+                {smsConfirmError && (
+                  <div className="w-full max-w-[380px] mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-xs text-red-600 dark:text-red-400 text-center">
+                    {smsConfirmError}
+                  </div>
+                )}
+
+                <div className="w-full max-w-[360px] flex flex-col items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleConfirmSmsVerification}
+                    disabled={isConfirmingSms}
+                    className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[#00580C] hover:bg-[#014209] text-white font-bold text-sm rounded-xl shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {isConfirmingSms ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Verifying Phone Number...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={16} />
+                        <span>Verify Phone Number</span>
+                      </>
+                    )}
+                  </button>
+
+                  <div className="flex items-center justify-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <Clock size={13} className="text-[#00580C] dark:text-emerald-400" />
+                    <span>Link valid for 24 hours · One-time verification</span>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 w-full flex items-center justify-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/')}
+                      className="hover:text-gray-800 dark:hover:text-white cursor-pointer"
+                    >
+                      Return to Home
+                    </button>
+                    <span>·</span>
+                    <button
+                      type="button"
+                      onClick={() => setViewState('form')}
+                      className="hover:text-gray-800 dark:hover:text-white cursor-pointer"
+                    >
+                      Go to Partner Form
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ────── STATE 1: VERIFIED SUCCESS ────── */}
             {viewState === 'verified_success' && (
               <div className="w-full text-center py-10 px-4 sm:px-6 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
@@ -1118,7 +1347,7 @@ export default function PartnerWithUs() {
                   Verification Complete
                 </span>
                 <h2 className="font-['Outfit'] text-2xl sm:text-[26px] font-extrabold text-[#00580C] dark:text-emerald-400 mb-2">
-                  Email Verified Successfully!
+                  {verifiedMethod === 'sms' ? 'Mobile Number Verified Successfully!' : 'Email Verified Successfully!'}
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-[480px] leading-relaxed mb-6">
                   Your partnership inquiry has been successfully submitted. Thank you for reaching out to us. Our operations team will review your credentials and connect with you shortly.
@@ -1278,6 +1507,102 @@ export default function PartnerWithUs() {
               </div>
             )}
 
+
+
+            {/* ────── STATE 3B: AWAITING SMS VERIFICATION LINK ────── */}
+            {viewState === 'awaiting_sms_link' && (
+              <div className="w-full py-8 px-2 sm:px-6 flex flex-col items-center text-center animate-in fade-in duration-200">
+                <div className="relative w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-[#00580C] dark:text-emerald-400 flex items-center justify-center mb-4 ring-8 ring-emerald-50/70 dark:ring-emerald-950/30">
+                  <Smartphone size={32} strokeWidth={2} />
+                  <span className="absolute top-2 right-2 w-3 h-3 rounded-full bg-emerald-500 animate-ping" />
+                  <span className="absolute top-2 right-2 w-3 h-3 rounded-full bg-emerald-600" />
+                </div>
+
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#00580C] dark:text-emerald-400 mb-1">
+                  Application Submitted
+                </span>
+
+                <h2 className="font-['Outfit'] text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  Verification Link Sent via SMS
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-[540px] leading-relaxed mb-4">
+                  We sent a secure, one-time verification link to <strong className="text-gray-900 dark:text-white font-semibold">+63 {formData.contactNumber}</strong>.
+                </p>
+
+                {/* Fragile SMS & Safe to Leave Notice Card */}
+                <div className="w-full max-w-[540px] mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-left flex items-start gap-3">
+                  <AlertTriangle size={18} className="shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                      Important Notice:
+                    </p>
+                    <p className="text-[12px] text-amber-800 dark:text-amber-300 leading-relaxed mb-2 font-medium">
+                      Your verification link is on its way. SMS delivery may be delayed depending on mobile signal. You may safely leave this page and return through the verification link once it arrives.
+                    </p>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                      The verification link works on any device or browser. You do not need to keep this page open or resubmit your inquiry.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleSwitchToEmailVerification}
+                      className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-bold text-[#00580C] dark:text-emerald-400 hover:underline cursor-pointer"
+                    >
+                      <span>Switch to Email Verification instead &rarr;</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Link Expiration Indicator */}
+                <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 mb-6 bg-gray-50 dark:bg-[#163321] px-4 py-2 rounded-full border border-gray-200 dark:border-[#2d5c3c]">
+                  <Clock size={13} className="text-[#00580C] dark:text-emerald-400" />
+                  <span>Link valid for 24 hours.</span>
+                  <span className="text-gray-300 dark:text-gray-600">·</span>
+                  <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400">One-time use only</span>
+                </div>
+
+                {/* Resend & Action Buttons */}
+                <div className="w-full max-w-[360px] flex flex-col items-center gap-3">
+                  {resendMessage && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mb-1">
+                      {resendMessage}
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleResendSmsLink}
+                    disabled={resendCooldown > 0 || isResending}
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#00580C] hover:bg-[#014209] text-white font-semibold text-xs sm:text-sm rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {isResending ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                    <span>
+                      {resendCooldown > 0
+                        ? `Resend Verification Link (${resendCooldown}s)`
+                        : 'Resend Verification Link via SMS'}
+                    </span>
+                  </button>
+
+                  <div className="flex items-center justify-center gap-4 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/')}
+                      className="text-xs font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white cursor-pointer"
+                    >
+                      Return to Home
+                    </button>
+                    <span className="text-gray-300 dark:text-gray-600">·</span>
+                    <button
+                      type="button"
+                      onClick={() => setViewState('form')}
+                      className="text-xs font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white cursor-pointer"
+                    >
+                      Edit Form Details
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ────── STATE 4: THE INQUIRY FORM ────── */}
             {viewState === 'form' && (
               <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-center gap-8 lg:gap-10">
@@ -1309,6 +1634,138 @@ export default function PartnerWithUs() {
                     {currentStep === 1 && (
                       <div className="flex flex-col gap-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+                          {/* Intended Partner Role Dropdown */}
+                          <div className="flex flex-col sm:col-span-2">
+                            <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5" htmlFor="partnerRole">
+                              INTENDED PARTNER ROLE <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative">
+                              <select
+                                id="partnerRole"
+                                name="partnerRole"
+                                value={formData.partnerRole}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setFormData(p => ({ ...p, partnerRole: v }));
+                                  setErrors(p => ({ ...p, partnerRole: validateRole(v) }));
+                                }}
+                                onBlur={() => handleBlur('partnerRole', formData.partnerRole)}
+                                className={`${inputCls((touched.partnerRole || submitAttempted) && errors.partnerRole)} cursor-pointer appearance-none pr-9`}
+                              >
+                                <option value="" disabled>Select your partner role...</option>
+                                <option value="farmer">Farmer</option>
+                                <option value="miller">Miller</option>
+                                <option value="warehouse">Warehouse Owner</option>
+                                <option value="retailer">Retailer</option>
+                              </select>
+                              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 dark:text-gray-500">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
+                            </div>
+                            <FieldError msg={(touched.partnerRole || submitAttempted) ? errors.partnerRole : ''} />
+                          </div>
+
+                          {/* Verification Method Selection - Farmer Only */}
+                          {formData.partnerRole === 'farmer' && (
+                            <div className="flex flex-col sm:col-span-2 p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/40 dark:bg-emerald-950/20">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <label className="text-[10.5px] font-bold text-gray-700 dark:text-gray-200 tracking-wider uppercase flex items-center gap-1.5">
+                                  <Smartphone size={13} className="text-[#00580C] dark:text-emerald-400" />
+                                  <span>Farmer Verification Method</span>
+                                  <span className="text-red-500">*</span>
+                                </label>
+                                <span className="text-[10px] text-[#00580C] dark:text-emerald-400 font-semibold bg-emerald-100/70 dark:bg-emerald-900/50 px-2 py-0.5 rounded-full">
+                                  Select 1 Method
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-3 leading-relaxed">
+                                Choose how you want to verify your partnership application. Only your selected method must be completed.
+                              </p>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {/* Option 1: SMS Verification Link */}
+                                  <div
+                                    onClick={() => {
+                                      setFormData(p => ({ ...p, verificationMethod: 'sms' }));
+                                      setErrors(p => ({ ...p, email: '' }));
+                                    }}
+                                    className={`relative flex flex-col p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                                      formData.verificationMethod === 'sms'
+                                        ? 'border-[#00580C] dark:border-emerald-500 bg-white dark:bg-[#163321] shadow-xs'
+                                        : 'border-gray-200 dark:border-white/10 bg-white/60 dark:bg-[#0e2417] hover:border-gray-300'
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between mb-1.5">
+                                      <span className="text-xs font-bold text-gray-800 dark:text-white flex items-center gap-1.5">
+                                        <Smartphone size={13} className="text-[#00580C] dark:text-emerald-400" />
+                                        SMS Verification Link
+                                      </span>
+                                      <input
+                                        type="radio"
+                                        name="farmerVerificationMethod"
+                                        checked={formData.verificationMethod === 'sms'}
+                                        onChange={() => {
+                                          setFormData(p => ({ ...p, verificationMethod: 'sms' }));
+                                          setErrors(p => ({ ...p, email: '' }));
+                                        }}
+                                        className="text-[#00580C] focus:ring-emerald-500 h-3.5 w-3.5 cursor-pointer"
+                                      />
+                                    </div>
+                                    <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-snug">
+                                      Receive a secure one-time verification link via SMS on your mobile phone (+63 {formData.contactNumber || '9XXXXXXXXX'}).
+                                    </p>
+
+                                    {/* Fragile SMS Note required by prompt */}
+                                    <div className="mt-2.5 p-2 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-start gap-1.5 text-amber-800 dark:text-amber-300">
+                                      <AlertTriangle size={12} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                                      <span className="text-[10px] leading-tight font-medium">
+                                        SMS delivery may be delayed depending on mobile signal. You may choose Email Verification instead.
+                                      </span>
+                                    </div>
+                                    <div className="mt-auto pt-2 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                                      Link valid for 24 hours · Works on any device
+                                    </div>
+                                  </div>
+
+                                  {/* Option 2: Email Verification */}
+                                <div
+                                  onClick={() => {
+                                    setFormData(p => ({ ...p, verificationMethod: 'email' }));
+                                  }}
+                                  className={`relative flex flex-col p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                                    formData.verificationMethod === 'email'
+                                      ? 'border-[#00580C] dark:border-emerald-500 bg-white dark:bg-[#163321] shadow-xs'
+                                      : 'border-gray-200 dark:border-white/10 bg-white/60 dark:bg-[#0e2417] hover:border-gray-300'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <span className="text-xs font-bold text-gray-800 dark:text-white flex items-center gap-1.5">
+                                      <Mail size={13} className="text-[#00580C] dark:text-emerald-400" />
+                                      Email Verification
+                                    </span>
+                                    <input
+                                      type="radio"
+                                      name="farmerVerificationMethod"
+                                      checked={formData.verificationMethod === 'email'}
+                                      onChange={() => {
+                                        setFormData(p => ({ ...p, verificationMethod: 'email' }));
+                                      }}
+                                      className="text-[#00580C] focus:ring-emerald-500 h-3.5 w-3.5 cursor-pointer"
+                                    />
+                                  </div>
+                                  <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-snug">
+                                    Receive a verification link to your email address. Highly reliable when mobile signal is weak.
+                                  </p>
+                                  <div className="mt-auto pt-2 text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">
+                                    ✓ Recommended if mobile signal is weak
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Full Legal Name */}
                           <div className="flex flex-col sm:col-span-2">
                             <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-0.5 flex items-center gap-0.5" htmlFor="name">
@@ -1327,27 +1784,6 @@ export default function PartnerWithUs() {
                               onBlur={() => handleBlur('name', formData.name)}
                             />
                             <FieldError msg={(touched.name || submitAttempted) ? errors.name : ''} />
-                          </div>
-
-                          {/* Email Address */}
-                          <div className="flex flex-col">
-                            <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5" htmlFor="email">
-                              EMAIL ADDRESS <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              id="email" name="email" type="email"
-                              className={inputCls((touched.email || submitAttempted) && errors.email)}
-                              placeholder="Enter your email address"
-                              value={formData.email}
-                              onChange={handleEmailChange}
-                              onBlur={() => {
-                                setTouched(p => ({ ...p, email: true }));
-                                const err = validateEmail(formData.email, true);
-                                setErrors(p => ({ ...p, email: err }));
-                                if (!err) checkAvailability('email', formData.email);
-                              }}
-                            />
-                            <FieldError msg={(touched.email || submitAttempted) ? errors.email : ''} />
                           </div>
 
                           {/* Contact Number with +63 country code */}
@@ -1374,6 +1810,37 @@ export default function PartnerWithUs() {
                             </div>
                             <FieldError msg={phoneError || ''} />
                           </div>
+
+                          {/* Email Address */}
+                          <div className="flex flex-col">
+                            <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-1" htmlFor="email">
+                              <span>EMAIL ADDRESS</span>
+                              {!(formData.partnerRole === 'farmer' && formData.verificationMethod === 'sms') ? (
+                                <span className="text-red-500">*</span>
+                              ) : (
+                                <span className="text-[10px] text-gray-400 font-normal lowercase">(optional)</span>
+                              )}
+                            </label>
+                            <input
+                              id="email" name="email" type="email"
+                              className={inputCls((touched.email || submitAttempted) && errors.email)}
+                              placeholder={formData.partnerRole === 'farmer' && formData.verificationMethod === 'sms' ? 'Enter email (optional for SMS Verification Link)' : 'Enter your email address'}
+                              value={formData.email}
+                              onChange={handleEmailChange}
+                              onBlur={() => {
+                                setTouched(p => ({ ...p, email: true }));
+                                const isFarmerSms = formData.partnerRole === 'farmer' && formData.verificationMethod === 'sms';
+                                if (isFarmerSms && !formData.email.trim()) {
+                                  setErrors(p => ({ ...p, email: '' }));
+                                  return;
+                                }
+                                const err = validateEmail(formData.email, true);
+                                setErrors(p => ({ ...p, email: err }));
+                                if (!err && formData.email) checkAvailability('email', formData.email);
+                              }}
+                            />
+                            <FieldError msg={(touched.email || submitAttempted) ? errors.email : ''} />
+                          </div>
                         </div>
 
                         {/* Step 1 Actions */}
@@ -1396,12 +1863,12 @@ export default function PartnerWithUs() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                           {/* Intended Partner Role Dropdown */}
                           <div className="flex flex-col">
-                            <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5" htmlFor="partnerRole">
+                            <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5" htmlFor="partnerRoleStep2">
                               INTENDED PARTNER ROLE <span className="text-red-500">*</span>
                             </label>
                             <div className="relative">
                               <select
-                                id="partnerRole"
+                                id="partnerRoleStep2"
                                 name="partnerRole"
                                 value={formData.partnerRole}
                                 onChange={(e) => {
@@ -1413,6 +1880,7 @@ export default function PartnerWithUs() {
                                 className={`${inputCls((touched.partnerRole || submitAttempted) && errors.partnerRole)} cursor-pointer appearance-none pr-9`}
                               >
                                 <option value="" disabled>Select your partner role...</option>
+                                <option value="farmer">Farmer</option>
                                 <option value="miller">Miller</option>
                                 <option value="warehouse">Warehouse Owner</option>
                                 <option value="retailer">Retailer</option>
@@ -1426,15 +1894,16 @@ export default function PartnerWithUs() {
                             <FieldError msg={(touched.partnerRole || submitAttempted) ? errors.partnerRole : ''} />
                           </div>
 
-                          {/* Organization / Company Name */}
+                          {/* Organization / Company / Farm Name */}
                           <div className="flex flex-col">
                             <label className="text-[10.5px] font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase mb-1.5 flex items-center gap-0.5" htmlFor="organization">
-                              ORGANIZATION / COMPANY <span className="text-red-500">*</span>
+                              {formData.partnerRole === 'farmer' ? 'FARM / ORGANIZATION NAME' : 'ORGANIZATION / COMPANY'}
+                              {formData.partnerRole !== 'farmer' && <span className="text-red-500">*</span>}
                             </label>
                             <input
                               id="organization" name="organization" type="text"
                               className={inputCls((touched.organization || submitAttempted) && errors.organization)}
-                              placeholder="Enter your organization or company name"
+                              placeholder={formData.partnerRole === 'farmer' ? 'Enter farm or organization name (e.g., Green Valley Farm or Independent Farmer)' : 'Enter your organization or company name'}
                               value={formData.organization}
                               onChange={handleOrgChange}
                               onPaste={handleOrgPaste}
@@ -1862,18 +2331,26 @@ export default function PartnerWithUs() {
                               <span>Edit</span>
                             </button>
                           </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                             <div>
                               <span className="block text-[10px] text-gray-400 uppercase font-medium">Full Legal Name</span>
                               <span className="font-semibold text-gray-800 dark:text-gray-200">{formData.name || '—'}</span>
                             </div>
                             <div>
-                              <span className="block text-[10px] text-gray-400 uppercase font-medium">Email Address</span>
-                              <span className="font-semibold text-gray-800 dark:text-gray-200 break-all">{formData.email || '—'}</span>
-                            </div>
-                            <div>
                               <span className="block text-[10px] text-gray-400 uppercase font-medium">Contact Number</span>
                               <span className="font-semibold text-gray-800 dark:text-gray-200">{formData.contactNumber ? `+63 ${formData.contactNumber}` : '—'}</span>
+                            </div>
+                            <div>
+                              <span className="block text-[10px] text-gray-400 uppercase font-medium">Email Address</span>
+                              <span className="font-semibold text-gray-800 dark:text-gray-200 break-all">{formData.email || (formData.partnerRole === 'farmer' && formData.verificationMethod === 'sms' ? 'None (SMS Verification Link)' : '—')}</span>
+                            </div>
+                            <div>
+                              <span className="block text-[10px] text-gray-400 uppercase font-medium">Verification Method</span>
+                              <span className="font-semibold text-[#00580C] dark:text-emerald-400">
+                                {formData.partnerRole === 'farmer'
+                                  ? (formData.verificationMethod === 'sms' ? 'SMS Verification Link' : 'Email Verification')
+                                  : 'Email Verification'}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -2008,7 +2485,7 @@ export default function PartnerWithUs() {
                             className="inline-flex items-center justify-center gap-2 bg-[#00580C] hover:bg-[#014209] text-white font-semibold text-xs sm:text-[12.5px] rounded-md px-5 py-2.5 shadow-sm transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                           >
                             {isSubmitting && <Loader2 size={14} className="animate-spin" />}
-                            <span>{isSubmitting ? 'Sending Verification Email...' : 'Submit Partnership Inquiry'}</span>
+                            <span>{isSubmitting ? (formData.partnerRole === 'farmer' && formData.verificationMethod === 'sms' ? 'Sending Verification Link...' : 'Sending Verification Email...') : (formData.partnerRole === 'farmer' && formData.verificationMethod === 'sms' ? 'Submit & Receive Verification Link' : 'Submit Partnership Inquiry')}</span>
                           </button>
                         </div>
                       </div>

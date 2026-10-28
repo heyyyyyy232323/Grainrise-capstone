@@ -3,8 +3,9 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import UserNavbar, { getUserNavbarMenuItems } from "./UserNavbar";
 import UserSidebar from "./UserSidebar";
 import useApi from "../hooks/useApi";
+import useAuth from "../hooks/useAuth";
 
-const GUARDED_ROLES = ["miller_manager", "warehouse_manager", "retailer"];
+const GUARDED_ROLES = ["miller_manager", "warehouse_manager", "retailer", "farmer"];
 
 const MainPageLayout = ({ role = "warehouse_encoder" }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -13,6 +14,7 @@ const MainPageLayout = ({ role = "warehouse_encoder" }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { request } = useApi();
+  const { user: authUser } = useAuth();
 
   const isGuardedRole = GUARDED_ROLES.includes(role);
   const [isCheckingGuard, setIsCheckingGuard] = useState(isGuardedRole);
@@ -29,6 +31,15 @@ const MainPageLayout = ({ role = "warehouse_encoder" }) => {
         });
 
         if (!isMounted) return;
+
+        const activeRole = String(
+          res?.user?.role || ""
+        ).trim().toLowerCase();
+
+        if (role === "farmer" && activeRole !== "farmer") {
+          navigate("/login", { replace: true });
+          return;
+        }
 
         const mustChange = Boolean(
           res?.must_change_password ?? res?.user?.must_change_password
@@ -65,7 +76,7 @@ const MainPageLayout = ({ role = "warehouse_encoder" }) => {
     return () => {
       isMounted = false;
     };
-  }, [isGuardedRole, navigate, request]);
+  }, [isGuardedRole, navigate, request, role]);
 
   const handleToggleSidebar = () => {
     const isMobile = window.innerWidth < 768;
@@ -77,8 +88,8 @@ const MainPageLayout = ({ role = "warehouse_encoder" }) => {
   };
 
   const user = {
-    name: "Kerbie Hector Abanid",
-    email: "abanid1@gmail.com",
+    name: authUser ? `${authUser.first_name || ""} ${authUser.last_name || ""}`.trim() || authUser.username || "User" : "User",
+    email: authUser?.email || "",
     avatarUrl: "",
   };
 

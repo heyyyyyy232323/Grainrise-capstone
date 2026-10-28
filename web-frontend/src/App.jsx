@@ -47,6 +47,8 @@ import FarmerTransactionHistory from "./Users/FarmersAccounts/FarmerTransactionH
 import FarmerNewsUpdates from "./Users/FarmersAccounts/FarmerNewsUpdates";
 import FarmerNewsArticle from "./Users/FarmersAccounts/FarmerNewsArticle";
 import FarmerManagement from "./Users/AdminAccounts/AccountAdmin/FarmerManagement";
+import FarmerFarmDetails from "./Users/FarmersAccounts/FarmerFarmDetails";
+import FarmerInventory from "./Users/FarmersAccounts/FarmerInventory";
 
 
 // ============================================================
@@ -411,6 +413,8 @@ function App() {
         <Route path="/partner-with-us" element={<PartnerWithUs />} />
         <Route path="/partner-with-us/verify-email/:token" element={<PartnerWithUs />} />
         <Route path="/partner-with-us/verify-email" element={<PartnerWithUs />} />
+        <Route path="/partner-with-us/verify-sms/:token" element={<PartnerWithUs />} />
+        <Route path="/partner-with-us/verify-sms" element={<PartnerWithUs />} />
         <Route path="/contact" element={<ContactUs />} />
         <Route path="/contact-support" element={<ContactSupport />} />
         <Route path="/support" element={<ContactSupport />} />
@@ -461,6 +465,14 @@ function App() {
             <Route
               path="/farmer/farm-management"
               element={<FarmerFarmManagement />}
+            />
+            <Route
+              path="/farmer/farm-management/:id"
+              element={<FarmerFarmDetails />}
+            />
+            <Route
+              path="/farmer/inventory"
+              element={<FarmerInventory />}
             />
             <Route
               path="/farmer/forecasting"

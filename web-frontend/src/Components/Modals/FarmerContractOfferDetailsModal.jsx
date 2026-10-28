@@ -10,7 +10,6 @@ import {
   Building2,
   FileText,
   Loader2,
-  MessageSquare,
   Package,
   X,
 } from "lucide-react";
@@ -394,7 +393,6 @@ export default function FarmerContractOfferDetailsModal({
   error = "",
 
   onClose,
-  onMessage,
   onDecline,
   onAccept,
 }) {
@@ -1193,39 +1191,6 @@ export default function FarmerContractOfferDetailsModal({
           "
         >
 
-          {offer &&
-            onMessage && (
-              <button
-                type="button"
-                disabled={isSaving}
-                onClick={onMessage}
-                className="
-                  inline-flex
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-lg
-                  border
-                  border-green-600
-                  bg-white
-                  px-4
-                  py-2.5
-                  text-sm
-                  font-semibold
-                  text-green-700
-                  transition
-                  hover:bg-green-50
-                  disabled:cursor-not-allowed
-                  disabled:opacity-50
-                "
-              >
-                <MessageSquare
-                  size={16}
-                />
-
-                Message Miller / Buyer
-              </button>
-            )}
 
 
           {canRespond && (

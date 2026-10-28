@@ -26,6 +26,17 @@ from .utils import (
 #
 # NOTE:
 # Admin authentication remains separate.
+def _build_media_url(request, relative_path):
+    if not relative_path:
+        return None
+    from django.conf import settings
+    media_url = str(getattr(settings, "MEDIA_URL", "/media/") or "/media/")
+    if not media_url.endswith("/"):
+        media_url += "/"
+    cleaned = str(relative_path).lstrip("/")
+    return request.build_absolute_uri(f"{media_url}{cleaned}")
+
+
 # ============================================================
 # PROFILE COMPLETENESS CHECK HELPER
 # ============================================================
@@ -66,7 +77,7 @@ def check_profile_incomplete(user_id, role=None):
      user_role) = row
 
     active_role = role or user_role
-    if active_role not in ("miller_manager", "warehouse_manager", "retailer"):
+    if active_role not in ("miller_manager", "warehouse_manager", "retailer", "farmer"):
         return False, []
 
     missing = []
@@ -141,6 +152,24 @@ def check_profile_incomplete(user_id, role=None):
             if is_blank(w_row[5]): missing.append("business_street_address")
             if is_blank(w_row[6]): missing.append("official_email")
             if is_blank(w_row[7]): missing.append("official_contact_number")
+
+    elif active_role == "farmer":
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(*)
+                FROM farm_profile
+                WHERE user_id = %s
+                  AND municipality IS NOT NULL AND TRIM(municipality) != ''
+                  AND province IS NOT NULL AND TRIM(province) != ''
+                  AND postal_code IS NOT NULL AND TRIM(postal_code) != ''
+                """,
+                [user_id]
+            )
+            f_count = cursor.fetchone()[0]
+
+        if f_count == 0:
+            missing.append("farm_profile")
 
     return len(missing) > 0, missing
 
@@ -315,7 +344,7 @@ def login(request):
     )
 
     # Calculate profile completeness for main accounts
-    if user.get("role") in ("miller_manager", "warehouse_manager", "retailer") or user.get("account_type") == "main_user":
+    if user.get("role") in ("miller_manager", "warehouse_manager", "retailer", "farmer") or user.get("account_type") == "main_user":
         profile_incomplete, _ = check_profile_incomplete(user["id"], user.get("role"))
         user["profile_incomplete"] = profile_incomplete
 
@@ -465,10 +494,27 @@ def change_temporary_password(request):
                 [user_id]
             )
         elif identifier:
-            cursor.execute(
-                "SELECT user_id, password_hash, user_role, must_change_password, province, gender, first_name, last_name, email FROM users WHERE LOWER(email) = %s OR LOWER(COALESCE(username, '')) = %s",
-                [identifier, identifier]
-            )
+            from .auth_utils import normalize_ph_mobile
+            norm_phone = normalize_ph_mobile(identifier)
+            if norm_phone:
+                p_09 = f"0{norm_phone[3:]}"
+                p_639 = norm_phone[1:]
+                cursor.execute(
+                    """
+                    SELECT user_id, password_hash, user_role, must_change_password, province, gender, first_name, last_name, email
+                    FROM users
+                    WHERE LOWER(email) = %s
+                       OR LOWER(COALESCE(username, '')) = %s
+                       OR (user_role = 'farmer' AND contact_number IN (%s, %s, %s, %s))
+                    LIMIT 1
+                    """,
+                    [identifier, identifier, norm_phone, p_09, p_639, norm_phone[3:]]
+                )
+            else:
+                cursor.execute(
+                    "SELECT user_id, password_hash, user_role, must_change_password, province, gender, first_name, last_name, email FROM users WHERE LOWER(email) = %s OR LOWER(COALESCE(username, '')) = %s LIMIT 1",
+                    [identifier, identifier]
+                )
         else:
             return Response({"detail": "Authentication credentials required."}, status=status.HTTP_401_UNAUTHORIZED)
         
@@ -523,6 +569,10 @@ def change_temporary_password(request):
         "auth_source": "grainrise",
     })
 
+    display_email = uemail or ""
+    if role == "farmer" and display_email.endswith("@grainrise.local"):
+        display_email = ""
+
     return Response({
         "success": True,
         "message": "Password changed successfully.",
@@ -532,7 +582,7 @@ def change_temporary_password(request):
             "id": uid,
             "first_name": fname,
             "last_name": lname,
-            "email": uemail,
+            "email": display_email,
             "role": role,
             "must_change_password": False,
             "profile_incomplete": profile_incomplete,
@@ -620,6 +670,10 @@ def get_authenticated_user_profile(user_id, payload=None):
                     resolved_acct_type = "main_user"
                     resolved_pos = None
 
+                email_val = row[11] or ""
+                if resolved_role == "farmer" and email_val.endswith("@grainrise.local"):
+                    email_val = ""
+
                 user_dict = {
                     "id": row[0],
                     "first_name": row[1] or "",
@@ -632,7 +686,7 @@ def get_authenticated_user_profile(user_id, payload=None):
                     "postal_code": row[8] or "",
                     "barangay": row[9] or "",
                     "street_address": row[10] or "",
-                    "email": row[11] or "",
+                    "email": email_val,
                     "contact_number": row[12] or "",
                     "username": row[13] or "",
                     "role": resolved_role,
@@ -785,6 +839,8 @@ def get_profile_status(request):
     role = user_row[14]
     profile_data = {}
     docs_data = {}
+    farms_data = []
+    reusable_docs = {}
 
     with connection.cursor() as cursor:
         if role == "miller_manager":
@@ -823,7 +879,81 @@ def get_profile_status(request):
             if d_row:
                 docs_data = {"barangay_permit": d_row[0], "valid_id": d_row[1]}
 
+        elif role == "farmer":
+            cursor.execute(
+                """
+                SELECT farm_profile_id, farm_lot_name, street_address,
+                       municipality, province, postal_code,
+                       total_farm_area_hectares, land_ownership_status,
+                       rice_variety_currently_planted, cropping_cycles_per_year,
+                       rsbsa_number, rsbsa_id_document
+                FROM farm_profile
+                WHERE user_id = %s
+                ORDER BY farm_profile_id ASC
+                """,
+                [user_id]
+            )
+            farm_rows = cursor.fetchall()
+            for f_row in farm_rows:
+                farms_data.append({
+                    "farm_profile_id": f_row[0],
+                    "farm_lot_name": f_row[1] or "",
+                    "street_address": f_row[2] or "",
+                    "municipality": f_row[3] or "",
+                    "province": f_row[4] or "",
+                    "postal_code": f_row[5] or "",
+                    "total_farm_area_hectares": str(f_row[6]) if f_row[6] is not None else "",
+                    "land_ownership_status": f_row[7] or "",
+                    "rice_variety_currently_planted": f_row[8] or "",
+                    "cropping_cycles_per_year": str(f_row[9]) if f_row[9] is not None else "",
+                    "rsbsa_number": f_row[10] or "",
+                    "rsbsa_id_document": f_row[11] or "",
+                    "rsbsa_id_document_url": _build_media_url(request, f_row[11]),
+                })
+
+            phone = user_row[12] or ""
+            from .auth_utils import normalize_ph_mobile
+            norm_phone = normalize_ph_mobile(phone)
+            phone_variants = [phone]
+            if norm_phone:
+                phone_variants.extend([norm_phone, "0" + norm_phone[3:], norm_phone[1:]])
+            phone_variants = list(dict.fromkeys(v for v in phone_variants if v))
+            placeholders = ", ".join(["%s"] * len(phone_variants))
+
+            cursor.execute(
+                f"""
+                SELECT business_verification_document, government_issued_id
+                FROM partnership_inquiries
+                WHERE partner_role = 'farmer'
+                  AND (
+                      (contact_number IS NOT NULL AND contact_number != '' AND contact_number IN ({placeholders}))
+                      OR (email IS NOT NULL AND email != '' AND LOWER(email) = %s)
+                  )
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                [*phone_variants, (user_row[11] or "").lower()]
+            )
+            inq_row = cursor.fetchone()
+            if inq_row and inq_row[0]:
+                doc_raw = str(inq_row[0]).strip()
+                if doc_raw.startswith("["):
+                    try:
+                        import json
+                        parsed_doc = json.loads(doc_raw)
+                        doc_raw = parsed_doc[0] if isinstance(parsed_doc, list) and parsed_doc else doc_raw
+                    except Exception:
+                        pass
+                reusable_docs = {
+                    "rsbsa_document": doc_raw,
+                    "rsbsa_document_url": _build_media_url(request, doc_raw),
+                }
+
     profile_incomplete, missing_fields = check_profile_incomplete(user_id, role)
+
+    display_email = user_row[11] or ""
+    if role == "farmer" and display_email.endswith("@grainrise.local"):
+        display_email = ""
 
     return Response({
         "user": {
@@ -831,12 +961,14 @@ def get_profile_status(request):
             "last_name": user_row[3], "suffix": user_row[4], "gender": user_row[5],
             "province": user_row[6], "municipality": user_row[7], "postal_code": user_row[8],
             "barangay": user_row[9], "street_address": user_row[10],
-            "email": user_row[11], "contact_number": user_row[12], "username": user_row[13],
+            "email": display_email, "contact_number": user_row[12], "username": user_row[13],
             "role": role, "must_change_password": user_row[15],
             "profile_incomplete": profile_incomplete,
         },
         "profile": profile_data,
         "documents": docs_data,
+        "farms": farms_data,
+        "reusable_documents": reusable_docs,
         "must_change_password": user_row[15],
         "profile_incomplete": profile_incomplete,
         "missing_fields": missing_fields,
@@ -898,8 +1030,8 @@ def complete_profile(request):
                 f.write(chunk)
         return os.path.join(rel_dir, unique_name).replace("\\", "/")
 
-    with transaction.atomic():
-        with connection.cursor() as cursor:
+    try:
+        with transaction.atomic(), connection.cursor() as cursor:
             cursor.execute("""
                 UPDATE users
                 SET gender = COALESCE(NULLIF(%s, ''), gender),
@@ -920,6 +1052,13 @@ def complete_profile(request):
                 first_name, middle_initial, last_name, suffix, contact_number,
                 user_id
             ])
+
+            new_email = str(data.get("email") or "").strip()
+            if new_email and (not user_email or user_email.endswith("@grainrise.local")):
+                cursor.execute(
+                    "UPDATE users SET email = %s WHERE user_id = %s",
+                    [new_email, user_id]
+                )
 
             if role == "miller_manager":
                 b_name = str(data.get("business_name") or "").strip()
@@ -1072,6 +1211,142 @@ def complete_profile(request):
                     updates.append("updated_at = CURRENT_TIMESTAMP")
                     params.append(user_id)
                     cursor.execute(f"UPDATE retailer_documents SET {', '.join(updates)} WHERE user_id = %s", params)
+
+            elif role == "farmer":
+                farm_lots_raw = data.get("farm_lots")
+                if farm_lots_raw:
+                    import json
+                    from decimal import Decimal
+
+                    try:
+                        farm_lots = json.loads(farm_lots_raw) if isinstance(farm_lots_raw, str) else farm_lots_raw
+                    except Exception as exc:
+                        raise ValueError(f"Invalid farm lots format: {exc}")
+
+                    if not isinstance(farm_lots, list):
+                        raise ValueError("Farm lots must be a list.")
+
+                    ALLOWED_OWNERSHIP = {"Owned", "Rented/Leased", "Tenant", "Other"}
+                    ALLOWED_VARIETIES = {"Dinorado", "Sinandomeng", "Jasmine Rice", "Malagkit", "Other"}
+
+                    validated_lots = []
+                    for idx, lot in enumerate(farm_lots):
+                        lot_num = idx + 1
+                        lot_name = str(lot.get("farm_lot_name") or "").strip()[:200] or None
+                        lot_street = str(lot.get("street_address") or "").strip()[:255] or None
+                        lot_prov = str(lot.get("province") or "").strip()[:100]
+                        lot_muni = str(lot.get("municipality") or "").strip()[:100]
+                        lot_postal = str(lot.get("postal_code") or "").strip()[:10]
+
+                        # In non-partial submission, location is strictly required
+                        if not is_partial:
+                            if not lot_prov:
+                                raise ValueError(f"Farm Lot #{lot_num}: Province is required.")
+                            if not lot_muni:
+                                raise ValueError(f"Farm Lot #{lot_num}: Municipality / City is required.")
+                            if not lot_postal:
+                                raise ValueError(f"Farm Lot #{lot_num}: Postal code is required.")
+
+                        area_val = lot.get("total_farm_area_hectares")
+                        area_dec = None
+                        if area_val is not None and str(area_val).strip() != "":
+                            try:
+                                area_dec = round(Decimal(str(area_val).strip()), 4)
+                                if area_dec <= 0:
+                                    raise ValueError()
+                            except Exception:
+                                raise ValueError(f"Farm Lot #{lot_num}: Total farm area must be a positive number.")
+
+                        ownership = str(lot.get("land_ownership_status") or "").strip() or None
+                        if ownership and ownership not in ALLOWED_OWNERSHIP:
+                            raise ValueError(f"Farm Lot #{lot_num}: Invalid land ownership '{ownership}'. Allowed: {', '.join(sorted(ALLOWED_OWNERSHIP))}.")
+
+                        variety = str(lot.get("rice_variety_currently_planted") or "").strip() or None
+                        if variety and variety not in ALLOWED_VARIETIES:
+                            raise ValueError(f"Farm Lot #{lot_num}: Invalid rice variety '{variety}'. Allowed: {', '.join(sorted(ALLOWED_VARIETIES))}.")
+
+                        cycles_val = lot.get("cropping_cycles_per_year")
+                        cycles_int = None
+                        if cycles_val is not None and str(cycles_val).strip() != "":
+                            try:
+                                cycles_int = int(str(cycles_val).strip())
+                                if cycles_int < 1 or cycles_int > 255:
+                                    raise ValueError()
+                            except Exception:
+                                raise ValueError(f"Farm Lot #{lot_num}: Cropping cycles must be a positive whole number.")
+
+                        rsbsa_num = str(lot.get("rsbsa_number") or "").strip()[:50] or None
+
+                        # Check if a new RSBSA file was uploaded for this lot
+                        file_key = f"farm_rsbsa_document_{idx}"
+                        doc_file = (
+                            request.FILES.get(file_key)
+                            or request.FILES.get(f"rsbsa_id_document_{idx}")
+                            or (request.FILES.get("rsbsa_id_document") if idx == 0 else None)
+                        )
+                        if doc_file:
+                            saved_doc_path = save_uploaded_file(doc_file, "farmer_documents")
+                        else:
+                            saved_doc_path = str(lot.get("rsbsa_id_document") or "").strip()[:500] or None
+
+                        if lot_prov or lot_muni or lot_name or area_dec is not None or rsbsa_num or saved_doc_path:
+                            validated_lots.append({
+                                "farm_lot_name": lot_name,
+                                "street_address": lot_street,
+                                "province": lot_prov,
+                                "municipality": lot_muni,
+                                "postal_code": lot_postal,
+                                "total_farm_area_hectares": area_dec,
+                                "land_ownership_status": ownership,
+                                "rice_variety_currently_planted": variety,
+                                "cropping_cycles_per_year": cycles_int,
+                                "rsbsa_number": rsbsa_num,
+                                "rsbsa_id_document": saved_doc_path,
+                            })
+
+                    if not is_partial and not validated_lots:
+                        raise ValueError("At least one farm lot profile is required.")
+
+                    if validated_lots:
+                        cursor.execute("DELETE FROM farm_profile WHERE user_id = %s", [user_id])
+                        for vlot in validated_lots:
+                            cursor.execute(
+                                """
+                                INSERT INTO farm_profile (
+                                    user_id, farm_lot_name, street_address,
+                                    municipality, province, postal_code,
+                                    total_farm_area_hectares, land_ownership_status,
+                                    rice_variety_currently_planted, cropping_cycles_per_year,
+                                    rsbsa_number, rsbsa_id_document,
+                                    created_at, updated_at
+                                ) VALUES (
+                                    %s, %s, %s,
+                                    %s, %s, %s,
+                                    %s, %s,
+                                    %s, %s,
+                                    %s, %s,
+                                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                                )
+                                """,
+                                [
+                                    user_id,
+                                    vlot["farm_lot_name"],
+                                    vlot["street_address"],
+                                    vlot["municipality"],
+                                    vlot["province"],
+                                    vlot["postal_code"],
+                                    vlot["total_farm_area_hectares"],
+                                    vlot["land_ownership_status"],
+                                    vlot["rice_variety_currently_planted"],
+                                    vlot["cropping_cycles_per_year"],
+                                    vlot["rsbsa_number"],
+                                    vlot["rsbsa_id_document"],
+                                ]
+                            )
+    except ValueError as err:
+        return Response({"detail": str(err)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as exc:
+        return Response({"detail": f"An error occurred while saving your profile: {exc}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     profile_incomplete, missing_fields = check_profile_incomplete(user_id, role)
 

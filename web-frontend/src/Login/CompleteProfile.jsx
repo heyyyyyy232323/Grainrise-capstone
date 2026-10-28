@@ -19,6 +19,10 @@ import {
   EyeOff,
   Lock,
   ChevronDown,
+  Plus,
+  Trash2,
+  Sprout,
+  ExternalLink,
 } from "lucide-react";
 import Footer from "../Components/Minor-Components/CustomFooter";
 import Logo from "../assets/Logo.png";
@@ -26,6 +30,28 @@ import useApi from "../Components/hooks/useApi";
 import useAuth from "../Components/hooks/useAuth";
 import usePhilippineAddress from "../Components/hooks/usePhilippineAddress";
 import Dropdown from "../Components/Minor-Components/Dropdown";
+
+const LAND_OWNERSHIP_OPTIONS = [
+  "Owned",
+  "Rented/Leased",
+  "Tenant",
+  "Other",
+];
+
+const RICE_VARIETY_OPTIONS = [
+  "Dinorado",
+  "Sinandomeng",
+  "Jasmine Rice",
+  "Malagkit",
+  "Other",
+];
+
+const CROPPING_CYCLES_OPTIONS = [
+  "1",
+  "2",
+  "3",
+  "4",
+];
 
 const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"];
 const SUFFIX_OPTIONS = [
@@ -300,8 +326,11 @@ const CompleteProfile = () => {
   const isMiller = role === "miller_manager" || role === "supplier";
   const isWarehouse = role === "warehouse_manager";
   const isRetailer = role === "retailer";
+  const isFarmer = role === "farmer";
 
-  const roleTitle = isMiller
+  const roleTitle = isFarmer
+    ? "Farmer"
+    : isMiller
     ? "Miller / Supplier"
     : isWarehouse
       ? "Warehouse Manager"
@@ -314,6 +343,36 @@ const CompleteProfile = () => {
     warehouse_manager: "/warehouse-manager/dashboard",
     miller_manager: "/miller-manager/dashboard",
     farmer: "/farmer/dashboard",
+  };
+
+  // Farm Lots State for Farmer
+  const createEmptyLot = (id = 1) => ({
+    id: id || Date.now(),
+    farm_profile_id: null,
+    farm_lot_name: "",
+    street_address: "",
+    province: "",
+    municipality: "",
+    postal_code: "",
+    manual_address: false,
+    municipalitiesList: [],
+    loadingMunicipalities: false,
+    total_farm_area_hectares: "",
+    land_ownership_status: "",
+    rice_variety_currently_planted: "",
+    cropping_cycles_per_year: "",
+    rsbsa_number: "",
+    rsbsa_id_document_file: null,
+    rsbsa_id_document_path: "",
+    rsbsa_id_document_url: "",
+  });
+
+  const [farmLots, setFarmLots] = useState([createEmptyLot(1)]);
+  const [reusableRsbsaDoc, setReusableRsbsaDoc] = useState(null);
+  const [farmLotTouched, setFarmLotTouched] = useState({});
+
+  const markFarmLotTouched = (idx, field) => {
+    setFarmLotTouched((prev) => ({ ...prev, [`${idx}_${field}`]: true }));
   };
 
   // Build steps list conditionally
@@ -336,29 +395,40 @@ const CompleteProfile = () => {
       },
       {
         key: "address",
-        title: "Company Address",
+        title: isFarmer ? "Residential Address" : "Company Address",
         shortTitle: "Address",
         icon: MapPin,
-      },
-      {
-        key: "business",
-        title: isWarehouse
-          ? "Warehouse Facility Details"
-          : isMiller
-            ? "Milling Facility Details"
-            : "Business Details",
-        shortTitle: "Business",
-        icon: Building2,
-      },
-      {
-        key: "documents",
-        title: "Verification Documents",
-        shortTitle: "Documents",
-        icon: FileText,
       }
     );
+    if (isFarmer) {
+      list.push({
+        key: "farm",
+        title: "Farm Information",
+        shortTitle: "Farm Lots",
+        icon: Sprout,
+      });
+    } else {
+      list.push(
+        {
+          key: "business",
+          title: isWarehouse
+            ? "Warehouse Facility Details"
+            : isMiller
+            ? "Milling Facility Details"
+            : "Business Details",
+          shortTitle: "Business",
+          icon: Building2,
+        },
+        {
+          key: "documents",
+          title: "Verification Documents",
+          shortTitle: "Documents",
+          icon: FileText,
+        }
+      );
+    }
     return list;
-  }, [hasSecurityStep, isWarehouse, isMiller]);
+  }, [hasSecurityStep, isWarehouse, isMiller, isFarmer]);
 
   const currentStep = steps[currentStepIndex] || steps[0];
   const totalSteps = steps.length;
@@ -437,7 +507,9 @@ const CompleteProfile = () => {
 
     const trimmedPersonalEmail = personalEmail.trim();
     if (!trimmedPersonalEmail) {
-      errors.personalEmail = "Email address is required.";
+      if (!isFarmer) {
+        errors.personalEmail = "Email address is required.";
+      }
     } else if (trimmedPersonalEmail.length > 100) {
       errors.personalEmail = "Email must not exceed 100 characters.";
     } else if (!trimmedPersonalEmail.includes("@")) {
@@ -505,7 +577,58 @@ const CompleteProfile = () => {
     officialContact,
     isMiller,
     isWarehouse,
+    isFarmer,
   ]);
+
+  // Real-time Validation Errors for farm lots
+  const farmLotErrors = useMemo(() => {
+    if (!isFarmer) return [];
+    return farmLots.map((lot) => {
+      const errs = {};
+      if (!lot.province?.trim()) {
+        errs.province = "Province is required.";
+      }
+      if (!lot.municipality?.trim()) {
+        errs.municipality = "Municipality or City is required.";
+      }
+      const cleanPostal = String(lot.postal_code || "").trim();
+      if (!cleanPostal) {
+        errs.postal_code = "Postal code is required.";
+      } else if (!/^\d{4}$/.test(cleanPostal)) {
+        errs.postal_code = "Postal code must be exactly 4 digits.";
+      }
+
+      if (
+        lot.total_farm_area_hectares !== "" &&
+        lot.total_farm_area_hectares !== null &&
+        lot.total_farm_area_hectares !== undefined
+      ) {
+        const areaStr = String(lot.total_farm_area_hectares).trim();
+        if (areaStr) {
+          const num = Number(areaStr);
+          if (isNaN(num) || num <= 0) {
+            errs.total_farm_area_hectares = "Total farm area must be a positive number.";
+          }
+        }
+      }
+
+      if (
+        lot.cropping_cycles_per_year !== "" &&
+        lot.cropping_cycles_per_year !== null &&
+        lot.cropping_cycles_per_year !== undefined
+      ) {
+        const cycleStr = String(lot.cropping_cycles_per_year).trim();
+        if (cycleStr) {
+          const cycles = Number(cycleStr);
+          if (isNaN(cycles) || cycles < 1 || cycles > 255 || !Number.isInteger(cycles)) {
+            errs.cropping_cycles_per_year = "Cropping cycles must be a whole number (1 or more).";
+          }
+        }
+      }
+
+      return errs;
+    });
+  }, [isFarmer, farmLots]);
 
   const isCurrentStepValid = useMemo(() => {
     if (!currentStep) return false;
@@ -534,6 +657,12 @@ const CompleteProfile = () => {
         !validationErrors.postalCode
       );
     }
+    if (currentStep.key === "farm") {
+      return (
+        farmLots.length > 0 &&
+        farmLotErrors.every((errs) => Object.keys(errs).length === 0)
+      );
+    }
     if (currentStep.key === "business") {
       return (
         !validationErrors.businessName &&
@@ -545,7 +674,16 @@ const CompleteProfile = () => {
       return true;
     }
     return true;
-  }, [currentStep, pwCriteria, validationErrors, passwordSaved, newPassword, confirmPassword]);
+  }, [
+    currentStep,
+    pwCriteria,
+    validationErrors,
+    passwordSaved,
+    newPassword,
+    confirmPassword,
+    farmLots,
+    farmLotErrors,
+  ]);
 
   // Load initial profile data from backend
   useEffect(() => {
@@ -576,7 +714,9 @@ const CompleteProfile = () => {
         setLastName(u.last_name || "");
         setSuffix(u.suffix || "");
         setGender(u.gender || "");
-        setPersonalEmail(u.email || user?.email || "");
+        const rawEmail = u.email || user?.email || "";
+        const cleanEmail = rawEmail.endsWith("@grainrise.local") ? "" : rawEmail;
+        setPersonalEmail(cleanEmail);
         setContactNumber(parsePhoneNumber(u.contact_number || ""));
 
         // Company Address fields
@@ -607,6 +747,39 @@ const CompleteProfile = () => {
           setExistingDocs(d);
         }
 
+        if (response.reusable_documents) {
+          setReusableRsbsaDoc(response.reusable_documents);
+        }
+
+        if (Array.isArray(response.farms) && response.farms.length > 0) {
+          const loadedLots = response.farms.map((f, i) => ({
+            ...createEmptyLot(i + 1),
+            farm_profile_id: f.farm_profile_id,
+            farm_lot_name: f.farm_lot_name || "",
+            street_address: f.street_address || "",
+            province: f.province || "",
+            municipality: f.municipality || "",
+            postal_code: f.postal_code || "",
+            manual_address: true,
+            total_farm_area_hectares: f.total_farm_area_hectares || "",
+            land_ownership_status: f.land_ownership_status || "",
+            rice_variety_currently_planted: f.rice_variety_currently_planted || "",
+            cropping_cycles_per_year: f.cropping_cycles_per_year || "",
+            rsbsa_number: f.rsbsa_number || "",
+            rsbsa_id_document_path: f.rsbsa_id_document || "",
+            rsbsa_id_document_url: f.rsbsa_id_document_url || "",
+          }));
+          setFarmLots(loadedLots);
+        } else if (response.reusable_documents?.rsbsa_document) {
+          setFarmLots([
+            {
+              ...createEmptyLot(1),
+              rsbsa_id_document_path: response.reusable_documents.rsbsa_document,
+              rsbsa_id_document_url: response.reusable_documents.rsbsa_document_url || "",
+            },
+          ]);
+        }
+
         // Restore draft from localStorage if available
         try {
           const draftRaw = localStorage.getItem("grainrise_profile_draft");
@@ -632,6 +805,16 @@ const CompleteProfile = () => {
             if (draft.organizationName !== undefined) setOrganizationName(draft.organizationName);
             if (draft.officialEmail !== undefined) setOfficialEmail(draft.officialEmail);
             if (draft.officialContact !== undefined) setOfficialContact(draft.officialContact);
+
+            if (Array.isArray(draft.farmLots) && draft.farmLots.length > 0) {
+              setFarmLots(
+                draft.farmLots.map((dlot, di) => ({
+                  ...createEmptyLot(di + 1),
+                  ...dlot,
+                  rsbsa_id_document_file: null,
+                }))
+              );
+            }
           }
         } catch (e) { }
       } catch (err) {
@@ -725,6 +908,257 @@ const CompleteProfile = () => {
     }
   };
 
+  // Farm Lot Handlers for Farmer
+  const handleAddFarmLot = () => {
+    setFarmLots((prev) => [
+      ...prev,
+      {
+        ...createEmptyLot(Date.now()),
+        rsbsa_id_document_path: reusableRsbsaDoc?.rsbsa_document || "",
+        rsbsa_id_document_url: reusableRsbsaDoc?.rsbsa_document_url || "",
+      },
+    ]);
+  };
+
+  const handleRemoveFarmLot = (idxToRemove) => {
+    if (farmLots.length <= 1) return;
+    setFarmLots((prev) => prev.filter((_, idx) => idx !== idxToRemove));
+  };
+
+  const updateFarmLot = (idx, field, value) => {
+    setFarmLots((prev) => {
+      const updated = [...prev];
+      if (updated[idx]) {
+        updated[idx] = { ...updated[idx], [field]: value };
+      }
+      return updated;
+    });
+  };
+
+  const handleFarmProvinceChange = async (lotIndex, provinceName) => {
+    markFarmLotTouched(lotIndex, "province");
+    setFarmLots((prev) => {
+      const updated = [...prev];
+      if (updated[lotIndex]) {
+        updated[lotIndex] = {
+          ...updated[lotIndex],
+          province: provinceName,
+          municipality: "",
+          postal_code: "",
+          municipalitiesList: [],
+          loadingMunicipalities: Boolean(provinceName),
+        };
+      }
+      return updated;
+    });
+
+    if (!provinceName) return;
+
+    const provObj = (address.provinces || []).find((p) => p.name === provinceName);
+    if (!provObj?.code) {
+      setFarmLots((prev) => {
+        const updated = [...prev];
+        if (updated[lotIndex]) {
+          updated[lotIndex] = { ...updated[lotIndex], loadingMunicipalities: false };
+        }
+        return updated;
+      });
+      return;
+    }
+
+    try {
+      const response = await request(
+        `/locations/provinces/${encodeURIComponent(provObj.code)}/cities-municipalities`,
+        { method: "GET" }
+      );
+      const results = Array.isArray(response?.results) ? response.results : [];
+      results.sort((a, b) => String(a?.name || "").localeCompare(String(b?.name || "")));
+
+      setFarmLots((prev) => {
+        const updated = [...prev];
+        if (updated[lotIndex]) {
+          updated[lotIndex] = {
+            ...updated[lotIndex],
+            municipalitiesList: results,
+            loadingMunicipalities: false,
+          };
+        }
+        return updated;
+      });
+    } catch (err) {
+      console.error("Failed to load cities for farm lot:", err);
+      setFarmLots((prev) => {
+        const updated = [...prev];
+        if (updated[lotIndex]) {
+          updated[lotIndex] = {
+            ...updated[lotIndex],
+            municipalitiesList: [],
+            loadingMunicipalities: false,
+          };
+        }
+        return updated;
+      });
+    }
+  };
+
+  const handleFarmMunicipalityChange = async (lotIndex, muniName) => {
+    markFarmLotTouched(lotIndex, "municipality");
+    let lotMuniObj = null;
+
+    setFarmLots((prev) => {
+      const updated = [...prev];
+      const lot = updated[lotIndex];
+      if (lot) {
+        lotMuniObj = (lot.municipalitiesList || []).find((m) => (m.name || m) === muniName);
+        const zip = lotMuniObj?.zip_code ? String(lotMuniObj.zip_code) : "";
+        updated[lotIndex] = {
+          ...lot,
+          municipality: muniName,
+          postal_code: zip || lot.postal_code || "",
+        };
+      }
+      return updated;
+    });
+
+    if (lotMuniObj?.code && !lotMuniObj?.zip_code) {
+      try {
+        const response = await request(
+          `/locations/cities-municipalities/${encodeURIComponent(lotMuniObj.code)}`,
+          { method: "GET" }
+        );
+        if (response?.postal_code) {
+          setFarmLots((prev) => {
+            const updated = [...prev];
+            if (updated[lotIndex]) {
+              updated[lotIndex] = {
+                ...updated[lotIndex],
+                postal_code: String(response.postal_code),
+              };
+            }
+            return updated;
+          });
+        }
+      } catch (err) {
+        console.warn("Could not auto-fetch postal code for lot:", err);
+      }
+    }
+  };
+
+  const toggleFarmLotManualAddress = async (lotIndex) => {
+    const lot = farmLots[lotIndex];
+    if (!lot) return;
+
+    const willBeManual = !lot.manual_address;
+    setFarmLots((prev) => {
+      const updated = [...prev];
+      if (updated[lotIndex]) {
+        updated[lotIndex] = {
+          ...updated[lotIndex],
+          manual_address: willBeManual,
+        };
+      }
+      return updated;
+    });
+
+    if (!willBeManual && lot.province && (!lot.municipalitiesList || lot.municipalitiesList.length === 0)) {
+      const provObj = (address.provinces || []).find((p) => p.name === lot.province);
+      if (provObj?.code) {
+        try {
+          const response = await request(
+            `/locations/provinces/${encodeURIComponent(provObj.code)}/cities-municipalities`,
+            { method: "GET" }
+          );
+          const results = Array.isArray(response?.results) ? response.results : [];
+          results.sort((a, b) => String(a?.name || "").localeCompare(String(b?.name || "")));
+          setFarmLots((prev) => {
+            const updated = [...prev];
+            if (updated[lotIndex]) {
+              updated[lotIndex] = {
+                ...updated[lotIndex],
+                municipalitiesList: results,
+              };
+            }
+            return updated;
+          });
+        } catch (e) {}
+      }
+    }
+  };
+
+  const handleFarmLotFileChange = (lotIndex, file) => {
+    if (!file) {
+      setFarmLots((prev) => {
+        const updated = [...prev];
+        if (updated[lotIndex]) {
+          updated[lotIndex] = {
+            ...updated[lotIndex],
+            rsbsa_id_document_file: null,
+            fileError: null,
+          };
+        }
+        return updated;
+      });
+      return;
+    }
+
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      setFarmLots((prev) => {
+        const updated = [...prev];
+        if (updated[lotIndex]) {
+          updated[lotIndex] = {
+            ...updated[lotIndex],
+            fileError: "Unsupported file format. Please upload JPG, PNG, WEBP, or PDF.",
+          };
+        }
+        return updated;
+      });
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setFarmLots((prev) => {
+        const updated = [...prev];
+        if (updated[lotIndex]) {
+          updated[lotIndex] = {
+            ...updated[lotIndex],
+            fileError: "File size exceeds 10MB limit.",
+          };
+        }
+        return updated;
+      });
+      return;
+    }
+
+    setFarmLots((prev) => {
+      const updated = [...prev];
+      if (updated[lotIndex]) {
+        updated[lotIndex] = {
+          ...updated[lotIndex],
+          rsbsa_id_document_file: file,
+          fileError: null,
+        };
+      }
+      return updated;
+    });
+  };
+
+  const handleUseReusableDocForLot = (lotIndex) => {
+    if (!reusableRsbsaDoc?.rsbsa_document) return;
+    setFarmLots((prev) => {
+      const updated = [...prev];
+      if (updated[lotIndex]) {
+        updated[lotIndex] = {
+          ...updated[lotIndex],
+          rsbsa_id_document_path: reusableRsbsaDoc.rsbsa_document,
+          rsbsa_id_document_url: reusableRsbsaDoc.rsbsa_document_url || "",
+          rsbsa_id_document_file: null,
+          fileError: null,
+        };
+      }
+      return updated;
+    });
+  };
+
   // Save current step data to localStorage draft and background partial save to backend
   const persistStepData = async () => {
     const draftData = {
@@ -745,6 +1179,26 @@ const CompleteProfile = () => {
       officialEmail,
       officialContact,
     };
+
+    if (isFarmer) {
+      draftData.farmLots = farmLots.map((lot) => ({
+        farm_profile_id: lot.farm_profile_id,
+        farm_lot_name: lot.farm_lot_name,
+        street_address: lot.street_address,
+        province: lot.province,
+        municipality: lot.municipality,
+        postal_code: lot.postal_code,
+        manual_address: lot.manual_address,
+        total_farm_area_hectares: lot.total_farm_area_hectares,
+        land_ownership_status: lot.land_ownership_status,
+        rice_variety_currently_planted: lot.rice_variety_currently_planted,
+        cropping_cycles_per_year: lot.cropping_cycles_per_year,
+        rsbsa_number: lot.rsbsa_number,
+        rsbsa_id_document_path: lot.rsbsa_id_document_path,
+        rsbsa_id_document_url: lot.rsbsa_id_document_url,
+      }));
+    }
+
     try {
       localStorage.setItem("grainrise_profile_draft", JSON.stringify(draftData));
     } catch (e) { }
@@ -770,6 +1224,24 @@ const CompleteProfile = () => {
       fd.append("organization_name", organizationName);
       fd.append("official_email", officialEmail);
       fd.append("official_contact_number", officialContact);
+
+      if (isFarmer) {
+        const serializedLots = farmLots.map((lot) => ({
+          farm_profile_id: lot.farm_profile_id,
+          farm_lot_name: lot.farm_lot_name?.trim() || "",
+          street_address: lot.street_address?.trim() || "",
+          province: lot.province?.trim() || "",
+          municipality: lot.municipality?.trim() || "",
+          postal_code: lot.postal_code?.trim() || "",
+          total_farm_area_hectares: lot.total_farm_area_hectares ? String(lot.total_farm_area_hectares).trim() : null,
+          land_ownership_status: lot.land_ownership_status || null,
+          rice_variety_currently_planted: lot.rice_variety_currently_planted || null,
+          cropping_cycles_per_year: lot.cropping_cycles_per_year ? String(lot.cropping_cycles_per_year).trim() : null,
+          rsbsa_number: lot.rsbsa_number?.trim() || null,
+          rsbsa_id_document: lot.rsbsa_id_document_path || null,
+        }));
+        fd.append("farm_lots", JSON.stringify(serializedLots));
+      }
 
       await request("/auth/complete-profile", {
         method: "POST",
@@ -879,7 +1351,30 @@ const CompleteProfile = () => {
         validationErrors.streetAddress ||
         validationErrors.postalCode
       ) {
-        setErrorMessage("Please complete all required fields in Company Address.");
+        setErrorMessage(
+          isFarmer
+            ? "Please complete all required fields in Residential Address."
+            : "Please complete all required fields in Company Address."
+        );
+        return;
+      }
+    }
+
+    // Step: Farm Information (for Farmer)
+    if (currentStep.key === "farm") {
+      const newFarmTouched = {};
+      farmLots.forEach((_, idx) => {
+        newFarmTouched[`${idx}_province`] = true;
+        newFarmTouched[`${idx}_municipality`] = true;
+        newFarmTouched[`${idx}_postal_code`] = true;
+        newFarmTouched[`${idx}_total_farm_area_hectares`] = true;
+        newFarmTouched[`${idx}_cropping_cycles_per_year`] = true;
+      });
+      setFarmLotTouched((prev) => ({ ...prev, ...newFarmTouched }));
+
+      const hasFarmErrors = farmLotErrors.some((errs) => Object.keys(errs).length > 0);
+      if (farmLots.length === 0 || hasFarmErrors) {
+        setErrorMessage("Please complete all required fields for each farm lot.");
         return;
       }
     }
@@ -966,10 +1461,28 @@ const CompleteProfile = () => {
       validationErrors.barangay ||
       validationErrors.streetAddress ||
       validationErrors.postalCode ||
-      validationErrors.businessName
+      (!isFarmer && validationErrors.businessName)
     ) {
       setErrorMessage("Some required profile fields are incomplete. Please review your previous steps.");
       return;
+    }
+
+    if (isFarmer) {
+      const newFarmTouched = {};
+      farmLots.forEach((_, idx) => {
+        newFarmTouched[`${idx}_province`] = true;
+        newFarmTouched[`${idx}_municipality`] = true;
+        newFarmTouched[`${idx}_postal_code`] = true;
+        newFarmTouched[`${idx}_total_farm_area_hectares`] = true;
+        newFarmTouched[`${idx}_cropping_cycles_per_year`] = true;
+      });
+      setFarmLotTouched((prev) => ({ ...prev, ...newFarmTouched }));
+
+      const hasFarmErrors = farmLotErrors.some((errs) => Object.keys(errs).length > 0);
+      if (farmLots.length === 0 || hasFarmErrors) {
+        setErrorMessage("Please complete all required fields for each farm lot.");
+        return;
+      }
     }
 
     setErrorMessage("");
@@ -990,6 +1503,30 @@ const CompleteProfile = () => {
       formData.append("barangay", barangay);
       formData.append("street_address", streetAddress);
       formData.append("postal_code", postalCode);
+
+      if (isFarmer) {
+        const serializedLots = farmLots.map((lot) => ({
+          farm_profile_id: lot.farm_profile_id,
+          farm_lot_name: lot.farm_lot_name?.trim() || "",
+          street_address: lot.street_address?.trim() || "",
+          province: lot.province?.trim() || "",
+          municipality: lot.municipality?.trim() || "",
+          postal_code: lot.postal_code?.trim() || "",
+          total_farm_area_hectares: lot.total_farm_area_hectares ? String(lot.total_farm_area_hectares).trim() : null,
+          land_ownership_status: lot.land_ownership_status || null,
+          rice_variety_currently_planted: lot.rice_variety_currently_planted || null,
+          cropping_cycles_per_year: lot.cropping_cycles_per_year ? String(lot.cropping_cycles_per_year).trim() : null,
+          rsbsa_number: lot.rsbsa_number?.trim() || null,
+          rsbsa_id_document: lot.rsbsa_id_document_path || null,
+        }));
+        formData.append("farm_lots", JSON.stringify(serializedLots));
+
+        farmLots.forEach((lot, idx) => {
+          if (lot.rsbsa_id_document_file) {
+            formData.append(`farm_rsbsa_document_${idx}`, lot.rsbsa_id_document_file);
+          }
+        });
+      }
 
       if (isMiller || isWarehouse) {
         formData.append("business_name", businessName);
@@ -1540,7 +2077,7 @@ const CompleteProfile = () => {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
-                      Email Address <span className="text-red-500">*</span>
+                      Email Address {isFarmer ? <span className="text-slate-400 font-normal normal-case">(Optional)</span> : <span className="text-red-500">*</span>}
                     </label>
                     <span className="text-[10px] text-slate-400">
                       {personalEmail.length}/100
@@ -1641,7 +2178,7 @@ const CompleteProfile = () => {
             </div>
           )}
 
-          {/* ── STEP: COMPANY ADDRESS ── */}
+          {/* ── STEP: COMPANY / RESIDENTIAL ADDRESS ── */}
           {currentStep?.key === "address" && (
             <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-xs space-y-6 animate-in fade-in duration-200">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-4">
@@ -1650,8 +2187,14 @@ const CompleteProfile = () => {
                     <MapPin size={20} />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold text-slate-900">Company Address</h2>
-                    <p className="text-xs text-slate-500">Your registered company or business location.</p>
+                    <h2 className="text-base font-bold text-slate-900">
+                      {isFarmer ? "Residential Address" : "Company Address"}
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      {isFarmer
+                        ? "Your residential or home address."
+                        : "Your registered company or business location."}
+                    </p>
                   </div>
                 </div>
                 <button
@@ -1822,8 +2365,13 @@ const CompleteProfile = () => {
                       value={streetAddress}
                       onChange={(e) => setStreetAddress(e.target.value)}
                       onBlur={() => markTouched("streetAddress")}
-                      placeholder="Building #, Street name, Industrial park / Compound"
-                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${touched.streetAddress && validationErrors.streetAddress
+                      placeholder={
+                        isFarmer
+                          ? "House #, Street name, Purok / Sitio"
+                          : "Building #, Street name, Industrial park / Compound"
+                      }
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
+                        touched.streetAddress && validationErrors.streetAddress
                           ? "border-red-400 bg-red-50/30 focus:border-red-500"
                           : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
                         }`}
@@ -1940,8 +2488,13 @@ const CompleteProfile = () => {
                       value={streetAddress}
                       onChange={(e) => setStreetAddress(e.target.value)}
                       onBlur={() => markTouched("streetAddress")}
-                      placeholder="Building #, Street name, Industrial park / Compound"
-                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${touched.streetAddress && validationErrors.streetAddress
+                      placeholder={
+                        isFarmer
+                          ? "House #, Street name, Purok / Sitio"
+                          : "Building #, Street name, Industrial park / Compound"
+                      }
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
+                        touched.streetAddress && validationErrors.streetAddress
                           ? "border-red-400 bg-red-50/30 focus:border-red-500"
                           : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
                         }`}
@@ -1952,6 +2505,540 @@ const CompleteProfile = () => {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── STEP: FARM INFORMATION (FOR FARMER) ── */}
+          {currentStep?.key === "farm" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Header Card */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 pb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-[#08511f]">
+                      <Sprout size={22} />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-slate-900">Farm Information</h2>
+                      <p className="text-xs text-slate-500">
+                        Register your farm lot(s), location, land ownership, and planting details.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddFarmLot}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-[#08511f] bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-xl transition cursor-pointer self-start sm:self-auto shadow-2xs"
+                  >
+                    <Plus size={15} />
+                    <span>Add Another Farm Lot</span>
+                  </button>
+                </div>
+
+                {/* Reusable RSBSA Banner if verified during inquiry */}
+                {reusableRsbsaDoc?.rsbsa_document && (
+                  <div className="mt-4 p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-emerald-900">
+                    <div className="flex items-start sm:items-center gap-2">
+                      <FileCheck size={18} className="text-emerald-700 shrink-0 mt-0.5 sm:mt-0" />
+                      <div>
+                        <span className="font-bold">Verified RSBSA Document Available: </span>
+                        <span>Your RSBSA verification document from partner inquiry is securely on file.</span>
+                      </div>
+                    </div>
+                    {reusableRsbsaDoc.rsbsa_document_url && (
+                      <a
+                        href={reusableRsbsaDoc.rsbsa_document_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-bold text-[#08511f] hover:underline self-end sm:self-auto shrink-0"
+                      >
+                        <span>View Document</span>
+                        <ExternalLink size={13} />
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Farm Lots List */}
+              <div className="space-y-5">
+                {farmLots.map((lot, idx) => {
+                  const lotErrors = farmLotErrors[idx] || {};
+                  const isSingle = farmLots.length === 1;
+
+                  return (
+                    <div
+                      key={lot.id || idx}
+                      className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-xs space-y-5 relative"
+                    >
+                      {/* Lot Header */}
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#08511f] text-white text-xs font-bold">
+                            {idx + 1}
+                          </span>
+                          <div>
+                            <h3 className="text-sm font-bold text-slate-800">
+                              {lot.farm_lot_name ? lot.farm_lot_name : `Farm Lot #${idx + 1}`}
+                            </h3>
+                            <p className="text-[11px] text-slate-400">
+                              Farm profile &amp; cultivation specifications
+                            </p>
+                          </div>
+                        </div>
+
+                        {!isSingle && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFarmLot(idx)}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5 py-1 rounded-lg transition cursor-pointer"
+                          >
+                            <Trash2 size={14} />
+                            <span>Remove Lot</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Farm Lot Name */}
+                        <div className="sm:col-span-2">
+                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                            Farm / Lot Name <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            maxLength={200}
+                            value={lot.farm_lot_name}
+                            onChange={(e) => updateFarmLot(idx, "farm_lot_name", e.target.value)}
+                            placeholder="e.g. Lot 1 - North Paddy, Sitio Maligaya"
+                            className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f] outline-none transition"
+                          />
+                        </div>
+
+                        {/* Location Header & Toggle */}
+                        <div className="sm:col-span-2 flex items-center justify-between pt-1">
+                          <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                            Farm Location Details
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => toggleFarmLotManualAddress(idx)}
+                            className="text-xs font-semibold text-[#08511f] hover:underline cursor-pointer"
+                          >
+                            {lot.manual_address ? "Use Address Dropdowns" : "Can't find location? Enter manually"}
+                          </button>
+                        </div>
+
+                        {!lot.manual_address ? (
+                          <>
+                            {/* Province Dropdown */}
+                            <div>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                                Province <span className="text-red-500">*</span>
+                              </label>
+                              <Dropdown
+                                label=""
+                                placeholder={
+                                  address.loading.provinces
+                                    ? "Loading provinces..."
+                                    : "Select Province"
+                                }
+                                options={address.provinceOptions}
+                                value={lot.province}
+                                onChange={(val) => handleFarmProvinceChange(idx, val)}
+                                disabled={address.loading.provinces}
+                                error={farmLotTouched[`${idx}_province`] ? lotErrors.province : ""}
+                              />
+                              {farmLotTouched[`${idx}_province`] && lotErrors.province && (
+                                <p className="mt-1 text-xs text-red-600 font-medium">{lotErrors.province}</p>
+                              )}
+                            </div>
+
+                            {/* Municipality Dropdown */}
+                            <div>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                                Municipality / City <span className="text-red-500">*</span>
+                              </label>
+                              <Dropdown
+                                label=""
+                                placeholder={
+                                  lot.loadingMunicipalities
+                                    ? "Loading cities/municipalities..."
+                                    : !lot.province
+                                    ? "Select Province First"
+                                    : "Select Municipality/City"
+                                }
+                                options={(lot.municipalitiesList || []).map((m) => m.name || m)}
+                                value={lot.municipality}
+                                onChange={(val) => handleFarmMunicipalityChange(idx, val)}
+                                disabled={!lot.province || lot.loadingMunicipalities}
+                                error={farmLotTouched[`${idx}_municipality`] ? lotErrors.municipality : ""}
+                              />
+                              {farmLotTouched[`${idx}_municipality`] && lotErrors.municipality && (
+                                <p className="mt-1 text-xs text-red-600 font-medium">{lotErrors.municipality}</p>
+                              )}
+                            </div>
+
+                            {/* Postal Code */}
+                            <div>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                                Postal Code <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={4}
+                                value={lot.postal_code}
+                                onChange={(e) => {
+                                  markFarmLotTouched(idx, "postal_code");
+                                  const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                                  updateFarmLot(idx, "postal_code", val);
+                                }}
+                                onBlur={() => markFarmLotTouched(idx, "postal_code")}
+                                placeholder="4-digit postal code"
+                                className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
+                                  farmLotTouched[`${idx}_postal_code`] && lotErrors.postal_code
+                                    ? "border-red-400 bg-red-50/30 focus:border-red-500"
+                                    : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                                }`}
+                              />
+                              {farmLotTouched[`${idx}_postal_code`] && lotErrors.postal_code && (
+                                <p className="mt-1 text-xs text-red-600 font-medium">{lotErrors.postal_code}</p>
+                              )}
+                            </div>
+
+                            {/* Street / Sitio Address */}
+                            <div>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                                Street Address / Sitio <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                              </label>
+                              <input
+                                type="text"
+                                maxLength={255}
+                                value={lot.street_address}
+                                onChange={(e) => updateFarmLot(idx, "street_address", e.target.value)}
+                                placeholder="e.g. Purok 3, Sitio Riverside"
+                                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f] outline-none transition"
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            {/* Manual Province */}
+                            <div>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                                Province <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                maxLength={100}
+                                value={lot.province}
+                                onChange={(e) => {
+                                  markFarmLotTouched(idx, "province");
+                                  updateFarmLot(idx, "province", e.target.value);
+                                }}
+                                onBlur={() => markFarmLotTouched(idx, "province")}
+                                placeholder="e.g. Isabela"
+                                className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
+                                  farmLotTouched[`${idx}_province`] && lotErrors.province
+                                    ? "border-red-400 bg-red-50/30 focus:border-red-500"
+                                    : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                                }`}
+                              />
+                              {farmLotTouched[`${idx}_province`] && lotErrors.province && (
+                                <p className="mt-1 text-xs text-red-600 font-medium">{lotErrors.province}</p>
+                              )}
+                            </div>
+
+                            {/* Manual Municipality */}
+                            <div>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                                Municipality / City <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                maxLength={100}
+                                value={lot.municipality}
+                                onChange={(e) => {
+                                  markFarmLotTouched(idx, "municipality");
+                                  updateFarmLot(idx, "municipality", e.target.value);
+                                }}
+                                onBlur={() => markFarmLotTouched(idx, "municipality")}
+                                placeholder="e.g. Santiago City"
+                                className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
+                                  farmLotTouched[`${idx}_municipality`] && lotErrors.municipality
+                                    ? "border-red-400 bg-red-50/30 focus:border-red-500"
+                                    : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                                }`}
+                              />
+                              {farmLotTouched[`${idx}_municipality`] && lotErrors.municipality && (
+                                <p className="mt-1 text-xs text-red-600 font-medium">{lotErrors.municipality}</p>
+                              )}
+                            </div>
+
+                            {/* Manual Postal Code */}
+                            <div>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                                Postal Code <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={4}
+                                value={lot.postal_code}
+                                onChange={(e) => {
+                                  markFarmLotTouched(idx, "postal_code");
+                                  const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                                  updateFarmLot(idx, "postal_code", val);
+                                }}
+                                onBlur={() => markFarmLotTouched(idx, "postal_code")}
+                                placeholder="4-digit postal code (e.g. 3311)"
+                                className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
+                                  farmLotTouched[`${idx}_postal_code`] && lotErrors.postal_code
+                                    ? "border-red-400 bg-red-50/30 focus:border-red-500"
+                                    : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                                }`}
+                              />
+                              {farmLotTouched[`${idx}_postal_code`] && lotErrors.postal_code && (
+                                <p className="mt-1 text-xs text-red-600 font-medium">{lotErrors.postal_code}</p>
+                              )}
+                            </div>
+
+                            {/* Manual Street Address */}
+                            <div>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                                Street Address / Sitio <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                              </label>
+                              <input
+                                type="text"
+                                maxLength={255}
+                                value={lot.street_address}
+                                onChange={(e) => updateFarmLot(idx, "street_address", e.target.value)}
+                                placeholder="e.g. Purok 3, Sitio Riverside"
+                                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f] outline-none transition"
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {/* Section Divider */}
+                        <div className="sm:col-span-2 pt-1 border-t border-slate-100">
+                          <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                            Cultivation &amp; Specifications
+                          </span>
+                        </div>
+
+                        {/* Total Farm Area (hectares) */}
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                            Total Farm Area (Hectares) <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={lot.total_farm_area_hectares}
+                            onChange={(e) => {
+                              markFarmLotTouched(idx, "total_farm_area_hectares");
+                              updateFarmLot(idx, "total_farm_area_hectares", e.target.value);
+                            }}
+                            onBlur={() => markFarmLotTouched(idx, "total_farm_area_hectares")}
+                            placeholder="e.g. 1.50"
+                            className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
+                              farmLotTouched[`${idx}_total_farm_area_hectares`] && lotErrors.total_farm_area_hectares
+                                ? "border-red-400 bg-red-50/30 focus:border-red-500"
+                                : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                            }`}
+                          />
+                          {farmLotTouched[`${idx}_total_farm_area_hectares`] && lotErrors.total_farm_area_hectares && (
+                            <p className="mt-1 text-xs text-red-600 font-medium">{lotErrors.total_farm_area_hectares}</p>
+                          )}
+                        </div>
+
+                        {/* Land Ownership Status */}
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                            Land Ownership Status <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                          </label>
+                          <div className="relative">
+                            <select
+                              value={lot.land_ownership_status}
+                              onChange={(e) => updateFarmLot(idx, "land_ownership_status", e.target.value)}
+                              className="w-full appearance-none px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white pr-9 outline-none transition focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f] cursor-pointer"
+                            >
+                              <option value="">Select Ownership Status</option>
+                              {LAND_OWNERSHIP_OPTIONS.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown
+                              size={16}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Rice Variety Currently Planted */}
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                            Rice Variety Currently Planted <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                          </label>
+                          <div className="relative">
+                            <select
+                              value={lot.rice_variety_currently_planted}
+                              onChange={(e) => updateFarmLot(idx, "rice_variety_currently_planted", e.target.value)}
+                              className="w-full appearance-none px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white pr-9 outline-none transition focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f] cursor-pointer"
+                            >
+                              <option value="">Select Rice Variety</option>
+                              {RICE_VARIETY_OPTIONS.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown
+                              size={16}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Cropping Cycles Per Year */}
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                            Cropping Cycles Per Year <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                          </label>
+                          <div className="relative">
+                            <select
+                              value={lot.cropping_cycles_per_year}
+                              onChange={(e) => updateFarmLot(idx, "cropping_cycles_per_year", e.target.value)}
+                              className="w-full appearance-none px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white pr-9 outline-none transition focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f] cursor-pointer"
+                            >
+                              <option value="">Select Cycles</option>
+                              {CROPPING_CYCLES_OPTIONS.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt} cycle{opt !== "1" ? "s" : ""} / year
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown
+                              size={16}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Section Divider */}
+                        <div className="sm:col-span-2 pt-1 border-t border-slate-100">
+                          <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                            RSBSA Registration &amp; Accreditation
+                          </span>
+                        </div>
+
+                        {/* RSBSA Number */}
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                            RSBSA Number <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            maxLength={50}
+                            value={lot.rsbsa_number}
+                            onChange={(e) => updateFarmLot(idx, "rsbsa_number", e.target.value)}
+                            placeholder="e.g. 01-23-45-678-000001"
+                            className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f] outline-none transition"
+                          />
+                          <p className="mt-1 text-[11px] text-slate-400">
+                            Registry System for Basic Sectors in Agriculture ID
+                          </p>
+                        </div>
+
+                        {/* RSBSA Document Upload / Attachment */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                              RSBSA ID Document <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                            </label>
+                            {reusableRsbsaDoc?.rsbsa_document && lot.rsbsa_id_document_path !== reusableRsbsaDoc.rsbsa_document && (
+                              <button
+                                type="button"
+                                onClick={() => handleUseReusableDocForLot(idx)}
+                                className="text-[11px] font-bold text-[#08511f] hover:underline cursor-pointer"
+                              >
+                                Link Inquiry RSBSA
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Existing / Linked document indicator */}
+                          {lot.rsbsa_id_document_path && !lot.rsbsa_id_document_file && (
+                            <div className="mb-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between text-xs text-emerald-800 font-medium">
+                              <span className="flex items-center gap-1.5 truncate max-w-[200px]">
+                                <FileCheck size={14} className="shrink-0 text-emerald-600" />
+                                <span>RSBSA document linked</span>
+                              </span>
+                              {lot.rsbsa_id_document_url && (
+                                <a
+                                  href={lot.rsbsa_id_document_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[11px] font-bold text-[#08511f] hover:underline flex items-center gap-0.5 ml-2 shrink-0"
+                                >
+                                  <span>View</span>
+                                  <ExternalLink size={11} />
+                                </a>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Newly selected file indicator */}
+                          {lot.rsbsa_id_document_file && (
+                            <div className="mb-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between text-xs text-emerald-800 font-medium">
+                              <span className="truncate max-w-[200px]">{lot.rsbsa_id_document_file.name}</span>
+                              <span className="text-[10px] text-emerald-600 ml-2">
+                                {formatFileSize(lot.rsbsa_id_document_file.size)}
+                              </span>
+                            </div>
+                          )}
+
+                          <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 rounded-lg text-xs font-semibold text-slate-700 cursor-pointer shadow-2xs">
+                            <Upload size={13} />
+                            <span>
+                              {lot.rsbsa_id_document_file || lot.rsbsa_id_document_path
+                                ? "Change File"
+                                : "Upload File"}
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              onChange={(e) => handleFarmLotFileChange(idx, e.target.files[0])}
+                              className="hidden"
+                            />
+                          </label>
+
+                          {lot.fileError && (
+                            <p className="mt-1 text-xs text-red-600 font-medium">{lot.fileError}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Add Lot Button at Bottom */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleAddFarmLot}
+                  className="w-full py-3 border-2 border-dashed border-emerald-300 hover:border-emerald-500 rounded-2xl bg-emerald-50/50 hover:bg-emerald-50 flex items-center justify-center gap-2 text-sm font-bold text-[#08511f] transition cursor-pointer"
+                >
+                  <Plus size={16} />
+                  <span>Add Another Farm Lot</span>
+                </button>
+              </div>
             </div>
           )}
 

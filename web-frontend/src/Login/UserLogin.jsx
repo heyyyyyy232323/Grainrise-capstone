@@ -174,7 +174,7 @@ const UserLogin = () => {
     }
 
     if (!email.trim()) {
-      setLoginError("Email or username is required.");
+      setLoginError("Email or contact number is required.");
       return;
     }
 
@@ -414,9 +414,9 @@ const UserLogin = () => {
 
             <form className="space-y-5" onSubmit={handleSubmit}>
               <CustomTextbox
-                label="Email Address"
-                placeholder="youremail@example.com"
-                type="email"
+                label="Email or Contact Number"
+                placeholder="youremail@example.com or 09XXXXXXXXX"
+                type="text"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);

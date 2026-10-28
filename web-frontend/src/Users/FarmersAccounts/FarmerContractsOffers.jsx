@@ -259,9 +259,7 @@ const normalizeBiddingDetails = (
 // COMPONENT
 // ============================================================
 
-export default function FarmerContractsOffers({
-  onMessage,
-}) {
+export default function FarmerContractsOffers() {
   const {
     biddings,
     selectedOffer,
@@ -556,38 +554,6 @@ export default function FarmerContractsOffers({
     };
 
 
-  // ==========================================================
-  // MESSAGE MILLER
-  // ==========================================================
-
-  const handleMessageMiller =
-    () => {
-      if (
-        !selectedOffer ||
-        !onMessage
-      ) {
-        return;
-      }
-
-
-      setIsOfferOpen(
-        false
-      );
-
-
-      onMessage({
-        supplierProfileId:
-          selectedOffer
-            .supplier_profile_id,
-
-        referenceType:
-          "bidding_offer",
-
-        referenceId:
-          selectedOffer
-            .offer_id,
-      });
-    };
 
 
   // ==========================================================
@@ -1681,9 +1647,6 @@ export default function FarmerContractsOffers({
             setIsOfferOpen(
               false
             )
-          }
-          onMessage={
-            handleMessageMiller
           }
           onDecline={
             handleDeclineOffer

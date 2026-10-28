@@ -1,4 +1,33 @@
+import re
 from django.db import connection
+
+
+# ============================================================
+# PHONE NORMALIZATION HELPER
+# ============================================================
+
+def normalize_ph_mobile(phone):
+    """
+    Normalize Philippine mobile numbers to +639XXXXXXXXX format.
+    Accepts:
+        09XXXXXXXXX (11 digits)
+        639XXXXXXXXX (12 digits)
+        +639XXXXXXXXX (13 chars)
+        9XXXXXXXXX (10 digits)
+    Returns normalized string (+639XXXXXXXXX) or None if not a valid PH mobile.
+    """
+    if not phone:
+        return None
+    cleaned = re.sub(r"[\s\-\(\)\.]", "", str(phone).strip())
+    if cleaned.startswith("+639") and len(cleaned) == 13 and cleaned[1:].isdigit():
+        return cleaned
+    if cleaned.startswith("639") and len(cleaned) == 12 and cleaned.isdigit():
+        return f"+{cleaned}"
+    if cleaned.startswith("09") and len(cleaned) == 11 and cleaned.isdigit():
+        return f"+63{cleaned[1:]}"
+    if cleaned.startswith("9") and len(cleaned) == 10 and cleaned.isdigit():
+        return f"+63{cleaned}"
+    return None
 
 
 # ============================================================
@@ -7,51 +36,94 @@ from django.db import connection
 
 def get_business_user(identifier):
     """
-    Hanapin ang GrainRise account gamit ang email o username.
+    Hanapin ang GrainRise account gamit ang email, username, o contact number (farmer).
 
     Checks:
-    1. Main users
+    1. Main users (Farmer, Retailer, Warehouse Manager, Miller Manager)
     2. Warehouse employees
     3. Supplier/Miller employees
     """
 
-    normalized_identifier = identifier.strip().lower()
+    raw_identifier = str(identifier or "").strip()
+    normalized_identifier = raw_identifier.lower()
+    norm_phone = normalize_ph_mobile(raw_identifier)
 
 
     # ========================================================
     # 1. MAIN USERS
-    # Retailer, Warehouse Manager, Miller Manager
+    # Farmer, Retailer, Warehouse Manager, Miller Manager
     # ========================================================
 
     with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT
-                user_id,
-                first_name,
-                middle_initial,
-                last_name,
-                suffix,
-                email,
-                contact_number,
-                username,
-                password_hash,
-                user_role,
-                status,
-                must_change_password,
-                province,
-                gender
-            FROM users
-            WHERE
-                LOWER(email) = %s
-                OR LOWER(COALESCE(username, '')) = %s
-            LIMIT 1
-            """,
-            [
-                normalized_identifier,
-                normalized_identifier,
-            ],
-        )
+        if norm_phone:
+            p_09 = f"0{norm_phone[3:]}"
+            p_639 = norm_phone[1:]
+            p_9 = norm_phone[3:]
+            cursor.execute(
+                """
+                SELECT
+                    user_id,
+                    first_name,
+                    middle_initial,
+                    last_name,
+                    suffix,
+                    email,
+                    contact_number,
+                    username,
+                    password_hash,
+                    user_role,
+                    status,
+                    must_change_password,
+                    province,
+                    gender
+                FROM users
+                WHERE
+                    LOWER(email) = %s
+                    OR LOWER(COALESCE(username, '')) = %s
+                    OR (
+                        user_role = 'farmer'
+                        AND contact_number IN (%s, %s, %s, %s)
+                    )
+                LIMIT 1
+                """,
+                [
+                    normalized_identifier,
+                    normalized_identifier,
+                    norm_phone,
+                    p_09,
+                    p_639,
+                    p_9,
+                ],
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT
+                    user_id,
+                    first_name,
+                    middle_initial,
+                    last_name,
+                    suffix,
+                    email,
+                    contact_number,
+                    username,
+                    password_hash,
+                    user_role,
+                    status,
+                    must_change_password,
+                    province,
+                    gender
+                FROM users
+                WHERE
+                    LOWER(email) = %s
+                    OR LOWER(COALESCE(username, '')) = %s
+                LIMIT 1
+                """,
+                [
+                    normalized_identifier,
+                    normalized_identifier,
+                ],
+            )
 
         row = cursor.fetchone()
 
@@ -60,18 +132,23 @@ def get_business_user(identifier):
         province = row[12]
         gender = row[13]
         profile_incomplete = (not province or not str(province).strip() or not gender or not str(gender).strip())
+        role = str(row[9])
+        email_val = row[5] or ""
+        if role == "farmer" and email_val.endswith("@grainrise.local"):
+            email_val = ""
+
         return {
             "id": row[0],
             "first_name": row[1],
             "middle_initial": row[2],
             "last_name": row[3],
             "suffix": row[4],
-            "email": row[5],
+            "email": email_val,
             "contact_number": row[6],
             "username": row[7],
             "password_hash": row[8],
 
-            "role": str(row[9]),
+            "role": role,
             "status": str(row[10]),
 
             "account_type": "main_user",

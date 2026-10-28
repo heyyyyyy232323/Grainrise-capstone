@@ -10,7 +10,6 @@ import {
   FileText,
   ImageOff,
   Loader2,
-  MessageSquare,
   X,
 } from "lucide-react";
 
@@ -389,7 +388,6 @@ export default function FarmerContractApplicationDetailsModal({
   isLoading = false,
   error = "",
   onClose,
-  onMessage,
   onCancel,
 }) {
 
@@ -433,11 +431,6 @@ export default function FarmerContractApplicationDetailsModal({
     application?.application_status;
 
 
-  const canMessage =
-    [
-      "pending",
-      "under_review",
-    ].includes(status);
 
 
   const canCancel =
@@ -1246,32 +1239,6 @@ export default function FarmerContractApplicationDetailsModal({
           "
         >
 
-          {canMessage && (
-            <button
-              type="button"
-              onClick={onMessage}
-              className="
-                inline-flex
-                items-center
-                justify-center
-                gap-2
-                rounded-lg
-                border
-                border-green-600
-                px-4
-                py-2.5
-                text-sm
-                font-semibold
-                text-green-700
-                transition
-                hover:bg-green-50
-              "
-            >
-              <MessageSquare size={16} />
-
-              Message Miller / Buyer
-            </button>
-          )}
 
 
           {canCancel && (

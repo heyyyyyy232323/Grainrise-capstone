@@ -221,9 +221,7 @@ const getFulfillmentStatusStyle = (
 // COMPONENT
 // ============================================================
 
-export default function FarmerContractsCurrent({
-  onMessage,
-}) {
+export default function FarmerContractsCurrent() {
   const {
     contracts,
     selectedContract,
@@ -629,38 +627,6 @@ export default function FarmerContractsCurrent({
     };
 
 
-  // ==========================================================
-  // MESSAGE MILLER
-  // ==========================================================
-
-  const handleMessage =
-    () => {
-      if (
-        !selectedContract ||
-        !onMessage
-      ) {
-        return;
-      }
-
-
-      setIsDetailsOpen(
-        false
-      );
-
-
-      onMessage({
-        supplierProfileId:
-          selectedContract
-            .supplier_profile_id,
-
-        referenceType:
-          "contract",
-
-        referenceId:
-          selectedContract
-            .contract_id,
-      });
-    };
 
 
   // ==========================================================
@@ -1393,9 +1359,6 @@ export default function FarmerContractsCurrent({
           setIsDetailsOpen(
             false
           )
-        }
-        onMessage={
-          handleMessage
         }
         onRequestVoid={
           selectedContract

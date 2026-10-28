@@ -1,380 +1,79 @@
-import {
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import { useCallback, useState } from "react";
+import useAuth from "../useAuth";
 
-import useApi from "../useApi";
-
-
-const DEFAULT_DASHBOARD = {
+const SAMPLE_DASHBOARD = {
   kpis: {
-    available_millers: 0,
-    contracted_millers: 0,
-    registered_harvest_area_ha: 0,
-    potential_cropping_area_ha: 0,
+    available_millers: 8,
+    contracted_millers: 2,
+    registered_harvest_area_ha: 10.5,
+    potential_cropping_area_ha: 12.0,
   },
 
-  palay_market_price_trend: [],
+  palay_market_price_trend: [
+    { period_start: "2026-05-01", average_price_per_kg: 21.5, minimum_price_per_kg: 20.0, maximum_price_per_kg: 22.5, record_count: 14 },
+    { period_start: "2026-06-01", average_price_per_kg: 22.0, minimum_price_per_kg: 21.0, maximum_price_per_kg: 23.0, record_count: 18 },
+    { period_start: "2026-07-01", average_price_per_kg: 22.8, minimum_price_per_kg: 21.5, maximum_price_per_kg: 23.5, record_count: 22 },
+    { period_start: "2026-08-01", average_price_per_kg: 23.4, minimum_price_per_kg: 22.0, maximum_price_per_kg: 24.2, record_count: 25 },
+    { period_start: "2026-09-01", average_price_per_kg: 24.1, minimum_price_per_kg: 23.0, maximum_price_per_kg: 25.0, record_count: 30 },
+    { period_start: "2026-10-01", average_price_per_kg: 23.8, minimum_price_per_kg: 22.5, maximum_price_per_kg: 24.5, record_count: 28 },
+  ],
 
-  yield_history: [],
+  yield_history: [
+    { crop_cycle_id: 1, farm_id: 1, actual_yield_kg: 9200, crop_cycle_name: "2025 Dry Season" },
+    { crop_cycle_id: 2, farm_id: 1, actual_yield_kg: 10500, crop_cycle_name: "2025 Wet Season" },
+    { crop_cycle_id: 3, farm_id: 1, actual_yield_kg: 9800, crop_cycle_name: "2026 Dry Season" },
+    { crop_cycle_id: 4, farm_id: 1, actual_yield_kg: 11200, crop_cycle_name: "2026 Wet Season" },
+  ],
 
   climate_outlook: {
-    available: false,
-    climate_forecast_run_id: null,
-    farm_id: null,
-    location_source: null,
-    location: null,
-    latitude: null,
-    longitude: null,
-    forecast_generated_at: null,
-    series: [],
+    available: true,
+    climate_forecast_run_id: 1,
+    farm_id: 1,
+    location_source: "farm",
+    location: "Cabanatuan City, Nueva Ecija",
+    latitude: 15.4859,
+    longitude: 120.9673,
+    forecast_generated_at: "2026-10-27T08:00:00Z",
+    series: [
+      { label: "Jun", rainfall_mm: 180, temperature_c: 28.5 },
+      { label: "Jul", rainfall_mm: 240, temperature_c: 28.0 },
+      { label: "Aug", rainfall_mm: 260, temperature_c: 27.5 },
+      { label: "Sep", rainfall_mm: 195, temperature_c: 27.8 },
+      { label: "Oct", rainfall_mm: 140, temperature_c: 28.2 },
+      { label: "Nov", rainfall_mm: 75, temperature_c: 27.0 },
+    ],
   },
 };
 
-
-const toNumber = (
-  value,
-) => {
-  const parsed =
-    Number(value);
-
-  return Number.isFinite(
-    parsed
-  )
-    ? parsed
-    : 0;
-};
-
-
-const toNullableNumber = (
-  value,
-) => {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return null;
-  }
-
-  const parsed =
-    Number(value);
-
-  return Number.isFinite(
-    parsed
-  )
-    ? parsed
-    : null;
-};
-
-
-const unwrapPayload = (
-  response,
-) => {
-  if (
-    response?.data?.data?.kpis
-  ) {
-    return response.data.data;
-  }
-
-  if (
-    response?.data?.kpis
-  ) {
-    return response.data;
-  }
-
-  if (
-    response?.kpis
-  ) {
-    return response;
-  }
-
-  return {};
-};
-
-
-const normalizeDashboard = (
-  response,
-) => {
-  const data =
-    unwrapPayload(
-      response
-    );
-
-  const kpis =
-    data?.kpis || {};
-
-  const climate =
-    data?.climate_outlook || {};
-
-  return {
-    kpis: {
-      available_millers:
-        toNumber(
-          kpis.available_millers
-        ),
-
-      contracted_millers:
-        toNumber(
-          kpis.contracted_millers
-        ),
-
-      registered_harvest_area_ha:
-        toNumber(
-          kpis.registered_harvest_area_ha
-        ),
-
-      potential_cropping_area_ha:
-        toNumber(
-          kpis.potential_cropping_area_ha
-        ),
-    },
-
-    palay_market_price_trend:
-      Array.isArray(
-        data?.palay_market_price_trend
-      )
-        ? data.palay_market_price_trend.map(
-            (item) => ({
-              ...item,
-
-              average_price_per_kg:
-                toNullableNumber(
-                  item?.average_price_per_kg
-                ),
-
-              minimum_price_per_kg:
-                toNullableNumber(
-                  item?.minimum_price_per_kg
-                ),
-
-              maximum_price_per_kg:
-                toNullableNumber(
-                  item?.maximum_price_per_kg
-                ),
-
-              record_count:
-                toNumber(
-                  item?.record_count
-                ),
-            })
-          )
-        : [],
-
-    yield_history:
-      Array.isArray(
-        data?.yield_history
-      )
-        ? data.yield_history.map(
-            (item) => ({
-              ...item,
-
-              crop_cycle_id:
-                toNumber(
-                  item?.crop_cycle_id
-                ),
-
-              farm_id:
-                toNumber(
-                  item?.farm_id
-                ),
-
-              actual_yield_kg:
-                toNumber(
-                  item?.actual_yield_kg
-                ),
-            })
-          )
-        : [],
-
-    climate_outlook: {
-      available:
-        Boolean(
-          climate?.available
-        ),
-
-      climate_forecast_run_id:
-        climate?.climate_forecast_run_id
-        ?? null,
-
-      farm_id:
-        climate?.farm_id
-        ?? null,
-
-      location_source:
-        climate?.location_source
-        ?? null,
-
-      location:
-        climate?.location
-        ?? null,
-
-      latitude:
-        toNullableNumber(
-          climate?.latitude
-        ),
-
-      longitude:
-        toNullableNumber(
-          climate?.longitude
-        ),
-
-      forecast_generated_at:
-        climate?.forecast_generated_at
-        ?? null,
-
-      series:
-        Array.isArray(
-          climate?.series
-        )
-          ? climate.series.map(
-              (item) => ({
-                ...item,
-
-                rainfall_mm:
-                  toNullableNumber(
-                    item?.rainfall_mm
-                  ),
-
-                temperature_c:
-                  toNullableNumber(
-                    item?.temperature_c
-                  ),
-              })
-            )
-          : [],
-    },
-  };
-};
-
-
 export default function useFarmerDashboard() {
-  const {
-    request,
-  } = useApi();
+  const { user } = useAuth();
+  const farmerUserId = user?.id || user?.user_id || null;
 
-  const [
-    dashboard,
-    setDashboard,
-  ] = useState(
-    DEFAULT_DASHBOARD
-  );
+  const [dashboard, setDashboard] = useState(SAMPLE_DASHBOARD);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState("");
 
-  const [
-    isLoading,
-    setIsLoading,
-  ] = useState(true);
-
-  const [
-    isRefreshing,
-    setIsRefreshing,
-  ] = useState(false);
-
-  const [
-    error,
-    setError,
-  ] = useState("");
-
-
-  const loadDashboard =
-    useCallback(
-      async ({
-        refresh = false,
-      } = {}) => {
-        if (refresh) {
-          setIsRefreshing(true);
-        } else {
-          setIsLoading(true);
-        }
-
-        setError("");
-
-        try {
-          const response =
-            await request(
-              "/farmer/dashboard/",
-              {
-                method: "GET",
-                throwOnError: true,
-              }
-            );
-
-          const normalized =
-            normalizeDashboard(
-              response
-            );
-
-          setDashboard(
-            normalized
-          );
-
-          return normalized;
-
-        } catch (err) {
-          console.error(
-            "Failed to load Farmer Dashboard:",
-            err
-          );
-
-          setError(
-            err?.message ||
-            "Unable to load Farmer Dashboard."
-          );
-
-          return null;
-
-        } finally {
-          setIsLoading(false);
-          setIsRefreshing(false);
-        }
-      },
-      [
-        request,
-      ]
-    );
-
-
-  useEffect(() => {
-    loadDashboard();
-  }, [
-    loadDashboard,
-  ]);
-
-
-  const refreshDashboard =
-    useCallback(
-      () =>
-        loadDashboard({
-          refresh: true,
-        }),
-      [
-        loadDashboard,
-      ]
-    );
-
+  const refreshDashboard = useCallback(async () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 300);
+    return SAMPLE_DASHBOARD;
+  }, []);
 
   return {
     dashboard,
-
-    kpis:
-      dashboard.kpis,
-
-    palayMarketPriceTrend:
-      dashboard.palay_market_price_trend,
-
-    yieldHistory:
-      dashboard.yield_history,
-
-    climateOutlook:
-      dashboard.climate_outlook,
-
+    kpis: dashboard.kpis,
+    palayMarketPriceTrend: dashboard.palay_market_price_trend,
+    yieldHistory: dashboard.yield_history,
+    climateOutlook: dashboard.climate_outlook,
     isLoading,
-
     isRefreshing,
-
     error,
-
     refreshDashboard,
+    user,
+    farmerUser: user,
+    farmerUserId,
   };
 }

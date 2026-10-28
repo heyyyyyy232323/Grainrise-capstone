@@ -31,6 +31,10 @@ ROLE_CONFIG = {
         'user_role': 'retailer',
         'title': 'Retailer',
     },
+    'farmer': {
+        'user_role': 'farmer',
+        'title': 'Farmer',
+    },
 }
 
 def generate_temporary_password(length=12):
@@ -47,9 +51,42 @@ def generate_temporary_password(length=12):
             any(c in symbols for c in pw)):
             return pw
 
-def send_partner_credentials_email(name, email, temp_password, role_title):
+def send_partner_credentials_sms(name, phone, temp_password, role_title, login_identifier=None):
+    """
+    Delivers temporary credentials to approved partner via Textbee real SMS.
+    Uses independently verified contact number.
+    Passwords and API credentials are kept strictly out of logs.
+    """
+    from ..partnership_inquiry import _send_sms_via_textbee, _validate_and_normalize_phone
+
     frontend_base = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173').rstrip('/')
     login_url = f'{frontend_base}/login'
+    login_id = login_identifier or phone
+
+    sms_message = (
+        f"GrainRise: Congratulations {name}! Your {role_title} application is APPROVED.\n"
+        f"Login Identifier: {login_id}\n"
+        f"Temporary Password: {temp_password}\n"
+        f"Login: {login_url}\n"
+        f"You must change your password on first login. Do not share your credentials."
+    )
+
+    normalized_phone = _validate_and_normalize_phone(phone)
+    if not normalized_phone:
+        return False, "Invalid Philippine mobile number format."
+
+    try:
+        _send_sms_via_textbee(normalized_phone, sms_message)
+        logger.info("Credentials SMS successfully dispatched for %s (%s)", name, role_title)
+        return True, None
+    except Exception as exc:
+        logger.warning("Could not send credentials SMS for %s: %s", name, exc)
+        return False, str(exc)
+
+def send_partner_credentials_email(name, email, temp_password, role_title, login_identifier=None):
+    frontend_base = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+    login_url = f'{frontend_base}/login'
+    login_id = login_identifier or email
 
     subject = f'Your GrainRise {role_title} Account Credentials'
 
@@ -58,7 +95,7 @@ def send_partner_credentials_email(name, email, temp_password, role_title):
 Your partnership application as a {role_title} on GrainRise has been reviewed and APPROVED!
 
 An account has been created for you with the following credentials:
-Login Email: {email}
+Login Identifier: {login_id}
 Temporary Password: {temp_password}
 
 Login Page: {login_url}
@@ -122,8 +159,8 @@ GrainRise Administration Team"""
                                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                                                 <tr>
                                                     <td style="padding-bottom: 14px;">
-                                                        <span style="display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; margin-bottom: 4px;">Login Email Address</span>
-                                                        <span style="font-size: 15px; font-weight: 700; color: #0f172a;">{escape(email)}</span>
+                                                        <span style="display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; margin-bottom: 4px;">Login Identifier</span>
+                                                        <span style="font-size: 15px; font-weight: 700; color: #0f172a;">{escape(login_id)}</span>
                                                     </td>
                                                 </tr>
                                                 <tr>
@@ -319,8 +356,8 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
     if partner_role != expected_role:
         raise ValueError(f'Inquiry role ({partner_role}) does not match expected role ({expected_role}).')
 
-    if not inquiry.email_verified:
-        raise ValueError('Partnership inquiry email must be verified before confirmation.')
+    if not (inquiry.email_verified or getattr(inquiry, 'contact_number_verified', False)):
+        raise ValueError('Partnership inquiry must be verified before confirmation.')
 
     if inquiry.status == 'active':
         raise ValueError('This partnership inquiry has already been confirmed and activated.')
@@ -328,13 +365,30 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
     if inquiry.status != PartnershipInquiry.Status.TO_REVIEW:
         raise ValueError('Only inquiries under review can be confirmed.')
 
-    # Check if a user with this email already exists
-    with connection.cursor() as cursor:
-        cursor.execute('SELECT user_id, user_role, status FROM users WHERE LOWER(email) = %s', [inquiry.email.lower()])
-        existing_user = cursor.fetchone()
+    # Check if a user with this email already exists (when email was provided)
+    if inquiry.email and inquiry.email.strip():
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT user_id, user_role, status FROM users WHERE LOWER(email) = %s', [inquiry.email.lower().strip()])
+            existing_user = cursor.fetchone()
 
-    if existing_user:
-        raise ValueError(f'An account with email {inquiry.email} already exists (User ID: {existing_user[0]}).')
+        if existing_user:
+            raise ValueError(f'An account with email {inquiry.email} already exists (User ID: {existing_user[0]}).')
+
+    from ..partnership_inquiry import _validate_and_normalize_phone
+    normalized_contact = _validate_and_normalize_phone(inquiry.contact_number) or str(inquiry.contact_number or "").strip()
+
+    # If farmer, also check if an account with this contact number already exists
+    if partner_role == 'farmer' and inquiry.contact_number:
+        phone_variants = [inquiry.contact_number.strip()]
+        if normalized_contact:
+            phone_variants.extend([normalized_contact, "0" + normalized_contact[3:] if normalized_contact.startswith("+63") else normalized_contact, normalized_contact[1:] if normalized_contact.startswith("+") else normalized_contact])
+        phone_variants = list(dict.fromkeys(v for v in phone_variants if v))
+        placeholders = ", ".join(["%s"] * len(phone_variants))
+        with connection.cursor() as cursor:
+            cursor.execute(f"SELECT user_id, user_role, status FROM users WHERE contact_number IN ({placeholders}) AND user_role = 'farmer' LIMIT 1", phone_variants)
+            existing_phone_user = cursor.fetchone()
+        if existing_phone_user:
+            raise ValueError(f'A Farmer account with contact number {inquiry.contact_number} already exists (User ID: {existing_phone_user[0]}).')
 
     config = ROLE_CONFIG.get(partner_role)
     if not config:
@@ -350,15 +404,30 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
     first_name = name_parts[0] if name_parts else 'Partner'
     last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else 'Applicant'
 
-    base_username = (inquiry.email.split('@')[0])[:20]
+    phone_digits = "".join(filter(str.isdigit, str(inquiry.contact_number or "")))
+    if inquiry.email and inquiry.email.strip():
+        user_email = inquiry.email.strip().lower()
+        base_username = (inquiry.email.split('@')[0])[:20]
+    else:
+        # Farmer without email: generate unique local placeholder email to satisfy MySQL NOT NULL UNIQUE constraint
+        user_email = f"farmer_{phone_digits}@grainrise.local"
+        base_username = f"farmer_{phone_digits[-6:]}" if len(phone_digits) >= 6 else f"farmer_{phone_digits}"
+
     with connection.cursor() as cursor:
+        cursor.execute('SELECT COUNT(*) FROM users WHERE email = %s', [user_email])
+        if cursor.fetchone()[0] > 0:
+            if not inquiry.email:
+                user_email = f"farmer_{phone_digits}_{secrets.token_hex(2)}@grainrise.local"
+            else:
+                raise ValueError(f'An account with email {user_email} already exists.')
+
         cursor.execute('SELECT COUNT(*) FROM users WHERE username = %s', [base_username])
         if cursor.fetchone()[0] > 0:
             base_username = f'{base_username}_{secrets.token_hex(3)}'
 
     with transaction.atomic():
         with connection.cursor() as cursor:
-            cursor.execute('''
+            cursor.execute("""
                 INSERT INTO users (
                     first_name, middle_initial, last_name, suffix, gender,
                     province, municipality, postal_code, barangay, street_address,
@@ -370,21 +439,21 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
                     %s, %s, %s, %s, %s,
                     'active', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 )
-            ''', [
+            """, [
                 first_name,
                 last_name,
-                inquiry.email.strip().lower(),
-                inquiry.contact_number or '',
+                user_email,
+                normalized_contact,
                 base_username,
                 hashed_password,
                 user_role,
             ])
             created_user_id = cursor.lastrowid
-            cursor.execute('''
+            cursor.execute("""
                 SELECT status, updated_at
                 FROM users
                 WHERE user_id = %s
-            ''', [created_user_id])
+            """, [created_user_id])
             row = cursor.fetchone()
             status_text = row[0]
             updated_at = row[1]
@@ -402,7 +471,7 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
             org_name = inquiry.organization_company or None
 
             if partner_role == 'miller':
-                cursor.execute('''
+                cursor.execute("""
                     INSERT INTO supplier_profiles (
                         user_id, business_name, organization_name,
                         province, municipality, postal_code, barangay, street_address,
@@ -412,7 +481,7 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
                         NULL, NULL, NULL, NULL, NULL,
                         %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                     )
-                ''', [
+                """, [
                     created_user_id,
                     org_name or inquiry.name,
                     org_name,
@@ -420,7 +489,7 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
                     inquiry.contact_number or '',
                 ])
 
-                cursor.execute('''
+                cursor.execute("""
                     INSERT INTO supplier_documents (
                         user_id, government_issued_id, business_permit, business_registration, milling_license,
                         created_at, updated_at
@@ -428,14 +497,14 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
                         %s, %s, NULL, %s, NULL,
                         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                     )
-                ''', [
+                """, [
                     created_user_id,
                     inquiry.government_issued_id,
                     doc_path,
                 ])
 
             elif partner_role == 'warehouse':
-                cursor.execute('''
+                cursor.execute("""
                     INSERT INTO warehouse_profiles (
                         user_id, business_name, organization_name,
                         province, municipality, postal_code, barangay, street_address,
@@ -445,7 +514,7 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
                         NULL, NULL, NULL, NULL, NULL,
                         %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                     )
-                ''', [
+                """, [
                     created_user_id,
                     org_name or inquiry.name,
                     org_name,
@@ -453,7 +522,7 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
                     inquiry.contact_number or '',
                 ])
 
-                cursor.execute('''
+                cursor.execute("""
                     INSERT INTO warehouse_documents (
                         user_id, government_issued_id, business_permit, business_registration, warehouse_license,
                         created_at, updated_at
@@ -461,14 +530,14 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
                         %s, %s, NULL, %s, NULL,
                         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                     )
-                ''', [
+                """, [
                     created_user_id,
                     inquiry.government_issued_id,
                     doc_path,
                 ])
 
             elif partner_role == 'retailer':
-                cursor.execute('''
+                cursor.execute("""
                     INSERT INTO retailer_documents (
                         user_id, barangay_permit, valid_id,
                         created_at, updated_at
@@ -476,7 +545,7 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
                         %s, %s, %s,
                         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                     )
-                ''', [
+                """, [
                     created_user_id,
                     doc_path,
                     inquiry.government_issued_id,
@@ -485,18 +554,43 @@ def create_partner_user_from_inquiry(inquiry_id, expected_role):
         inquiry.status = PartnershipInquiry.Status.ACTIVE
         inquiry.save(update_fields=['status', 'updated_at'])
 
-    email_sent, email_error = send_partner_credentials_email(
-        name=inquiry.name,
-        email=inquiry.email,
-        temp_password=temp_password,
-        role_title=role_title,
-    )
+    login_identifier = inquiry.contact_number if (partner_role == 'farmer' and not inquiry.email) else (inquiry.email or inquiry.contact_number)
+
+    email_sent = False
+    email_error = None
+    if inquiry.email and inquiry.email_verified:
+        email_sent, email_error = send_partner_credentials_email(
+            name=inquiry.name,
+            email=inquiry.email,
+            temp_password=temp_password,
+            role_title=role_title,
+            login_identifier=inquiry.email,
+        )
+    else:
+        email_sent = False
+        email_error = "Email not provided" if not inquiry.email else "Email not verified"
+
+    sms_sent = False
+    sms_error = None
+    if inquiry.contact_number and getattr(inquiry, 'contact_number_verified', False):
+        sms_sent, sms_error = send_partner_credentials_sms(
+            name=inquiry.name,
+            phone=inquiry.contact_number,
+            temp_password=temp_password,
+            role_title=role_title,
+            login_identifier=login_identifier,
+        )
+    else:
+        sms_sent = False
+        sms_error = "Contact number not verified via SMS"
 
     return {
-        'message': f'{role_title} account created and credentials emailed successfully.',
+        'message': f'{role_title} account created and activated successfully.',
         'user_id': created_user_id,
         'status': status_text,
         'updated_at': updated_at,
         'email_sent': email_sent,
         'email_error': email_error,
+        'sms_sent': sms_sent,
+        'sms_error': sms_error,
     }
