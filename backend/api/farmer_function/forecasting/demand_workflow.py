@@ -19,7 +19,12 @@ from datetime import date, datetime, timedelta
 from typing import Mapping, Sequence
 from django.db import connection, transaction
 from django.utils import timezone
-from psycopg2.extras import Json
+try:
+    from psycopg2.extras import Json
+except ImportError:
+    import json
+    def Json(val):
+        return json.dumps(val)
 from .demand_forecast_engine import MODEL_TYPE, MODEL_VERSION, DemandForecastError, generate_demand_forecast
 from .selectors import get_farmer_contract_demand_series, get_farmer_sales_demand_series, list_demand_news_articles, list_farmer_demand_products
 VALID_GRANULARITIES = {'weekly', 'monthly'}

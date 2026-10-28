@@ -1,561 +1,222 @@
-import {
-  useEffect,
-} from "react";
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { Archive, AlertTriangle, RotateCcw, X, Loader2 } from "lucide-react";
 
-import {
-  createPortal,
-} from "react-dom";
+export const INVENTORY_ARCHIVE_ACTION = "archive";
+export const INVENTORY_RESTORE_ACTION = "restore";
 
-import {
-  AlertCircle,
-  Loader2,
-  X,
-} from "lucide-react";
-
-
-// ============================================================
-// ACTIONS
-// ============================================================
-
-export const INVENTORY_ARCHIVE_ACTION =
-  "archive";
-
-export const INVENTORY_RESTORE_ACTION =
-  "restore";
-
-
-// ============================================================
-// HELPERS
-// ============================================================
-
-const displayValue = (
-  value,
-  fallback = "—"
-) => {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return fallback;
-  }
-
-  const normalized =
-    String(
-      value
-    ).trim();
-
-  return (
-    normalized ||
-    fallback
-  );
-};
-
-
-// ============================================================
-// COMPONENT
-// ============================================================
+const MAX_REASON_LENGTH = 500;
 
 export default function FarmerInventoryStatusConfirmModal({
   open,
-  action,
+  action = INVENTORY_ARCHIVE_ACTION,
   product,
   isSaving = false,
   error = "",
   onClose,
   onConfirm,
 }) {
+  const [reason, setReason] = useState("");
+  const [localError, setLocalError] = useState("");
 
-  // =========================================================
-  // BODY SCROLL LOCK
-  // =========================================================
+  const isArchive = action === INVENTORY_ARCHIVE_ACTION;
 
-  useEffect(
-    () => {
-      if (!open) {
-        return undefined;
+  useEffect(() => {
+    if (open) {
+      setReason("");
+      setLocalError("");
+    }
+  }, [open]);
+
+  // Lock body scroll
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  if (!open || !product) return null;
+
+  const handleSubmit = (e) => {
+    if (e) e.preventDefault();
+
+    if (isArchive) {
+      const cleanReason = String(reason || "").trim();
+      if (!cleanReason) {
+        setLocalError("Please provide a mandatory reason for archiving this product.");
+        return;
       }
-
-      const previousOverflow =
-        document.body.style.overflow;
-
-      document.body.style.overflow =
-        "hidden";
-
-      return () => {
-        document.body.style.overflow =
-          previousOverflow;
-      };
-    },
-    [
-      open,
-    ]
-  );
-
-
-  if (!open) {
-    return null;
-  }
-
-
-  // =========================================================
-  // DERIVED
-  // =========================================================
-
-  const isArchive =
-    action ===
-    INVENTORY_ARCHIVE_ACTION;
-
-
-  const isRestore =
-    action ===
-    INVENTORY_RESTORE_ACTION;
-
-
-  const productCode =
-    displayValue(
-      product?.product_code,
-      "this product"
-    );
-
-
-  const riceVariety =
-    displayValue(
-      product?.rice_variety
-    );
-
-
-  const title =
-    isArchive
-      ? "Archive Product?"
-      : "Restore Product?";
-
-
-  const description =
-    isArchive
-      ? (
-        "This product will be moved from Active Inventory to Archive. "
-        +
-        "Its product information, stock quantities, and source history will not be deleted."
-      )
-      : (
-        "This product will be returned to Active Inventory with its existing product, source, and stock information unchanged."
-      );
-
-
-  const confirmLabel =
-    isArchive
-      ? "Archive"
-      : "Restore";
-
-
-  // =========================================================
-  // CLOSE
-  // =========================================================
-
-  const handleClose = () => {
-    if (isSaving) {
-      return;
+      onConfirm(product.farm_product_id, cleanReason);
+    } else {
+      onConfirm(product.farm_product_id);
     }
-
-    onClose?.();
   };
 
-
-  // =========================================================
-  // CONFIRM
-  // =========================================================
-
-  const handleConfirm = async () => {
-    if (
-      isSaving ||
-      !product ||
-      !onConfirm
-    ) {
-      return;
-    }
-
-    await onConfirm(
-      product,
-      action
-    );
-  };
-
-
-  // =========================================================
-  // MODAL
-  // =========================================================
+  const varietyName = product.rice_variety || product.variety || "Product";
+  const productCode = product.product_code || "";
 
   return createPortal(
-    <div
-      className="
-        fixed
-        inset-0
-        z-[100000]
-        flex
-        items-center
-        justify-center
-        bg-slate-950/55
-        p-4
-      "
-    >
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]">
+      {/* Backdrop click does NOT close the modal */}
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="farmer-inventory-status-confirm-title"
-        className="
-          w-full
-          max-w-md
-          overflow-hidden
-          rounded-2xl
-          border
-          border-slate-200
-          bg-white
-          shadow-2xl
-        "
+        aria-labelledby="status-modal-title"
+        className="w-full max-w-[500px] overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_25px_70px_rgba(15,23,42,0.28)]"
+        onClick={(e) => e.stopPropagation()}
       >
-
-        {/* ==================================================
-            HEADER
-        ================================================== */}
-
-        <div
-          className="
-            flex
-            items-start
-            justify-between
-            gap-4
-            border-b
-            border-slate-200
-            px-5
-            py-5
-          "
-        >
-          <div
-            className="
-              flex
-              min-w-0
-              items-start
-              gap-3
-            "
-          >
+        {/* Header (Matches Miller EncoderArchiveProductModal) */}
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+          <div className="flex min-w-0 items-start gap-3">
             <div
-              className={`
-                flex
-                h-10
-                w-10
-                shrink-0
-                items-center
-                justify-center
-                rounded-xl
-
-                ${
-                  isArchive
-                    ? "bg-orange-50 text-orange-600"
-                    : "bg-green-50 text-green-700"
-                }
-              `}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                isArchive
+                  ? "bg-amber-50 text-amber-600"
+                  : "bg-emerald-50 text-emerald-600"
+              }`}
             >
-              <AlertCircle
-                size={20}
-              />
+              {isArchive ? <Archive size={19} /> : <RotateCcw size={19} />}
             </div>
-
-
-            <div
-              className="
-                min-w-0
-              "
-            >
-              <h3
-                id="farmer-inventory-status-confirm-title"
-                className="
-                  text-lg
-                  font-bold
-                  text-slate-900
-                "
+            <div className="min-w-0">
+              <h2
+                id="status-modal-title"
+                className="text-[17px] font-extrabold text-slate-900"
               >
-                {title}
-              </h3>
-
-              <p
-                className="
-                  mt-1
-                  text-sm
-                  leading-5
-                  text-slate-500
-                "
-              >
-                {description}
+                {isArchive ? "Archive Product?" : "Restore Product?"}
+              </h2>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {isArchive
+                  ? "Move this item to the Archive tab."
+                  : "Restore this item back to Active Stock."}
               </p>
             </div>
           </div>
 
-
+          {/* Top-right X is the ONLY exit control */}
           <button
             type="button"
-            onClick={
-              handleClose
-            }
-            disabled={
-              isSaving
-            }
-            aria-label="Close confirmation"
-            className="
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-full
-              border
-              border-slate-200
-              text-slate-400
-              transition
-              hover:bg-slate-50
-              hover:text-slate-700
-              disabled:cursor-not-allowed
-              disabled:opacity-50
-            "
+            onClick={onClose}
+            disabled={isSaving}
+            aria-label="Close"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600 transition cursor-pointer disabled:opacity-50"
           >
-            <X
-              size={18}
-            />
+            <X size={16} />
           </button>
         </div>
 
-
-        {/* ==================================================
-            PRODUCT SUMMARY
-        ================================================== */}
-
-        <div
-          className="
-            px-5
-            py-5
-          "
-        >
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+          {/* Target Product Identity Card */}
           <div
-            className="
-              rounded-xl
-              border
-              border-slate-200
-              bg-slate-50
-              p-4
-            "
+            className={`rounded-xl border p-3.5 ${
+              isArchive
+                ? "border-amber-200/70 bg-amber-50/40"
+                : "border-emerald-200/70 bg-emerald-50/40"
+            }`}
           >
-            <div>
-              <p
-                className="
-                  text-xs
-                  font-medium
-                  text-slate-400
-                "
-              >
-                Product Code
-              </p>
-
-              <p
-                className="
-                  mt-1
-                  break-words
-                  text-sm
-                  font-bold
-                  text-slate-800
-                "
-              >
-                {productCode}
-              </p>
-            </div>
-
-
-            <div
-              className="
-                mt-4
-              "
+            <span
+              className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${
+                isArchive ? "text-amber-800" : "text-emerald-800"
+              }`}
             >
-              <p
-                className="
-                  text-xs
-                  font-medium
-                  text-slate-400
-                "
-              >
-                Rice Variety / Variant
-              </p>
-
-              <p
-                className="
-                  mt-1
-                  break-words
-                  text-sm
-                  font-semibold
-                  text-slate-700
-                "
-              >
-                {riceVariety}
-              </p>
-            </div>
-          </div>
-
-
-          {error && (
-            <div
-              className="
-                mt-4
-                flex
-                items-start
-                gap-3
-                rounded-xl
-                border
-                border-red-200
-                bg-red-50
-                px-4
-                py-3
-                text-sm
-                text-red-700
-              "
-            >
-              <AlertCircle
-                size={18}
-                className="
-                  mt-0.5
-                  shrink-0
-                "
-              />
-
-              <span>
-                {error}
+              Selected Product
+            </span>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-bold text-slate-900 truncate">
+                {varietyName}
               </span>
+              {productCode && (
+                <span className="text-xs font-mono font-semibold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200 shrink-0">
+                  {productCode}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Warning Message Card */}
+          <div className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 leading-relaxed">
+            <AlertTriangle
+              size={15}
+              className={`shrink-0 mt-0.5 ${
+                isArchive ? "text-amber-500" : "text-emerald-600"
+              }`}
+            />
+            <span>
+              {isArchive
+                ? "This product will be archived and hidden from active stock. You can restore it later from the Archive tab."
+                : "This product will be restored to your Active Stock with its original stock balance and details."}
+            </span>
+          </div>
+
+          {/* Archive Reason Textarea (Required for Archive) */}
+          {isArchive && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="farmer-archive-reason"
+                  className="text-xs font-bold text-slate-700"
+                >
+                  Archive Reason <span className="text-red-500">*</span>
+                </label>
+                <span className="text-[11px] text-slate-400">
+                  {reason.length}/{MAX_REASON_LENGTH}
+                </span>
+              </div>
+
+              <textarea
+                id="farmer-archive-reason"
+                rows={3}
+                maxLength={MAX_REASON_LENGTH}
+                value={reason}
+                onChange={(e) => {
+                  setReason(e.target.value);
+                  if (localError) setLocalError("");
+                }}
+                placeholder="Provide a mandatory reason for archiving this product (e.g., damaged packaging, expired batch, seasonal storage shift)..."
+                className={`w-full rounded-xl border p-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 transition resize-none ${
+                  localError || error
+                    ? "border-red-400 focus:border-red-500 focus:ring-red-400"
+                    : "border-slate-300 focus:border-amber-500 focus:ring-amber-500"
+                }`}
+              />
+
+              {(localError || error) && (
+                <p className="text-[11px] font-medium text-red-500 mt-1">
+                  {localError || error}
+                </p>
+              )}
             </div>
           )}
 
-
-          {isArchive && (
-            <p
-              className="
-                mt-4
-                text-xs
-                leading-5
-                text-slate-500
-              "
-            >
-              You can restore this product later from the Archive tab.
-            </p>
-          )}
-
-
-          {isRestore && (
-            <p
-              className="
-                mt-4
-                text-xs
-                leading-5
-                text-slate-500
-              "
-            >
-              After restoration, this product will appear again under Active Inventory.
-            </p>
-          )}
-        </div>
-
-
-        {/* ==================================================
-            FOOTER
-        ================================================== */}
-
-        <div
-          className="
-            flex
-            items-center
-            justify-end
-            gap-2
-            border-t
-            border-slate-200
-            bg-white
-            px-5
-            py-4
-          "
-        >
-          <button
-            type="button"
-            onClick={
-              handleClose
-            }
-            disabled={
-              isSaving
-            }
-            className="
-              rounded-lg
-              border
-              border-slate-300
-              bg-white
-              px-5
-              py-2.5
-              text-sm
-              font-semibold
-              text-slate-600
-              transition
-              hover:bg-slate-50
-              disabled:cursor-not-allowed
-              disabled:opacity-50
-            "
-          >
-            Cancel
-          </button>
-
-
-          <button
-            type="button"
-            onClick={
-              handleConfirm
-            }
-            disabled={
-              isSaving
-            }
-            className={`
-              inline-flex
-              min-w-28
-              items-center
-              justify-center
-              gap-2
-              rounded-lg
-              px-5
-              py-2.5
-              text-sm
-              font-semibold
-              text-white
-              transition
-              disabled:cursor-not-allowed
-              disabled:opacity-60
-
-              ${
+          {/* Footer: NO Cancel button, ONLY Confirm button */}
+          <div className="flex items-center justify-end pt-3 border-t border-slate-100">
+            <button
+              type="submit"
+              disabled={isSaving}
+              className={`flex items-center gap-1.5 px-5 py-2 text-xs font-semibold text-white active:scale-95 rounded-lg transition shadow-xs cursor-pointer disabled:opacity-50 ${
                 isArchive
-                  ? "bg-orange-500 hover:bg-orange-600"
-                  : "bg-green-700 hover:bg-green-800"
-              }
-            `}
-          >
-            {isSaving && (
-              <Loader2
-                size={16}
-                className="
-                  animate-spin
-                "
-              />
-            )}
-
-            {isSaving
-              ? (
-                isArchive
-                  ? "Archiving..."
-                  : "Restoring..."
-              )
-              : confirmLabel}
-          </button>
-        </div>
-
+                  ? "bg-amber-600 hover:bg-amber-700"
+                  : "bg-[#0B5D1E] hover:bg-[#084b18]"
+              }`}
+            >
+              {isSaving && <Loader2 size={14} className="animate-spin" />}
+              {!isSaving &&
+                (isArchive ? <Archive size={14} /> : <RotateCcw size={14} />)}
+              <span>
+                {isSaving
+                  ? isArchive
+                    ? "Archiving..."
+                    : "Restoring..."
+                  : isArchive
+                  ? "Confirm Archive"
+                  : "Confirm Restore"}
+              </span>
+            </button>
+          </div>
+        </form>
       </div>
     </div>,
     document.body

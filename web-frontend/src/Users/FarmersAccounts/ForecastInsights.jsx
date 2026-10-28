@@ -22,6 +22,8 @@ import {
 
 import useFarmerForecasting
   from "../../Components/hooks/Farmer/useFarmerForecasting";
+import Toast from "../../Components/Modals/Toast";
+import useToast from "../../Components/hooks/useToast";
 
 
 // ============================================================
@@ -1037,6 +1039,8 @@ export default function ForecastInsights() {
     generateAIInterpretation,
   } =
     forecasting;
+
+  const { toasts, showToast, removeToast } = useToast();
 
 
   // =========================================================
@@ -3009,6 +3013,13 @@ export default function ForecastInsights() {
         300
       );
 
+      showToast({
+        type: "success",
+        title: "Report Ready",
+        message: "Forecast insights printable report generated successfully.",
+        duration: 4000,
+      });
+
     };
 
 
@@ -4632,6 +4643,8 @@ export default function ForecastInsights() {
           </>
         )
       }
+
+      <Toast toasts={toasts} removeToast={removeToast} />
 
     </div>
   );

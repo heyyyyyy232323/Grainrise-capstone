@@ -20,6 +20,8 @@ import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 import FarmerContractOpenBiddingModal from "../../Components/Modals/FarmerContractOpenBiddingModal";
 import FarmerContractOfferDetailsModal from "../../Components/Modals/FarmerContractOfferDetailsModal";
 import FarmerContractAcceptOfferModal from "../../Components/Modals/FarmerContractAcceptOfferModal";
+import Toast from "../../Components/Modals/Toast";
+import useToast from "../../Components/hooks/useToast";
 
 
 // ============================================================
@@ -276,6 +278,8 @@ export default function FarmerContractsOffers() {
     declineOffer,
   } = useFarmerContracts();
 
+  const { toasts, showToast, removeToast } = useToast();
+
 
   const {
     products,
@@ -463,6 +467,13 @@ export default function FarmerContractsOffers() {
         setIsCreateOpen(
           false
         );
+
+        showToast({
+          type: "success",
+          title: "Bidding Created",
+          message: "Open bidding listing created successfully.",
+          duration: 4000,
+        });
       } catch {
         // Contracts hook handles the error.
       }
@@ -583,6 +594,13 @@ export default function FarmerContractsOffers() {
 
 
         await refreshCurrentBidding();
+
+        showToast({
+          type: "success",
+          title: "Offer Declined",
+          message: "Buyer offer has been declined.",
+          duration: 4000,
+        });
       } catch {
         // Contracts hook handles the error.
       }
@@ -669,6 +687,13 @@ export default function FarmerContractsOffers() {
         setBiddingDetails(
           null
         );
+
+        showToast({
+          type: "success",
+          title: "Offer Accepted",
+          message: "Buyer offer accepted and contract created successfully.",
+          duration: 4000,
+        });
       } catch {
         // Contracts hook handles the error.
       }
@@ -2308,6 +2333,8 @@ export default function FarmerContractsOffers() {
           handleCreateBidding
         }
       />
+
+      <Toast toasts={toasts} removeToast={removeToast} />
 
     </>
   );

@@ -22,6 +22,8 @@ import Dropdown from "../../Components/Minor-Components/Dropdown";
 
 import useFarmerForecasting
   from "../../Components/hooks/Farmer/useFarmerForecasting";
+import Toast from "../../Components/Modals/Toast";
+import useToast from "../../Components/hooks/useToast";
 
 
 // ============================================================
@@ -954,6 +956,8 @@ export default function DemandForecasting() {
 
   } = useFarmerForecasting();
 
+  const { toasts, showToast, removeToast } = useToast();
+
 
   const [
     selectedProductKey,
@@ -1827,6 +1831,13 @@ export default function DemandForecasting() {
         URL.revokeObjectURL(
           url
         );
+
+        showToast({
+          type: "success",
+          title: "Report Downloaded",
+          message: "Demand forecast summary report downloaded successfully.",
+          duration: 4000,
+        });
 
       },
       [
@@ -2931,6 +2942,8 @@ export default function DemandForecasting() {
         </div>
 
       </div>
+
+      <Toast toasts={toasts} removeToast={removeToast} />
 
     </div>
 

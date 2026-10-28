@@ -5,7 +5,9 @@ import POSProductCard from "../../Components/Minor-Components/POSProductCard";
 import POSCartCard from "../../Components/Minor-Components/POSCartCard";
 import POSPaymentProofModal from "../../Components/Modals/MillerSales/POSPaymentProofModal";
 import POSSalesReceiptModal from "../../Components/Modals/MillerSales/POSSalesReceiptModal";
+import Toast from "../../Components/Modals/Toast";
 import useFarmerPointOfSale from "../../Components/hooks/Farmer/useFarmerPointOfSale";
+import useToast from "../../Components/hooks/useToast";
 import { translations, useLanguagePreference } from "../../lib/translations";
 
 const METHODS = { Cash: "cash", GCash: "gcash", "Bank Transfer": "bank" };
@@ -30,6 +32,7 @@ export default function FarmerPointOfSale() {
   const [checkoutError, setCheckoutError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const idempotency = useRef(`farmer-pos-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const { toasts, showToast, removeToast } = useToast();
 
   useEffect(() => { loadProducts(); }, [loadProducts]);
   useEffect(() => {
@@ -89,6 +92,12 @@ export default function FarmerPointOfSale() {
     setProofOpen(false); setReceipt({ ...result.data, items: receiptItems }); setCart([]); setCash("");
     idempotency.current = `farmer-pos-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     loadProducts();
+    showToast({
+      type: "success",
+      title: "Sale Completed",
+      message: "Sale transaction recorded successfully.",
+      duration: 4000,
+    });
   };
 
   return <div className="w-full">
@@ -142,5 +151,6 @@ export default function FarmerPointOfSale() {
       onConfirmPaymentProof={({ capturedImage, referenceNo, credentialsId, confirmed }) => submit({ paymentProofImage: capturedImage, referenceNo, credentialsId, confirmed })} />
     <POSSalesReceiptModal isOpen={Boolean(receipt)} onClose={() => setReceipt(null)} receiptData={receipt}
       receiptContextLabel="GrainRise Farmer POS" />
+    <Toast toasts={toasts} removeToast={removeToast} />
   </div>;
 }

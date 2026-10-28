@@ -17,6 +17,8 @@ import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 
 import FarmerContractOpportunityDetailsModal from "../../Components/Modals/FarmerContractOpportunityDetailsModal";
 import FarmerContractApplicationModal from "../../Components/Modals/FarmerContractApplicationModal";
+import Toast from "../../Components/Modals/Toast";
+import useToast from "../../Components/hooks/useToast";
 
 
 // ============================================================
@@ -174,6 +176,8 @@ export default function FarmerContractsOpportunities() {
     loadOpportunityDetails,
     submitApplication,
   } = useFarmerContracts();
+
+  const { toasts, showToast, removeToast } = useToast();
 
 
   const {
@@ -455,6 +459,13 @@ export default function FarmerContractsOpportunities() {
         setIsApplicationOpen(
           false
         );
+
+        showToast({
+          type: "success",
+          title: "Application Submitted",
+          message: "Contract application submitted successfully.",
+          duration: 4000,
+        });
       } catch {
         // Contracts hook handles error.
       }
@@ -1266,6 +1277,8 @@ export default function FarmerContractsOpportunities() {
           handleSubmitApplication
         }
       />
+
+      <Toast toasts={toasts} removeToast={removeToast} />
 
     </>
   );

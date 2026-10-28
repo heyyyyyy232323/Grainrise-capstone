@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 // STATIC PHILIPPINE REGIONS / PROVINCES DATA
 // ============================================================
 
-const PHILIPPINE_LOCATIONS = {
+export const PHILIPPINE_LOCATIONS = {
   "Nueva Ecija": {
     postalCode: "3100",
     municipalities: {
@@ -73,7 +73,7 @@ const PHILIPPINE_LOCATIONS = {
   },
 };
 
-const DEFAULT_PROVINCES = Object.keys(PHILIPPINE_LOCATIONS);
+export const DEFAULT_PROVINCES = Object.keys(PHILIPPINE_LOCATIONS);
 
 const useFarmAddress = () => {
   const [province, setProvince] = useState("");
@@ -93,19 +93,32 @@ const useFarmAddress = () => {
     barangays: "",
   });
 
-  const provinceOptions = useMemo(() => DEFAULT_PROVINCES, []);
-
-  const municipalityOptions = useMemo(() => {
-    if (!province || !PHILIPPINE_LOCATIONS[province]) return [];
-    return Object.keys(PHILIPPINE_LOCATIONS[province].municipalities);
+  const provinceOptions = useMemo(() => {
+    if (province && !DEFAULT_PROVINCES.includes(province)) {
+      return [province, ...DEFAULT_PROVINCES];
+    }
+    return DEFAULT_PROVINCES;
   }, [province]);
 
-  const barangayOptions = useMemo(() => {
-    if (!province || !municipality || !PHILIPPINE_LOCATIONS[province]?.municipalities[municipality]) {
-      return [];
+  const municipalityOptions = useMemo(() => {
+    if (!province) return [];
+    const standard = PHILIPPINE_LOCATIONS[province]?.municipalities
+      ? Object.keys(PHILIPPINE_LOCATIONS[province].municipalities)
+      : [];
+    if (municipality && !standard.includes(municipality)) {
+      return [municipality, ...standard];
     }
-    return PHILIPPINE_LOCATIONS[province].municipalities[municipality];
+    return standard;
   }, [province, municipality]);
+
+  const barangayOptions = useMemo(() => {
+    if (!province || !municipality) return [];
+    const standard = PHILIPPINE_LOCATIONS[province]?.municipalities?.[municipality] || [];
+    if (barangay && !standard.includes(barangay)) {
+      return [barangay, ...standard];
+    }
+    return standard;
+  }, [province, municipality, barangay]);
 
   const selectProvince = useCallback((selected) => {
     setProvince(selected || "");
@@ -113,6 +126,8 @@ const useFarmAddress = () => {
     setBarangay("");
     if (selected && PHILIPPINE_LOCATIONS[selected]) {
       setPostalCode(PHILIPPINE_LOCATIONS[selected].postalCode || "");
+    } else {
+      setPostalCode("");
     }
   }, []);
 
@@ -133,11 +148,12 @@ const useFarmAddress = () => {
   const enableManualMode = useCallback(() => setManualMode(true), []);
   const enableDropdownMode = useCallback(() => setManualMode(false), []);
 
-  const setInitialAddress = useCallback(({ province: p, municipality: m, barangay: b, postalCode: pc } = {}) => {
-    if (p) setProvince(p);
-    if (m) setMunicipality(m);
-    if (b) setBarangay(b);
-    if (pc) setPostalCode(pc);
+  const setInitialAddress = useCallback(({ province: p = "", municipality: m = "", barangay: b = "", postalCode: pc = "" } = {}) => {
+    setProvince(p || "");
+    setMunicipality(m || "");
+    setBarangay(b || "");
+    setPostalCode(pc || "");
+    setManualMode(false);
   }, []);
 
   const resetAddress = useCallback(() => {

@@ -22,8 +22,10 @@ import Dropdown from "../../Components/Minor-Components/Dropdown";
 import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 
 import FarmerFarmFormModal from "../../Components/Modals/FarmerFarmFormModal";
+import Toast from "../../Components/Modals/Toast";
 
 import useFarmManagement from "../../Components/hooks/Farmer/useFarmManagement";
+import useToast from "../../Components/hooks/useToast";
 import { translations, useLanguagePreference } from "../../lib/translations";
 
 
@@ -267,67 +269,36 @@ const getFarmName = (
 const CropStatusBadge = ({
   status,
 }) => {
-  let classes =
-    "border-slate-200 bg-slate-100 text-slate-600";
+  let classes = "border-slate-200 bg-slate-100 text-slate-600";
 
-  if (
-    status ===
-    "land_preparation"
-  ) {
-    classes =
-      "border-amber-200 bg-amber-50 text-amber-700";
+  if (status === "land_preparation") {
+    classes = "border-amber-200 bg-amber-50 text-amber-700";
   }
 
-  if (
-    status ===
-    "planted_and_growing"
-  ) {
-    classes =
-      "border-green-200 bg-green-50 text-green-700";
+  if (status === "planted_and_growing") {
+    classes = "border-green-200 bg-green-50 text-green-700";
   }
 
-  if (
-    status ===
-    "harvested"
-  ) {
-    classes =
-      "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (status === "harvested") {
+    classes = "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
 
-  if (
-    status ===
-    "failed_crop"
-  ) {
-    classes =
-      "border-red-200 bg-red-50 text-red-700";
+  if (status === "failed_crop") {
+    classes = "border-red-200 bg-red-50 text-red-700";
   }
 
   return (
     <span
-      className={`
-        inline-flex
-        items-center
-        rounded-full
-        border
-        px-2.5
-        py-1
-        text-xs
-        font-semibold
-        ${classes}
-      `}
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${classes}`}
     >
-      {
-        formatCropStatus(
-          status
-        )
-      }
+      {formatCropStatus(status)}
     </span>
   );
 };
 
 
 // ============================================================
-// FARM CARD
+// FARM CARD (Matches Farmer Contracts Card Style)
 // ============================================================
 
 const FarmCard = ({
@@ -340,222 +311,77 @@ const FarmCard = ({
 
   return (
     <article
-      className="
-        flex
-        min-h-[330px]
-        flex-col
-        rounded-2xl
-        border
-        border-slate-200
-        bg-white
-        p-5
-        shadow-sm
-        transition
-        hover:border-slate-300
-        hover:shadow-md
-      "
+      className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:border-slate-300 hover:shadow-md"
     >
+      <div className="flex flex-1 flex-col gap-4 p-4">
+        {/* HEADER: ID + STATUS */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <span className="inline-flex rounded-md bg-green-100 px-2.5 py-0.5 text-[10px] font-bold text-green-700">
+              Farm #{farm.farm_id || farm.farm_profile_id}
+            </span>
 
-      {/* FARM NUMBER & STATUS */}
+            <h4
+              className="mt-1.5 truncate text-[15px] font-bold text-slate-900"
+              title={getFarmName(farm)}
+            >
+              {getFarmName(farm)}
+            </h4>
+          </div>
 
-      <div className="flex items-center justify-between">
-        <p
-          className="
-            text-xs
-            font-bold
-            uppercase
-            tracking-wide
-            text-green-700
-          "
-        >
-          Farm #{farm.farm_id || farm.farm_profile_id}
-        </p>
-
-        <span
-          className={`
-            inline-flex
-            items-center
-            rounded-full
-            border
-            px-2.5
-            py-0.5
-            text-xs
-            font-semibold
-            ${
+          <span
+            className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-bold capitalize ${
               String(farm.farm_status || farm.status || "").toLowerCase() === "inactive"
                 ? "border-slate-300 bg-slate-100 text-slate-600"
                 : "border-green-200 bg-green-50 text-green-700"
-            }
-          `}
-        >
-          {String(farm.farm_status || farm.status || "").toLowerCase() === "inactive"
-            ? "Inactive"
-            : "Active"}
-        </span>
-      </div>
+            }`}
+          >
+            {String(farm.farm_status || farm.status || "").toLowerCase() === "inactive"
+              ? "Inactive"
+              : "Active"}
+          </span>
+        </div>
 
+        {/* LOCATION */}
+        <div className="flex items-start gap-1.5 text-xs text-slate-500 min-h-[32px]">
+          <MapPin size={14} className="mt-0.5 shrink-0 text-slate-400" />
+          <span className="line-clamp-2">
+            {farm.farm_location || "Farm location not recorded"}
+          </span>
+        </div>
 
-      {/* FARM NAME */}
+        {/* DETAILS BOX (Highlight panel matching Farmer Contracts) */}
+        <div className="grid grid-cols-2 gap-3 rounded-xl border border-green-100 bg-green-50/40 p-3">
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+              Total Farm Area
+            </p>
+            <p className="mt-1 text-sm font-bold text-slate-900">
+              {formatNumber(farm.total_farm_area)} ha
+            </p>
+          </div>
 
-      <h3
-        className="
-          mt-1
-          break-words
-          text-lg
-          font-bold
-          text-slate-900
-        "
-      >
-        {
-          getFarmName(
-            farm
-          )
-        }
-      </h3>
-
-
-      {/* LOCATION */}
-
-      <div
-        className="
-          mt-4
-          flex
-          min-h-[42px]
-          items-start
-          gap-2
-          text-sm
-          text-slate-500
-        "
-      >
-        <MapPin
-          size={16}
-          className="
-            mt-0.5
-            shrink-0
-            text-slate-400
-          "
-        />
-
-        <span
-          className="
-            break-words
-          "
-        >
-          {
-            farm.farm_location ||
-            "Farm location not recorded"
-          }
-        </span>
-      </div>
-
-
-      {/* FARM AREA */}
-
-      <div
-        className="
-          mt-6
-          rounded-xl
-          bg-slate-50
-          px-4
-          py-3
-        "
-      >
-        <p
-          className="
-            text-xs
-            font-medium
-            text-slate-400
-          "
-        >
-          Total Farm Area
-        </p>
-
-        <p
-          className="
-            mt-1
-            text-sm
-            font-bold
-            text-slate-900
-          "
-        >
-          {
-            formatNumber(
-              farm.total_farm_area
-            )
-          }{" "}
-          ha
-        </p>
-      </div>
-
-
-      {/* CURRENT CROP STATUS */}
-
-      <div
-        className="
-          mt-4
-        "
-      >
-        <p
-          className="
-            text-xs
-            font-medium
-            text-slate-500
-          "
-        >
-          Current Crop Status
-        </p>
-
-        <div
-          className="
-            mt-2
-          "
-        >
-          <CropStatusBadge
-            status={
-              cropStatus
-            }
-          />
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+              Crop Status
+            </p>
+            <div className="mt-1">
+              <CropStatusBadge status={cropStatus} />
+            </div>
+          </div>
         </div>
       </div>
 
-
-      {/* VIEW DETAILS */}
-
-      <div
-        className="
-          mt-auto
-          pt-5
-        "
-      >
+      {/* ACTION FOOTER */}
+      <div className="mt-auto border-t border-slate-200 bg-slate-50/60 p-3">
         <button
           type="button"
-          onClick={
-            () =>
-              onViewDetails(
-                farm.farm_id || farm.farm_profile_id
-              )
-          }
-          className="
-            w-full
-            rounded-lg
-            bg-green-700
-            px-4
-            py-2.5
-            text-sm
-            font-semibold
-            text-white
-            transition
-            hover:bg-green-800
-            focus:outline-none
-            focus:ring-2
-            focus:ring-green-600
-            focus:ring-offset-2
-          "
+          onClick={() => onViewDetails(farm.farm_id || farm.farm_profile_id)}
+          className="w-full rounded-lg border border-green-600 bg-white px-4 py-2 text-sm font-semibold text-green-700 transition hover:bg-green-50 active:scale-98 cursor-pointer"
         >
           View Details
         </button>
       </div>
-
     </article>
   );
 };
@@ -695,15 +521,7 @@ export default function FarmerFarmManagement() {
       false
     );
 
-
-  const [
-    successMessage,
-    setSuccessMessage,
-  ] =
-    useState(
-      ""
-    );
-
+  const { toasts, showToast, removeToast } = useToast();
 
   // =========================================================
   // LOAD FARMS
@@ -749,41 +567,6 @@ export default function FarmerFarmManagement() {
     ]
   );
 
-
-  // =========================================================
-  // SUCCESS MESSAGE TIMER
-  // =========================================================
-
-  useEffect(
-    () => {
-      if (
-        !successMessage
-      ) {
-        return undefined;
-      }
-
-      const timer =
-        window.setTimeout(
-          () => {
-            setSuccessMessage(
-              ""
-            );
-          },
-          4000
-        );
-
-      return () => {
-        window.clearTimeout(
-          timer
-        );
-      };
-    },
-    [
-      successMessage,
-    ]
-  );
-
-
   // =========================================================
   // SEGMENT CHANGE
   // =========================================================
@@ -792,10 +575,6 @@ export default function FarmerFarmManagement() {
     segment
   ) => {
     clearError();
-
-    setSuccessMessage(
-      ""
-    );
 
     setActiveSegment(
       segment
@@ -878,9 +657,12 @@ export default function FarmerFarmManagement() {
           false
         );
 
-        setSuccessMessage(
-          "Farm added successfully."
-        );
+        showToast({
+          type: "success",
+          title: "Success",
+          message: "Farm added successfully.",
+          duration: 4000,
+        });
 
         await loadFarms(
           filters
@@ -981,66 +763,20 @@ export default function FarmerFarmManagement() {
           PAGE HEADER
       ==================================================== */}
 
-      <div
-        className="
-          flex
-          flex-col
-          gap-4
-          sm:flex-row
-          sm:items-end
-          sm:justify-between
-        "
-      >
-        <div className="flex flex-col gap-1">
-          <h1
-            className="
-              text-[clamp(2rem,3vw,2.5rem)]
-              font-extrabold
-              tracking-[-0.03em]
-              text-slate-900
-            "
-          >
-            {t.farmManagement.title}
-          </h1>
-          <p className="text-sm text-slate-500">
-            {t.farmManagement.subtitle}
-          </p>
-        </div>
-
-
-        {/* ADD NEW FARM — ONLY MY FARMS */}
-
-        {
-          isMyFarms &&
-          (
-            <button
-              type="button"
-              onClick={
-                handleOpenAddFarm
-              }
-              className="
-                shrink-0
-                self-end
-                rounded-lg
-                bg-green-700
-                px-5
-                py-2.5
-                text-sm
-                font-semibold
-                text-white
-                transition
-                hover:bg-green-800
-                focus:outline-none
-                focus:ring-2
-                focus:ring-green-600
-                focus:ring-offset-2
-              "
-            >
-              {t.farmManagement.addFarm}
-            </button>
-          )
-        }
-
+      <div className="flex flex-col gap-1">
+        <h1
+          className="
+            text-[clamp(2rem,3vw,2.5rem)]
+            font-extrabold
+            tracking-[-0.03em]
+            text-slate-900
+          "
+        >
+          {t.farmManagement.title}
+        </h1>
+        <p className="text-sm text-slate-500">
+          {t.farmManagement.subtitle}
+        </p>
       </div>
 
 
@@ -1144,153 +880,34 @@ export default function FarmerFarmManagement() {
           <>
 
             {/* ==============================================
-                SUCCESS
+                SEARCH, FILTERS, AND ADD FARM
             ============================================== */}
 
-            {
-              successMessage &&
-              (
-                <div
-                  className="
-                    flex
-                    items-start
-                    gap-3
-                    rounded-xl
-                    border
-                    border-green-200
-                    bg-green-50
-                    px-4
-                    py-3
-                    text-sm
-                    text-green-700
-                  "
-                >
-                  <Sprout
-                    size={18}
-                    className="
-                      mt-0.5
-                      shrink-0
-                    "
-                  />
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between mb-6 sm:mb-7">
 
-                  <span>
-                    {
-                      successMessage
-                    }
-                  </span>
-                </div>
-              )
-            }
-
-
-            {/* ==============================================
-                FILTERS
-            ============================================== */}
-
-            <section
-              className="
-                rounded-2xl
-                border
-                border-slate-200
-                bg-white
-                p-4
-                shadow-sm
-              "
-            >
-              <div
-                className="
-                  grid
-                  gap-3
-                  md:grid-cols-2
-                  xl:grid-cols-[minmax(280px,2fr)_minmax(180px,1fr)_minmax(170px,1fr)_minmax(150px,0.9fr)_auto]
-                "
-              >
+              {/* LEFT-ALIGNED FILTERS ROW */}
+              <div className="flex flex-wrap items-center gap-3 md:gap-3.5">
 
                 {/* SEARCH FARM */}
-
-                <div>
-                  <label
-                    htmlFor="farm-search"
-                    className="
-                      mb-1.5
-                      block
-                      text-xs
-                      font-semibold
-                      text-slate-600
-                    "
-                  >
-                    {t.farmManagement.details.farm}
-                  </label>
-
-                  <div
-                    className="
-                      relative
-                    "
-                  >
-                    <Search
-                      size={17}
-                      className="
-                        pointer-events-none
-                        absolute
-                        left-3
-                        top-1/2
-                        -translate-y-1/2
-                        text-slate-400
-                      "
-                    />
-
-                    <input
-                      id="farm-search"
-                      type="text"
-                      value={
-                        filters.search
-                      }
-                      onChange={
-                        (
-                          event
-                        ) =>
-                          handleFilterChange(
-                            "search",
-                            event.target.value
-                          )
-                      }
-                      placeholder={t.farmManagement.searchPlaceholder}
-                      className="
-                        w-full
-                        rounded-lg
-                        border
-                        border-slate-300
-                        bg-white
-                        py-2.5
-                        pl-10
-                        pr-3
-                        text-sm
-                        text-slate-800
-                        outline-none
-                        transition
-                        placeholder:text-slate-400
-                        focus:border-green-600
-                        focus:ring-1
-                        focus:ring-green-600
-                      "
-                    />
-                  </div>
+                <div className="relative w-full sm:w-64 md:w-72">
+                  <Search
+                    size={16}
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                  <input
+                    id="farm-search"
+                    type="text"
+                    value={filters.search}
+                    onChange={(event) =>
+                      handleFilterChange("search", event.target.value)
+                    }
+                    placeholder={t.farmManagement.searchPlaceholder}
+                    className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                  />
                 </div>
 
-
                 {/* CURRENT CROP STATUS */}
-                <div>
-                  <label
-                    className="
-                      mb-1.5
-                      block
-                      text-xs
-                      font-semibold
-                      text-slate-600
-                    "
-                  >
-                    {t.farmManagement.cropStatus}
-                  </label>
+                <div className="w-44">
                   <Dropdown
                     options={cropStatusOptions}
                     value={filters.cropStatus}
@@ -1301,20 +918,8 @@ export default function FarmerFarmManagement() {
                   />
                 </div>
 
-
                 {/* FARM STATUS */}
-                <div>
-                  <label
-                    className="
-                      mb-1.5
-                      block
-                      text-xs
-                      font-semibold
-                      text-slate-600
-                    "
-                  >
-                    {t.farmManagement.farmStatus}
-                  </label>
+                <div className="w-36">
                   <Dropdown
                     options={farmStatusOptions}
                     value={filters.farmStatus}
@@ -1325,20 +930,8 @@ export default function FarmerFarmManagement() {
                   />
                 </div>
 
-
                 {/* SORT */}
-                <div>
-                  <label
-                    className="
-                      mb-1.5
-                      block
-                      text-xs
-                      font-semibold
-                      text-slate-600
-                    "
-                  >
-                    {t.farmManagement.sortBy}
-                  </label>
+                <div className="w-36">
                   <SortByDropdown
                     options={sortOptions}
                     value={filters.sortBy}
@@ -1348,47 +941,46 @@ export default function FarmerFarmManagement() {
                   />
                 </div>
 
-
                 {/* RESET */}
-
-                <div
-                  className="
-                    flex
-                    items-end
-                  "
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  disabled={!hasActiveFilters}
+                  className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <button
-                    type="button"
-                    onClick={
-                      handleResetFilters
-                    }
-                    disabled={
-                      !hasActiveFilters
-                    }
-                    className="
-                      w-full
-                      rounded-lg
-                      border
-                      border-slate-300
-                      bg-white
-                      px-4
-                      py-2.5
-                      text-sm
-                      font-semibold
-                      text-slate-600
-                      transition
-                      hover:bg-slate-50
-                      disabled:cursor-not-allowed
-                      disabled:opacity-40
-                      xl:w-auto
-                    "
-                  >
-                    Reset
-                  </button>
-                </div>
+                  Reset
+                </button>
 
               </div>
-            </section>
+
+              {/* ADD NEW FARM */}
+              <button
+                type="button"
+                onClick={handleOpenAddFarm}
+                className="
+                  shrink-0
+                  self-start
+                  lg:self-auto
+                  rounded-lg
+                  bg-green-700
+                  px-5
+                  py-2.5
+                  text-sm
+                  font-semibold
+                  text-white
+                  transition
+                  hover:bg-green-800
+                  focus:outline-none
+                  focus:ring-2
+                  focus:ring-green-600
+                  focus:ring-offset-2
+                  cursor-pointer
+                "
+              >
+                {t.farmManagement.addFarm}
+              </button>
+
+            </div>
 
 
             {/* ==============================================
@@ -1676,12 +1268,7 @@ export default function FarmerFarmManagement() {
 
 
                               <div
-                                className="
-                                  grid
-                                  gap-5
-                                  md:grid-cols-2
-                                  2xl:grid-cols-3
-                                "
+                                className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
                               >
                                 {
                                   farms.map(
@@ -1795,6 +1382,8 @@ export default function FarmerFarmManagement() {
           </Suspense>
         )
       }
+
+      <Toast toasts={toasts} removeToast={removeToast} />
 
     </div>
   );

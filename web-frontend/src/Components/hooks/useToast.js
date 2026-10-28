@@ -16,6 +16,8 @@ const nextId = () => ++_id;
 const useToast = () => {
   const [toasts, setToasts] = useState([]);
   const timers = useRef({});
+  const toastsRef = useRef([]);
+  toastsRef.current = toasts;
 
   const removeToast = useCallback((id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -50,6 +52,11 @@ const useToast = () => {
         title = args.title || (type === "success" ? "Success" : type === "error" ? "Error" : "");
         message = args.message || "";
         duration = args.duration !== undefined ? args.duration : 4000;
+      }
+
+      // Prevent duplicate toasts if identical message and type are already active
+      if (toastsRef.current.some((t) => t.message === message && t.type === type)) {
+        return;
       }
 
       const id = nextId();

@@ -17,6 +17,11 @@ urlpatterns = [
         name="forecasting-farms",
     ),
     path(
+        "resolve-location/",
+        views.resolve_location_coordinates,
+        name="resolve-location-coordinates",
+    ),
+    path(
         "climate/",
         views.climate_forecast,
         name="climate-forecast",

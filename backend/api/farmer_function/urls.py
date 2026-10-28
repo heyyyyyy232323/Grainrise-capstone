@@ -67,4 +67,12 @@ urlpatterns = [
         "notifications/",
         include("api.farmer_function.notifications.urls"),
     ),
+
+    # ========================================================
+    # 8. FORECASTING
+    # ========================================================
+    path(
+        "forecasting/",
+        include("api.farmer_function.forecasting.urls"),
+    ),
 ]

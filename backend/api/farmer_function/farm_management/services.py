@@ -1,4 +1,8 @@
-from datetime import datetime
+from uuid import uuid4
+from datetime import datetime, date
+import calendar
+import re
+from zoneinfo import ZoneInfo
 from decimal import Decimal, InvalidOperation
 
 from django.db import connection, transaction
@@ -722,7 +726,15 @@ def start_land_preparation(farmer_user_id, farm_id, data):
             data.get("land_preparation_date"),
             required=False,
             field_name="Land Preparation Date",
-        ) or timezone.now().date()
+        ) or datetime.now(ZoneInfo("Asia/Manila")).date()
+
+        manila_today = datetime.now(ZoneInfo("Asia/Manila")).date()
+        if prep_date > manila_today:
+            raise FarmManagementError(
+                "future_date_not_allowed",
+                "Land preparation date cannot be in the future (Asia/Manila). Please select today or a past date.",
+                400,
+            )
 
         rice_variety = _text(
             data.get("rice_variety") or farm.get("registered_rice_variety") or "RC 222 (Tubigan 18)"
@@ -765,6 +777,25 @@ def start_land_preparation(farmer_user_id, farm_id, data):
     return get_farmer_farm_details(farmer_id, normalized_farm_id)
 
 
+def add_one_calendar_month(d):
+    """
+    Returns the date exactly 1 calendar month after d.
+    Correctly handles month and year transitions and clamps days to month end.
+    """
+    if hasattr(d, "date"):
+        d = d.date()
+    elif isinstance(d, str):
+        d = datetime.strptime(str(d)[:10], "%Y-%m-%d").date()
+    year = d.year
+    month = d.month + 1
+    if month > 12:
+        month = 1
+        year += 1
+    max_days = calendar.monthrange(year, month)[1]
+    day = min(d.day, max_days)
+    return date(year, month, day)
+
+
 @transaction.atomic
 def record_planting(farmer_user_id, farm_id, data):
     farmer_id = _normalize_farmer_id(farmer_user_id)
@@ -790,11 +821,71 @@ def record_planting(farmer_user_id, farm_id, data):
     )
     remarks = _text(data.get("remarks") or data.get("notes")) or None
 
+    if not rice_variety:
+        raise FarmManagementError(
+            "rice_variety_required",
+            "Rice Variety is required.",
+            400,
+        )
+
     with connection.cursor() as cursor:
         farm = _lock_owned_farm(cursor, farmer_id, normalized_farm_id)
         _require_active_farm(farm)
 
         active_crop = get_active_crop_cycle(farmer_id, normalized_farm_id)
+
+        # Land Preparation Date validation
+        raw_lp = None
+        if active_crop and active_crop.get("land_preparation_date"):
+            raw_lp = active_crop["land_preparation_date"]
+        elif farm and farm.get("land_preparation_date"):
+            raw_lp = farm["land_preparation_date"]
+        else:
+            cursor.execute(
+                """
+                SELECT land_preparation_date
+                FROM existing_grainrise_farmer_crop_cycles
+                WHERE farm_profile_id = %s
+                  AND land_preparation_date IS NOT NULL
+                ORDER BY crop_cycle_id DESC
+                LIMIT 1
+                """,
+                [normalized_farm_id],
+            )
+            lp_row = cursor.fetchone()
+            if lp_row and lp_row[0]:
+                raw_lp = lp_row[0]
+
+        if raw_lp:
+            land_prep_date = (
+                raw_lp.date()
+                if hasattr(raw_lp, "date")
+                else raw_lp
+                if isinstance(raw_lp, date)
+                else datetime.strptime(str(raw_lp)[:10], "%Y-%m-%d").date()
+            )
+            if planting_date < land_prep_date:
+                raise FarmManagementError(
+                    "planting_date_before_land_prep",
+                    f"Planting Date must be on or after Land Preparation Date ({land_prep_date.strftime('%b %d, %Y')}).",
+                    400,
+                )
+            max_planting_date = add_one_calendar_month(land_prep_date)
+            if planting_date > max_planting_date:
+                raise FarmManagementError(
+                    "planting_date_exceeds_max",
+                    f"Planting Date cannot be more than 1 calendar month after Land Preparation Date ({max_planting_date.strftime('%b %d, %Y')}).",
+                    400,
+                )
+
+        if not expected_harvest:
+            expected_harvest = add_one_calendar_month(planting_date)
+        elif expected_harvest < planting_date:
+            raise FarmManagementError(
+                "invalid_expected_harvest_date",
+                "Expected Harvest Date cannot be earlier than Planting Date.",
+                400,
+            )
 
         if active_crop:
             cycle_id = active_crop["crop_cycle_id"]
@@ -939,6 +1030,75 @@ def update_current_crop(farmer_user_id, farm_id, data):
     return get_farmer_farm_details(farmer_id, normalized_farm_id)
 
 
+def _get_farmer_initials(first_name, last_name):
+    fn = str(first_name or "").strip()
+    ln = str(last_name or "").strip()
+    res = ""
+    if fn:
+        res += fn[0].upper()
+    if ln:
+        res += ln[0].upper()
+    return res or "FM"
+
+
+def _get_farm_initials_for_harvest(farm_name):
+    if not farm_name:
+        return "FM"
+    words = [w for w in re.split(r"[^A-Za-z0-9]+", str(farm_name).strip()) if w]
+    if not words:
+        return "FM"
+    if len(words) == 1:
+        return words[0][:2].upper() if len(words[0]) >= 2 else (words[0] + "F").upper()
+    return "".join(w[0] for w in words).upper()
+
+
+def _generate_harvest_product_code(cursor, farm_name, first_name, last_name, client_code=None):
+    """
+    Format: [FARMER INITIALS]-[FARM INITIALS]-[MMDDYYYY]-[HHMM]
+    Example: CA-DF-10292026-0506
+
+    Authoritatively generated in Asia/Manila timezone with 24-hour HHMM.
+    Handles same-minute collisions safely by appending sequence (-01, -02, etc.)
+    without silently changing the approved format.
+    """
+    farmer_init = _get_farmer_initials(first_name, last_name)
+    farm_init = _get_farm_initials_for_harvest(farm_name)
+    manila_tz = ZoneInfo("Asia/Manila")
+    now_manila = timezone.now().astimezone(manila_tz)
+    date_str = now_manila.strftime("%m%d%Y")
+    time_str = now_manila.strftime("%H%M")
+
+    base_code = f"{farmer_init}-{farm_init}-{date_str}-{time_str}"
+
+    if client_code:
+        trimmed = str(client_code).strip()
+        if trimmed.startswith(base_code):
+            cursor.execute(
+                "SELECT 1 FROM existing_grainrise_farmer_products WHERE product_code = %s LIMIT 1",
+                [trimmed],
+            )
+            if not cursor.fetchone():
+                return trimmed
+
+    cursor.execute(
+        "SELECT 1 FROM existing_grainrise_farmer_products WHERE product_code = %s LIMIT 1",
+        [base_code],
+    )
+    if not cursor.fetchone():
+        return base_code
+
+    seq = 1
+    while True:
+        candidate = f"{base_code}-{seq:02d}"
+        cursor.execute(
+            "SELECT 1 FROM existing_grainrise_farmer_products WHERE product_code = %s LIMIT 1",
+            [candidate],
+        )
+        if not cursor.fetchone():
+            return candidate
+        seq += 1
+
+
 @transaction.atomic
 def record_harvest(farmer_user_id, farm_id, data):
     farmer_id = _normalize_farmer_id(farmer_user_id)
@@ -987,6 +1147,76 @@ def record_harvest(farmer_user_id, farm_id, data):
                 cycle_id,
             ],
         )
+
+        # Automatic inventory creation from Record Harvest
+        cursor.execute(
+            """
+            SELECT farm_product_id
+            FROM existing_grainrise_farmer_products
+            WHERE crop_cycle_id = %s
+            LIMIT 1
+            """,
+            [cycle_id],
+        )
+        if not cursor.fetchone():
+            cursor.execute(
+                "SELECT first_name, last_name FROM users WHERE user_id = %s LIMIT 1",
+                [farmer_id],
+            )
+            user_row = cursor.fetchone()
+            first_name = user_row[0] if user_row else ""
+            last_name = user_row[1] if user_row else ""
+
+            farm_name_for_code = farm.get("farm_name") or "Farm"
+
+            product_code = _generate_harvest_product_code(
+                cursor,
+                farm_name_for_code,
+                first_name,
+                last_name,
+                client_code=data.get("product_code"),
+            )
+            variety = active_crop.get("rice_variety") or "RC 222 (Tubigan 18)"
+            grade = _text(data.get("product_grade")) or "Standard Grade"
+            description = _text(data.get("description") or data.get("product_description")) or f"Harvest generated from {variety}"
+            product_image = data.get("product_image") or None
+            cursor.execute(
+                """
+                INSERT INTO existing_grainrise_farmer_products (
+                    farm_profile_id,
+                    crop_cycle_id,
+                    product_code,
+                    product_image,
+                    product_type,
+                    rice_variety,
+                    product_grade,
+                    product_description,
+                    record_origin,
+                    source_type,
+                    acquisition_remarks,
+                    harvest_acquisition_date,
+                    stock_quantity_kg,
+                    selling_price_per_kg,
+                    product_status
+                )
+                VALUES (
+                    %s, %s, %s, %s, 'Unmilled Palay', %s, %s, %s,
+                    'Harvest Generated', 'Own Farm', %s, %s, %s, NULL, 'active'
+                )
+                """,
+                [
+                    normalized_farm_id,
+                    cycle_id,
+                    product_code,
+                    product_image,
+                    variety,
+                    grade,
+                    description,
+                    remarks,
+                    actual_harvest_date,
+                    actual_yield_kg,
+                ],
+            )
 
         _record_activity(
             cursor,

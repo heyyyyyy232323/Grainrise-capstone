@@ -8,18 +8,15 @@ from django.db import connection
 STATUS_ACTIVE = "active"
 STATUS_ARCHIVED = "archived"
 
-
 VALID_INVENTORY_STATUSES = {
     STATUS_ACTIVE,
     STATUS_ARCHIVED,
 }
 
-
 SORT_NEWEST = "newest"
 SORT_OLDEST = "oldest"
 SORT_STOCK_HIGHEST = "stock_highest"
 SORT_STOCK_LOWEST = "stock_lowest"
-
 
 VALID_INVENTORY_SORTS = {
     SORT_NEWEST,
@@ -33,112 +30,51 @@ VALID_INVENTORY_SORTS = {
 # DATABASE RESULT HELPERS
 # ============================================================
 
-def _rows_to_dicts(
-    cursor,
-):
+def _rows_to_dicts(cursor):
     """
     Convert all rows from the current cursor result into
     dictionaries using the selected column aliases.
     """
-
-    columns = [
-        column[0]
-        for column in cursor.description
-    ]
-
-    return [
-        dict(
-            zip(
-                columns,
-                row,
-            )
-        )
-        for row in cursor.fetchall()
-    ]
+    columns = [column[0] for column in cursor.description]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
 
-def _row_to_dict(
-    cursor,
-):
+def _row_to_dict(cursor):
     """
     Convert one cursor row into a dictionary.
-
     Returns None when no matching record exists.
     """
-
     row = cursor.fetchone()
-
     if row is None:
         return None
-
-    columns = [
-        column[0]
-        for column in cursor.description
-    ]
-
-    return dict(
-        zip(
-            columns,
-            row,
-        )
-    )
+    columns = [column[0] for column in cursor.description]
+    return dict(zip(columns, row))
 
 
 # ============================================================
 # ID NORMALIZERS
 # ============================================================
 
-def _normalize_farmer_id(
-    farmer_user_id,
-):
-    """
-    farmer_user_id must come from the authenticated Farmer
-    JWT/session.
-
-    Never accept this value from request.data.
-    """
-
+def _normalize_farmer_id(farmer_user_id):
     try:
-        farmer_id = int(
-            farmer_user_id
-        )
-
-    except (
-        TypeError,
-        ValueError,
-    ) as exc:
-        raise ValueError(
-            "Invalid Farmer session."
-        ) from exc
+        farmer_id = int(farmer_user_id)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Invalid Farmer session.") from exc
 
     if farmer_id <= 0:
-        raise ValueError(
-            "Invalid Farmer session."
-        )
+        raise ValueError("Invalid Farmer session.")
 
     return farmer_id
 
 
-def _normalize_product_id(
-    farm_product_id,
-):
+def _normalize_product_id(farm_product_id):
     try:
-        product_id = int(
-            farm_product_id
-        )
-
-    except (
-        TypeError,
-        ValueError,
-    ) as exc:
-        raise ValueError(
-            "Invalid inventory product ID."
-        ) from exc
+        product_id = int(farm_product_id)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Invalid inventory product ID.") from exc
 
     if product_id <= 0:
-        raise ValueError(
-            "Invalid inventory product ID."
-        )
+        raise ValueError("Invalid inventory product ID.")
 
     return product_id
 
@@ -156,388 +92,162 @@ def list_farmer_inventory_products(
 ):
     """
     Return Farmer Inventory products belonging only to the
-    authenticated Farmer.
-
-    Used by:
-
-        Farm Management
-            -> Inventory
-                -> Active
-                -> Archive
-
-    Supported:
-
-        status_filter:
-            active
-            archived
-
-        search:
-            Product Code
-            Rice Variety / Variant
-            Description
-
-        sort_by:
-            newest
-            oldest
-            stock_highest
-            stock_lowest
-
-
-    SECURITY:
-
-        fp.user_id = authenticated Farmer ID
-
-    Therefore one Farmer cannot retrieve another Farmer's
-    inventory even if a product ID/code becomes known.
+    authenticated Farmer (via farm_profile.user_id).
     """
+    farmer_id = _normalize_farmer_id(farmer_user_id)
 
-    farmer_id = (
-        _normalize_farmer_id(
-            farmer_user_id
-        )
-    )
+    normalized_status = str(status_filter or STATUS_ACTIVE).strip().lower()
+    if normalized_status not in VALID_INVENTORY_STATUSES:
+        raise ValueError("Invalid inventory status.")
 
+    normalized_sort = str(sort_by or SORT_NEWEST).strip().lower()
+    if normalized_sort not in VALID_INVENTORY_SORTS:
+        raise ValueError("Invalid inventory sort option.")
 
-    normalized_status = (
-        str(
-            status_filter or STATUS_ACTIVE
-        )
-        .strip()
-        .lower()
-    )
+    normalized_search = str(search or "").strip()
 
-
-    if (
-        normalized_status
-        not in VALID_INVENTORY_STATUSES
-    ):
-        raise ValueError(
-            "Invalid inventory status."
-        )
-
-
-    normalized_sort = (
-        str(
-            sort_by or SORT_NEWEST
-        )
-        .strip()
-        .lower()
-    )
-
-
-    if (
-        normalized_sort
-        not in VALID_INVENTORY_SORTS
-    ):
-        raise ValueError(
-            "Invalid inventory sort option."
-        )
-
-
-    normalized_search = (
-        str(
-            search or ""
-        ).strip()
-    )
-
-
-    # ========================================================
-    # SAFE ORDER BY MAPPING
-    # ========================================================
-
+    # Safe order-by mapping
     order_by_map = {
-        SORT_NEWEST:
-            """
-            fp.created_at DESC,
-            fp.farm_product_id DESC
-            """,
-
-        SORT_OLDEST:
-            """
-            fp.created_at ASC,
-            fp.farm_product_id ASC
-            """,
-
-        SORT_STOCK_HIGHEST:
-            """
-            fp.available_quantity_kg DESC,
-            fp.created_at DESC,
-            fp.farm_product_id DESC
-            """,
-
-        SORT_STOCK_LOWEST:
-            """
-            fp.available_quantity_kg ASC,
-            fp.created_at DESC,
-            fp.farm_product_id DESC
-            """,
+        SORT_NEWEST: "fp.created_at DESC, fp.farm_product_id DESC",
+        SORT_OLDEST: "fp.created_at ASC, fp.farm_product_id ASC",
+        SORT_STOCK_HIGHEST: "available_quantity_kg DESC, fp.created_at DESC, fp.farm_product_id DESC",
+        SORT_STOCK_LOWEST: "available_quantity_kg ASC, fp.created_at DESC, fp.farm_product_id DESC",
     }
-
-
-    order_by = (
-        order_by_map[
-            normalized_sort
-        ]
-    )
-
-
-    # ========================================================
-    # FILTERS
-    # ========================================================
+    order_by = order_by_map[normalized_sort]
 
     conditions = [
-        "fp.user_id = %s",
-        "fp.status = %s",
+        "f.user_id = %s",
+        "fp.product_status = %s",
     ]
-
-
-    params = [
-        farmer_id,
-        normalized_status,
-    ]
-
+    params = [farmer_id, normalized_status]
 
     if normalized_search:
         conditions.append(
             """
             (
-                fp.product_code ILIKE %s
-                OR fp.rice_variety ILIKE %s
-                OR COALESCE(
-                    fp.description,
-                    ''
-                ) ILIKE %s
+                fp.product_code LIKE %s
+                OR fp.rice_variety LIKE %s
+                OR COALESCE(fp.product_description, '') LIKE %s
             )
             """
         )
+        search_pattern = f"%{normalized_search}%"
+        params.extend([search_pattern, search_pattern, search_pattern])
 
+    where_clause = "\nAND ".join(conditions)
 
-        search_pattern = (
-            f"%{normalized_search}%"
-        )
+    query = f"""
+    SELECT
+        fp.farm_product_id,
+        fp.product_code,
+        fp.product_image,
+        fp.product_type,
+        fp.rice_variety,
+        fp.product_grade,
+        fp.product_description AS description,
 
+        -- Source
+        fp.record_origin AS record_source_type,
+        fp.source_type AS acquisition_source_type,
+        fp.farm_profile_id AS source_farm_id,
+        COALESCE(NULLIF(TRIM(f.farm_lot_name), ''), CONCAT('Farm #', f.farm_profile_id)) AS source_farm_name,
+        CONCAT_WS(
+            ', ',
+            NULLIF(TRIM(f.street_address), ''),
+            NULLIF(TRIM(f.municipality), ''),
+            NULLIF(TRIM(f.province), ''),
+            NULLIF(TRIM(f.postal_code), '')
+        ) AS source_farm_location,
 
-        params.extend(
-            [
-                search_pattern,
-                search_pattern,
-                search_pattern,
-            ]
-        )
+        fp.crop_cycle_id AS source_crop_cycle_id,
+        cc.cycle_number AS source_crop_cycle_number,
+        cc.rice_variety AS source_crop_rice_variety,
+        cc.crop_status AS source_crop_status,
+        cc.planting_date AS source_planting_date,
+        cc.expected_harvest_date AS source_expected_harvest_date,
+        cc.actual_harvest_date AS source_actual_harvest_date,
+        cc.actual_yield_kg AS source_actual_yield_kg,
 
+        fp.harvest_acquisition_date,
+        fp.acquisition_remarks AS source_acquisition_remarks,
 
-    where_clause = (
-        "\nAND ".join(
-            conditions
-        )
-    )
+        -- Stock Calculations
+        fp.stock_quantity_kg AS total_stock_quantity_kg,
+        COALESCE(
+            (
+                SELECT SUM(GREATEST(c.committed_quantity_kg - c.released_quantity_kg, 0))
+                FROM existing_grainrise_farmer_inventory_commitments c
+                WHERE c.farm_product_id = fp.farm_product_id
+                  AND c.commitment_status = 'Active'
+            ),
+            0
+        ) AS reserved_committed_quantity_kg,
+        GREATEST(
+            fp.stock_quantity_kg - COALESCE(
+                (
+                    SELECT SUM(GREATEST(c.committed_quantity_kg - c.released_quantity_kg, 0))
+                    FROM existing_grainrise_farmer_inventory_commitments c
+                    WHERE c.farm_product_id = fp.farm_product_id
+                      AND c.commitment_status = 'Active'
+                ),
+                0
+            ),
+            0
+        ) AS available_quantity_kg,
+        CASE
+            WHEN GREATEST(
+                fp.stock_quantity_kg - COALESCE(
+                    (
+                        SELECT SUM(GREATEST(c.committed_quantity_kg - c.released_quantity_kg, 0))
+                        FROM existing_grainrise_farmer_inventory_commitments c
+                        WHERE c.farm_product_id = fp.farm_product_id
+                          AND c.commitment_status = 'Active'
+                    ),
+                    0
+                ),
+                0
+            ) >= 200 THEN 'in_stock'
+            WHEN GREATEST(
+                fp.stock_quantity_kg - COALESCE(
+                    (
+                        SELECT SUM(GREATEST(c.committed_quantity_kg - c.released_quantity_kg, 0))
+                        FROM existing_grainrise_farmer_inventory_commitments c
+                        WHERE c.farm_product_id = fp.farm_product_id
+                          AND c.commitment_status = 'Active'
+                    ),
+                    0
+                ),
+                0
+            ) > 0 THEN 'low_stock'
+            ELSE 'out_of_stock'
+        END AS stock_level,
 
+        -- Commercial
+        fp.selling_price_per_kg,
 
-    # ========================================================
-    # QUERY
-    # ========================================================
+        -- Record
+        fp.product_status AS status,
+        fp.archive_reason,
+        fp.archived_at,
+        fp.created_at,
+        fp.updated_at
+
+    FROM existing_grainrise_farmer_products fp
+    INNER JOIN farm_profile f
+        ON f.farm_profile_id = fp.farm_profile_id
+    LEFT JOIN existing_grainrise_farmer_crop_cycles cc
+        ON cc.crop_cycle_id = fp.crop_cycle_id
+
+    WHERE
+        {where_clause}
+
+    ORDER BY
+        {order_by}
+    """
 
     with connection.cursor() as cursor:
-        cursor.execute(
-            f"""
-            SELECT
-
-                -- ===========================================
-                -- PRODUCT IDENTIFICATION
-                -- ===========================================
-
-                fp.farm_product_id,
-                fp.product_code,
-                fp.product_image,
-                fp.product_type,
-                fp.rice_variety,
-                fp.product_grade,
-                fp.description,
-
-
-                -- ===========================================
-                -- SOURCE
-                -- ===========================================
-
-                fp.record_source_type,
-                fp.acquisition_source_type,
-
-                fp.source_farm_id,
-
-                CASE
-                    WHEN ff.farm_id IS NULL
-                    THEN NULL
-
-                    WHEN NULLIF(
-                        TRIM(
-                            COALESCE(
-                                ff.farm_name,
-                                ''
-                            )
-                        ),
-                        ''
-                    ) IS NOT NULL
-                    THEN ff.farm_name
-
-                    ELSE CONCAT(
-                        'Farm #',
-                        ff.farm_id
-                    )
-                END
-                    AS source_farm_name,
-
-
-                CONCAT_WS(
-                    ', ',
-
-                    NULLIF(
-                        TRIM(
-                            COALESCE(
-                                ff.street_address,
-                                ''
-                            )
-                        ),
-                        ''
-                    ),
-
-                    NULLIF(
-                        TRIM(
-                            COALESCE(
-                                ff.barangay,
-                                ''
-                            )
-                        ),
-                        ''
-                    ),
-
-                    NULLIF(
-                        TRIM(
-                            COALESCE(
-                                ff.municipality,
-                                ''
-                            )
-                        ),
-                        ''
-                    ),
-
-                    NULLIF(
-                        TRIM(
-                            COALESCE(
-                                ff.province,
-                                ''
-                            )
-                        ),
-                        ''
-                    ),
-
-                    NULLIF(
-                        TRIM(
-                            COALESCE(
-                                ff.postal_code,
-                                ''
-                            )
-                        ),
-                        ''
-                    )
-                )
-                    AS source_farm_location,
-
-
-                fp.source_crop_cycle_id,
-
-                fcc.rice_variety
-                    AS source_crop_rice_variety,
-
-                fcc.crop_status
-                    AS source_crop_status,
-
-                fcc.land_preparation_date
-                    AS source_land_preparation_date,
-
-                fcc.planting_date
-                    AS source_planting_date,
-
-                fcc.expected_harvest_date
-                    AS source_expected_harvest_date,
-
-                fcc.actual_harvest_date
-                    AS source_actual_harvest_date,
-
-                fcc.actual_yield_kg
-                    AS source_actual_yield_kg,
-
-
-                fp.harvest_acquisition_date,
-
-                fp.source_acquisition_remarks,
-
-
-                -- ===========================================
-                -- STOCK
-                -- ===========================================
-
-                fp.total_stock_quantity_kg,
-
-                fp.reserved_committed_quantity_kg,
-
-                fp.available_quantity_kg,
-
-                fp.stock_level,
-
-
-                -- ===========================================
-                -- COMMERCIAL
-                -- ===========================================
-
-                fp.selling_price_per_kg,
-
-
-                -- ===========================================
-                -- RECORD
-                -- ===========================================
-
-                fp.status,
-
-                fp.created_at,
-
-                fp.updated_at
-
-
-            FROM farm_products fp
-
-
-            LEFT JOIN farmer_farms ff
-                ON ff.farm_id =
-                    fp.source_farm_id
-
-                AND ff.user_id =
-                    fp.user_id
-
-
-            LEFT JOIN farmer_crop_cycles fcc
-                ON fcc.crop_cycle_id =
-                    fp.source_crop_cycle_id
-
-                AND fcc.farm_id =
-                    fp.source_farm_id
-
-
-            WHERE
-                {where_clause}
-
-
-            ORDER BY
-                {order_by}
-            """,
-            params,
-        )
-
-
-        return (
-            _rows_to_dicts(
-                cursor
-            )
-        )
+        cursor.execute(query, params)
+        return _rows_to_dicts(cursor)
 
 
 # ============================================================
@@ -549,288 +259,125 @@ def get_farmer_inventory_product_details(
     farm_product_id,
 ):
     """
-    Retrieve the complete Farmer Inventory View Details data.
+    Retrieve the complete Farmer Inventory View Details data for one product.
+    Ensures the product belongs to the authenticated Farmer via farm_profile.
+    """
+    farmer_id = _normalize_farmer_id(farmer_user_id)
+    product_id = _normalize_product_id(farm_product_id)
 
-    Includes:
+    query = """
+    SELECT
+        fp.farm_product_id,
+        fp.product_code,
+        fp.product_image,
+        fp.product_type,
+        fp.rice_variety,
+        fp.product_grade,
+        fp.product_description AS description,
+        fp.product_status AS status,
+        fp.archive_reason,
+        fp.archived_at,
 
-    PRODUCT INFORMATION:
-        Product Code
-        Product Image
-        Product Type
-        Rice Variety / Variant
-        Product Grade / Classification
-        Description
-        Status
+        -- Source Information
+        fp.record_origin AS record_source_type,
+        fp.source_type AS acquisition_source_type,
+        fp.farm_profile_id AS source_farm_id,
+        COALESCE(NULLIF(TRIM(f.farm_lot_name), ''), CONCAT('Farm #', f.farm_profile_id)) AS source_farm_name,
+        CONCAT_WS(
+            ', ',
+            NULLIF(TRIM(f.street_address), ''),
+            NULLIF(TRIM(f.municipality), ''),
+            NULLIF(TRIM(f.province), ''),
+            NULLIF(TRIM(f.postal_code), '')
+        ) AS source_farm_location,
 
-    SOURCE INFORMATION:
-        Source Type
-        Acquisition Source
-        Source Farm
-        Source Cropping Cycle
-        Harvest / Acquisition Date
+        fp.crop_cycle_id AS source_crop_cycle_id,
+        cc.cycle_number AS source_crop_cycle_number,
+        cc.rice_variety AS source_crop_rice_variety,
+        cc.crop_status AS source_crop_status,
+        cc.planting_date AS source_planting_date,
+        cc.expected_harvest_date AS source_expected_harvest_date,
+        cc.expected_yield_kg AS source_expected_yield_kg,
+        cc.actual_harvest_date AS source_actual_harvest_date,
+        cc.actual_yield_kg AS source_actual_yield_kg,
 
-    STOCK INFORMATION:
-        Total Stock Quantity
-        Reserved / Committed Quantity
-        Available Quantity
-        Stock Level
+        fp.harvest_acquisition_date,
+        fp.acquisition_remarks AS source_acquisition_remarks,
 
-    COMMERCIAL INFORMATION:
-        Selling Price per kg
+        -- Stock Information
+        fp.stock_quantity_kg AS total_stock_quantity_kg,
+        COALESCE(
+            (
+                SELECT SUM(GREATEST(c.committed_quantity_kg - c.released_quantity_kg, 0))
+                FROM existing_grainrise_farmer_inventory_commitments c
+                WHERE c.farm_product_id = fp.farm_product_id
+                  AND c.commitment_status = 'Active'
+            ),
+            0
+        ) AS reserved_committed_quantity_kg,
+        GREATEST(
+            fp.stock_quantity_kg - COALESCE(
+                (
+                    SELECT SUM(GREATEST(c.committed_quantity_kg - c.released_quantity_kg, 0))
+                    FROM existing_grainrise_farmer_inventory_commitments c
+                    WHERE c.farm_product_id = fp.farm_product_id
+                      AND c.commitment_status = 'Active'
+                ),
+                0
+            ),
+            0
+        ) AS available_quantity_kg,
+        CASE
+            WHEN GREATEST(
+                fp.stock_quantity_kg - COALESCE(
+                    (
+                        SELECT SUM(GREATEST(c.committed_quantity_kg - c.released_quantity_kg, 0))
+                        FROM existing_grainrise_farmer_inventory_commitments c
+                        WHERE c.farm_product_id = fp.farm_product_id
+                          AND c.commitment_status = 'Active'
+                    ),
+                    0
+                ),
+                0
+            ) >= 200 THEN 'in_stock'
+            WHEN GREATEST(
+                fp.stock_quantity_kg - COALESCE(
+                    (
+                        SELECT SUM(GREATEST(c.committed_quantity_kg - c.released_quantity_kg, 0))
+                        FROM existing_grainrise_farmer_inventory_commitments c
+                        WHERE c.farm_product_id = fp.farm_product_id
+                          AND c.commitment_status = 'Active'
+                    ),
+                    0
+                ),
+                0
+            ) > 0 THEN 'low_stock'
+            ELSE 'out_of_stock'
+        END AS stock_level,
 
-    RECORD INFORMATION:
-        Date Added
-        Last Updated
+        -- Commercial Information
+        fp.selling_price_per_kg,
 
+        -- Record Information
+        fp.created_at,
+        fp.updated_at
 
-    SECURITY:
+    FROM existing_grainrise_farmer_products fp
+    INNER JOIN farm_profile f
+        ON f.farm_profile_id = fp.farm_profile_id
+    LEFT JOIN existing_grainrise_farmer_crop_cycles cc
+        ON cc.crop_cycle_id = fp.crop_cycle_id
 
-        Product ownership is checked with:
+    WHERE
+        fp.farm_product_id = %s
+        AND f.user_id = %s
 
-            fp.user_id = farmer_id
-
-    so a Farmer cannot access another Farmer's product by
-    manually changing the URL/product ID.
+    LIMIT 1
     """
 
-    farmer_id = (
-        _normalize_farmer_id(
-            farmer_user_id
-        )
-    )
-
-
-    product_id = (
-        _normalize_product_id(
-            farm_product_id
-        )
-    )
-
-
     with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT
-
-                -- ===========================================
-                -- PRODUCT INFORMATION
-                -- ===========================================
-
-                fp.farm_product_id,
-
-                fp.product_code,
-
-                fp.product_image,
-
-                fp.product_type,
-
-                fp.rice_variety,
-
-                fp.product_grade,
-
-                fp.description,
-
-                fp.status,
-
-
-                -- ===========================================
-                -- SOURCE INFORMATION
-                -- ===========================================
-
-                fp.record_source_type,
-
-                fp.acquisition_source_type,
-
-                fp.source_farm_id,
-
-
-                CASE
-                    WHEN ff.farm_id IS NULL
-                    THEN NULL
-
-                    WHEN NULLIF(
-                        TRIM(
-                            COALESCE(
-                                ff.farm_name,
-                                ''
-                            )
-                        ),
-                        ''
-                    ) IS NOT NULL
-                    THEN ff.farm_name
-
-                    ELSE CONCAT(
-                        'Farm #',
-                        ff.farm_id
-                    )
-                END
-                    AS source_farm_name,
-
-
-                CONCAT_WS(
-                    ', ',
-
-                    NULLIF(
-                        TRIM(
-                            COALESCE(
-                                ff.street_address,
-                                ''
-                            )
-                        ),
-                        ''
-                    ),
-
-                    NULLIF(
-                        TRIM(
-                            COALESCE(
-                                ff.barangay,
-                                ''
-                            )
-                        ),
-                        ''
-                    ),
-
-                    NULLIF(
-                        TRIM(
-                            COALESCE(
-                                ff.municipality,
-                                ''
-                            )
-                        ),
-                        ''
-                    ),
-
-                    NULLIF(
-                        TRIM(
-                            COALESCE(
-                                ff.province,
-                                ''
-                            )
-                        ),
-                        ''
-                    ),
-
-                    NULLIF(
-                        TRIM(
-                            COALESCE(
-                                ff.postal_code,
-                                ''
-                            )
-                        ),
-                        ''
-                    )
-                )
-                    AS source_farm_location,
-
-
-                fp.source_crop_cycle_id,
-
-
-                fcc.rice_variety
-                    AS source_crop_rice_variety,
-
-
-                fcc.crop_status
-                    AS source_crop_status,
-
-
-                fcc.land_preparation_date
-                    AS source_land_preparation_date,
-
-
-                fcc.planting_date
-                    AS source_planting_date,
-
-
-                fcc.expected_harvest_date
-                    AS source_expected_harvest_date,
-
-
-                fcc.expected_yield_kg
-                    AS source_expected_yield_kg,
-
-
-                fcc.actual_harvest_date
-                    AS source_actual_harvest_date,
-
-
-                fcc.actual_yield_kg
-                    AS source_actual_yield_kg,
-
-
-                fp.harvest_acquisition_date,
-
-                fp.source_acquisition_remarks,
-
-
-                -- ===========================================
-                -- STOCK INFORMATION
-                -- ===========================================
-
-                fp.total_stock_quantity_kg,
-
-                fp.reserved_committed_quantity_kg,
-
-                fp.available_quantity_kg,
-
-                fp.stock_level,
-
-
-                -- ===========================================
-                -- COMMERCIAL INFORMATION
-                -- ===========================================
-
-                fp.selling_price_per_kg,
-
-
-                -- ===========================================
-                -- RECORD INFORMATION
-                -- ===========================================
-
-                fp.created_at,
-
-                fp.updated_at
-
-
-            FROM farm_products fp
-
-
-            LEFT JOIN farmer_farms ff
-                ON ff.farm_id =
-                    fp.source_farm_id
-
-                AND ff.user_id =
-                    fp.user_id
-
-
-            LEFT JOIN farmer_crop_cycles fcc
-                ON fcc.crop_cycle_id =
-                    fp.source_crop_cycle_id
-
-                AND fcc.farm_id =
-                    fp.source_farm_id
-
-
-            WHERE
-                fp.farm_product_id = %s
-
-                AND fp.user_id = %s
-
-
-            LIMIT 1
-            """,
-            [
-                product_id,
-                farmer_id,
-            ],
-        )
-
-
-        return (
-            _row_to_dict(
-                cursor
-            )
-        )
+        cursor.execute(query, [product_id, farmer_id])
+        return _row_to_dict(cursor)
 
 
 # ============================================================
@@ -842,124 +389,38 @@ def list_farmer_inventory_farm_options(
 ):
     """
     Used by:
+        Inventory -> Add Product -> Source Type = Own Farm -> Source Farm dropdown
 
-        Inventory
-            -> Add Product
-                -> Source Type = Own Farm
-                -> Source Farm dropdown
+    Only farms belonging to the authenticated Farmer are returned.
+    """
+    farmer_id = _normalize_farmer_id(farmer_user_id)
 
-    Only farms owned by the authenticated Farmer are returned.
+    query = """
+    SELECT
+        f.farm_profile_id AS farm_id,
+        COALESCE(NULLIF(TRIM(f.farm_lot_name), ''), CONCAT('Farm #', f.farm_profile_id)) AS farm_name,
+        CONCAT_WS(
+            ', ',
+            NULLIF(TRIM(f.street_address), ''),
+            NULLIF(TRIM(f.municipality), ''),
+            NULLIF(TRIM(f.province), ''),
+            NULLIF(TRIM(f.postal_code), '')
+        ) AS farm_location,
+        COALESCE(s.farm_status, 'Active') AS farm_status,
+        f.rice_variety_currently_planted AS registered_rice_variety
 
-    Both Active and Inactive farms remain visible as historical
-    source options because inventory may represent an earlier
-    acquisition.
+    FROM farm_profile f
+    LEFT JOIN existing_grainrise_farmer_farm_status s
+        ON s.farm_profile_id = f.farm_profile_id
 
-    The backend service will still verify ownership again when
-    the product is submitted.
+    WHERE
+        f.user_id = %s
+
+    ORDER BY
+        f.created_at DESC,
+        f.farm_profile_id DESC
     """
 
-    farmer_id = (
-        _normalize_farmer_id(
-            farmer_user_id
-        )
-    )
-
-
     with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT
-                ff.farm_id,
-
-                CASE
-                    WHEN NULLIF(
-                        TRIM(
-                            COALESCE(
-                                ff.farm_name,
-                                ''
-                            )
-                        ),
-                        ''
-                    ) IS NOT NULL
-                    THEN ff.farm_name
-
-                    ELSE CONCAT(
-                        'Farm #',
-                        ff.farm_id
-                    )
-                END
-                    AS farm_name,
-
-
-                CONCAT_WS(
-                    ', ',
-
-                    NULLIF(
-                        TRIM(
-                            ff.street_address
-                        ),
-                        ''
-                    ),
-
-                    NULLIF(
-                        TRIM(
-                            ff.barangay
-                        ),
-                        ''
-                    ),
-
-                    NULLIF(
-                        TRIM(
-                            ff.municipality
-                        ),
-                        ''
-                    ),
-
-                    NULLIF(
-                        TRIM(
-                            ff.province
-                        ),
-                        ''
-                    ),
-
-                    NULLIF(
-                        TRIM(
-                            COALESCE(
-                                ff.postal_code,
-                                ''
-                            )
-                        ),
-                        ''
-                    )
-                )
-                    AS farm_location,
-
-
-                ff.farm_status,
-
-                ff.rice_variety_currently_planted
-                    AS registered_rice_variety
-
-
-            FROM farmer_farms ff
-
-
-            WHERE
-                ff.user_id = %s
-
-
-            ORDER BY
-                ff.created_at DESC,
-                ff.farm_id DESC
-            """,
-            [
-                farmer_id,
-            ],
-        )
-
-
-        return (
-            _rows_to_dicts(
-                cursor
-            )
-        )
+        cursor.execute(query, [farmer_id])
+        return _rows_to_dicts(cursor)

@@ -333,6 +333,12 @@ def climate_forecast(
             forecast_issue_date=payload.get(
                 "forecast_issue_date"
             ),
+            province=payload.get(
+                "province"
+            ),
+            city=payload.get(
+                "city"
+            ),
         )
 
         return _success(
@@ -526,3 +532,53 @@ def forecast_ai(
         return _handle_exception(
             exc
         )
+
+
+
+# ============================================================
+# RESOLVE LOCATION COORDINATES
+# ============================================================
+
+
+@api_view([
+    "GET",
+])
+@farmer_required
+def resolve_location_coordinates(
+    request,
+):
+    """
+    Resolve accurate coordinates for a Philippine province and city/municipality.
+    GET /api/farmer/forecasting/resolve-location/?province=...&city=...
+    """
+    try:
+        province = request.query_params.get("province", "").strip()
+        city = request.query_params.get("city", "").strip()
+
+        if not province and not city:
+            return _error(
+                code="missing_location",
+                detail="Province and city are required.",
+                http_status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from api.account_admin_fnction.announcements.climate_selectors import (
+            resolve_forecast_location,
+        )
+
+        resolved = resolve_forecast_location({
+            "country": "Philippines",
+            "country_code": "PH",
+            "province": province,
+            "city": city,
+            "display_name": f"{city}, {province}, Philippines",
+        })
+
+        coords = resolved.get("coordinates") or {}
+        return _success({
+            "latitude": coords.get("latitude"),
+            "longitude": coords.get("longitude"),
+            "display_name": f"{city}, {province}",
+        })
+    except Exception as exc:
+        return _handle_exception(exc)

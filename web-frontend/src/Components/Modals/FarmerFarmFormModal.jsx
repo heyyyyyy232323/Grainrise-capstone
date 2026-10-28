@@ -10,9 +10,13 @@ import {
 import {
   AlertCircle,
   Loader2,
+  X,
 } from "lucide-react";
 
-import useFarmAddress from "../hooks/Farmer/useFarmAddress";
+import useFarmAddress, {
+  PHILIPPINE_LOCATIONS,
+  DEFAULT_PROVINCES,
+} from "../hooks/Farmer/useFarmAddress";
 
 
 // ============================================================
@@ -70,68 +74,55 @@ const LAND_OWNERSHIP_OPTIONS = [
 
 
 // ============================================================
-// INITIAL VALUES
+// ADDRESS HELPERS
 // ============================================================
 
-const normalizeInitialValues = (
-  values = {}
-) => ({
-  farm_name:
-    values.farm_name || "",
+const extractBarangay = (streetAddress) => {
+  const street = String(streetAddress || "").trim();
+  if (!street) return "";
+  for (const prefix of ["Brgy. ", "brgy. ", "Barangay ", "barangay ", "Brgy ", "brgy "]) {
+    if (street.includes(prefix)) {
+      return street.split(prefix)[1].trim();
+    }
+  }
+  return "";
+};
 
-  street_address:
-    values.street_address || "",
+const cleanStreetAddress = (rawStreet = "", rawBarangay = "") => {
+  let s = String(rawStreet || "").trim();
+  if (rawBarangay && s) {
+    const escapedBrgy = rawBarangay.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const brgyPattern = new RegExp(`,?\\s*(?:brgy\\.?|barangay)\\s*${escapedBrgy}\\s*$`, "i");
+    const cleaned = s.replace(brgyPattern, "").trim();
+    if (cleaned) return cleaned;
+  }
+  return s;
+};
 
-  total_farm_area:
-    values.total_farm_area ?? "",
+const normalizeInitialValues = (values = {}) => {
+  const brgy = String(values.barangay || "").trim() || extractBarangay(values.street_address);
+  return {
+    farm_name: values.farm_name || "",
+    street_address: cleanStreetAddress(values.street_address || "", brgy),
+    total_farm_area: values.total_farm_area ?? "",
+    land_ownership_status: values.land_ownership_status || "owned",
+    rice_variety_currently_planted:
+      values.rice_variety_currently_planted ||
+      values.registered_rice_variety ||
+      "",
+    cropping_cycles_per_year: values.cropping_cycles_per_year ?? "",
+  };
+};
 
-  land_ownership_status:
-    values.land_ownership_status ||
-    "owned",
-
-  rice_variety_currently_planted:
-    values.rice_variety_currently_planted ||
-    values.registered_rice_variety ||
-    "",
-
-  cropping_cycles_per_year:
-    values.cropping_cycles_per_year ??
-    "",
-});
-
-
-// ============================================================
-// NORMALIZE ADDRESS
-// ============================================================
-
-const normalizeEditAddress = (
-  values = {}
-) => ({
-  province:
-    String(
-      values.province ||
-      ""
-    ).trim(),
-
-  municipality:
-    String(
-      values.municipality ||
-      ""
-    ).trim(),
-
-  barangay:
-    String(
-      values.barangay ||
-      ""
-    ).trim(),
-
-  postalCode:
-    String(
-      values.postal_code ||
-      values.postalCode ||
-      ""
-    ).trim(),
-});
+const normalizeEditAddress = (values = {}) => {
+  const brgy = String(values.barangay || "").trim() || extractBarangay(values.street_address);
+  return {
+    province: String(values.province || "").trim(),
+    municipality: String(values.municipality || "").trim(),
+    barangay: brgy,
+    postalCode: String(values.postal_code || values.postalCode || "").trim(),
+  };
+};
 
 
 // ============================================================
@@ -147,37 +138,15 @@ export default function FarmerFarmFormModal({
   onClose,
   onSubmit,
 }) {
-  const [
-    form,
-    setForm,
-  ] = useState(
-    EMPTY_FORM
-  );
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [editAddressSeed, setEditAddressSeed] = useState(EMPTY_EDIT_ADDRESS);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-
-  const [
-    editAddressSeed,
-    setEditAddressSeed,
-  ] = useState(
-    EMPTY_EDIT_ADDRESS
-  );
-
-
-  const [
-    editAddressHydrated,
-    setEditAddressHydrated,
-  ] = useState(
-    false
-  );
-
-
-  const isEdit =
-    mode === "edit";
-
+  const isEdit = mode === "edit";
 
   // =========================================================
-  // ADDRESS
-  // ============================================================
+  // ADDRESS HOOK
+  // =========================================================
 
   const {
     province,
@@ -206,838 +175,234 @@ export default function FarmerFarmFormModal({
     enableManualMode,
     enableDropdownMode,
 
+    setInitialAddress,
     resetAddress,
   } = useFarmAddress();
 
+  // Helper: Match saved address values case-insensitively with standard options
+  const resolveMatchedAddress = (addr) => {
+    let matchedProvince = addr.province;
+    if (addr.province) {
+      const found = DEFAULT_PROVINCES.find(
+        (p) => p.toLowerCase() === addr.province.toLowerCase()
+      );
+      if (found) matchedProvince = found;
+    }
+
+    let matchedMunicipality = addr.municipality;
+    if (
+      matchedProvince &&
+      addr.municipality &&
+      PHILIPPINE_LOCATIONS[matchedProvince]?.municipalities
+    ) {
+      const munis = Object.keys(PHILIPPINE_LOCATIONS[matchedProvince].municipalities);
+      const found = munis.find(
+        (m) => m.toLowerCase() === addr.municipality.toLowerCase()
+      );
+      if (found) matchedMunicipality = found;
+    }
+
+    let matchedBarangay = addr.barangay;
+    if (
+      matchedProvince &&
+      matchedMunicipality &&
+      PHILIPPINE_LOCATIONS[matchedProvince]?.municipalities?.[matchedMunicipality]
+    ) {
+      const brgys = PHILIPPINE_LOCATIONS[matchedProvince].municipalities[matchedMunicipality];
+      const found = brgys.find(
+        (b) => b.toLowerCase() === addr.barangay.toLowerCase()
+      );
+      if (found) matchedBarangay = found;
+    }
+
+    const resolvedPostalCode =
+      addr.postalCode ||
+      (matchedProvince && PHILIPPINE_LOCATIONS[matchedProvince]?.postalCode) ||
+      "";
+
+    return {
+      province: matchedProvince,
+      municipality: matchedMunicipality,
+      barangay: matchedBarangay,
+      postalCode: resolvedPostalCode,
+    };
+  };
 
   // =========================================================
-  // INITIALIZE MODAL
-  // ============================================================
+  // INITIALIZE MODAL (Auto-prefill in Edit Mode)
+  // =========================================================
 
-  useEffect(
-    () => {
-      if (!open) {
-        return;
-      }
+  useEffect(() => {
+    setShowClearConfirm(false);
 
+    if (!open) {
+      return;
+    }
 
-      // ------------------------------------------------------
-      // EDIT FARM
-      // ------------------------------------------------------
+    if (isEdit && initialValues) {
+      setForm(normalizeInitialValues(initialValues));
 
-      if (isEdit) {
-        const normalizedAddress =
-          normalizeEditAddress(
-            initialValues || {}
-          );
+      const addr = normalizeEditAddress(initialValues);
+      setEditAddressSeed(addr);
 
+      const matched = resolveMatchedAddress(addr);
+      setInitialAddress(matched);
 
-        setForm(
-          normalizeInitialValues(
-            initialValues || {}
-          )
-        );
-
-
-        setEditAddressSeed(
-          normalizedAddress
-        );
-
-
-        setEditAddressHydrated(
-          false
-        );
-
-
-        /*
-          Important:
-
-          Do NOT force Edit mode into manual address mode.
-
-          We reset the address and allow the same dropdown
-          sequence used by Add Farm:
-
-          Province
-            -> Municipality
-              -> Barangay
-                -> Postal Code
-
-          The effects below will restore the saved farm address.
-        */
-
-        resetAddress();
-
-
-        if (
-          typeof enableDropdownMode ===
-          "function"
-        ) {
-          enableDropdownMode();
-        }
-
-
-        return;
-      }
-
-
-      // ------------------------------------------------------
-      // ADD FARM
-      // ------------------------------------------------------
-
-      setForm({
-        ...EMPTY_FORM,
-      });
-
-
-      setEditAddressSeed({
-        ...EMPTY_EDIT_ADDRESS,
-      });
-
-
-      setEditAddressHydrated(
-        false
-      );
-
-
-      resetAddress();
-
-
-      if (
-        typeof enableDropdownMode ===
-        "function"
-      ) {
+      if (typeof enableDropdownMode === "function") {
         enableDropdownMode();
       }
-    },
-    [
-      open,
-      isEdit,
-      initialValues,
-      resetAddress,
-      enableDropdownMode,
-    ]
-  );
-
-
-  // =========================================================
-  // EDIT ADDRESS
-  // STEP 1 — RESTORE PROVINCE
-  // ============================================================
-
-  useEffect(
-    () => {
-      if (
-        !open ||
-        !isEdit ||
-        manualMode ||
-        editAddressHydrated
-      ) {
-        return;
+    } else {
+      setForm({ ...EMPTY_FORM });
+      setEditAddressSeed({ ...EMPTY_EDIT_ADDRESS });
+      resetAddress();
+      if (typeof enableDropdownMode === "function") {
+        enableDropdownMode();
       }
-
-
-      const savedProvince =
-        editAddressSeed.province;
-
-
-      if (!savedProvince) {
-        return;
-      }
-
-
-      if (
-        province === savedProvince
-      ) {
-        return;
-      }
-
-
-      if (
-        loading.provinces
-      ) {
-        return;
-      }
-
-
-      /*
-        Wait until province records have loaded.
-
-        We do not immediately switch to manual mode while
-        provinceOptions is still empty because the request
-        may still be initializing.
-      */
-
-      if (
-        provinceOptions.length === 0
-      ) {
-        return;
-      }
-
-
-      const exactMatch =
-        provinceOptions.find(
-          (
-            option
-          ) =>
-            String(
-              option
-            ).trim().toLowerCase() ===
-            savedProvince.toLowerCase()
-        );
-
-
-      // Saved province exists in lookup.
-      if (exactMatch) {
-        selectProvince(
-          exactMatch
-        );
-
-        return;
-      }
-
-
-      /*
-        Saved address is not represented by the current
-        lookup data. Preserve the farmer's existing address
-        instead of deleting or changing it.
-      */
-
-      enableManualMode();
-    },
-    [
-      open,
-      isEdit,
-      manualMode,
-      editAddressHydrated,
-      editAddressSeed.province,
-      province,
-      provinceOptions,
-      loading.provinces,
-      selectProvince,
-      enableManualMode,
-    ]
-  );
-
-
-  // =========================================================
-  // EDIT ADDRESS
-  // STEP 2 — RESTORE CITY / MUNICIPALITY
-  // ============================================================
-
-  useEffect(
-    () => {
-      if (
-        !open ||
-        !isEdit ||
-        manualMode ||
-        editAddressHydrated
-      ) {
-        return;
-      }
-
-
-      const savedProvince =
-        editAddressSeed.province;
-
-
-      const savedMunicipality =
-        editAddressSeed.municipality;
-
-
-      if (
-        !savedProvince ||
-        !savedMunicipality
-      ) {
-        return;
-      }
-
-
-      /*
-        Province must be restored first because municipality
-        options depend on the selected province.
-      */
-
-      if (
-        province !==
-        savedProvince
-      ) {
-        return;
-      }
-
-
-      if (
-        municipality ===
-        savedMunicipality
-      ) {
-        return;
-      }
-
-
-      if (
-        loading.municipalities
-      ) {
-        return;
-      }
-
-
-      if (
-        municipalityOptions.length === 0
-      ) {
-        return;
-      }
-
-
-      const exactMatch =
-        municipalityOptions.find(
-          (
-            option
-          ) =>
-            String(
-              option
-            ).trim().toLowerCase() ===
-            savedMunicipality.toLowerCase()
-        );
-
-
-      if (exactMatch) {
-        selectMunicipality(
-          exactMatch
-        );
-
-        return;
-      }
-
-
-      enableManualMode();
-    },
-    [
-      open,
-      isEdit,
-      manualMode,
-      editAddressHydrated,
-      editAddressSeed.province,
-      editAddressSeed.municipality,
-      province,
-      municipality,
-      municipalityOptions,
-      loading.municipalities,
-      selectMunicipality,
-      enableManualMode,
-    ]
-  );
-
-
-  // =========================================================
-  // EDIT ADDRESS
-  // STEP 3 — RESTORE BARANGAY
-  // ============================================================
-
-  useEffect(
-    () => {
-      if (
-        !open ||
-        !isEdit ||
-        manualMode ||
-        editAddressHydrated
-      ) {
-        return;
-      }
-
-
-      const savedMunicipality =
-        editAddressSeed.municipality;
-
-
-      const savedBarangay =
-        editAddressSeed.barangay;
-
-
-      if (
-        !savedMunicipality ||
-        !savedBarangay
-      ) {
-        return;
-      }
-
-
-      if (
-        municipality !==
-        savedMunicipality
-      ) {
-        return;
-      }
-
-
-      if (
-        barangay ===
-        savedBarangay
-      ) {
-        return;
-      }
-
-
-      if (
-        loading.barangays
-      ) {
-        return;
-      }
-
-
-      if (
-        barangayOptions.length === 0
-      ) {
-        return;
-      }
-
-
-      const exactMatch =
-        barangayOptions.find(
-          (
-            option
-          ) =>
-            String(
-              option
-            ).trim().toLowerCase() ===
-            savedBarangay.toLowerCase()
-        );
-
-
-      if (exactMatch) {
-        selectBarangay(
-          exactMatch
-        );
-
-        return;
-      }
-
-
-      enableManualMode();
-    },
-    [
-      open,
-      isEdit,
-      manualMode,
-      editAddressHydrated,
-      editAddressSeed.municipality,
-      editAddressSeed.barangay,
-      municipality,
-      barangay,
-      barangayOptions,
-      loading.barangays,
-      selectBarangay,
-      enableManualMode,
-    ]
-  );
-
-
-  // =========================================================
-  // EDIT ADDRESS
-  // STEP 4 — RESTORE SAVED POSTAL CODE
-  // ============================================================
-
-  useEffect(
-    () => {
-      if (
-        !open ||
-        !isEdit ||
-        manualMode ||
-        editAddressHydrated
-      ) {
-        return;
-      }
-
-
-      const savedBarangay =
-        editAddressSeed.barangay;
-
-
-      if (!savedBarangay) {
-        return;
-      }
-
-
-      /*
-        Wait until the complete address hierarchy has been
-        restored before applying the saved postal code.
-
-        Municipality selection may automatically fetch a
-        postal code. The stored farm value is applied last
-        so the edit modal preserves the farmer's saved data.
-      */
-
-      if (
-        barangay !==
-        savedBarangay
-      ) {
-        return;
-      }
-
-
-      if (
-        editAddressSeed.postalCode
-      ) {
-        updatePostalCode(
-          editAddressSeed.postalCode
-        );
-      }
-
-
-      setEditAddressHydrated(
-        true
-      );
-    },
-    [
-      open,
-      isEdit,
-      manualMode,
-      editAddressHydrated,
-      editAddressSeed.barangay,
-      editAddressSeed.postalCode,
-      barangay,
-      updatePostalCode,
-    ]
-  );
-
-
-  // =========================================================
-  // AUTOMATIC FALLBACK
-  // ============================================================
-
-  useEffect(
-    () => {
-      if (
-        !open ||
-        manualMode
-      ) {
-        return;
-      }
-
-
-      const failed =
-        Boolean(
-          errors.provinces ||
-          errors.municipalities ||
-          errors.barangays
-        );
-
-
-      if (failed) {
-        enableManualMode();
-      }
-    },
-    [
-      open,
-      manualMode,
-      errors.provinces,
-      errors.municipalities,
-      errors.barangays,
-      enableManualMode,
-    ]
-  );
-
-
-  // =========================================================
-  // PRESERVE EDIT ADDRESS WHEN FALLBACK BECOMES MANUAL
-  // ============================================================
-
-  useEffect(
-    () => {
-      if (
-        !open ||
-        !isEdit ||
-        !manualMode ||
-        editAddressHydrated
-      ) {
-        return;
-      }
-
-
-      /*
-        If the lookup fails while editing, never wipe the
-        address already saved in the farm record.
-
-        Populate the manual fields with those original values.
-      */
-
-      updateManualProvince(
-        editAddressSeed.province
-      );
-
-
-      updateManualMunicipality(
-        editAddressSeed.municipality
-      );
-
-
-      updateManualBarangay(
-        editAddressSeed.barangay
-      );
-
-
-      updatePostalCode(
-        editAddressSeed.postalCode
-      );
-
-
-      setEditAddressHydrated(
-        true
-      );
-    },
-    [
-      open,
-      isEdit,
-      manualMode,
-      editAddressHydrated,
-      editAddressSeed.province,
-      editAddressSeed.municipality,
-      editAddressSeed.barangay,
-      editAddressSeed.postalCode,
-      updateManualProvince,
-      updateManualMunicipality,
-      updateManualBarangay,
-      updatePostalCode,
-    ]
-  );
-
+    }
+  }, [open, isEdit, initialValues, setInitialAddress, resetAddress, enableDropdownMode]);
 
   // =========================================================
   // LOCK BACKGROUND
-  // ============================================================
+  // =========================================================
 
-  useEffect(
-    () => {
-      if (!open) {
-        return undefined;
-      }
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
 
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
-      const previousOverflow =
-        document.body.style.overflow;
-
-
-      document.body.style.overflow =
-        "hidden";
-
-
-      return () => {
-        document.body.style.overflow =
-          previousOverflow;
-      };
-    },
-    [
-      open,
-    ]
-  );
-
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
 
   if (!open) {
     return null;
   }
 
-
   // =========================================================
-  // NORMAL FORM CHANGE
-  // ============================================================
+  // FORM HANDLERS
+  // =========================================================
 
-  const handleChange = (
-    event
-  ) => {
-    const {
-      name,
-      value,
-    } =
-      event.target;
-
-
-    setForm(
-      (
-        current
-      ) => ({
-        ...current,
-
-        [name]:
-          value,
-      })
-    );
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
   };
 
-
-  // =========================================================
-  // PROVINCE CHANGE
-  // ============================================================
-
-  const handleProvinceChange = (
-    event
-  ) => {
-    selectProvince(
-      event.target.value
-    );
+  const handleProvinceChange = (event) => {
+    selectProvince(event.target.value);
   };
 
-
-  // =========================================================
-  // MUNICIPALITY CHANGE
-  // ============================================================
-
-  const handleMunicipalityChange = (
-    event
-  ) => {
-    selectMunicipality(
-      event.target.value
-    );
+  const handleMunicipalityChange = (event) => {
+    selectMunicipality(event.target.value);
   };
 
-
-  // =========================================================
-  // BARANGAY CHANGE
-  // ============================================================
-
-  const handleBarangayChange = (
-    event
-  ) => {
-    selectBarangay(
-      event.target.value
-    );
+  const handleBarangayChange = (event) => {
+    selectBarangay(event.target.value);
   };
 
+  // =========================================================
+  // INPUT DETECTION
+  // =========================================================
+
+  const hasFormInput = isEdit
+    ? Boolean(
+        form.farm_name !== (initialValues?.farm_name || "") ||
+        form.street_address !== (initialValues?.street_address || "") ||
+        String(form.total_farm_area ?? "") !== String(initialValues?.total_farm_area ?? "") ||
+        form.land_ownership_status !== (initialValues?.land_ownership_status || "owned") ||
+        form.rice_variety_currently_planted !== (initialValues?.rice_variety_currently_planted || initialValues?.registered_rice_variety || "") ||
+        String(form.cropping_cycles_per_year ?? "") !== String(initialValues?.cropping_cycles_per_year ?? "") ||
+        province !== (editAddressSeed.province || "") ||
+        municipality !== (editAddressSeed.municipality || "") ||
+        barangay !== (editAddressSeed.barangay || "") ||
+        postalCode !== (editAddressSeed.postalCode || "")
+      )
+    : Boolean(
+        form.farm_name ||
+        form.street_address ||
+        form.total_farm_area ||
+        form.rice_variety_currently_planted ||
+        form.cropping_cycles_per_year ||
+        province ||
+        municipality ||
+        barangay ||
+        postalCode
+      );
 
   // =========================================================
-  // CLEAR
-  // ============================================================
+  // CLEAR (Matches Miller Procurement - Edit Supplier)
+  // =========================================================
 
-  const handleClear = () => {
-    if (isSaving) {
-      return;
+  const handleClearClick = () => {
+    if (isSaving) return;
+    setShowClearConfirm(true);
+  };
+
+  const handleConfirmClear = () => {
+    if (isEdit && initialValues) {
+      setForm(normalizeInitialValues(initialValues));
+      const addr = normalizeEditAddress(initialValues);
+      setEditAddressSeed(addr);
+      const matched = resolveMatchedAddress(addr);
+      setInitialAddress(matched);
+    } else {
+      setForm({ ...EMPTY_FORM });
+      setEditAddressSeed({ ...EMPTY_EDIT_ADDRESS });
+      resetAddress();
     }
 
-
-    setForm({
-      ...EMPTY_FORM,
-    });
-
-
-    setEditAddressSeed({
-      ...EMPTY_EDIT_ADDRESS,
-    });
-
-
-    setEditAddressHydrated(
-      false
-    );
-
-
-    resetAddress();
-
-
-    if (
-      typeof enableDropdownMode ===
-      "function"
-    ) {
+    if (typeof enableDropdownMode === "function") {
       enableDropdownMode();
     }
+    setShowClearConfirm(false);
   };
 
-
   // =========================================================
-  // CLOSE
-  // ============================================================
+  // CLOSE (Only exit control via top-right X)
+  // =========================================================
 
   const handleClose = () => {
-    if (isSaving) {
-      return;
-    }
-
-
+    if (isSaving) return;
+    setShowClearConfirm(false);
     onClose?.();
   };
 
-
   // =========================================================
   // SUBMIT
-  // ============================================================
+  // =========================================================
 
-  const handleSubmit =
-    async (
-      event
-    ) => {
-      event.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!onSubmit || isSaving) return;
 
-
-      if (
-        !onSubmit ||
-        isSaving
-      ) {
-        return;
-      }
-
-
-      const commonPayload = {
-        farm_name:
-          String(
-            form.farm_name ||
-            ""
-          ).trim(),
-
-        street_address:
-          String(
-            form.street_address ||
-            ""
-          ).trim(),
-
-        barangay:
-          String(
-            barangay ||
-            ""
-          ).trim(),
-
-        municipality:
-          String(
-            municipality ||
-            ""
-          ).trim(),
-
-        province:
-          String(
-            province ||
-            ""
-          ).trim(),
-
-        postal_code:
-          String(
-            postalCode ||
-            ""
-          ).trim(),
-
-        total_farm_area:
-          form.total_farm_area,
-
-        land_ownership_status:
-          form.land_ownership_status,
-
-        cropping_cycles_per_year:
-          form.cropping_cycles_per_year,
-      };
-
-
-      if (isEdit) {
-        await onSubmit(
-          commonPayload
-        );
-
-        return;
-      }
-
-
-      await onSubmit({
-        ...commonPayload,
-
-        rice_variety_currently_planted:
-          String(
-            form.rice_variety_currently_planted ||
-            ""
-          ).trim(),
-      });
+    const commonPayload = {
+      farm_name: String(form.farm_name || "").trim(),
+      street_address: String(form.street_address || "").trim(),
+      barangay: String(barangay || "").trim(),
+      municipality: String(municipality || "").trim(),
+      province: String(province || "").trim(),
+      postal_code: String(postalCode || "").trim(),
+      total_farm_area: form.total_farm_area,
+      land_ownership_status: form.land_ownership_status,
+      cropping_cycles_per_year: form.cropping_cycles_per_year,
     };
+
+    if (isEdit) {
+      await onSubmit(commonPayload);
+      return;
+    }
+
+    await onSubmit({
+      ...commonPayload,
+      rice_variety_currently_planted: String(form.rice_variety_currently_planted || "").trim(),
+    });
+  };
 
 
   // =========================================================
@@ -1055,78 +420,140 @@ export default function FarmerFarmFormModal({
         justify-center
         bg-slate-950/55
         p-4
+        backdrop-blur-xs
       "
     >
-
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="
-          flex
-          max-h-[90vh]
-          w-full
-          max-w-3xl
-          flex-col
-          overflow-hidden
-          rounded-2xl
-          border
-          border-slate-200
-          bg-white
-          shadow-2xl
-        "
-      >
-
-        {/* ==================================================
-            HEADER
-        ================================================== */}
-
+      {showClearConfirm ? (
+        /* Clear Form / Restore Confirmation Modal (temporarily replaces modal card) */
         <div
-          className="
-            flex
-            shrink-0
-            items-start
-            justify-between
-            gap-4
-            border-b
-            border-slate-200
-            px-6
-            py-5
-          "
+          className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in duration-150"
+          onClick={(e) => e.stopPropagation()}
         >
-
-          <div>
-
-            <h3
-              className="
-                text-xl
-                font-bold
-                text-slate-900
-              "
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <AlertCircle size={20} />
+            </div>
+            <div>
+              <h4 className="font-bold text-gray-900 text-sm">
+                {isEdit ? "Restore Original Values" : "Clear Form"}
+              </h4>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {isEdit
+                  ? "Are you sure you want to discard your changes and restore original values?"
+                  : "Are you sure you want to clear all entered fields?"}
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setShowClearConfirm(false)}
+              className="px-3.5 py-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition cursor-pointer"
             >
-              {
-                isEdit
-                  ? "Edit Farm Information"
-                  : "Add New Farm"
-              }
-            </h3>
-
-
-            <p
-              className="
-                mt-1
-                text-sm
-                text-slate-500
-              "
+              No
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmClear}
+              className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#0B5D1E] hover:bg-[#084b18] rounded-lg transition cursor-pointer"
             >
-              {
-                isEdit
-                  ? "Update the registered information for this farm."
-                  : "Register a farm or farm lot under your Farmer account."
-              }
-            </p>
-
+              Yes
+            </button>
           </div>
         </div>
+      ) : (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="
+            flex
+            max-h-[90vh]
+            w-full
+            max-w-3xl
+            flex-col
+            overflow-hidden
+            rounded-2xl
+            border
+            border-slate-200
+            bg-white
+            shadow-2xl
+          "
+          onClick={(e) => e.stopPropagation()}
+        >
+
+          {/* ==================================================
+              HEADER
+          ================================================== */}
+
+          <div
+            className="
+              flex
+              shrink-0
+              items-start
+              justify-between
+              gap-4
+              border-b
+              border-slate-200
+              px-6
+              py-5
+            "
+          >
+
+            <div>
+
+              <h3
+                className="
+                  text-xl
+                  font-bold
+                  text-slate-900
+                "
+              >
+                {
+                  isEdit
+                    ? "Edit Farm Information"
+                    : "Add New Farm"
+                }
+              </h3>
+
+
+              <p
+                className="
+                  mt-1
+                  text-sm
+                  text-slate-500
+                "
+              >
+                {
+                  isEdit
+                    ? "Update the registered information for this farm."
+                    : "Register a farm or farm lot under your Farmer account."
+                }
+              </p>
+
+            </div>
+
+            {/* Top-right X button: ONLY modal exit control */}
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={isSaving}
+              className="
+                p-1.5
+                rounded-lg
+                text-slate-400
+                hover:text-slate-600
+                hover:bg-slate-100
+                transition
+                cursor-pointer
+                disabled:opacity-50
+              "
+              aria-label="Close modal"
+              title="Close modal"
+            >
+              <X size={20} />
+            </button>
+
+          </div>
 
 
         {/* ==================================================
@@ -2048,8 +1475,8 @@ export default function FarmerFarmFormModal({
 
             <button
               type="button"
-              onClick={handleClose}
-              disabled={isSaving}
+              onClick={handleClearClick}
+              disabled={isSaving || !hasFormInput}
               className="
                 rounded-lg
                 border
@@ -2066,7 +1493,7 @@ export default function FarmerFarmFormModal({
                 disabled:opacity-50
               "
             >
-              Cancel
+              Clear
             </button>
 
             <button
@@ -2118,6 +1545,7 @@ export default function FarmerFarmFormModal({
         </form>
 
       </div>
+      )}
 
     </div>
   );

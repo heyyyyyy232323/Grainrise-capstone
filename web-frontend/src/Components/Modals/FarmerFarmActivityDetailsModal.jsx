@@ -7,10 +7,6 @@ import {
 } from "react-dom";
 
 import {
-  CalendarDays,
-  ClipboardList,
-  Sprout,
-  User,
   X,
 } from "lucide-react";
 
@@ -20,62 +16,27 @@ import {
 // ============================================================
 
 const ACTIVITY_LABELS = {
-  farm_added:
-    "Farm Added",
-
-  land_preparation_started:
-    "Land Preparation Started",
-
-  planting_recorded:
-    "Planting Recorded",
-
-  crop_status_updated:
-    "Crop Updated",
-
-  expected_harvest_updated:
-    "Expected Harvest Updated",
-
-  harvest_recorded:
-    "Harvest Recorded",
-
-  yield_recorded:
-    "Yield Recorded",
-
-  failed_crop_recorded:
-    "Failed Crop Recorded",
-
-  farm_information_updated:
-    "Farm Information Updated",
-
-  farm_set_inactive:
-    "Farm Set Inactive",
-
-  farm_reactivated:
-    "Farm Reactivated",
-
-  inventory_record_created:
-    "Inventory Record Created",
-
-  inventory_record_updated:
-    "Inventory Record Updated",
+  farm_added: "Farm Added",
+  land_preparation_started: "Land Preparation Started",
+  planting_recorded: "Planting Recorded",
+  crop_status_updated: "Crop Updated",
+  expected_harvest_updated: "Expected Harvest Updated",
+  harvest_recorded: "Harvest Recorded",
+  yield_recorded: "Yield Recorded",
+  failed_crop_recorded: "Failed Crop Recorded",
+  farm_information_updated: "Farm Information Updated",
+  farm_set_inactive: "Farm Set Inactive",
+  farm_reactivated: "Farm Reactivated",
+  inventory_record_created: "Inventory Record Created",
+  inventory_record_updated: "Inventory Record Updated",
 };
 
-
 const CROP_STATUS_LABELS = {
-  available_for_planting:
-    "Available for Planting",
-
-  land_preparation:
-    "Land Preparation",
-
-  planted_and_growing:
-    "Planted and Growing",
-
-  harvested:
-    "Harvested",
-
-  failed_crop:
-    "Failed Crop",
+  available_for_planting: "Available for Planting",
+  land_preparation: "Land Preparation",
+  planted_and_growing: "Planted and Growing",
+  harvested: "Harvested",
+  failed_crop: "Failed Crop",
 };
 
 
@@ -83,192 +44,75 @@ const CROP_STATUS_LABELS = {
 // HELPERS
 // ============================================================
 
-const displayValue = (
-  value,
-  fallback = "—"
-) => {
-  const cleaned =
-    String(
-      value ?? ""
-    ).trim();
-
-  return (
-    cleaned ||
-    fallback
-  );
+const displayValue = (value, fallback = "—") => {
+  const cleaned = String(value ?? "").trim();
+  return cleaned || fallback;
 };
 
+const humanize = (value) => {
+  const normalized = String(value || "")
+    .trim()
+    .replaceAll("_", " ");
 
-const humanize = (
-  value
-) => {
-  const normalized =
-    String(
-      value || ""
-    )
-      .trim()
-      .replaceAll(
-        "_",
-        " "
-      );
-
-
-  if (
-    !normalized
-  ) {
+  if (!normalized) {
     return "—";
   }
 
-
-  return normalized.replace(
-    /\b\w/g,
-    (
-      character
-    ) =>
-      character.toUpperCase()
-  );
+  return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-
-const formatActivityType = (
-  value
-) => {
-  return (
-    ACTIVITY_LABELS[
-      value
-    ] ||
-    humanize(
-      value
-    )
-  );
+const formatActivityType = (value) => {
+  return ACTIVITY_LABELS[value] || humanize(value);
 };
 
-
-const formatCropStatus = (
-  value
-) => {
-  return (
-    CROP_STATUS_LABELS[
-      value
-    ] ||
-    humanize(
-      value
-    )
-  );
+const formatCropStatus = (value) => {
+  return CROP_STATUS_LABELS[value] || humanize(value);
 };
 
-
-const formatDateTime = (
-  value
-) => {
-  if (
-    !value
-  ) {
+const formatDateTime = (value) => {
+  if (!value) {
     return "—";
   }
 
-
-  const date =
-    new Date(
-      value
-    );
-
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return displayValue(
-      value
-    );
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return displayValue(value);
   }
 
-
-  return new Intl.DateTimeFormat(
-    "en-PH",
-    {
-      year:
-        "numeric",
-
-      month:
-        "short",
-
-      day:
-        "numeric",
-
-      hour:
-        "numeric",
-
-      minute:
-        "2-digit",
-    }
-  ).format(
-    date
-  );
+  return new Intl.DateTimeFormat("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
 };
 
 
 // ============================================================
-// DETAIL ROW
+// MODAL DETAIL ROW (Matches Miller Manager - Order Approval)
 // ============================================================
 
-const DetailRow = ({
-  icon,
-  label,
-  value,
-  fullWidth = false,
-}) => {
+function ModalDetailRow({ label, value, isBadge = false, badgeStyle = "", children }) {
   return (
-    <div
-      className={`
-        min-w-0
-        ${
-          fullWidth
-            ? "sm:col-span-2"
-            : ""
-        }
-      `}
-    >
-      <div
-        className="
-          flex
-          items-center
-          gap-2
-          text-xs
-          font-medium
-          text-slate-400
-        "
-      >
-        {
-          icon
-        }
-
-        <span>
-          {label}
+    <div className="flex items-center justify-between gap-3 py-1.5 text-xs sm:text-sm">
+      <span className="text-slate-500 font-medium shrink-0">{label}:</span>
+      {children ? (
+        <div className="text-right">{children}</div>
+      ) : isBadge ? (
+        <span
+          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold capitalize ${badgeStyle}`}
+        >
+          {value}
         </span>
-      </div>
-
-
-      <p
-        className="
-          mt-1.5
-          break-words
-          text-sm
-          font-semibold
-          leading-6
-          text-slate-800
-        "
-      >
-        {
-          displayValue(
-            value
-          )
-        }
-      </p>
+      ) : (
+        <span className="font-semibold text-slate-800 text-right break-words max-w-[60%]">
+          {value}
+        </span>
+      )}
     </div>
   );
-};
+}
 
 
 // ============================================================
@@ -280,427 +124,142 @@ export default function FarmerFarmActivityDetailsModal({
   activity = null,
   onClose,
 }) {
+  // Lock background scroll when open
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
 
-  // =========================================================
-  // LOCK PAGE SCROLL
-  // =========================================================
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
-  useEffect(
-    () => {
-      if (
-        !open
-      ) {
-        return undefined;
-      }
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
 
-
-      const previousOverflow =
-        document.body.style.overflow;
-
-
-      document.body.style.overflow =
-        "hidden";
-
-
-      return () => {
-        document.body.style.overflow =
-          previousOverflow;
-      };
-    },
-    [
-      open,
-    ]
-  );
-
-
-  // =========================================================
-  // CLOSED
-  // =========================================================
-
-  if (
-    !open ||
-    !activity
-  ) {
+  if (!open || !activity) {
     return null;
   }
-
-
-  // =========================================================
-  // CLOSE
-  // =========================================================
 
   const handleClose = () => {
     onClose?.();
   };
 
-
-  // =========================================================
-  // MODAL
-  // =========================================================
-
   const modalContent = (
     <div
-      className="
-        fixed
-        inset-0
-        z-[99999]
-        flex
-        items-center
-        justify-center
-        bg-slate-950/55
-        p-4
-      "
+      className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
       role="presentation"
     >
-
       {/*
-        No outside-click close.
-        X button only.
+        Matches Miller Manager - Order Approval View Details Modal:
+        - Clean layout, section grouping, typography, spacing
+        - No outside-click close (e.stopPropagation())
+        - Top-right X as the ONLY exit control
+        - NO Done button in footer
       */}
-
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="farm-activity-details-title"
-        className="
-          flex
-          max-h-[90vh]
-          w-full
-          max-w-xl
-          flex-col
-          overflow-hidden
-          rounded-2xl
-          border
-          border-slate-200
-          bg-white
-          shadow-2xl
-        "
+        className="relative w-full max-w-md sm:max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
       >
-
-        {/* ==================================================
-            HEADER
-        ================================================== */}
-
-        <div
-          className="
-            flex
-            shrink-0
-            items-start
-            justify-between
-            gap-4
-            border-b
-            border-slate-200
-            bg-white
-            px-6
-            py-5
-          "
-        >
-
-          <div
-            className="
-              flex
-              items-start
-              gap-3
-            "
-          >
-
-            <div
-              className="
-                flex
-                h-10
-                w-10
-                shrink-0
-                items-center
-                justify-center
-                rounded-xl
-                bg-green-50
-                text-green-700
-              "
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+          <div>
+            <h2
+              id="farm-activity-details-title"
+              className="text-base sm:text-lg font-bold text-slate-900 tracking-tight"
             >
-              <ClipboardList
-                size={19}
-              />
-            </div>
-
-
-            <div>
-
-              <h3
-                id="farm-activity-details-title"
-                className="
-                  text-lg
-                  font-bold
-                  text-slate-900
-                "
-              >
-                Activity Details
-              </h3>
-
-
-              <p
-                className="
-                  mt-1
-                  text-sm
-                  text-slate-500
-                "
-              >
-                View the complete information
-                recorded for this farm activity.
-              </p>
-
-            </div>
-
+              {formatActivityType(activity.activity_type)}
+            </h2>
+            <p className="text-xs text-slate-500 font-medium">Activity Details</p>
           </div>
 
-
+          {/* X Button: Only way to close */}
           <button
             type="button"
-            onClick={
-              handleClose
-            }
+            onClick={handleClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
             aria-label="Close activity details"
-            className="
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-full
-              border
-              border-slate-200
-              bg-white
-              text-slate-400
-              transition
-              hover:bg-slate-50
-              hover:text-slate-700
-            "
+            title="Close details"
           >
-            <X
-              size={18}
-            />
+            <X size={18} />
           </button>
-
         </div>
 
+        {/* Modal Body */}
+        <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-75px)] space-y-4">
+          {/* SECTION 1 — GENERAL INFORMATION */}
+          <div className="space-y-1">
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+              General Information
+            </div>
 
-        {/* ==================================================
-            BODY
-        ================================================== */}
-
-        <div
-          className="
-            min-h-0
-            flex-1
-            overflow-y-auto
-            px-6
-            py-5
-          "
-        >
-
-          {/* ACTIVITY SUMMARY */}
-
-          <div
-            className="
-              rounded-xl
-              border
-              border-green-100
-              bg-green-50/60
-              px-4
-              py-4
-            "
-          >
-            <p
-              className="
-                text-xs
-                font-semibold
-                uppercase
-                tracking-wide
-                text-green-700
-              "
-            >
-              Activity
-            </p>
-
-
-            <p
-              className="
-                mt-1
-                text-base
-                font-bold
-                text-slate-900
-              "
-            >
-              {
-                formatActivityType(
-                  activity.activity_type
-                )
-              }
-            </p>
-          </div>
-
-
-          {/* DETAILS */}
-
-          <div
-            className="
-              mt-5
-              grid
-              gap-x-6
-              gap-y-6
-              sm:grid-cols-2
-            "
-          >
-
-            <DetailRow
-              icon={
-                <CalendarDays
-                  size={14}
-                />
-              }
-              label="Date / Time"
-              value={
-                formatDateTime(
-                  activity.activity_date_time
-                )
-              }
+            <ModalDetailRow
+              label="Date & Time"
+              value={formatDateTime(activity.activity_date_time)}
             />
 
+            <ModalDetailRow
+              label="Activity Type"
+              value={formatActivityType(activity.activity_type)}
+            />
 
-            <DetailRow
-              icon={
-                <ClipboardList
-                  size={14}
-                />
-              }
+            <ModalDetailRow
+              label="Performed By"
+              value={displayValue(activity.performed_by, "Farmer")}
+            />
+          </div>
+
+          {/* SECTION 2 — CROP & FARM INFORMATION */}
+          <div className="space-y-1">
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+              Crop & Farm Information
+            </div>
+
+            <ModalDetailRow
               label="Cropping Cycle"
               value={
                 activity.crop_cycle_id
-                  ? (
-                    `Cycle #${activity.crop_cycle_id}`
-                  )
+                  ? `Cycle #${activity.crop_cycle_id}`
                   : "—"
               }
             />
 
-
-            <DetailRow
-              icon={
-                <Sprout
-                  size={14}
-                />
-              }
+            <ModalDetailRow
               label="Rice Variety"
-              value={
-                activity.rice_variety
-              }
+              value={displayValue(activity.rice_variety)}
             />
 
-
-            <DetailRow
-              icon={
-                <Sprout
-                  size={14}
-                />
-              }
+            <ModalDetailRow
               label="Farm / Crop Status"
               value={
                 activity.farm_crop_status
-                  ? (
-                    formatCropStatus(
-                      activity.farm_crop_status
-                    )
-                  )
+                  ? formatCropStatus(activity.farm_crop_status)
                   : "—"
               }
             />
-
-
-            <DetailRow
-              icon={
-                <User
-                  size={14}
-                />
-              }
-              label="Performed By"
-              value={
-                displayValue(
-                  activity.performed_by,
-                  "Farmer"
-                )
-              }
-            />
-
-
-            <DetailRow
-              icon={
-                <ClipboardList
-                  size={14}
-                />
-              }
-              label="Details / Remarks"
-              value={
-                activity.details_remarks
-              }
-              fullWidth
-            />
-
           </div>
 
+          {/* SECTION 3 — DETAILS / REMARKS */}
+          <div className="space-y-1">
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+              Activity Notes & Remarks
+            </div>
+
+            <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3.5 text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+              {displayValue(
+                activity.details_remarks || activity.details,
+                "No additional remarks recorded for this activity."
+              )}
+            </div>
+          </div>
         </div>
-
-
-        {/* ==================================================
-            FOOTER
-        ================================================== */}
-
-        <div
-          className="
-            flex
-            shrink-0
-            justify-end
-            border-t
-            border-slate-200
-            bg-white
-            px-6
-            py-4
-          "
-        >
-
-          <button
-            type="button"
-            onClick={
-              handleClose
-            }
-            className="
-              rounded-lg
-              bg-green-700
-              px-5
-              py-2.5
-              text-sm
-              font-semibold
-              text-white
-              transition
-              hover:bg-green-800
-            "
-          >
-            Done
-          </button>
-
-        </div>
-
       </div>
-
     </div>
   );
 
-
-  // =========================================================
-  // PORTAL
-  // =========================================================
-
-  return createPortal(
-    modalContent,
-    document.body
-  );
+  return createPortal(modalContent, document.body);
 }

@@ -8,109 +8,38 @@ export const INVENTORY_SORT_OLDEST = "oldest";
 export const INVENTORY_SORT_STOCK_HIGHEST = "stock_highest";
 export const INVENTORY_SORT_STOCK_LOWEST = "stock_lowest";
 
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1")
+    ? "http://127.0.0.1:8000"
+    : "")
+).replace(/\/$/, "") + "/api";
+
+const getAuthHeaders = () => {
+  const token =
+    localStorage.getItem("grainrise_token") ||
+    localStorage.getItem("access_token") ||
+    "";
+
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 const DEFAULT_FILTERS = {
   status: INVENTORY_STATUS_ACTIVE,
   search: "",
   sortBy: INVENTORY_SORT_NEWEST,
 };
 
-const INITIAL_PRODUCTS = [
-  {
-    farm_product_id: 1,
-    product_code: "PRD-2026-001",
-    rice_variety: "RC 222 (Tubigan 18)",
-    product_type: "Dry Palay (14% MC)",
-    product_grade: "Grade 1 (Premium)",
-    available_quantity_kg: 8500,
-    reserved_committed_quantity_kg: 4000,
-    total_stock_quantity_kg: 12500,
-    stock_level: "normal",
-    selling_price_per_kg: 23.5,
-    acquisition_source_type: "Harvest",
-    record_source_type: "farm_harvest",
-    source_farm_name: "Green Valley Rice Field",
-    source_farm_location: "Cabanatuan City, Nueva Ecija",
-    harvest_acquisition_date: "2026-09-22",
-    description: "Well-dried premium RC 222 palay harvested from Green Valley Farm.",
-    status: INVENTORY_STATUS_ACTIVE,
-    created_at: "2026-09-23T08:00:00Z",
-    updated_at: "2026-10-15T10:00:00Z",
-  },
-  {
-    farm_product_id: 2,
-    product_code: "PRD-2026-002",
-    rice_variety: "NSIC Rc 160",
-    product_type: "Dry Palay (14% MC)",
-    product_grade: "Grade 2 (Standard)",
-    available_quantity_kg: 14000,
-    reserved_committed_quantity_kg: 0,
-    total_stock_quantity_kg: 14000,
-    stock_level: "normal",
-    selling_price_per_kg: 22.0,
-    acquisition_source_type: "Harvest",
-    record_source_type: "farm_harvest",
-    source_farm_name: "Central Isabela Agri Lot",
-    source_farm_location: "Cauayan City, Isabela",
-    harvest_acquisition_date: "2026-09-28",
-    description: "Clean dry palay stored in ventilated warehouse sacks.",
-    status: INVENTORY_STATUS_ACTIVE,
-    created_at: "2026-09-29T11:00:00Z",
-    updated_at: "2026-10-10T14:30:00Z",
-  },
-  {
-    farm_product_id: 3,
-    product_code: "PRD-2026-003",
-    rice_variety: "Angelica Special",
-    product_type: "Clean & Dry Palay",
-    product_grade: "Premium Aromatic",
-    available_quantity_kg: 600,
-    reserved_committed_quantity_kg: 0,
-    total_stock_quantity_kg: 600,
-    stock_level: "low",
-    selling_price_per_kg: 25.5,
-    acquisition_source_type: "Harvest",
-    record_source_type: "farm_harvest",
-    source_farm_name: "Tarlac Plains Paddy 4",
-    source_farm_location: "Concepcion, Tarlac",
-    harvest_acquisition_date: "2026-09-20",
-    description: "Aromatic long-grain palay.",
-    status: INVENTORY_STATUS_ACTIVE,
-    created_at: "2026-09-21T09:00:00Z",
-    updated_at: "2026-10-05T16:00:00Z",
-  },
-  {
-    farm_product_id: 4,
-    product_code: "PRD-2026-000",
-    rice_variety: "Sinandomeng Special",
-    product_type: "Dry Palay (14% MC)",
-    product_grade: "Grade 2",
-    available_quantity_kg: 0,
-    reserved_committed_quantity_kg: 0,
-    total_stock_quantity_kg: 0,
-    stock_level: "out_of_stock",
-    selling_price_per_kg: 21.0,
-    acquisition_source_type: "Harvest",
-    record_source_type: "farm_harvest",
-    source_farm_name: "Green Valley Rice Field",
-    source_farm_location: "Cabanatuan City, Nueva Ecija",
-    harvest_acquisition_date: "2026-04-15",
-    description: "Previous crop cycle batch sold out.",
-    status: INVENTORY_STATUS_ARCHIVED,
-    created_at: "2026-04-16T08:00:00Z",
-    updated_at: "2026-07-01T12:00:00Z",
-  },
-];
-
-const SAMPLE_FARM_OPTIONS = [
-  { farm_id: 1, farm_name: "Green Valley Rice Field", location: "Cabanatuan City, Nueva Ecija" },
-  { farm_id: 2, farm_name: "Central Isabela Agri Lot", location: "Cauayan City, Isabela" },
-  { farm_id: 3, farm_name: "Tarlac Plains Paddy 4", location: "Concepcion, Tarlac" },
-];
-
 export const useFarmerInventory = () => {
-  const [products, setProducts] = useState(INITIAL_PRODUCTS);
-  const [selectedProduct, setSelectedProduct] = useState(INITIAL_PRODUCTS[0]);
-  const [farmOptions, setFarmOptions] = useState(SAMPLE_FARM_OPTIONS);
+  const [products, setProducts] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [farmOptions, setFarmOptions] = useState([]);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
@@ -120,110 +49,296 @@ export const useFarmerInventory = () => {
   const [isChangingProductStatus, setIsChangingProductStatus] = useState(false);
   const [error, setError] = useState("");
 
-  const loadProducts = useCallback(async () => {
-    setIsLoadingProducts(false);
-    return products;
-  }, [products]);
+  const clearError = useCallback(() => setError(""), []);
+  const clearSelectedProduct = useCallback(() => setSelectedProduct(null), []);
 
-  const loadProductDetails = useCallback(
-    async (productId) => {
-      setIsLoadingProductDetails(false);
-      const prod = products.find((p) => Number(p.farm_product_id) === Number(productId)) || products[0];
-      if (prod) setSelectedProduct(prod);
-      return prod;
+  // =========================================================
+  // LOAD PRODUCTS (ACTIVE / ARCHIVE)
+  // =========================================================
+  const loadProducts = useCallback(
+    async (customFilters = {}) => {
+      setIsLoadingProducts(true);
+      setError("");
+
+      try {
+        const activeFilters = {
+          ...filters,
+          ...customFilters,
+        };
+
+        const params = new URLSearchParams();
+        if (activeFilters.status) {
+          params.append("status", activeFilters.status);
+        }
+        if (activeFilters.search) {
+          params.append("search", activeFilters.search.trim());
+        }
+        if (activeFilters.sortBy) {
+          params.append("sort_by", activeFilters.sortBy);
+        }
+
+        const res = await fetch(
+          `${API_BASE_URL}/farmer/farm-management/inventory/?${params.toString()}`,
+          {
+            method: "GET",
+            headers: getAuthHeaders(),
+          }
+        );
+
+        const json = await res.json();
+        if (!res.ok || json.success === false) {
+          throw new Error(
+            json.message || "Failed to load inventory products."
+          );
+        }
+
+        const items = json.data?.items || [];
+        setProducts(items);
+        return items;
+      } catch (err) {
+        console.error("useFarmerInventory loadProducts error:", err);
+        setError(err.message || "Failed to load inventory products.");
+        setProducts([]);
+        return [];
+      } finally {
+        setIsLoadingProducts(false);
+      }
     },
-    [products]
+    [filters]
   );
 
-  const loadFarmOptions = useCallback(async () => {
-    setIsLoadingFarmOptions(false);
-    return SAMPLE_FARM_OPTIONS;
-  }, []);
+  // =========================================================
+  // LOAD PRODUCT DETAILS
+  // =========================================================
+  const loadProductDetails = useCallback(async (productId) => {
+    if (!productId) return null;
+    setIsLoadingProductDetails(true);
+    setError("");
 
-  const addProduct = useCallback(async (formData) => {
-    setIsSavingProduct(true);
-    const newId = Date.now();
-    const qty = Number(formData.total_stock_quantity_kg || formData.available_quantity_kg || 5000);
-    const newProd = {
-      farm_product_id: newId,
-      product_code: `PRD-2026-${String(Math.floor(Math.random() * 900) + 100)}`,
-      rice_variety: formData.rice_variety || "RC 222 (Tubigan 18)",
-      product_type: formData.product_type || "Dry Palay (14% MC)",
-      product_grade: formData.product_grade || "Grade 1 (Premium)",
-      available_quantity_kg: qty,
-      reserved_committed_quantity_kg: 0,
-      total_stock_quantity_kg: qty,
-      stock_level: qty > 1000 ? "normal" : qty > 0 ? "low" : "out_of_stock",
-      selling_price_per_kg: Number(formData.selling_price_per_kg || 23.5),
-      acquisition_source_type: formData.acquisition_source_type || "Harvest",
-      record_source_type: "farm_harvest",
-      source_farm_name: formData.source_farm_name || "Green Valley Rice Field",
-      source_farm_location: formData.source_farm_location || "Cabanatuan City, Nueva Ecija",
-      harvest_acquisition_date: formData.harvest_acquisition_date || new Date().toISOString().split("T")[0],
-      description: formData.description || "Newly added harvest inventory.",
-      status: INVENTORY_STATUS_ACTIVE,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    setProducts((prev) => [newProd, ...prev]);
-    setIsSavingProduct(false);
-    return { success: true, data: newProd };
-  }, []);
-
-  const updateProduct = useCallback(async (productId, formData) => {
-    setIsSavingProduct(true);
-    const targetId = Number(productId);
-    let updatedObj = null;
-
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (Number(p.farm_product_id) === targetId) {
-          const qty = Number(formData.available_quantity_kg ?? p.available_quantity_kg);
-          updatedObj = {
-            ...p,
-            ...formData,
-            available_quantity_kg: qty,
-            total_stock_quantity_kg: qty + Number(p.reserved_committed_quantity_kg || 0),
-            stock_level: qty > 1000 ? "normal" : qty > 0 ? "low" : "out_of_stock",
-            updated_at: new Date().toISOString(),
-          };
-          return updatedObj;
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/farmer/farm-management/inventory/${productId}/`,
+        {
+          method: "GET",
+          headers: getAuthHeaders(),
         }
-        return p;
-      })
-    );
+      );
 
-    if (updatedObj) {
-      setSelectedProduct(updatedObj);
+      const json = await res.json();
+      if (!res.ok || json.success === false) {
+        throw new Error(
+          json.message || "Failed to load product details."
+        );
+      }
+
+      const product = json.data;
+      setSelectedProduct(product);
+      return product;
+    } catch (err) {
+      console.error("useFarmerInventory loadProductDetails error:", err);
+      setError(err.message || "Failed to load product details.");
+      return null;
+    } finally {
+      setIsLoadingProductDetails(false);
     }
-    setIsSavingProduct(false);
-    return { success: true, data: updatedObj };
   }, []);
 
-  const archiveProduct = useCallback(async (productId) => {
-    setIsChangingProductStatus(true);
-    const targetId = Number(productId);
-    setProducts((prev) =>
-      prev.map((p) =>
-        Number(p.farm_product_id) === targetId ? { ...p, status: INVENTORY_STATUS_ARCHIVED } : p
-      )
-    );
-    setIsChangingProductStatus(false);
-    return { success: true };
+  // =========================================================
+  // LOAD FARM OPTIONS
+  // =========================================================
+  const loadFarmOptions = useCallback(async () => {
+    setIsLoadingFarmOptions(true);
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/farmer/farm-management/inventory/farm-options/`,
+        {
+          method: "GET",
+          headers: getAuthHeaders(),
+        }
+      );
+
+      const json = await res.json();
+      if (!res.ok || json.success === false) {
+        throw new Error(
+          json.message || "Failed to load farm options."
+        );
+      }
+
+      const items = json.data?.items || [];
+      setFarmOptions(items);
+      return items;
+    } catch (err) {
+      console.error("useFarmerInventory loadFarmOptions error:", err);
+      setFarmOptions([]);
+      return [];
+    } finally {
+      setIsLoadingFarmOptions(false);
+    }
   }, []);
 
-  const restoreProduct = useCallback(async (productId) => {
-    setIsChangingProductStatus(true);
-    const targetId = Number(productId);
-    setProducts((prev) =>
-      prev.map((p) =>
-        Number(p.farm_product_id) === targetId ? { ...p, status: INVENTORY_STATUS_ACTIVE } : p
-      )
-    );
-    setIsChangingProductStatus(false);
-    return { success: true };
-  }, []);
+  // =========================================================
+  // ADD PRODUCT
+  // =========================================================
+  const addProduct = useCallback(
+    async (formData) => {
+      setIsSavingProduct(true);
+      setError("");
+
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/farmer/farm-management/inventory/`,
+          {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify(formData),
+          }
+        );
+
+        const json = await res.json();
+        if (!res.ok || json.success === false) {
+          throw new Error(
+            json.message || "Failed to add inventory product."
+          );
+        }
+
+        // Refresh products list
+        await loadProducts({ status: INVENTORY_STATUS_ACTIVE });
+
+        return { success: true, data: json.data };
+      } catch (err) {
+        console.error("useFarmerInventory addProduct error:", err);
+        setError(err.message || "Failed to add inventory product.");
+        throw err;
+      } finally {
+        setIsSavingProduct(false);
+      }
+    },
+    [loadProducts]
+  );
+
+  // =========================================================
+  // UPDATE PRODUCT
+  // =========================================================
+  const updateProduct = useCallback(
+    async (productId, formData) => {
+      setIsSavingProduct(true);
+      setError("");
+
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/farmer/farm-management/inventory/${productId}/`,
+          {
+            method: "PATCH",
+            headers: getAuthHeaders(),
+            body: JSON.stringify(formData),
+          }
+        );
+
+        const json = await res.json();
+        if (!res.ok || json.success === false) {
+          throw new Error(
+            json.message || "Failed to update product."
+          );
+        }
+
+        const updated = json.data;
+        setSelectedProduct(updated);
+
+        // Refresh products list
+        await loadProducts();
+
+        return { success: true, data: updated };
+      } catch (err) {
+        console.error("useFarmerInventory updateProduct error:", err);
+        setError(err.message || "Failed to update product.");
+        throw err;
+      } finally {
+        setIsSavingProduct(false);
+      }
+    },
+    [loadProducts]
+  );
+
+  // =========================================================
+  // ARCHIVE PRODUCT
+  // =========================================================
+  const archiveProduct = useCallback(
+    async (productId, reason) => {
+      setIsChangingProductStatus(true);
+      setError("");
+
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/farmer/farm-management/inventory/${productId}/archive/`,
+          {
+            method: "PATCH",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+              reason: reason || "Archived by farmer",
+            }),
+          }
+        );
+
+        const json = await res.json();
+        if (!res.ok || json.success === false) {
+          throw new Error(
+            json.message || "Failed to archive product."
+          );
+        }
+
+        // Refresh products
+        await loadProducts();
+
+        return { success: true, data: json.data };
+      } catch (err) {
+        console.error("useFarmerInventory archiveProduct error:", err);
+        setError(err.message || "Failed to archive product.");
+        throw err;
+      } finally {
+        setIsChangingProductStatus(false);
+      }
+    },
+    [loadProducts]
+  );
+
+  // =========================================================
+  // RESTORE PRODUCT
+  // =========================================================
+  const restoreProduct = useCallback(
+    async (productId) => {
+      setIsChangingProductStatus(true);
+      setError("");
+
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/farmer/farm-management/inventory/${productId}/restore/`,
+          {
+            method: "PATCH",
+            headers: getAuthHeaders(),
+          }
+        );
+
+        const json = await res.json();
+        if (!res.ok || json.success === false) {
+          throw new Error(
+            json.message || "Failed to restore product."
+          );
+        }
+
+        // Refresh products
+        await loadProducts();
+
+        return { success: true, data: json.data };
+      } catch (err) {
+        console.error("useFarmerInventory restoreProduct error:", err);
+        setError(err.message || "Failed to restore product.");
+        throw err;
+      } finally {
+        setIsChangingProductStatus(false);
+      }
+    },
+    [loadProducts]
+  );
 
   const setInventoryStatus = useCallback((status) => {
     setFilters((prev) => ({ ...prev, status }));
@@ -240,9 +355,6 @@ export const useFarmerInventory = () => {
   const resetFilters = useCallback(() => {
     setFilters(DEFAULT_FILTERS);
   }, []);
-
-  const clearError = useCallback(() => setError(""), []);
-  const clearSelectedProduct = useCallback(() => setSelectedProduct(null), []);
 
   return {
     products,

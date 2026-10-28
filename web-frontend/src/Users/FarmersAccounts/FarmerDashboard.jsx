@@ -25,7 +25,9 @@ import { jsPDF } from "jspdf";
 
 import Breadcrumbs from "../../Components/Minor-Components/Breadcrumbs";
 import KPICard from "../../Components/Graphs/KPICard";
+import Toast from "../../Components/Modals/Toast";
 import useFarmerDashboard from "../../Components/hooks/Farmer/useFarmerDashboard";
+import useToast from "../../Components/hooks/useToast";
 import { translations, useLanguagePreference } from "../../lib/translations";
 
 // ============================================================
@@ -374,6 +376,7 @@ export default function FarmerDashboard() {
 
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const exportDropdownRef = useRef(null);
+  const { toasts, showToast, removeToast } = useToast();
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -559,6 +562,12 @@ export default function FarmerDashboard() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     setExportMenuOpen(false);
+    showToast({
+      type: "success",
+      title: "Report Exported",
+      message: "CSV report downloaded successfully.",
+      duration: 4000,
+    });
   };
 
   // ==========================================================
@@ -748,9 +757,20 @@ export default function FarmerDashboard() {
       );
 
       doc.save(`grainrise-farmer-report-${new Date().toISOString().split("T")[0]}.pdf`);
+      showToast({
+        type: "success",
+        title: "Report Exported",
+        message: "Farmer summary PDF report has been downloaded.",
+        duration: 4000,
+      });
     } catch (err) {
       console.error("PDF Export error:", err);
-      alert("Failed to generate PDF. Please try again.");
+      showToast({
+        type: "error",
+        title: "Export Failed",
+        message: "Failed to generate PDF. Please try again.",
+        duration: 4000,
+      });
     }
   };
 
@@ -1410,6 +1430,8 @@ export default function FarmerDashboard() {
           <span className="font-medium text-slate-500">Auto-refreshes monthly</span>
         </div>
       </div>
+
+      <Toast toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }

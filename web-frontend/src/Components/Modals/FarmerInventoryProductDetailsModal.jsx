@@ -1,1473 +1,382 @@
-import {
-  useEffect,
-} from "react";
+import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
+import { X, Pencil, Image as ImageIcon } from "lucide-react";
 
-import {
-  createPortal,
-} from "react-dom";
+const STOCK_DOT = {
+  in_stock: "bg-emerald-500",
+  low_stock: "bg-amber-400",
+  out_of_stock: "bg-rose-500",
+};
 
-import {
-  AlertCircle,
-  ImageOff,
-  Loader2,
-  Package,
-  RotateCcw,
-  X,
-} from "lucide-react";
-
-
-// ============================================================
-// HELPERS
-// ============================================================
-
-const displayValue = (
-  value,
-  fallback = "—"
-) => {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return fallback;
-  }
-
-  const normalized =
-    String(
-      value
-    ).trim();
-
+// ─── Modal Detail Row Sub-Component (Matches Miller Order Approval Style) ──────
+function ModalDetailRow({ label, value, isBadge = false, badgeStyle = "", children }) {
   return (
-    normalized ||
-    fallback
-  );
-};
-
-
-const humanize = (
-  value
-) => {
-  const normalized =
-    String(
-      value || ""
-    )
-      .trim()
-      .replaceAll(
-        "_",
-        " "
-      );
-
-  if (!normalized) {
-    return "—";
-  }
-
-  return normalized.replace(
-    /\b\w/g,
-    (
-      character
-    ) =>
-      character.toUpperCase()
-  );
-};
-
-
-const formatNumber = (
-  value
-) => {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return "—";
-  }
-
-  const number =
-    Number(
-      value
-    );
-
-  if (
-    !Number.isFinite(
-      number
-    )
-  ) {
-    return displayValue(
-      value
-    );
-  }
-
-  return new Intl.NumberFormat(
-    "en-PH",
-    {
-      maximumFractionDigits:
-        2,
-    }
-  ).format(
-    number
-  );
-};
-
-
-const formatPeso = (
-  value
-) => {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return "Not set";
-  }
-
-  const number =
-    Number(
-      value
-    );
-
-  if (
-    !Number.isFinite(
-      number
-    )
-  ) {
-    return displayValue(
-      value
-    );
-  }
-
-  return new Intl.NumberFormat(
-    "en-PH",
-    {
-      style:
-        "currency",
-
-      currency:
-        "PHP",
-
-      minimumFractionDigits:
-        2,
-
-      maximumFractionDigits:
-        2,
-    }
-  ).format(
-    number
-  );
-};
-
-
-const formatDate = (
-  value
-) => {
-  if (!value) {
-    return "—";
-  }
-
-  const date =
-    new Date(
-      value
-    );
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return displayValue(
-      value
-    );
-  }
-
-  return new Intl.DateTimeFormat(
-    "en-PH",
-    {
-      year:
-        "numeric",
-
-      month:
-        "short",
-
-      day:
-        "numeric",
-    }
-  ).format(
-    date
-  );
-};
-
-
-const formatDateTime = (
-  value
-) => {
-  if (!value) {
-    return "—";
-  }
-
-  const date =
-    new Date(
-      value
-    );
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return displayValue(
-      value
-    );
-  }
-
-  return new Intl.DateTimeFormat(
-    "en-PH",
-    {
-      year:
-        "numeric",
-
-      month:
-        "short",
-
-      day:
-        "numeric",
-
-      hour:
-        "numeric",
-
-      minute:
-        "2-digit",
-    }
-  ).format(
-    date
-  );
-};
-
-
-// ============================================================
-// LABEL HELPERS
-// ============================================================
-
-const formatProductType = (
-  value
-) => {
-  if (
-    value ===
-    "unmilled_palay"
-  ) {
-    return "Unmilled Palay";
-  }
-
-  if (
-    value ===
-    "milled_rice"
-  ) {
-    return "Milled Rice";
-  }
-
-  return humanize(
-    value
-  );
-};
-
-
-const formatRecordSource = (
-  value
-) => {
-  if (
-    value ===
-    "harvest_generated"
-  ) {
-    return "Harvest Generated";
-  }
-
-  if (
-    value ===
-    "manually_added"
-  ) {
-    return "Manually Added";
-  }
-
-  return humanize(
-    value
-  );
-};
-
-
-const formatAcquisitionSource = (
-  value
-) => {
-  if (
-    value ===
-    "own_farm"
-  ) {
-    return "Own Farm";
-  }
-
-  if (
-    value ===
-    "other_source"
-  ) {
-    return "Other Source";
-  }
-
-  return humanize(
-    value
-  );
-};
-
-
-const formatStockLevel = (
-  value
-) => {
-  if (
-    value ===
-    "in_stock"
-  ) {
-    return "In Stock";
-  }
-
-  if (
-    value ===
-    "low_stock"
-  ) {
-    return "Low Stock";
-  }
-
-  if (
-    value ===
-    "out_of_stock"
-  ) {
-    return "Out of Stock";
-  }
-
-  return humanize(
-    value
-  );
-};
-
-
-// ============================================================
-// DETAIL ITEM
-// ============================================================
-
-const DetailItem = ({
-  label,
-  value,
-  fullWidth = false,
-  children,
-}) => {
-  return (
-    <div
-      className={
-        fullWidth
-          ? "sm:col-span-2"
-          : ""
-      }
-    >
-      <p
-        className="
-          text-xs
-          font-medium
-          text-slate-400
-        "
-      >
-        {label}
-      </p>
-
+    <div className="flex items-center justify-between gap-3 py-1.5 text-xs sm:text-sm">
+      <span className="text-slate-500 font-medium shrink-0">{label}:</span>
       {children ? (
-        <div
-          className="
-            mt-1.5
-          "
+        <div className="text-right">{children}</div>
+      ) : isBadge ? (
+        <span
+          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold capitalize ${badgeStyle}`}
         >
-          {children}
-        </div>
+          {value}
+        </span>
       ) : (
-        <p
-          className="
-            mt-1
-            break-words
-            text-sm
-            font-semibold
-            leading-5
-            text-slate-800
-          "
-        >
-          {
-            displayValue(
-              value
-            )
-          }
-        </p>
+        <span className="font-semibold text-slate-800 text-right break-words max-w-[60%]">
+          {value || "—"}
+        </span>
       )}
     </div>
   );
-};
-
-
-// ============================================================
-// SECTION
-// ============================================================
-
-const DetailSection = ({
-  title,
-  description = "",
-  children,
-}) => {
-  return (
-    <section
-      className="
-        overflow-hidden
-        rounded-xl
-        border
-        border-slate-200
-        bg-white
-      "
-    >
-      <div
-        className="
-          border-b
-          border-slate-100
-          bg-slate-50/70
-          px-4
-          py-3
-        "
-      >
-        <h4
-          className="
-            text-sm
-            font-bold
-            text-slate-800
-          "
-        >
-          {title}
-        </h4>
-
-        {description && (
-          <p
-            className="
-              mt-0.5
-              text-xs
-              leading-5
-              text-slate-500
-            "
-          >
-            {description}
-          </p>
-        )}
-      </div>
-
-      <div
-        className="
-          grid
-          gap-x-6
-          gap-y-5
-          p-4
-          sm:grid-cols-2
-        "
-      >
-        {children}
-      </div>
-    </section>
-  );
-};
-
-
-// ============================================================
-// PRODUCT STATUS BADGE
-// ============================================================
-
-const ProductStatusBadge = ({
-  status,
-}) => {
-  const isActive =
-    status ===
-    "active";
-
-  return (
-    <span
-      className={`
-        inline-flex
-        rounded-full
-        border
-        px-2.5
-        py-1
-        text-xs
-        font-semibold
-
-        ${
-          isActive
-            ? (
-              "border-green-200 " +
-              "bg-green-50 " +
-              "text-green-700"
-            )
-            : (
-              "border-slate-300 " +
-              "bg-slate-100 " +
-              "text-slate-600"
-            )
-        }
-      `}
-    >
-      {
-        isActive
-          ? "Active"
-          : "Archived"
-      }
-    </span>
-  );
-};
-
-
-// ============================================================
-// STOCK LEVEL BADGE
-// ============================================================
-
-const StockLevelBadge = ({
-  stockLevel,
-}) => {
-  let classes =
-    "border-green-200 bg-green-50 text-green-700";
-
-
-  if (
-    stockLevel ===
-    "low_stock"
-  ) {
-    classes =
-      "border-amber-200 bg-amber-50 text-amber-700";
-  }
-
-
-  if (
-    stockLevel ===
-    "out_of_stock"
-  ) {
-    classes =
-      "border-red-200 bg-red-50 text-red-700";
-  }
-
-
-  return (
-    <span
-      className={`
-        inline-flex
-        rounded-full
-        border
-        px-2.5
-        py-1
-        text-xs
-        font-semibold
-        ${classes}
-      `}
-    >
-      {
-        formatStockLevel(
-          stockLevel
-        )
-      }
-    </span>
-  );
-};
-
-
-// ============================================================
-// COMPONENT
-// ============================================================
+}
 
 export default function FarmerInventoryProductDetailsModal({
   open,
   product,
-  isLoading = false,
-  isChangingStatus = false,
-  error = "",
   onClose,
   onEdit,
-  onArchive,
-  onRestore,
 }) {
+  // Lock body scroll
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
 
-  // =========================================================
-  // BODY SCROLL LOCK
-  // =========================================================
+  if (!open || !product) return null;
 
-  useEffect(
-    () => {
-      if (!open) {
-        return undefined;
-      }
+  const isActive = product.status === "active";
+  const isArchived = product.status === "archived";
 
-      const previousOverflow =
-        document.body.style.overflow;
-
-      document.body.style.overflow =
-        "hidden";
-
-      return () => {
-        document.body.style.overflow =
-          previousOverflow;
-      };
-    },
-    [
-      open,
-    ]
+  const totalStock = parseFloat(product.total_stock_quantity_kg || product.stock_quantity_kg || 0);
+  const reservedStock = parseFloat(product.reserved_committed_quantity_kg || 0);
+  const availableStock = parseFloat(
+    product.available_quantity_kg !== undefined && product.available_quantity_kg !== null
+      ? product.available_quantity_kg
+      : Math.max(totalStock - reservedStock, 0)
   );
 
+  const stockLevel =
+    product.stock_level ||
+    (availableStock >= 200 ? "in_stock" : availableStock > 0 ? "low_stock" : "out_of_stock");
 
-  if (!open) {
-    return null;
-  }
+  const stockLevelLabel =
+    stockLevel === "in_stock"
+      ? "In Stock"
+      : stockLevel === "low_stock"
+      ? "Low Stock"
+      : "Out of Stock";
 
-
-  // =========================================================
-  // CLOSE
-  // =========================================================
-
-  const handleClose = () => {
-    if (
-      isChangingStatus
-    ) {
-      return;
-    }
-
-    onClose?.();
-  };
-
-
-  // =========================================================
-  // DERIVED
-  // =========================================================
-
-  const isActive =
-    product?.status ===
-    "active";
-
-
-  const isArchived =
-    product?.status ===
-    "archived";
-
-
-  const isHarvestGenerated =
-    product?.record_source_type ===
-    "harvest_generated";
-
-
-  const isOwnFarm =
-    product?.acquisition_source_type ===
-    "own_farm";
-
-
-  const productImage =
-    String(
-      product?.product_image ||
-      ""
-    ).trim();
-
-
-  // =========================================================
-  // MODAL
-  // =========================================================
+  const stockLevelBadgeStyle =
+    stockLevel === "in_stock"
+      ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+      : stockLevel === "low_stock"
+      ? "bg-amber-100 text-amber-700 border border-amber-200"
+      : "bg-rose-100 text-rose-700 border border-rose-200";
 
   return createPortal(
     <div
-      className="
-        fixed
-        inset-0
-        z-[99999]
-        flex
-        items-center
-        justify-center
-        bg-slate-950/55
-        p-3
-        sm:p-4
-      "
+      className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="farmer-product-details-title"
     >
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="farmer-inventory-product-details-title"
-        className="
-          flex
-          max-h-[92vh]
-          w-full
-          max-w-4xl
-          flex-col
-          overflow-hidden
-          rounded-2xl
-          border
-          border-slate-200
-          bg-white
-          shadow-2xl
-        "
+        className="relative w-full max-w-md sm:max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150"
+        onClick={(e) => e.stopPropagation()}
       >
-
-        {/* ==================================================
-            HEADER
-        ================================================== */}
-
-        <div
-          className="
-            flex
-            shrink-0
-            items-start
-            justify-between
-            gap-4
-            border-b
-            border-slate-200
-            px-5
-            py-5
-            sm:px-6
-          "
-        >
-          <div
-            className="
-              flex
-              min-w-0
-              items-start
-              gap-3
-            "
-          >
-            <div
-              className="
-                flex
-                h-10
-                w-10
-                shrink-0
-                items-center
-                justify-center
-                rounded-xl
-                bg-green-50
-                text-green-700
-              "
-            >
-              <Package
-                size={20}
-              />
-            </div>
-
-            <div
-              className="
-                min-w-0
-              "
-            >
-              <h3
-                id="farmer-inventory-product-details-title"
-                className="
-                  break-words
-                  text-xl
-                  font-bold
-                  text-slate-900
-                "
+        {/* Header (Matches Miller Order Approval Style) */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2
+                id="farmer-product-details-title"
+                className="text-base sm:text-lg font-bold text-slate-900 tracking-tight"
               >
-                Product Details
-              </h3>
-
-              <p
-                className="
-                  mt-1
-                  text-sm
-                  leading-5
-                  text-slate-500
-                "
+                {product.rice_variety || "Product Details"}
+              </h2>
+              <span
+                className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold capitalize ${
+                  isActive
+                    ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                    : "bg-slate-100 text-slate-700 border border-slate-200"
+                }`}
               >
-                Review complete inventory, source, stock, and record information.
-              </p>
+                {isActive ? "Active" : "Archived"}
+              </span>
             </div>
+            <p className="text-xs text-slate-500 font-medium">
+              Product Code: <span className="font-mono font-semibold text-slate-700">{product.product_code || "—"}</span>
+            </p>
           </div>
 
-
+          {/* Top-right X Button: Only way to exit */}
           <button
             type="button"
-            onClick={
-              handleClose
-            }
-            disabled={
-              isChangingStatus
-            }
-            aria-label="Close modal"
-            className="
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-full
-              border
-              border-slate-200
-              text-slate-400
-              transition
-              hover:bg-slate-50
-              hover:text-slate-700
-              disabled:cursor-not-allowed
-              disabled:opacity-50
-            "
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+            aria-label="Close details"
+            title="Close details"
           >
-            <X
-              size={18}
-            />
+            <X size={18} />
           </button>
         </div>
 
-
-        {/* ==================================================
-            CONTENT
-        ================================================== */}
-
-        <div
-          className="
-            min-h-0
-            flex-1
-            overflow-y-auto
-            px-5
-            py-5
-            sm:px-6
-          "
-        >
-
-          {/* ERROR */}
-
-          {error && (
-            <div
-              className="
-                mb-5
-                flex
-                items-start
-                gap-3
-                rounded-xl
-                border
-                border-red-200
-                bg-red-50
-                px-4
-                py-3
-                text-sm
-                text-red-700
-              "
-            >
-              <AlertCircle
-                size={18}
-                className="
-                  mt-0.5
-                  shrink-0
-                "
-              />
-
-              <span>
-                {error}
-              </span>
+        {/* Modal Body */}
+        <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-75px)] space-y-4">
+          {/* ── SECTION 1 — PRODUCT IDENTIFICATION ─────────────────── */}
+          <div className="space-y-1">
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+              Product Information
             </div>
-          )}
 
+            <ModalDetailRow
+              label="Rice Variety"
+              value={product.rice_variety || "—"}
+            />
 
-          {/* LOADING */}
+            <ModalDetailRow
+              label="Product Code"
+              value={product.product_code || "—"}
+            />
 
-          {isLoading ? (
-            <div
-              className="
-                flex
-                min-h-[420px]
-                items-center
-                justify-center
-              "
-            >
-              <div
-                className="
-                  flex
-                  flex-col
-                  items-center
-                  gap-3
-                  text-slate-500
-                "
-              >
-                <Loader2
-                  size={28}
-                  className="
-                    animate-spin
-                    text-green-700
-                  "
-                />
+            <ModalDetailRow
+              label="Product Type"
+              value={product.product_type || "—"}
+              isBadge
+              badgeStyle={
+                product.product_type === "Unmilled Palay"
+                  ? "bg-amber-100 text-amber-800 border border-amber-200"
+                  : "bg-blue-100 text-blue-800 border border-blue-200"
+              }
+            />
 
-                <p
-                  className="
-                    text-sm
-                    font-medium
-                  "
+            <ModalDetailRow
+              label="Product Grade"
+              value={product.product_grade || "Standard"}
+            />
+
+            <ModalDetailRow label="Selling Price">
+              <span className="font-bold text-emerald-700">
+                {product.selling_price_per_kg !== null && product.selling_price_per_kg !== undefined
+                  ? `₱${Number(product.selling_price_per_kg).toFixed(2)} / kg`
+                  : "Not set"}
+              </span>
+            </ModalDetailRow>
+
+            <ModalDetailRow
+              label="Record Origin"
+              value={product.record_source_type || product.record_origin || "Manually Added"}
+            />
+
+            <ModalDetailRow
+              label="Date Added"
+              value={product.created_at ? new Date(product.created_at).toLocaleDateString() : "—"}
+            />
+
+            {/* Product Photo */}
+            <div className="flex items-center justify-between gap-3 py-1.5 text-xs sm:text-sm">
+              <span className="text-slate-500 font-medium shrink-0">
+                Product Photo:
+              </span>
+              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center">
+                {product.product_image ? (
+                  <img
+                    src={product.product_image}
+                    alt={product.rice_variety || "Product photo"}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-slate-300">
+                    <ImageIcon size={18} />
+                    <span className="text-[8px] font-extrabold uppercase tracking-wider text-slate-400">
+                      IMG
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ── SECTION 2 — STOCK & RESERVATION BREAKDOWN ───────────── */}
+          <div className="border-t border-slate-100 pt-2" />
+          <div className="space-y-2">
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">
+              Stock & Reservation Breakdown
+            </div>
+
+            {/* Metric Comparison Cards */}
+            <div className="grid grid-cols-3 gap-2.5 pt-1">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 text-center">
+                <span className="text-[10px] font-semibold text-slate-400 block uppercase tracking-wider">
+                  Total Stock
+                </span>
+                <span className="text-xs sm:text-sm font-bold text-slate-800">
+                  {totalStock.toLocaleString()} kg
+                </span>
+              </div>
+              <div className="rounded-xl border border-amber-200/80 bg-amber-50/50 p-2.5 text-center">
+                <span className="text-[10px] font-semibold text-amber-600 block uppercase tracking-wider">
+                  Reserved
+                </span>
+                <span className="text-xs sm:text-sm font-bold text-amber-800">
+                  {reservedStock.toLocaleString()} kg
+                </span>
+              </div>
+              <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-2.5 text-center">
+                <span className="text-[10px] font-semibold text-emerald-600 block uppercase tracking-wider">
+                  Available
+                </span>
+                <span className="text-xs sm:text-sm font-bold text-emerald-800">
+                  {availableStock.toLocaleString()} kg
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-1.5 space-y-0.5">
+              <ModalDetailRow label="Total Stock Quantity">
+                <div className="flex items-center justify-end gap-1.5 font-bold text-slate-800">
+                  <span
+                    className={`inline-block h-2 w-2 rounded-full ${
+                      STOCK_DOT[stockLevel] || "bg-slate-300"
+                    }`}
+                  />
+                  <span>{totalStock.toLocaleString()} kg</span>
+                </div>
+              </ModalDetailRow>
+
+              <ModalDetailRow label="Reserved / Committed Stock">
+                <span
+                  className={`font-semibold ${
+                    reservedStock > 0 ? "text-amber-700" : "text-slate-700"
+                  }`}
                 >
-                  Loading product details...
+                  {reservedStock.toLocaleString()} kg
+                </span>
+              </ModalDetailRow>
+
+              <ModalDetailRow label="Available Stock">
+                <span className="font-bold text-emerald-700">
+                  {availableStock.toLocaleString()} kg
+                </span>
+              </ModalDetailRow>
+
+              <ModalDetailRow
+                label="Stock Level"
+                value={stockLevelLabel}
+                isBadge
+                badgeStyle={stockLevelBadgeStyle}
+              />
+            </div>
+          </div>
+
+          {/* ── SECTION 3 — SOURCE & HARVEST INFORMATION ────────────── */}
+          <div className="border-t border-slate-100 pt-2" />
+          <div className="space-y-1">
+            <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+              Source & Harvest Information
+            </div>
+
+            <ModalDetailRow
+              label="Source Type"
+              value={product.acquisition_source_type || product.source_type || "Own Farm"}
+            />
+
+            <ModalDetailRow
+              label="Source Farm"
+              value={product.source_farm_name || "—"}
+            />
+
+            <ModalDetailRow
+              label="Farm Location"
+              value={product.source_farm_location || "—"}
+            />
+
+            <ModalDetailRow
+              label="Harvest / Acquisition Date"
+              value={product.harvest_acquisition_date || "—"}
+            />
+
+            {product.source_crop_cycle_number && (
+              <ModalDetailRow
+                label="Crop Cycle"
+                value={`Cycle #${product.source_crop_cycle_number} (${product.source_crop_status || "Harvested"})`}
+              />
+            )}
+
+            {product.source_acquisition_remarks && (
+              <div className="pt-1.5 space-y-1">
+                <span className="text-slate-500 font-medium text-xs block">
+                  Acquisition Remarks:
+                </span>
+                <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  {product.source_acquisition_remarks}
                 </p>
               </div>
-            </div>
-          ) : !product ? (
-            <div
-              className="
-                flex
-                min-h-[320px]
-                flex-col
-                items-center
-                justify-center
-                text-center
-              "
-            >
-              <AlertCircle
-                size={32}
-                className="
-                  text-amber-500
-                "
-              />
+            )}
+          </div>
 
-              <p
-                className="
-                  mt-3
-                  text-sm
-                  font-semibold
-                  text-slate-700
-                "
-              >
-                Product details are unavailable.
-              </p>
-            </div>
-          ) : (
-            <div
-              className="
-                space-y-5
-              "
-            >
-
-              {/* ============================================
-                  PRODUCT SUMMARY
-              ============================================ */}
-
-              <div
-                className="
-                  grid
-                  gap-5
-                  rounded-xl
-                  border
-                  border-slate-200
-                  bg-slate-50
-                  p-4
-                  sm:grid-cols-[140px_minmax(0,1fr)]
-                "
-              >
-                <div
-                  className="
-                    flex
-                    min-h-[140px]
-                    items-center
-                    justify-center
-                    overflow-hidden
-                    rounded-xl
-                    border
-                    border-slate-200
-                    bg-white
-                  "
-                >
-                  {productImage ? (
-                    <img
-                      src={
-                        productImage
-                      }
-                      alt={
-                        product.product_code ||
-                        "Inventory product"
-                      }
-                      className="
-                        h-full
-                        min-h-[140px]
-                        w-full
-                        object-cover
-                      "
-                    />
-                  ) : (
-                    <div
-                      className="
-                        flex
-                        flex-col
-                        items-center
-                        justify-center
-                        gap-2
-                        px-3
-                        text-center
-                        text-slate-400
-                      "
-                    >
-                      <ImageOff
-                        size={28}
-                      />
-
-                      <span
-                        className="
-                          text-xs
-                          font-medium
-                        "
-                      >
-                        No product image
-                      </span>
-                    </div>
-                  )}
+          {/* ── SECTION 4 — PRODUCT DESCRIPTION (Optional) ──────────── */}
+          {product.description && (
+            <>
+              <div className="border-t border-slate-100 pt-2" />
+              <div className="space-y-1">
+                <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-1">
+                  Product Description
                 </div>
+                <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  {product.description}
+                </p>
+              </div>
+            </>
+          )}
 
-
-                <div
-                  className="
-                    grid
-                    content-start
-                    gap-x-6
-                    gap-y-5
-                    sm:grid-cols-2
-                  "
-                >
-                  <DetailItem
-                    label="Product Code"
-                    value={
-                      product.product_code
-                    }
-                  />
-
-                  <DetailItem
-                    label="Product Type"
-                    value={
-                      formatProductType(
-                        product.product_type
-                      )
-                    }
-                  />
-
-                  <DetailItem
-                    label="Rice Variety / Variant"
-                    value={
-                      product.rice_variety
-                    }
-                  />
-
-                  <DetailItem
-                    label="Product Grade / Classification"
-                    value={
-                      product.product_grade
-                    }
-                  />
+          {/* ── SECTION 5 — ARCHIVE DETAILS (If archived) ───────────── */}
+          {isArchived && (
+            <>
+              <div className="border-t border-slate-100 pt-2" />
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-extrabold uppercase tracking-wider text-amber-700 mb-1">
+                  Archive Information
+                </div>
+                <div className="rounded-xl border border-amber-200/80 bg-amber-50/50 p-3 space-y-1 text-xs">
+                  <ModalDetailRow label="Archive Reason">
+                    <span className="text-amber-900 font-medium">
+                      {product.archive_reason || "Archived by farmer"}
+                    </span>
+                  </ModalDetailRow>
+                  {product.archived_at && (
+                    <ModalDetailRow label="Archived Date">
+                      <span className="text-amber-800 font-medium">
+                        {new Date(product.archived_at).toLocaleString()}
+                      </span>
+                    </ModalDetailRow>
+                  )}
                 </div>
               </div>
-
-
-              {/* ============================================
-                  PRODUCT INFORMATION
-                  NO DUPLICATE PRODUCT IDENTITY FIELDS
-              ============================================ */}
-
-              <DetailSection
-                title="Product Information"
-              >
-                <DetailItem
-                  label="Product Status"
-                >
-                  <ProductStatusBadge
-                    status={
-                      product.status
-                    }
-                  />
-                </DetailItem>
-
-                <DetailItem
-                  label="Description"
-                  value={
-                    product.description
-                  }
-                  fullWidth
-                />
-              </DetailSection>
-
-
-              {/* ============================================
-                  SOURCE INFORMATION
-              ============================================ */}
-
-              <DetailSection
-                title="Source Information"
-                description="Shows how this Inventory record entered GrainRise and where the product came from."
-              >
-                <DetailItem
-                  label="Record Source"
-                  value={
-                    formatRecordSource(
-                      product.record_source_type
-                    )
-                  }
-                />
-
-                <DetailItem
-                  label="Acquisition Source"
-                  value={
-                    formatAcquisitionSource(
-                      product.acquisition_source_type
-                    )
-                  }
-                />
-
-
-                {isOwnFarm && (
-                  <>
-                    <DetailItem
-                      label="Source Farm"
-                      value={
-                        product.source_farm_name
-                      }
-                    />
-
-                    <DetailItem
-                      label="Source Farm Location"
-                      value={
-                        product.source_farm_location
-                      }
-                    />
-                  </>
-                )}
-
-
-                {isHarvestGenerated && (
-                  <>
-                    <DetailItem
-                      label="Source Cropping Cycle"
-                      value={
-                        product.source_crop_cycle_id
-                          ? (
-                            `Cycle #${product.source_crop_cycle_id}`
-                          )
-                          : "—"
-                      }
-                    />
-
-                    <DetailItem
-                      label="Source Crop Status"
-                      value={
-                        humanize(
-                          product.source_crop_status
-                        )
-                      }
-                    />
-                  </>
-                )}
-
-
-                <DetailItem
-                  label="Harvest / Acquisition Date"
-                  value={
-                    formatDate(
-                      product.harvest_acquisition_date
-                    )
-                  }
-                />
-
-
-                {isHarvestGenerated && (
-                  <>
-                    <DetailItem
-                      label="Source Planting Date"
-                      value={
-                        formatDate(
-                          product.source_planting_date
-                        )
-                      }
-                    />
-
-                    <DetailItem
-                      label="Source Actual Harvest Date"
-                      value={
-                        formatDate(
-                          product.source_actual_harvest_date
-                        )
-                      }
-                    />
-
-                    <DetailItem
-                      label="Source Actual Yield"
-                      value={
-                        product.source_actual_yield_kg !==
-                          null &&
-                        product.source_actual_yield_kg !==
-                          undefined
-                          ? (
-                            `${formatNumber(
-                              product.source_actual_yield_kg
-                            )} kg`
-                          )
-                          : "—"
-                      }
-                    />
-                  </>
-                )}
-
-
-                <DetailItem
-                  label="Source / Acquisition Remarks"
-                  value={
-                    product.source_acquisition_remarks
-                  }
-                  fullWidth
-                />
-              </DetailSection>
-
-
-              {/* ============================================
-                  STOCK INFORMATION
-              ============================================ */}
-
-              <DetailSection
-                title="Stock Information"
-              >
-                <DetailItem
-                  label="Total Stock Quantity"
-                  value={
-                    `${
-                      formatNumber(
-                        product.total_stock_quantity_kg
-                      )
-                    } kg`
-                  }
-                />
-
-                <DetailItem
-                  label="Reserved / Committed Quantity"
-                  value={
-                    `${
-                      formatNumber(
-                        product.reserved_committed_quantity_kg
-                      )
-                    } kg`
-                  }
-                />
-
-                <DetailItem
-                  label="Available Quantity"
-                  value={
-                    `${
-                      formatNumber(
-                        product.available_quantity_kg
-                      )
-                    } kg`
-                  }
-                />
-
-                <DetailItem
-                  label="Stock Level"
-                >
-                  <StockLevelBadge
-                    stockLevel={
-                      product.stock_level
-                    }
-                  />
-                </DetailItem>
-              </DetailSection>
-
-
-              {/* ============================================
-                  COMMERCIAL INFORMATION
-              ============================================ */}
-
-              <DetailSection
-                title="Commercial Information"
-              >
-                <DetailItem
-                  label="Selling Price per kg"
-                  value={
-                    formatPeso(
-                      product.selling_price_per_kg
-                    )
-                  }
-                />
-
-                {isHarvestGenerated && (
-                  <DetailItem
-                    label="Pricing Status"
-                    value={
-                      product.selling_price_per_kg ===
-                        null ||
-                      product.selling_price_per_kg ===
-                        undefined
-                        ? "Selling Price Not Set"
-                        : "Selling Price Set"
-                    }
-                  />
-                )}
-              </DetailSection>
-
-
-              {/* ============================================
-                  RECORD INFORMATION
-              ============================================ */}
-
-              <DetailSection
-                title="Record Information"
-              >
-                <DetailItem
-                  label="Date Added"
-                  value={
-                    formatDateTime(
-                      product.created_at
-                    )
-                  }
-                />
-
-                <DetailItem
-                  label="Last Updated"
-                  value={
-                    formatDateTime(
-                      product.updated_at
-                    )
-                  }
-                />
-              </DetailSection>
-
-            </div>
+            </>
           )}
-
         </div>
 
-
-        {/* ==================================================
-            FOOTER ACTIONS
-            NO CLOSE BUTTON
-        ================================================== */}
-
-        {!isLoading &&
-          product && (
-            <div
-              className="
-                flex
-                shrink-0
-                items-center
-                justify-end
-                gap-2
-                border-t
-                border-slate-200
-                bg-white
-                px-5
-                py-4
-                sm:px-6
-              "
+        {/* Modal Footer: Edit Product as ONLY footer action (Archive removed) */}
+        {isActive && (
+          <div className="flex items-center justify-end px-6 py-3.5 bg-[#F5F7FF] border-t border-slate-100 shrink-0">
+            <button
+              type="button"
+              onClick={() => onEdit?.(product)}
+              className="px-4 py-2 text-xs font-semibold text-white bg-[#0B5D1E] hover:bg-[#084b18] rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
             >
-
-              {/* ============================================
-                  ACTIVE ACTIONS
-              ============================================ */}
-
-              {isActive && (
-                <>
-                  <button
-                    type="button"
-                    onClick={
-                      () =>
-                        onArchive?.(
-                          product
-                        )
-                    }
-                    disabled={
-                      isChangingStatus
-                    }
-                    className="
-                      rounded-lg
-                      bg-orange-500
-                      px-5
-                      py-2.5
-                      text-sm
-                      font-semibold
-                      text-white
-                      transition
-                      hover:bg-orange-600
-                      disabled:cursor-not-allowed
-                      disabled:opacity-50
-                    "
-                  >
-                    Archive
-                  </button>
-
-
-                  <button
-                    type="button"
-                    onClick={
-                      () =>
-                        onEdit?.(
-                          product
-                        )
-                    }
-                    disabled={
-                      isChangingStatus
-                    }
-                    className="
-                      rounded-lg
-                      bg-green-700
-                      px-5
-                      py-2.5
-                      text-sm
-                      font-semibold
-                      text-white
-                      transition
-                      hover:bg-green-800
-                      disabled:cursor-not-allowed
-                      disabled:opacity-50
-                    "
-                  >
-                    Edit Product
-                  </button>
-                </>
-              )}
-
-
-              {/* ============================================
-                  ARCHIVED ACTION
-              ============================================ */}
-
-              {isArchived && (
-                <button
-                  type="button"
-                  onClick={
-                    () =>
-                      onRestore?.(
-                        product
-                      )
-                  }
-                  disabled={
-                    isChangingStatus
-                  }
-                  className="
-                    inline-flex
-                    items-center
-                    justify-center
-                    gap-2
-                    rounded-lg
-                    bg-green-700
-                    px-5
-                    py-2.5
-                    text-sm
-                    font-semibold
-                    text-white
-                    transition
-                    hover:bg-green-800
-                    disabled:cursor-not-allowed
-                    disabled:opacity-60
-                  "
-                >
-                  {isChangingStatus ? (
-                    <Loader2
-                      size={15}
-                      className="
-                        animate-spin
-                      "
-                    />
-                  ) : (
-                    <RotateCcw
-                      size={15}
-                    />
-                  )}
-
-                  Restore
-                </button>
-              )}
-
-            </div>
-          )}
-
+              <Pencil size={14} />
+              Edit Product
+            </button>
+          </div>
+        )}
       </div>
     </div>,
     document.body

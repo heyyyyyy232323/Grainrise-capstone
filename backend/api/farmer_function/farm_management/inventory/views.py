@@ -497,10 +497,17 @@ def inventory_product_archive(
 
     try:
 
+        reason = (
+            request.data.get('reason')
+            or request.data.get('archive_reason')
+            or 'Archived by farmer'
+        )
+
         product = (
             archive_inventory_product(
                 farmer_user_id,
                 farm_product_id,
+                reason=reason,
             )
         )
 

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import Breadcrumbs from "../../Components/Minor-Components/Breadcrumbs";
+import PaginationControls from "../../Components/Minor-Components/PaginationControls";
 
 import FarmerFarmFormModal from "../../Components/Modals/FarmerFarmFormModal";
 
@@ -36,8 +37,10 @@ import FarmerCropActionModal, {
 } from "../../Components/Modals/FarmerCropActionModal";
 
 import FarmerFarmActivityDetailsModal from "../../Components/Modals/FarmerFarmActivityDetailsModal";
+import Toast from "../../Components/Modals/Toast";
 
 import useFarmManagement from "../../Components/hooks/Farmer/useFarmManagement";
+import useToast from "../../Components/hooks/useToast";
 
 
 // ============================================================
@@ -723,19 +726,7 @@ export default function FarmerFarmDetails() {
       null
     );
 
-
-  // =========================================================
-  // FEEDBACK
-  // =========================================================
-
-  const [
-    successMessage,
-    setSuccessMessage,
-  ] =
-    useState(
-      ""
-    );
-
+  const { toasts, showToast, removeToast } = useToast();
 
   // =========================================================
   // LOAD FARM
@@ -780,43 +771,6 @@ export default function FarmerFarmDetails() {
       clearSelectedFarm,
     ]
   );
-
-
-  // =========================================================
-  // SUCCESS TIMER
-  // =========================================================
-
-  useEffect(
-    () => {
-      if (
-        !successMessage
-      ) {
-        return undefined;
-      }
-
-
-      const timer =
-        window.setTimeout(
-          () => {
-            setSuccessMessage(
-              ""
-            );
-          },
-          4000
-        );
-
-
-      return () => {
-        window.clearTimeout(
-          timer
-        );
-      };
-    },
-    [
-      successMessage,
-    ]
-  );
-
 
   // =========================================================
   // FARM STATE
@@ -972,9 +926,12 @@ export default function FarmerFarmDetails() {
         );
 
 
-        setSuccessMessage(
-          "Farm information updated successfully."
-        );
+        showToast({
+          type: "success",
+          title: "Success",
+          message: "Farm information updated successfully.",
+          duration: 4000,
+        });
 
 
         await loadFarmActivity(
@@ -1025,12 +982,16 @@ export default function FarmerFarmDetails() {
         );
 
 
-        setSuccessMessage(
-          nextStatus ===
-            "active"
-            ? "Farm reactivated successfully."
-            : "Farm set to inactive successfully."
-        );
+        showToast({
+          type: "success",
+          title: "Success",
+          message:
+            nextStatus ===
+              "active"
+              ? "Farm reactivated successfully."
+              : "Farm set to inactive successfully.",
+          duration: 4000,
+        });
 
 
         await loadFarmActivity(
@@ -1101,9 +1062,12 @@ export default function FarmerFarmDetails() {
             data
           );
 
-          setSuccessMessage(
-            "Land preparation started successfully."
-          );
+          showToast({
+            type: "success",
+            title: "Success",
+            message: "Land preparation started successfully.",
+            duration: 4000,
+          });
         }
 
 
@@ -1120,9 +1084,12 @@ export default function FarmerFarmDetails() {
             data
           );
 
-          setSuccessMessage(
-            "Planting recorded successfully."
-          );
+          showToast({
+            type: "success",
+            title: "Success",
+            message: "Planting recorded successfully.",
+            duration: 4000,
+          });
         }
 
 
@@ -1139,9 +1106,12 @@ export default function FarmerFarmDetails() {
             data
           );
 
-          setSuccessMessage(
-            "Current crop updated successfully."
-          );
+          showToast({
+            type: "success",
+            title: "Success",
+            message: "Current crop updated successfully.",
+            duration: 4000,
+          });
         }
 
 
@@ -1158,9 +1128,12 @@ export default function FarmerFarmDetails() {
             data
           );
 
-          setSuccessMessage(
-            "Harvest recorded successfully and added to Inventory."
-          );
+          showToast({
+            type: "success",
+            title: "Success",
+            message: "Harvest recorded successfully and added to Inventory.",
+            duration: 4000,
+          });
         }
 
 
@@ -1177,9 +1150,12 @@ export default function FarmerFarmDetails() {
             data
           );
 
-          setSuccessMessage(
-            "Failed crop recorded successfully."
-          );
+          showToast({
+            type: "success",
+            title: "Success",
+            message: "Failed crop recorded successfully.",
+            duration: 4000,
+          });
         }
 
 
@@ -1606,46 +1582,6 @@ export default function FarmerFarmDetails() {
           Back to My Farms
         </button>
       </div>
-
-
-      {/* ====================================================
-          SUCCESS
-      ==================================================== */}
-
-      {
-        successMessage &&
-        (
-          <div
-            className="
-              flex
-              items-start
-              gap-3
-              rounded-xl
-              border
-              border-green-200
-              bg-green-50
-              px-4
-              py-3
-              text-sm
-              text-green-700
-            "
-          >
-            <CheckCircle2
-              size={18}
-              className="
-                mt-0.5
-                shrink-0
-              "
-            />
-
-            <span>
-              {
-                successMessage
-              }
-            </span>
-          </div>
-        )
-      }
 
 
       {/* ====================================================
@@ -2434,394 +2370,111 @@ export default function FarmerFarmDetails() {
 
         {
           isLoadingActivity &&
-          activityItems.length ===
-            0
+          activityItems.length === 0
             ? (
-              <div
-                className="
-                  flex
-                  min-h-[180px]
-                  items-center
-                  justify-center
-                "
-              >
-                <div
-                  className="
-                    flex
-                    items-center
-                    gap-2
-                    text-sm
-                    text-slate-500
-                  "
-                >
-                  <Loader2
-                    size={18}
-                    className="
-                      animate-spin
-                      text-green-700
-                    "
-                  />
-
+              <div className="flex min-h-[180px] items-center justify-center">
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <Loader2 size={18} className="animate-spin text-emerald-600" />
                   Loading farm activity...
                 </div>
               </div>
             )
+            : activityItems.length === 0
+            ? (
+              <div className="px-6 py-12 text-center">
+                <History size={30} className="mx-auto text-slate-300" />
+                <p className="mt-3 text-sm font-semibold text-slate-700">
+                  No farm activity yet
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  New farm and crop activities will appear here.
+                </p>
+              </div>
+            )
             : (
               <>
-                {
-                  activityItems.length ===
-                    0
-                    ? (
-                      <div
-                        className="
-                          px-6
-                          py-12
-                          text-center
-                        "
-                      >
-                        <History
-                          size={30}
-                          className="
-                            mx-auto
-                            text-slate-300
-                          "
-                        />
-
-                        <p
-                          className="
-                            mt-3
-                            text-sm
-                            font-semibold
-                            text-slate-700
-                          "
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse table-auto">
+                    <thead>
+                      <tr className="bg-[#EDEDED] text-left text-[11px] font-extrabold uppercase tracking-[0.03em] text-slate-600">
+                        <th
+                          className="whitespace-nowrap px-4 py-3.5 align-middle first:pl-6 last:pr-6 text-left"
+                          style={{ width: "35%" }}
                         >
-                          No farm activity yet
-                        </p>
-
-                        <p
-                          className="
-                            mt-1
-                            text-xs
-                            text-slate-400
-                          "
+                          DATE / TIME
+                        </th>
+                        <th
+                          className="whitespace-nowrap px-4 py-3.5 align-middle first:pl-6 last:pr-6 text-left"
+                          style={{ width: "45%" }}
                         >
-                          New farm and crop activities will appear here.
-                        </p>
-                      </div>
-                    )
-                    : (
-                      <div className="w-full">
-                        <table
-                          className="
-                            w-full
-                            table-fixed
-                            text-sm
-                          "
+                          ACTIVITY
+                        </th>
+                        <th
+                          className="whitespace-nowrap px-4 py-3.5 align-middle first:pl-6 last:pr-6 text-center"
+                          style={{ width: "20%" }}
                         >
-                          <colgroup>
-                            <col className="w-1/3" />
-                            <col className="w-1/3" />
-                            <col className="w-1/3" />
-                          </colgroup>
+                          ACTION
+                        </th>
+                      </tr>
+                    </thead>
 
+                    <tbody>
+                      {activityItems.map((activity) => (
+                        <tr
+                          key={activity.farm_activity_id}
+                          className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70 transition-colors"
+                        >
+                          <td className="whitespace-nowrap px-4 py-3 pl-6 text-[13px] font-medium text-slate-700">
+                            {formatDateTime(activity.activity_date_time)}
+                          </td>
 
-                          <thead
-                            className="
-                              border-b
-                              border-slate-200
-                              bg-slate-50
-                            "
-                          >
-                            <tr
-                              className="
-                                text-[10px]
-                                font-semibold
-                                uppercase
-                                tracking-wide
-                                text-slate-500
-                                sm:text-xs
-                              "
+                          <td className="px-4 py-3 text-[13px] font-medium text-slate-700">
+                            <ActivityBadge type={activity.activity_type} />
+                          </td>
+
+                          <td className="whitespace-nowrap px-4 py-3 pr-6 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleViewActivity(activity)}
+                              className="rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-600 transition hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
                             >
-                              <th
-                                className="
-                                  px-2
-                                  py-3
-                                  text-center
-                                  sm:px-5
-                                "
-                              >
-                                Date / Time
-                              </th>
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-                              <th
-                                className="
-                                  px-2
-                                  py-3
-                                  text-center
-                                  sm:px-5
-                                "
-                              >
-                                Activity
-                              </th>
+                {/* Table Footer: Results count & pagination matching FarmerInventory */}
+                {totalActivityItems > 0 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-3.5 bg-slate-50 border-t border-slate-100 text-xs text-slate-500">
+                    <span>
+                      Showing{" "}
+                      {totalActivityItems === 0
+                        ? 0
+                        : (currentActivityPage - 1) *
+                            (farmActivity?.pagination?.page_size || 10) +
+                          1}{" "}
+                      to{" "}
+                      {Math.min(
+                        currentActivityPage *
+                          (farmActivity?.pagination?.page_size || 10),
+                        totalActivityItems
+                      )}{" "}
+                      of {totalActivityItems}{" "}
+                      {totalActivityItems === 1 ? "activity" : "activities"}
+                    </span>
 
-                              <th
-                                className="
-                                  px-2
-                                  py-3
-                                  text-center
-                                  sm:px-5
-                                "
-                              >
-                                Action
-                              </th>
-                            </tr>
-                          </thead>
-
-
-                          <tbody
-                            className="
-                              divide-y
-                              divide-slate-100
-                            "
-                          >
-                            {
-                              activityItems.map(
-                                (
-                                  activity
-                                ) => (
-                                  <tr
-                                    key={
-                                      activity.farm_activity_id
-                                    }
-                                    className="
-                                      transition
-                                      hover:bg-slate-50/70
-                                    "
-                                  >
-                                    <td
-                                      className="
-                                        break-words
-                                        px-2
-                                        py-4
-                                        text-center
-                                        text-[11px]
-                                        leading-5
-                                        text-slate-600
-                                        sm:px-5
-                                        sm:text-sm
-                                      "
-                                    >
-                                      {
-                                        formatDateTime(
-                                          activity.activity_date_time
-                                        )
-                                      }
-                                    </td>
-
-
-                                    <td
-                                      className="
-                                        px-2
-                                        py-4
-                                        text-center
-                                        sm:px-5
-                                      "
-                                    >
-                                      <ActivityBadge
-                                        type={
-                                          activity.activity_type
-                                        }
-                                      />
-                                    </td>
-
-
-                                    <td
-                                      className="
-                                        px-2
-                                        py-4
-                                        text-center
-                                        sm:px-5
-                                      "
-                                    >
-                                      <button
-                                        type="button"
-                                        onClick={
-                                          () =>
-                                            handleViewActivity(
-                                              activity
-                                            )
-                                        }
-                                        className="
-                                          break-words
-                                          text-[11px]
-                                          font-semibold
-                                          leading-4
-                                          text-green-700
-                                          transition
-                                          hover:text-green-800
-                                          hover:underline
-                                          hover:underline-offset-2
-                                          sm:text-sm
-                                        "
-                                      >
-                                        View Details
-                                      </button>
-                                    </td>
-                                  </tr>
-                                )
-                              )
-                            }
-                          </tbody>
-                        </table>
-                      </div>
-                    )
-                }
-
-
-                {
-                  totalActivityPages >
-                    1 &&
-                  (
-                    <div
-                      className="
-                        flex
-                        flex-col
-                        gap-3
-                        border-t
-                        border-slate-200
-                        px-4
-                        py-4
-                        sm:flex-row
-                        sm:items-center
-                        sm:justify-between
-                        sm:px-5
-                      "
-                    >
-                      <p
-                        className="
-                          text-center
-                          text-xs
-                          text-slate-500
-                          sm:text-left
-                        "
-                      >
-                        Page{" "}
-                        <span
-                          className="
-                            font-semibold
-                            text-slate-700
-                          "
-                        >
-                          {
-                            currentActivityPage
-                          }
-                        </span>
-                        {" "}of{" "}
-                        <span
-                          className="
-                            font-semibold
-                            text-slate-700
-                          "
-                        >
-                          {
-                            totalActivityPages
-                          }
-                        </span>
-                      </p>
-
-
-                      <div
-                        className="
-                          flex
-                          items-center
-                          justify-center
-                          gap-2
-                        "
-                      >
-                        <button
-                          type="button"
-                          onClick={
-                            () =>
-                              handleActivityPage(
-                                currentActivityPage -
-                                1
-                              )
-                          }
-                          disabled={
-                            isLoadingActivity ||
-                            currentActivityPage <=
-                              1
-                          }
-                          className="
-                            inline-flex
-                            items-center
-                            gap-1
-                            rounded-lg
-                            border
-                            border-slate-300
-                            bg-white
-                            px-3
-                            py-2
-                            text-xs
-                            font-semibold
-                            text-slate-600
-                            transition
-                            hover:bg-slate-50
-                            disabled:cursor-not-allowed
-                            disabled:opacity-40
-                          "
-                        >
-                          <ChevronLeft
-                            size={14}
-                          />
-
-                          Previous
-                        </button>
-
-
-                        <button
-                          type="button"
-                          onClick={
-                            () =>
-                              handleActivityPage(
-                                currentActivityPage +
-                                1
-                              )
-                          }
-                          disabled={
-                            isLoadingActivity ||
-                            currentActivityPage >=
-                              totalActivityPages
-                          }
-                          className="
-                            inline-flex
-                            items-center
-                            gap-1
-                            rounded-lg
-                            border
-                            border-slate-300
-                            bg-white
-                            px-3
-                            py-2
-                            text-xs
-                            font-semibold
-                            text-slate-600
-                            transition
-                            hover:bg-slate-50
-                            disabled:cursor-not-allowed
-                            disabled:opacity-40
-                          "
-                        >
-                          Next
-
-                          <ChevronRight
-                            size={14}
-                          />
-                        </button>
-                      </div>
-                    </div>
-                  )
-                }
+                    <PaginationControls
+                      currentPage={currentActivityPage}
+                      totalPages={totalActivityPages}
+                      onPageChange={handleActivityPage}
+                      disabled={isLoadingActivity}
+                    />
+                  </div>
+                )}
               </>
             )
         }
@@ -2935,6 +2588,8 @@ export default function FarmerFarmDetails() {
             )
         }
       />
+
+      <Toast toasts={toasts} removeToast={removeToast} />
 
     </div>
   );

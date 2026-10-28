@@ -186,9 +186,11 @@ export const ToastNotification = ({
   const displayMessage = message || description || "";
   const resolvedActionType = actionType || variant.defaultActionType || "link";
 
+  const isFixed = position !== "relative" && position !== "static";
+
   return (
     <div
-      className={`fixed ${POSITION_STYLES[position] || POSITION_STYLES["top-right"]} z-[9999] max-w-xs w-[calc(100vw-2rem)] pointer-events-none transition-all duration-300 ease-out`}
+      className={`${isFixed ? `fixed ${POSITION_STYLES[position] || POSITION_STYLES["top-right"]} z-[9999]` : "relative"} max-w-xs w-[calc(100vw-2rem)] pointer-events-none transition-all duration-300 ease-out`}
     >
       <div
         role="alert"
@@ -295,6 +297,7 @@ const ToastCollection = ({ toasts = [], removeToast }) => {
           type={toast.type}
           title={toast.title}
           message={toast.message}
+          position="relative"
           onClose={() => removeToast?.(toast.id)}
         />
       ))}

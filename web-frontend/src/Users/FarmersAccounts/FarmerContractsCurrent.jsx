@@ -16,6 +16,8 @@ import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 
 import FarmerContractDetailsModal from "../../Components/Modals/FarmerContractDetailsModal";
 import FarmerContractVoidRequestModal from "../../Components/Modals/FarmerContractVoidRequestModal";
+import Toast from "../../Components/Modals/Toast";
+import useToast from "../../Components/hooks/useToast";
 import { translations, useLanguagePreference } from "../../lib/translations";
 
 
@@ -238,6 +240,8 @@ export default function FarmerContractsCurrent() {
     loadContractDetails,
     requestVoid,
   } = useFarmerContracts();
+
+  const { toasts, showToast, removeToast } = useToast();
 
 
   // ==========================================================
@@ -625,6 +629,13 @@ export default function FarmerContractsCurrent() {
         setIsDetailsOpen(
           false
         );
+
+        showToast({
+          type: "success",
+          title: "Void Request Submitted",
+          message: "Contract void request submitted successfully.",
+          duration: 4000,
+        });
       } catch {
         // Hook handles the error.
       }
@@ -1411,6 +1422,8 @@ export default function FarmerContractsCurrent() {
           handleRequestVoid
         }
       />
+
+      <Toast toasts={toasts} removeToast={removeToast} />
 
     </>
   );

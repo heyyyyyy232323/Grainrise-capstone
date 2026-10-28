@@ -12,6 +12,8 @@ import Dropdown from "../../Components/Minor-Components/Dropdown";
 import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 import FarmerContractApplicationDetailsModal from "../../Components/Modals/FarmerContractApplicationDetailsModal";
 import FarmerContractCancelApplicationModal from "../../Components/Modals/FarmerContractCancelApplicationModal";
+import Toast from "../../Components/Modals/Toast";
+import useToast from "../../Components/hooks/useToast";
 import { translations, useLanguagePreference } from "../../lib/translations";
 
 const MONTHS = [
@@ -131,6 +133,8 @@ export default function FarmerContractsApplications() {
     loadApplicationDetails,
     cancelApplication,
   } = useFarmerContracts();
+
+  const { toasts, showToast, removeToast } = useToast();
 
 
   // ==========================================================
@@ -268,6 +272,12 @@ export default function FarmerContractsApplications() {
 
         setIsCancelOpen(false);
         setIsDetailsOpen(false);
+        showToast({
+          type: "success",
+          title: "Application Cancelled",
+          message: "Contract application has been successfully cancelled.",
+          duration: 4000,
+        });
       } catch {
         // Hook handles error message.
       }
@@ -558,6 +568,8 @@ export default function FarmerContractsApplications() {
         onClose={handleCloseCancelModal}
         onConfirm={handleCancelApplication}
       />
+
+      <Toast toasts={toasts} removeToast={removeToast} />
 
     </div>
   );

@@ -122,12 +122,26 @@ const FAILURE_REASON_OPTIONS = [
 // INITIAL FORMS
 // ============================================================
 
+export const RICE_VARIETY_OPTIONS = [
+  "Inbred (NSIC Rc 222)",
+  "Inbred (NSIC Rc 160)",
+  "Hybrid (Mestiso 20)",
+  "Hybrid (SL-8H)",
+  "Organic / Traditional Rice",
+  "Dinorado",
+  "Sinandomeng",
+  "Other / Specify",
+];
+
+
 const EMPTY_START_FORM = {
   land_preparation_date: "",
 };
 
 
 const EMPTY_PLANTING_FORM = {
+  rice_variety_selection: "",
+  rice_variety_custom: "",
   rice_variety: "",
   planting_date: "",
   expected_harvest_date: "",
@@ -207,6 +221,17 @@ const formatStatus = (
 };
 
 
+const getTodayInManila = () => {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return formatter.format(new Date());
+};
+
+
 const getTodayDate = () => {
   const now =
     new Date();
@@ -231,6 +256,30 @@ const getTodayDate = () => {
     );
 
   return `${year}-${month}-${day}`;
+};
+
+
+export const addOneCalendarMonth = (dateString) => {
+  if (!dateString) return "";
+  const [yStr, mStr, dStr] = String(dateString).trim().split("-");
+  const year = parseInt(yStr, 10);
+  const month = parseInt(mStr, 10);
+  const day = parseInt(dStr, 10);
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return "";
+
+  let nextYear = year;
+  let nextMonth = month + 1;
+  if (nextMonth > 12) {
+    nextMonth = 1;
+    nextYear += 1;
+  }
+
+  const maxDays = new Date(nextYear, nextMonth, 0).getDate();
+  const nextDay = Math.min(day, maxDays);
+
+  const mm = String(nextMonth).padStart(2, "0");
+  const dd = String(nextDay).padStart(2, "0");
+  return `${nextYear}-${mm}-${dd}`;
 };
 
 
@@ -290,6 +339,34 @@ const toDateInputValue = (
 };
 
 
+export const formatFarmerFriendlyDate = (value) => {
+  if (!value) return "";
+  const str = String(value).trim();
+  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const [, yearStr, monthStr, dayStr] = match;
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10) - 1;
+    const day = parseInt(dayStr, 10);
+    const date = new Date(year, month, day);
+    return new Intl.DateTimeFormat("en-PH", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }).format(date);
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return new Intl.DateTimeFormat("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+};
+
+
 // ============================================================
 // FIELD COMPONENT
 // ============================================================
@@ -300,14 +377,14 @@ const FormField = ({
   children,
   fullWidth = false,
   hint = "",
+  className = "",
 }) => {
   return (
     <div
-      className={
-        fullWidth
-          ? "md:col-span-2"
-          : ""
-      }
+      className={`
+        ${fullWidth ? "col-span-full sm:col-span-2 md:col-span-2" : "col-span-1"}
+        ${className}
+      `}
     >
       <label
         className="
@@ -527,6 +604,24 @@ export default function FarmerCropActionModal({
     farm?.current_crop_cycle ||
     "";
 
+  const landPreparationDate = toDateInputValue(farm?.land_preparation_date);
+  const maxPlantingDate = landPreparationDate
+    ? addOneCalendarMonth(landPreparationDate)
+    : "";
+
+  // Planting Date change handler: automatically sets expected harvest to 1 calendar month later
+  const handlePlantingDateChange = (event) => {
+    const nextDate = event.target.value;
+    setLocalError("");
+
+    const nextHarvest = nextDate ? addOneCalendarMonth(nextDate) : "";
+
+    setPlantingForm((current) => ({
+      ...current,
+      planting_date: nextDate,
+      expected_harvest_date: nextHarvest,
+    }));
+  };
 
   // =========================================================
   // RESET WHEN OPENED
@@ -560,9 +655,6 @@ export default function FarmerCropActionModal({
 
       setPlantingForm({
         ...EMPTY_PLANTING_FORM,
-
-        rice_variety:
-          currentRiceVariety,
       });
 
 
@@ -653,6 +745,15 @@ export default function FarmerCropActionModal({
           return RECORD_FAILED_CROP;
         }
 
+        if (modalView === "primary") {
+          if (action === START_LAND_PREPARATION) {
+            return START_LAND_PREPARATION;
+          }
+          if (action === RECORD_PLANTING) {
+            return RECORD_PLANTING;
+          }
+          return UPDATE_CROP;
+        }
 
         return action;
       },
@@ -661,6 +762,43 @@ export default function FarmerCropActionModal({
         action,
       ]
     );
+
+  const isHarvestOrFailed =
+    effectiveAction === RECORD_HARVEST ||
+    effectiveAction === RECORD_FAILED_CROP;
+
+  const previewProductCode = useMemo(() => {
+    let farmerInitials = "CA";
+    try {
+      const stored = localStorage.getItem("grainrise_user");
+      if (stored) {
+        const u = JSON.parse(stored);
+        const fn = (u.first_name || "").trim();
+        const ln = (u.last_name || "").trim();
+        if (fn || ln) {
+          farmerInitials = `${fn ? fn[0] : ""}${ln ? ln[0] : ""}`.toUpperCase();
+        }
+      }
+    } catch (_) {}
+
+    const rawFarmName = farm?.farm_name || farm?.farm_lot_name || "Desmond Farm";
+    const words = String(rawFarmName).match(/[A-Za-z0-9]+/g) || ["DF"];
+    const farmInitials =
+      words.length === 1
+        ? words[0].slice(0, 2).toUpperCase()
+        : words.map((w) => w[0]).join("").toUpperCase();
+
+    const now = new Date();
+    const manilaString = now.toLocaleString("en-US", { timeZone: "Asia/Manila" });
+    const manilaDate = new Date(manilaString);
+    const mm = String(manilaDate.getMonth() + 1).padStart(2, "0");
+    const dd = String(manilaDate.getDate()).padStart(2, "0");
+    const yyyy = manilaDate.getFullYear();
+    const hh = String(manilaDate.getHours()).padStart(2, "0");
+    const min = String(manilaDate.getMinutes()).padStart(2, "0");
+
+    return `${farmerInitials}-${farmInitials}-${mm}${dd}${yyyy}-${hh}${min}`;
+  }, [farm, open]);
 
 
   // =========================================================
@@ -800,6 +938,11 @@ export default function FarmerCropActionModal({
     setLocalError(
       ""
     );
+
+
+    setPlantingForm({
+      ...EMPTY_PLANTING_FORM,
+    });
 
 
     onClose?.();
@@ -1075,6 +1218,15 @@ export default function FarmerCropActionModal({
           return;
         }
 
+        const maxDate = getTodayInManila();
+        if (startForm.land_preparation_date > maxDate) {
+          setLocalError(
+            "Land preparation date cannot be in the future (Asia/Manila). Please select today or a past date."
+          );
+
+          return;
+        }
+
 
         await onSubmit(
           {
@@ -1096,14 +1248,14 @@ export default function FarmerCropActionModal({
         effectiveAction ===
         RECORD_PLANTING
       ) {
-        const riceVariety =
-          String(
-            plantingForm.rice_variety ||
-            ""
-          ).trim();
+        const varietySelection = String(
+          plantingForm.rice_variety_selection || ""
+        ).trim();
+        const varietyCustom = String(
+          plantingForm.rice_variety_custom || ""
+        ).trim();
 
-
-        if (!riceVariety) {
+        if (!varietySelection) {
           setLocalError(
             "Rice Variety is required."
           );
@@ -1111,6 +1263,21 @@ export default function FarmerCropActionModal({
           return;
         }
 
+        if (
+          varietySelection === "Other / Specify" &&
+          !varietyCustom
+        ) {
+          setLocalError(
+            "Please specify the variety name."
+          );
+
+          return;
+        }
+
+        const finalRiceVariety =
+          varietySelection === "Other / Specify"
+            ? varietyCustom
+            : varietySelection;
 
         if (
           !plantingForm.planting_date
@@ -1122,10 +1289,32 @@ export default function FarmerCropActionModal({
           return;
         }
 
+        if (landPreparationDate) {
+          if (plantingForm.planting_date < landPreparationDate) {
+            setLocalError(
+              `Planting Date must be on or after Land Preparation Date (${formatFarmerFriendlyDate(landPreparationDate)}).`
+            );
 
-        if (
-          !plantingForm.expected_harvest_date
-        ) {
+            return;
+          }
+
+          if (
+            maxPlantingDate &&
+            plantingForm.planting_date > maxPlantingDate
+          ) {
+            setLocalError(
+              `Planting Date cannot be more than 1 calendar month after Land Preparation Date (${formatFarmerFriendlyDate(maxPlantingDate)}).`
+            );
+
+            return;
+          }
+        }
+
+        const calculatedHarvestDate =
+          plantingForm.expected_harvest_date ||
+          addOneCalendarMonth(plantingForm.planting_date);
+
+        if (!calculatedHarvestDate) {
           setLocalError(
             "Expected Harvest Date is required."
           );
@@ -1133,9 +1322,8 @@ export default function FarmerCropActionModal({
           return;
         }
 
-
         if (
-          plantingForm.expected_harvest_date <
+          calculatedHarvestDate <
           plantingForm.planting_date
         ) {
           setLocalError(
@@ -1144,7 +1332,6 @@ export default function FarmerCropActionModal({
 
           return;
         }
-
 
         if (
           plantingForm.expected_yield_kg !==
@@ -1160,17 +1347,16 @@ export default function FarmerCropActionModal({
           return;
         }
 
-
         await onSubmit(
           {
             rice_variety:
-              riceVariety,
+              finalRiceVariety,
 
             planting_date:
               plantingForm.planting_date,
 
             expected_harvest_date:
-              plantingForm.expected_harvest_date,
+              calculatedHarvestDate,
 
             expected_yield_kg:
               plantingForm.expected_yield_kg,
@@ -1358,6 +1544,9 @@ export default function FarmerCropActionModal({
             product_type:
               harvestForm.product_type,
 
+            product_code:
+              previewProductCode,
+
             actual_harvest_date:
               harvestForm.actual_harvest_date,
 
@@ -1499,53 +1688,6 @@ export default function FarmerCropActionModal({
               gap-3
             "
           >
-
-            {
-              (
-                modalView ===
-                  "harvest" ||
-                modalView ===
-                  "failed"
-              ) &&
-              action !== RECORD_HARVEST &&
-              action !== RECORD_FAILED_CROP &&
-              (
-                <button
-                  type="button"
-                  onClick={
-                    handleBackToPrimary
-                  }
-                  disabled={
-                    isSaving
-                  }
-                  aria-label="Back"
-                  className="
-                    mt-0.5
-                    flex
-                    h-9
-                    w-9
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-full
-                    border
-                    border-slate-200
-                    text-slate-500
-                    transition
-                    hover:bg-slate-50
-                    hover:text-slate-800
-                    disabled:cursor-not-allowed
-                    disabled:opacity-50
-                  "
-                >
-                  <ArrowLeft
-                    size={17}
-                  />
-                </button>
-              )
-            }
-
-
             <div
               className="
                 min-w-0
@@ -1581,38 +1723,42 @@ export default function FarmerCropActionModal({
           </div>
 
 
-          <button
-            type="button"
-            onClick={
-              handleClose
-            }
-            disabled={
-              isSaving ||
-              isReadingImage
-            }
-            aria-label="Close modal"
-            className="
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-full
-              border
-              border-slate-200
-              text-slate-400
-              transition
-              hover:bg-slate-50
-              hover:text-slate-700
-              disabled:cursor-not-allowed
-              disabled:opacity-50
-            "
-          >
-            <X
-              size={18}
-            />
-          </button>
+          {
+            !isHarvestOrFailed && (
+              <button
+                type="button"
+                onClick={
+                  handleClose
+                }
+                disabled={
+                  isSaving ||
+                  isReadingImage
+                }
+                aria-label="Close modal"
+                className="
+                  flex
+                  h-9
+                  w-9
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-full
+                  border
+                  border-slate-200
+                  text-slate-400
+                  transition
+                  hover:bg-slate-50
+                  hover:text-slate-700
+                  disabled:cursor-not-allowed
+                  disabled:opacity-50
+                "
+              >
+                <X
+                  size={18}
+                />
+              </button>
+            )
+          }
 
         </div>
 
@@ -1721,6 +1867,13 @@ export default function FarmerCropActionModal({
                   )
                 }
               />
+
+              {landPreparationDate && (
+                <ReadOnlyItem
+                  label="Land Preparation Date"
+                  value={formatFarmerFriendlyDate(landPreparationDate)}
+                />
+              )}
             </div>
 
 
@@ -1747,19 +1900,30 @@ export default function FarmerCropActionModal({
                     <input
                       required
                       type="date"
+                      max={getTodayInManila()}
                       value={
                         startForm.land_preparation_date
                       }
                       onChange={
                         (
                           event
-                        ) =>
+                        ) => {
+                          const val = event.target.value;
                           setStartForm(
                             {
                               land_preparation_date:
-                                event.target.value,
+                                val,
                             }
-                          )
+                          );
+                          const maxDate = getTodayInManila();
+                          if (val && val > maxDate) {
+                            setLocalError(
+                              "Land preparation date cannot be in the future (Asia/Manila). Please select today or a past date."
+                            );
+                          } else {
+                            setLocalError("");
+                          }
+                        }
                       }
                       className="
                         w-full
@@ -1795,87 +1959,127 @@ export default function FarmerCropActionModal({
                       grid
                       gap-x-4
                       gap-y-5
-                      md:grid-cols-2
+                      sm:grid-cols-2
                     "
                   >
                     <FormField
                       label="Rice Variety"
                       required
-                      fullWidth
+                      fullWidth={plantingForm.rice_variety_selection !== "Other / Specify"}
                     >
-                      <input
+                      <select
                         required
-                        type="text"
-                        value={
-                          plantingForm.rice_variety
-                        }
-                        onChange={
-                          (
-                            event
-                          ) =>
-                            setPlantingForm(
-                              (
-                                current
-                              ) => ({
-                                ...current,
-
-                                rice_variety:
-                                  event.target.value,
-                              })
-                            )
-                        }
-                        placeholder="Enter rice variety"
+                        value={plantingForm.rice_variety_selection}
+                        onChange={(event) => {
+                          const val = event.target.value;
+                          setLocalError("");
+                          setPlantingForm((current) => ({
+                            ...current,
+                            rice_variety_selection: val,
+                            rice_variety_custom:
+                              val === "Other / Specify"
+                                ? current.rice_variety_custom
+                                : "",
+                            rice_variety:
+                              val === "Other / Specify"
+                                ? current.rice_variety_custom
+                                : val,
+                          }));
+                        }}
                         className="
                           w-full
                           rounded-xl
                           border
                           border-slate-300
+                          bg-white
                           px-3.5
                           py-2.5
                           text-sm
+                          text-slate-700
                           outline-none
-                          placeholder:text-slate-400
                           focus:border-green-600
                           focus:ring-1
                           focus:ring-green-600
                         "
-                      />
+                      >
+                        <option value="">Select Variety</option>
+                        {RICE_VARIETY_OPTIONS.map((v) => (
+                          <option key={v} value={v}>
+                            {v}
+                          </option>
+                        ))}
+                      </select>
                     </FormField>
 
+                    {plantingForm.rice_variety_selection === "Other / Specify" && (
+                      <FormField
+                        label="Specify Variety Name"
+                        required
+                      >
+                        <input
+                          required
+                          type="text"
+                          value={plantingForm.rice_variety_custom}
+                          onChange={(event) => {
+                            const customVal = event.target.value;
+                            setLocalError("");
+                            setPlantingForm((current) => ({
+                              ...current,
+                              rice_variety_custom: customVal,
+                              rice_variety: customVal,
+                            }));
+                          }}
+                          placeholder="e.g. Traditional Red Rice, Jasmine"
+                          className="
+                            w-full
+                            rounded-xl
+                            border
+                            border-slate-300
+                            bg-white
+                            px-3.5
+                            py-2.5
+                            text-sm
+                            text-slate-700
+                            outline-none
+                            placeholder:text-slate-400
+                            focus:border-green-600
+                            focus:ring-1
+                            focus:ring-green-600
+                          "
+                        />
+                      </FormField>
+                    )}
 
                     <FormField
                       label="Planting Date"
                       required
+                      hint={
+                        landPreparationDate
+                          ? `Must be on or after ${formatFarmerFriendlyDate(landPreparationDate)} and up to ${formatFarmerFriendlyDate(maxPlantingDate)}.`
+                          : undefined
+                      }
                     >
                       <input
                         required
                         type="date"
+                        min={landPreparationDate || undefined}
+                        max={maxPlantingDate || undefined}
                         value={
                           plantingForm.planting_date
                         }
                         onChange={
-                          (
-                            event
-                          ) =>
-                            setPlantingForm(
-                              (
-                                current
-                              ) => ({
-                                ...current,
-
-                                planting_date:
-                                  event.target.value,
-                              })
-                            )
+                          handlePlantingDateChange
                         }
                         className="
                           w-full
                           rounded-xl
                           border
                           border-slate-300
+                          bg-white
                           px-3.5
                           py-2.5
                           text-sm
+                          text-slate-700
                           outline-none
                           focus:border-green-600
                           focus:ring-1
@@ -1884,27 +2088,26 @@ export default function FarmerCropActionModal({
                       />
                     </FormField>
 
-
                     <FormField
                       label="Expected Harvest Date"
                       required
+                      hint="Automatically set to 1 calendar month after Planting Date."
                     >
                       <input
                         required
                         type="date"
+                        min={
+                          plantingForm.planting_date ||
+                          undefined
+                        }
                         value={
                           plantingForm.expected_harvest_date
                         }
                         onChange={
-                          (
-                            event
-                          ) =>
+                          (event) =>
                             setPlantingForm(
-                              (
-                                current
-                              ) => ({
+                              (current) => ({
                                 ...current,
-
                                 expected_harvest_date:
                                   event.target.value,
                               })
@@ -1915,9 +2118,11 @@ export default function FarmerCropActionModal({
                           rounded-xl
                           border
                           border-slate-300
+                          bg-white
                           px-3.5
                           py-2.5
                           text-sm
+                          text-slate-700
                           outline-none
                           focus:border-green-600
                           focus:ring-1
@@ -1925,7 +2130,6 @@ export default function FarmerCropActionModal({
                         "
                       />
                     </FormField>
-
 
                     <FormField
                       label="Expected Yield (kg)"
@@ -1959,9 +2163,11 @@ export default function FarmerCropActionModal({
                           rounded-xl
                           border
                           border-slate-300
+                          bg-white
                           px-3.5
                           py-2.5
                           text-sm
+                          text-slate-700
                           outline-none
                           placeholder:text-slate-400
                           focus:border-green-600
@@ -2504,7 +2710,7 @@ export default function FarmerCropActionModal({
                     >
                       <ReadOnlyItem
                         label="Product Code"
-                        value="System-generated"
+                        value={previewProductCode}
                       />
 
                       <ReadOnlyItem
@@ -2815,6 +3021,33 @@ export default function FarmerCropActionModal({
                         md:grid-cols-2
                       "
                     >
+
+                      {/* PRODUCT CODE */}
+                      <FormField
+                        label="Product Code"
+                        fullWidth
+                        hint="Auto-generated: [FARMER INITIALS]-[FARM INITIALS]-[MMDDYYYY]-[HHMM]"
+                      >
+                        <input
+                          type="text"
+                          readOnly
+                          value={previewProductCode}
+                          className="
+                            w-full
+                            rounded-xl
+                            border
+                            border-slate-200
+                            bg-slate-100
+                            px-3.5
+                            py-2.5
+                            text-sm
+                            font-semibold
+                            text-slate-700
+                            cursor-not-allowed
+                            outline-none
+                          "
+                        />
+                      </FormField>
 
                       {/* PRODUCT IMAGE */}
 
@@ -3426,19 +3659,51 @@ export default function FarmerCropActionModal({
           ================================================= */}
 
           <div
-            className="
+            className={`
               flex
               shrink-0
               items-center
-              justify-end
               border-t
               border-slate-200
               bg-white
               px-5
               py-4
               sm:px-6
-            "
+              ${isHarvestOrFailed ? "justify-between" : "justify-end"}
+            `}
           >
+            {
+              isHarvestOrFailed && (
+                <button
+                  type="button"
+                  onClick={
+                    handleBackToPrimary
+                  }
+                  disabled={
+                    isSaving ||
+                    isReadingImage
+                  }
+                  className="
+                    rounded-lg
+                    border
+                    border-slate-300
+                    bg-white
+                    px-4
+                    py-2.5
+                    text-sm
+                    font-semibold
+                    text-slate-700
+                    transition
+                    hover:bg-slate-50
+                    hover:text-slate-900
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
+                  "
+                >
+                  Cancel
+                </button>
+              )
+            }
 
             <button
               type="submit"
