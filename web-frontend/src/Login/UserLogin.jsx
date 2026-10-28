@@ -50,11 +50,14 @@ export const resolvePostLoginDashboard = (user) => {
     return "/farmer/dashboard";
   }
 
-  // SUPPLIER / MILLER EMPLOYEES
+  // SUPPLIER / MILLER EMPLOYEES (supplier_employees = Miller)
+  // Routing must check employee account type AND position
   const isSupplierEmployee =
-    role === "supplier_employee" ||
     accountType === "supplier_employee" ||
-    orgType === "supplier";
+    role === "supplier_employee" ||
+    orgType === "supplier" ||
+    role.startsWith("miller_") ||
+    role.startsWith("supplier_");
 
   if (isSupplierEmployee) {
     if (position === "encoder" || role === "supplier_encoder" || role === "miller_encoder") {
@@ -74,23 +77,27 @@ export const resolvePostLoginDashboard = (user) => {
       position === "fulfillment & logistics" ||
       position === "fulfillment and logistics" ||
       position === "logistics" ||
-      role === "miller_logistics"
+      position === "flc" ||
+      role === "miller_logistics" ||
+      role === "miller_flc"
     ) {
       return "/miller-logistics/dashboard";
     }
-    if (position === "driver" || role === "miller_driver") {
+    if (position === "driver" || position === "delivery_driver" || role === "miller_driver") {
       return "/miller-driver/dashboard";
     }
-    if (position === "branch_manager" || position === "branch manager") {
+    if (position === "branch_manager" || position === "branch manager" || role === "miller_branch_manager") {
       return "/miller-branch-manager/dashboard";
     }
   }
 
-  // WAREHOUSE EMPLOYEES
+  // WAREHOUSE EMPLOYEES (warehouse_employees = Warehouse)
+  // Routing must check employee account type AND position
   const isWarehouseEmployee =
-    role === "warehouse_employee" ||
     accountType === "warehouse_employee" ||
-    orgType === "warehouse";
+    role === "warehouse_employee" ||
+    orgType === "warehouse" ||
+    role.startsWith("warehouse_");
 
   if (isWarehouseEmployee) {
     if (position === "encoder" || role === "warehouse_encoder") {
@@ -132,11 +139,15 @@ export const resolvePostLoginDashboard = (user) => {
   // Explicit direct role routes configured in App.jsx
   const directRoleRoutes = {
     supplier_encoder: "/supplier-encoder/dashboard",
+    miller_encoder: "/supplier-encoder/dashboard",
     miller_sales: "/miller-sales/dashboard",
     miller_logistics: "/miller-logistics/dashboard",
+    miller_flc: "/miller-logistics/dashboard",
+    supplier_logistics: "/miller-logistics/dashboard",
     miller_procurement: "/miller-procurement/dashboard",
     miller_finance: "/miller-finance/dashboard",
     miller_driver: "/miller-driver/dashboard",
+    supplier_driver: "/miller-driver/dashboard",
     miller_branch_manager: "/miller-branch-manager/dashboard",
     warehouse_encoder: "/warehouse-encoder/dashboard",
     warehouse_sales: "/warehouse-sales/dashboard",

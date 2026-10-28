@@ -32,10 +32,10 @@ class WarehouseFlcDriverAuthTests(unittest.TestCase):
         self.factory = APIRequestFactory()
 
     def test_warehouse_driver_login_and_notifications(self):
-        # 1. Login with warehouse driver account
+        # 1. Login with warehouse driver account (bryant@rice.com)
         req = self.factory.post(
             '/api/auth/login',
-            {'identifier': 'angelo@rice.com', 'password': 'Password123!'},
+            {'identifier': 'bryant@rice.com', 'password': 'Password123!'},
             format='json'
         )
         resp = auth_views.login(req)
@@ -72,66 +72,114 @@ class WarehouseFlcDriverAuthTests(unittest.TestCase):
         self.assertEqual(resp_miller.status_code, 401)
         self.assertIn("Miller Driver authentication required", resp_miller.content.decode())
 
+    def test_miller_driver_login_and_notifications(self):
+        # 1. Login with Miller driver account (bryant@grains.com)
+        req = self.factory.post(
+            '/api/auth/login',
+            {'identifier': 'bryant@grains.com', 'password': 'Password123!'},
+            format='json'
+        )
+        resp = auth_views.login(req)
+        self.assertEqual(resp.status_code, 200, f"Miller Driver login failed: {resp.data}")
+        self.assertIn('access_token', resp.data)
+        user = resp.data['user']
+        self.assertEqual(user['role'], 'supplier_employee')
+        self.assertEqual(user['account_type'], 'supplier_employee')
+        self.assertEqual(user['position'], 'driver')
+        self.assertEqual(user['organization_type'], 'supplier')
+        self.assertEqual(user['status'], 'active')
+
+        token = resp.data['access_token']
+
+        # 2. Miller Driver calls Miller driver notifications -> HTTP 200
+        req_miller = self.factory.get(
+            '/api/miller-employees/driver/notifications/',
+            HTTP_AUTHORIZATION=f'Bearer {token}'
+        )
+        resp_miller = miller_driver_views.driver_notifications_list_view(req_miller)
+        self.assertEqual(resp_miller.status_code, 200)
+
+        # 3. Miller Driver calls Warehouse driver notifications -> MUST return HTTP 401
+        req_wh = self.factory.get(
+            '/api/warehouse/driver/notifications/',
+            HTTP_AUTHORIZATION=f'Bearer {token}'
+        )
+        resp_wh = wh_driver_views.driver_notifications_list_view(req_wh)
+        self.assertEqual(resp_wh.status_code, 401)
+        self.assertIn("Warehouse Driver authentication required", resp_wh.content.decode())
+
     def test_warehouse_flc_login_and_notifications(self):
-        # Insert a temporary Warehouse FLC employee if not exists
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT warehouse_employee_id FROM warehouse_employees WHERE email = 'test_flc@rice.com'")
-            row = cursor.fetchone()
-            if not row:
-                cursor.execute("""
-                    INSERT INTO warehouse_employees
-                    (warehouse_profile_id, first_name, last_name, email, contact_number, username, password_hash, position, status, must_change_password)
-                    VALUES
-                    (6, 'Felix', 'Logistics', 'test_flc@rice.com', '09123456780', 'test_flc@rice.com', %s, 'fulfillment_logistics_coordinator', 'active', 0)
-                """, [hash_password('Password123!')])
-                flc_id = cursor.lastrowid
-                created_flc = True
-            else:
-                flc_id = row[0]
-                created_flc = False
+        # angelo@rice.com is active warehouse FLC (position = fulfillment_logistics_coordinator)
+        req = self.factory.post(
+            '/api/auth/login',
+            {'identifier': 'angelo@rice.com', 'password': 'Password123!'},
+            format='json'
+        )
+        resp = auth_views.login(req)
+        self.assertEqual(resp.status_code, 200, f"Warehouse FLC login failed: {resp.data}")
+        user = resp.data['user']
+        self.assertEqual(user['role'], 'warehouse_employee')
+        self.assertEqual(user['account_type'], 'warehouse_employee')
+        self.assertEqual(user['position'], 'fulfillment_logistics_coordinator')
+        self.assertEqual(user['organization_type'], 'warehouse')
+        self.assertEqual(user['status'], 'active')
 
-        try:
-            # 1. Login with warehouse FLC account
-            req = self.factory.post(
-                '/api/auth/login',
-                {'identifier': 'test_flc@rice.com', 'password': 'Password123!'},
-                format='json'
-            )
-            resp = auth_views.login(req)
-            self.assertEqual(resp.status_code, 200, f"FLC login failed: {resp.data}")
-            user = resp.data['user']
-            self.assertEqual(user['role'], 'warehouse_employee')
-            self.assertEqual(user['account_type'], 'warehouse_employee')
-            self.assertEqual(user['position'], 'fulfillment_logistics_coordinator')
-            self.assertEqual(user['organization_type'], 'warehouse')
-            self.assertEqual(user['status'], 'active')
+        flc_token = resp.data['access_token']
 
-            flc_token = resp.data['access_token']
+        # 2. FLC calls warehouse logistics notifications -> HTTP 200
+        req_notif = self.factory.get(
+            '/api/warehouse/logistics/notifications/',
+            HTTP_AUTHORIZATION=f'Bearer {flc_token}'
+        )
+        resp_notif = wh_logistics_views.list_notifications_view(req_notif)
+        self.assertEqual(resp_notif.status_code, 200)
+        self.assertTrue(resp_notif.data['success'])
+        self.assertIn('notifications', resp_notif.data)
+        self.assertIn('unseen_count', resp_notif.data)
 
-            # 2. FLC calls warehouse logistics notifications -> HTTP 200
-            req_notif = self.factory.get(
-                '/api/warehouse/logistics/notifications/',
-                HTTP_AUTHORIZATION=f'Bearer {flc_token}'
-            )
-            resp_notif = wh_logistics_views.list_notifications_view(req_notif)
-            self.assertEqual(resp_notif.status_code, 200)
-            self.assertTrue(resp_notif.data['success'])
-            self.assertIn('notifications', resp_notif.data)
-            self.assertIn('unseen_count', resp_notif.data)
+        # 3. FLC calls Miller logistics notifications -> MUST return HTTP 401
+        req_miller = self.factory.get(
+            '/api/miller-employees/logistics/notifications/',
+            HTTP_AUTHORIZATION=f'Bearer {flc_token}'
+        )
+        resp_miller = miller_logistics_views.notifications_list_view(req_miller)
+        self.assertEqual(resp_miller.status_code, 401)
+        self.assertIn("Fulfillment Logistics Coordinator authentication required", resp_miller.content.decode())
 
-            # 3. FLC calls Miller logistics notifications -> MUST return HTTP 401
-            req_miller = self.factory.get(
-                '/api/miller-employees/logistics/notifications/',
-                HTTP_AUTHORIZATION=f'Bearer {flc_token}'
-            )
-            resp_miller = miller_logistics_views.notifications_list_view(req_miller)
-            self.assertEqual(resp_miller.status_code, 401)
-            self.assertIn("Fulfillment Logistics Coordinator authentication required", resp_miller.content.decode())
+    def test_miller_flc_login_and_notifications(self):
+        # angelo@grains.com is active Miller FLC (position = fulfillment_logistics_coordinator)
+        req = self.factory.post(
+            '/api/auth/login',
+            {'identifier': 'angelo@grains.com', 'password': 'Password123!'},
+            format='json'
+        )
+        resp = auth_views.login(req)
+        self.assertEqual(resp.status_code, 200, f"Miller FLC login failed: {resp.data}")
+        user = resp.data['user']
+        self.assertEqual(user['role'], 'supplier_employee')
+        self.assertEqual(user['account_type'], 'supplier_employee')
+        self.assertEqual(user['position'], 'fulfillment_logistics_coordinator')
+        self.assertEqual(user['organization_type'], 'supplier')
+        self.assertEqual(user['status'], 'active')
 
-        finally:
-            if created_flc:
-                with connection.cursor() as cursor:
-                    cursor.execute("DELETE FROM warehouse_employees WHERE warehouse_employee_id = %s", [flc_id])
+        flc_token = resp.data['access_token']
+
+        # 2. Miller FLC calls Miller logistics notifications -> HTTP 200
+        req_miller = self.factory.get(
+            '/api/miller-employees/logistics/notifications/',
+            HTTP_AUTHORIZATION=f'Bearer {flc_token}'
+        )
+        resp_miller = miller_logistics_views.notifications_list_view(req_miller)
+        self.assertEqual(resp_miller.status_code, 200)
+
+        # 3. Miller FLC calls Warehouse logistics notifications -> MUST return HTTP 401
+        req_wh = self.factory.get(
+            '/api/warehouse/logistics/notifications/',
+            HTTP_AUTHORIZATION=f'Bearer {flc_token}'
+        )
+        resp_wh = wh_logistics_views.list_notifications_view(req_wh)
+        self.assertEqual(resp_wh.status_code, 401)
+        self.assertIn("Warehouse Logistics Coordinator", resp_wh.content.decode())
 
     def test_warehouse_notification_lifecycle(self):
         # Insert test notifications for driver and logistics
@@ -150,10 +198,10 @@ class WarehouseFlcDriverAuthTests(unittest.TestCase):
         flc_notif_id = [r[0] for r in inserted_rows if r[1] == 'logistics'][0]
 
         try:
-            # Login as driver
+            # Login as warehouse driver (bryant@rice.com)
             req = self.factory.post(
                 '/api/auth/login',
-                {'identifier': 'angelo@rice.com', 'password': 'Password123!'},
+                {'identifier': 'bryant@rice.com', 'password': 'Password123!'},
                 format='json'
             )
             resp = auth_views.login(req)
@@ -204,7 +252,7 @@ class WarehouseFlcDriverAuthTests(unittest.TestCase):
     def test_reject_expired_and_inactive_tokens(self):
         # Expired token
         expired_token = create_access_token({
-            "sub": "1007",
+            "sub": "1008",
             "role": "warehouse_employee",
             "account_type": "warehouse_employee",
             "auth_source": "grainrise"
@@ -228,4 +276,3 @@ class WarehouseFlcDriverAuthTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

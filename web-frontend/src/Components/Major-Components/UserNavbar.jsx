@@ -352,66 +352,75 @@ const UserNavbar = ({
       (authenticatedUser?.position === "sales" ||
         authenticatedUser?.position === "seller"));
 
-  const isWarehouseLogistics =
-    propRole === "warehouse_logistics" ||
-    propRole === "warehouse_flc" ||
-    role === "warehouse_logistics" ||
-    role === "warehouse_flc" ||
-    location.pathname.startsWith("/warehouse-logistics") ||
-    (authenticatedUser?.account_type === "warehouse_employee" &&
-      (authenticatedUser?.position === "fulfillment_logistics_coordinator" ||
-        authenticatedUser?.position === "fulfillment & logistics" ||
-        authenticatedUser?.position === "fulfillment and logistics" ||
-        authenticatedUser?.position === "logistics" ||
-        authenticatedUser?.position === "flc")) ||
-    (authenticatedUser?.role === "warehouse_employee" &&
-      (authenticatedUser?.position === "fulfillment_logistics_coordinator" ||
-        authenticatedUser?.position === "fulfillment & logistics" ||
-        authenticatedUser?.position === "fulfillment and logistics" ||
-        authenticatedUser?.position === "logistics" ||
-        authenticatedUser?.position === "flc"));
-
-  const isLogistics =
-    propRole === "supplier_logistics" ||
-    propRole === "miller_logistics" ||
-    propRole === "warehouse_logistics" ||
-    propRole === "warehouse_flc" ||
-    role === "supplier_logistics" ||
-    role === "miller_logistics" ||
-    role === "warehouse_logistics" ||
-    role === "warehouse_flc" ||
-    isWarehouseLogistics ||
+  const isMillerDriver =
+    propRole === "miller_driver" ||
+    propRole === "supplier_driver" ||
+    role === "miller_driver" ||
+    role === "supplier_driver" ||
     (authenticatedUser?.account_type === "supplier_employee" &&
-      (authenticatedUser?.position === "logistics" ||
-        authenticatedUser?.position === "fulfillment_logistics_coordinator")) ||
+      (authenticatedUser?.position === "driver" ||
+        authenticatedUser?.position === "delivery_driver")) ||
     (authenticatedUser?.role === "supplier_employee" &&
-      (authenticatedUser?.position === "logistics" ||
-        authenticatedUser?.position === "fulfillment_logistics_coordinator"));
+      (authenticatedUser?.position === "driver" ||
+        authenticatedUser?.position === "delivery_driver")) ||
+    (authenticatedUser?.role === "miller_driver");
 
   const isWarehouseDriver =
-    propRole === "warehouse_driver" ||
-    role === "warehouse_driver" ||
-    location.pathname.startsWith("/warehouse-driver") ||
-    (authenticatedUser?.account_type === "warehouse_employee" &&
-      (authenticatedUser?.position === "driver" ||
-        authenticatedUser?.position === "delivery_driver")) ||
-    (authenticatedUser?.role === "warehouse_employee" &&
-      (authenticatedUser?.position === "driver" ||
-        authenticatedUser?.position === "delivery_driver")) ||
-    (authenticatedUser?.role === "warehouse_driver");
+    !isMillerDriver &&
+    (propRole === "warehouse_driver" ||
+      role === "warehouse_driver" ||
+      location.pathname.startsWith("/warehouse-driver") ||
+      (authenticatedUser?.account_type === "warehouse_employee" &&
+        (authenticatedUser?.position === "driver" ||
+          authenticatedUser?.position === "delivery_driver")) ||
+      (authenticatedUser?.role === "warehouse_employee" &&
+        (authenticatedUser?.position === "driver" ||
+          authenticatedUser?.position === "delivery_driver")) ||
+      (authenticatedUser?.role === "warehouse_driver"));
 
-  const isDriver =
-    propRole === "miller_driver" ||
-    propRole === "warehouse_driver" ||
-    role === "miller_driver" ||
-    role === "warehouse_driver" ||
-    isWarehouseDriver ||
+  const isDriver = isMillerDriver || isWarehouseDriver;
+
+  const isMillerLogistics =
+    propRole === "supplier_logistics" ||
+    propRole === "miller_logistics" ||
+    propRole === "miller_flc" ||
+    role === "supplier_logistics" ||
+    role === "miller_logistics" ||
+    role === "miller_flc" ||
     (authenticatedUser?.account_type === "supplier_employee" &&
-      (authenticatedUser?.position === "driver" ||
-        authenticatedUser?.position === "delivery_driver")) ||
+      (authenticatedUser?.position === "logistics" ||
+        authenticatedUser?.position === "fulfillment_logistics_coordinator" ||
+        authenticatedUser?.position === "fulfillment & logistics" ||
+        authenticatedUser?.position === "fulfillment and logistics" ||
+        authenticatedUser?.position === "flc")) ||
     (authenticatedUser?.role === "supplier_employee" &&
-      (authenticatedUser?.position === "driver" ||
-        authenticatedUser?.position === "delivery_driver"));
+      (authenticatedUser?.position === "logistics" ||
+        authenticatedUser?.position === "fulfillment_logistics_coordinator" ||
+        authenticatedUser?.position === "fulfillment & logistics" ||
+        authenticatedUser?.position === "fulfillment and logistics" ||
+        authenticatedUser?.position === "flc"));
+
+  const isWarehouseLogistics =
+    !isMillerLogistics &&
+    (propRole === "warehouse_logistics" ||
+      propRole === "warehouse_flc" ||
+      role === "warehouse_logistics" ||
+      role === "warehouse_flc" ||
+      location.pathname.startsWith("/warehouse-logistics") ||
+      (authenticatedUser?.account_type === "warehouse_employee" &&
+        (authenticatedUser?.position === "fulfillment_logistics_coordinator" ||
+          authenticatedUser?.position === "fulfillment & logistics" ||
+          authenticatedUser?.position === "fulfillment and logistics" ||
+          authenticatedUser?.position === "logistics" ||
+          authenticatedUser?.position === "flc")) ||
+      (authenticatedUser?.role === "warehouse_employee" &&
+        (authenticatedUser?.position === "fulfillment_logistics_coordinator" ||
+          authenticatedUser?.position === "fulfillment & logistics" ||
+          authenticatedUser?.position === "fulfillment and logistics" ||
+          authenticatedUser?.position === "logistics" ||
+          authenticatedUser?.position === "flc")));
+
+  const isLogistics = isMillerLogistics || isWarehouseLogistics;
 
 
 

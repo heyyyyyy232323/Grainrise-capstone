@@ -71,11 +71,17 @@ export const isEmployeeAccount = (user, payload = null) => {
     user?.position || payload?.position || ""
   ).trim().toLowerCase();
 
+  const orgType = String(
+    user?.organization_type || payload?.organization_type || ""
+  ).trim().toLowerCase();
+
   if (
     accountType === "warehouse_employee" ||
     accountType === "supplier_employee" ||
     role === "warehouse_employee" ||
-    role === "supplier_employee"
+    role === "supplier_employee" ||
+    orgType === "warehouse" ||
+    orgType === "supplier"
   ) {
     return true;
   }
@@ -107,7 +113,10 @@ export const isEmployeeAccount = (user, payload = null) => {
     "miller_finance",
     "miller_sales",
     "miller_logistics",
+    "miller_flc",
+    "supplier_logistics",
     "miller_driver",
+    "supplier_driver",
     "warehouse_encoder",
     "warehouse_sales",
     "warehouse_logistics",
@@ -365,15 +374,49 @@ const useAuth = () => {
     role === "miller_manager";
 
 
-  const isWarehouseEmployee =
-    accountType ===
-    "warehouse_employee";
+  const orgType =
+    user?.organization_type || null;
 
+  const isWarehouseEmployee =
+    accountType === "warehouse_employee" ||
+    role === "warehouse_employee" ||
+    orgType === "warehouse" ||
+    (typeof role === "string" && role.startsWith("warehouse_"));
 
   const isSupplierEmployee =
-    accountType ===
-    "supplier_employee";
+    accountType === "supplier_employee" ||
+    role === "supplier_employee" ||
+    orgType === "supplier" ||
+    (typeof role === "string" && (role.startsWith("miller_") || role.startsWith("supplier_")));
 
+  const isMillerDriver =
+    Boolean(isSupplierEmployee) &&
+    (position === "driver" || position === "delivery_driver" || role === "miller_driver" || role === "supplier_driver");
+
+  const isWarehouseDriver =
+    Boolean(isWarehouseEmployee) &&
+    (position === "driver" || position === "delivery_driver" || role === "warehouse_driver");
+
+  const isMillerLogistics =
+    Boolean(isSupplierEmployee) &&
+    (position === "fulfillment_logistics_coordinator" ||
+      position === "fulfillment & logistics" ||
+      position === "fulfillment and logistics" ||
+      position === "logistics" ||
+      position === "flc" ||
+      role === "miller_logistics" ||
+      role === "miller_flc" ||
+      role === "supplier_logistics");
+
+  const isWarehouseLogistics =
+    Boolean(isWarehouseEmployee) &&
+    (position === "fulfillment_logistics_coordinator" ||
+      position === "fulfillment & logistics" ||
+      position === "fulfillment and logistics" ||
+      position === "logistics" ||
+      position === "flc" ||
+      role === "warehouse_logistics" ||
+      role === "warehouse_flc");
 
   // ==========================================================
   // RETURN AUTH DATA
@@ -390,6 +433,7 @@ const useAuth = () => {
     role,
     accountType,
     position,
+    orgType,
 
     isAdmin,
     isFarmer,
@@ -398,6 +442,10 @@ const useAuth = () => {
     isMillerManager,
     isWarehouseEmployee,
     isSupplierEmployee,
+    isMillerDriver,
+    isWarehouseDriver,
+    isMillerLogistics,
+    isWarehouseLogistics,
 
     login,
     logout,

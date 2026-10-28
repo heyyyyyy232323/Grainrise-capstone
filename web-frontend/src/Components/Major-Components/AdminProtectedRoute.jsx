@@ -80,7 +80,8 @@ export const ProtectedRoute = () => {
         isEmployeeAccount(parsedUser, curPayload) &&
         hasRequiredEmployeeFields(parsedUser)
       ) {
-        const destination = resolvePostLoginDashboard(parsedUser);
+        const combinedUser = { ...curPayload, ...(parsedUser || {}) };
+        const destination = resolvePostLoginDashboard(combinedUser);
         navigate(destination || "/login", { replace: true });
       }
     }
