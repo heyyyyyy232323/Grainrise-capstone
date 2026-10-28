@@ -17,7 +17,7 @@ import logging
 from asgiref.sync import async_to_sync
 from django.db import connection, transaction
 
-from .identity import ROLE_MILLER, ROLE_WAREHOUSE, get_identity
+from .identity import ROLE_MILLER, ROLE_WAREHOUSE, ROLE_FARMER, get_identity
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +86,17 @@ def _thread_for(identity, row):
             return f"user_{o_u}", is_mine
         return None, is_mine
 
+    if identity["role"] == ROLE_FARMER:
+        is_mine = (s_u == uid)
+        o_wh, o_sp, o_u = (r_wh, r_sp, r_u) if is_mine else (s_wh, s_sp, s_u)
+        if o_sp:
+            return f"supplier_{o_sp}", is_mine
+        if o_wh:
+            return f"warehouse_{o_wh}", is_mine
+        if o_u and o_u != uid:
+            return f"user_{o_u}", is_mine
+        return None, is_mine
+
     return None, False
 
 
@@ -149,7 +160,15 @@ def _publish_message_created(message_id):
         if not thread_id:
             continue
 
-        mine_type = "miller" if ident["role"] == ROLE_MILLER else "warehouse"
+        if ident["role"] == ROLE_MILLER:
+            mine_type = "miller"
+        elif ident["role"] == ROLE_WAREHOUSE:
+            mine_type = "warehouse"
+        elif ident["role"] == ROLE_FARMER:
+            mine_type = "farmer"
+        else:
+            mine_type = "user"
+
         replied_meta = None
         if reply_id:
             replied_meta = {

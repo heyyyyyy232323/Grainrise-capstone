@@ -12,10 +12,12 @@ from django.db import connection
 
 from api.miller_function.miller_auth import get_authenticated_miller_manager
 from api.warehouse_function.warehouse_auth import get_authenticated_warehouse_manager
+from api.farmer_function.farmer_auth import get_authenticated_farmer
 
 ROLE_MILLER = "miller_manager"
 ROLE_WAREHOUSE = "warehouse_manager"
-REALTIME_ROLES = {ROLE_MILLER, ROLE_WAREHOUSE}
+ROLE_FARMER = "farmer"
+REALTIME_ROLES = {ROLE_MILLER, ROLE_WAREHOUSE, ROLE_FARMER}
 
 THREAD_ID_RE = re.compile(r"^(supplier|warehouse|user)_(\d{1,18})$")
 
@@ -43,7 +45,7 @@ def _owned_ids(table, id_col, user_id):
 
 def get_identity(user_id, role=None):
     """
-    Build the messaging identity for a manager user.
+    Build the messaging identity for a user.
     Returns None for roles that do not use realtime messaging.
     """
     if role is None:
@@ -69,6 +71,13 @@ def get_identity(user_id, role=None):
             "supplier_ids": [],
             "warehouse_ids": _owned_ids("warehouse_profiles", "warehouse_profile_id", user_id),
         }
+    if role == ROLE_FARMER:
+        return {
+            "user_id": user_id,
+            "role": ROLE_FARMER,
+            "supplier_ids": [],
+            "warehouse_ids": [],
+        }
     return None
 
 
@@ -89,6 +98,10 @@ def authenticate_token(token):
     warehouse = get_authenticated_warehouse_manager(shim)
     if warehouse:
         return get_identity(int(warehouse["user_id"]), ROLE_WAREHOUSE)
+
+    farmer = get_authenticated_farmer(shim)
+    if farmer:
+        return get_identity(int(farmer["user_id"]), ROLE_FARMER)
 
     return None
 
