@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import useApi from "../useApi";
 
 // ============================================================
 // INITIAL SAMPLE DATA
@@ -265,21 +266,23 @@ const INITIAL_MESSAGES_BY_REF = {
 // ============================================================
 
 export default function useFarmerContracts() {
-  const [opportunities, setOpportunities] = useState(INITIAL_OPPORTUNITIES);
-  const [applications, setApplications] = useState(INITIAL_APPLICATIONS);
-  const [biddings, setBiddings] = useState(INITIAL_BIDDINGS);
-  const [contracts, setContracts] = useState(INITIAL_CONTRACTS);
+  const { request } = useApi();
 
-  const [messageThreads, setMessageThreads] = useState(INITIAL_THREADS);
-  const [messages, setMessages] = useState(INITIAL_MESSAGES_BY_REF["posting_1"]);
-  const [messagesMap, setMessagesMap] = useState(INITIAL_MESSAGES_BY_REF);
+  const [opportunities, setOpportunities] = useState([]);
+  const [applications, setApplications] = useState([]);
+  const [biddings, setBiddings] = useState([]);
+  const [contracts, setContracts] = useState([]);
 
-  const [selectedOpportunity, setSelectedOpportunity] = useState(INITIAL_OPPORTUNITIES[0]);
-  const [selectedApplication, setSelectedApplication] = useState(INITIAL_APPLICATIONS[0]);
-  const [selectedBidding, setSelectedBidding] = useState(INITIAL_BIDDINGS[0]);
-  const [selectedOffer, setSelectedOffer] = useState(INITIAL_BIDDINGS[0].offers[0]);
-  const [selectedContract, setSelectedContract] = useState(INITIAL_CONTRACTS[0]);
-  const [selectedMessageThread, setSelectedMessageThread] = useState(INITIAL_THREADS[0]);
+  const [messageThreads, setMessageThreads] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [messagesMap, setMessagesMap] = useState({});
+
+  const [selectedOpportunity, setSelectedOpportunity] = useState(null);
+  const [selectedApplication, setSelectedApplication] = useState(null);
+  const [selectedBidding, setSelectedBidding] = useState(null);
+  const [selectedOffer, setSelectedOffer] = useState(null);
+  const [selectedContract, setSelectedContract] = useState(null);
+  const [selectedMessageThread, setSelectedMessageThread] = useState(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -298,66 +301,160 @@ export default function useFarmerContracts() {
   // APPLICATIONS
   // =========================================================
 
-  const loadApplications = useCallback(async () => {
-    setIsLoading(false);
-    return applications;
-  }, [applications]);
+  const loadApplications = useCallback(
+    async (filters = {}) => {
+      setIsLoading(true);
+      setError("");
+      try {
+        const queryParams = new URLSearchParams();
+        if (filters.search) queryParams.append("search", filters.search);
+        if (filters.status) queryParams.append("status", filters.status);
+        if (filters.year) queryParams.append("year", filters.year);
+        if (filters.month) queryParams.append("month", filters.month);
+        if (filters.sortBy) queryParams.append("sortBy", filters.sortBy);
+
+        const qs = queryParams.toString();
+        const url = `/farmer/contracts/applications/${qs ? `?${qs}` : ""}`;
+        const res = await request(url, { method: "GET" });
+        const list = res?.applications || res?.data || [];
+        setApplications(list);
+        return list;
+      } catch (err) {
+        const msg = err?.message || "Failed to load contract applications.";
+        setError(msg);
+        return [];
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [request]
+  );
 
   const loadApplicationDetails = useCallback(
     async (appId) => {
-      const app = applications.find((a) => Number(a.application_id) === Number(appId));
-      if (app) setSelectedApplication(app);
-      return app;
+      setIsLoading(true);
+      setError("");
+      try {
+        const res = await request(`/farmer/contracts/applications/${appId}/`, {
+          method: "GET",
+        });
+        const app = res?.application || res?.data || null;
+        setSelectedApplication(app);
+        return app;
+      } catch (err) {
+        const msg = err?.message || "Failed to load application details.";
+        setError(msg);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
     },
-    [applications]
+    [request]
   );
 
   const cancelApplication = useCallback(
-    async (appId, reason = "") => {
+    async (appId, payload) => {
       setIsSaving(true);
-      const targetId = Number(appId);
-      setApplications((prev) =>
-        prev.map((a) =>
-          Number(a.application_id) === targetId
-            ? { ...a, application_status: "cancelled", cancel_reason: reason }
-            : a
-        )
-      );
-      setIsSaving(false);
-      return { success: true };
+      setError("");
+      try {
+        let reason = "";
+        let remarks = "";
+        if (typeof payload === "object" && payload !== null) {
+          reason = payload.cancellationReason || payload.reason || "";
+          remarks = payload.cancellationRemarks || payload.remarks || "";
+        } else {
+          reason = String(payload || "");
+        }
+
+        const res = await request(`/farmer/contracts/applications/${appId}/cancel/`, {
+          method: "POST",
+          body: { reason, remarks },
+        });
+
+        const updated = res?.application || res?.data;
+        setApplications((prev) =>
+          prev.map((a) =>
+            Number(a.application_id) === Number(appId)
+              ? { ...a, ...(updated || {}), application_status: "cancelled", cancellation_reason: reason }
+              : a
+          )
+        );
+
+        setSelectedApplication((prev) => {
+          if (prev && Number(prev.application_id) === Number(appId)) {
+            return {
+              ...prev,
+              ...(updated || {}),
+              application_status: "cancelled",
+              cancellation_reason: reason,
+            };
+          }
+          return prev;
+        });
+
+        return { success: true, data: updated };
+      } catch (err) {
+        const msg = err?.message || "Failed to cancel application.";
+        setError(msg);
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
     },
-    []
+    [request]
   );
 
   // =========================================================
   // OFFERS / BIDDINGS
   // =========================================================
 
-  const loadBiddings = useCallback(async () => {
-    setIsLoading(false);
-    return biddings;
-  }, [biddings]);
+  const loadBiddings = useCallback(
+    async (filters = {}) => {
+      setIsLoading(true);
+      setError("");
+      try {
+        const queryParams = new URLSearchParams();
+        if (filters.search) queryParams.append("search", filters.search);
+        if (filters.status) queryParams.append("status", filters.status);
+        if (filters.sortBy) queryParams.append("sortBy", filters.sortBy);
+        const qs = queryParams.toString();
+        const url = `/farmer/contracts/biddings/${qs ? `?${qs}` : ""}`;
+        const res = await request(url, { method: "GET" });
+        const list = res?.biddings || res?.data || [];
+        setBiddings(list);
+        return list;
+      } catch (err) {
+        const msg = err?.message || "Failed to load open biddings.";
+        setError(msg);
+        return [];
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [request]
+  );
 
-  const createBidding = useCallback(async (payload) => {
-    setIsSaving(true);
-    const newBidding = {
-      bidding_id: Date.now(),
-      bidding_code: `BID-2026-${String(Math.floor(Math.random() * 900) + 100)}`,
-      rice_variety: payload.rice_variety || "RC 222 (Tubigan 18)",
-      product_grade: payload.product_grade || "Grade 1",
-      quantity_open_for_bidding_kg: Number(payload.quantity_open_for_bidding_kg || 10000),
-      minimum_acceptable_price_per_kg: Number(payload.minimum_acceptable_price_per_kg || 22),
-      bidding_status: "active",
-      bidding_deadline: payload.bidding_deadline || "2026-12-31",
-      proposed_fulfillment_date: payload.proposed_fulfillment_date || "2027-01-15",
-      created_at: new Date().toISOString(),
-      offers_received: 0,
-      offers: [],
-    };
-    setBiddings((prev) => [newBidding, ...prev]);
-    setIsSaving(false);
-    return { success: true, data: newBidding };
-  }, []);
+  const createBidding = useCallback(
+    async (payload) => {
+      setIsSaving(true);
+      setError("");
+      try {
+        const res = await request("/farmer/contracts/biddings/create/", {
+          method: "POST",
+          body: payload,
+        });
+        await loadBiddings();
+        return { success: true, data: res?.data };
+      } catch (err) {
+        const msg = err?.message || "Failed to create open bidding.";
+        setError(msg);
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [request, loadBiddings]
+  );
 
   const loadBiddingDetails = useCallback(
     async (bidId) => {
@@ -370,184 +467,259 @@ export default function useFarmerContracts() {
 
   const loadOfferDetails = useCallback(
     async (offerId) => {
-      for (const b of biddings) {
-        const found = (b.offers || []).find((o) => Number(o.offer_id) === Number(offerId));
-        if (found) {
-          setSelectedOffer(found);
-          return found;
-        }
+      setIsLoading(true);
+      setError("");
+      try {
+        const res = await request(`/farmer/contracts/offers/${offerId}/`, {
+          method: "GET",
+        });
+        const off = res?.offer || res?.data;
+        setSelectedOffer(off);
+        return off;
+      } catch (err) {
+        const msg = err?.message || "Failed to load offer details.";
+        setError(msg);
+        throw err;
+      } finally {
+        setIsLoading(false);
       }
-      return null;
     },
-    [biddings]
+    [request]
   );
 
   const acceptOffer = useCallback(
-    async (offerId) => {
+    async (offerId, signature = "") => {
       setIsSaving(true);
-      const targetId = Number(offerId);
-      let acceptedOfferObj = null;
-
-      setBiddings((prev) =>
-        prev.map((b) => {
-          const hasOffer = (b.offers || []).some((o) => Number(o.offer_id) === targetId);
-          if (!hasOffer) return b;
-          return {
-            ...b,
-            bidding_status: "awarded",
-            offers: b.offers.map((o) => {
-              if (Number(o.offer_id) === targetId) {
-                acceptedOfferObj = { ...o, offer_status: "accepted" };
-                return acceptedOfferObj;
-              }
-              return { ...o, offer_status: "rejected" };
-            }),
-          };
-        })
-      );
-
-      if (acceptedOfferObj) {
-        const newContract = {
-          contract_id: Date.now(),
-          contract_code: `CTR-2026-${String(Math.floor(Math.random() * 900) + 100)}`,
-          miller_name: acceptedOfferObj.miller_name,
-          business_name: acceptedOfferObj.business_name,
-          organization_name: acceptedOfferObj.organization_name,
-          rice_variety: "RC 222 (Tubigan 18)",
-          product_grade: "Grade 1",
-          product_type: "Dry Palay (14% MC)",
-          product_code: "RC222-DRY",
-          contracted_quantity_kg: acceptedOfferObj.offered_quantity_kg,
-          remaining_quantity_kg: acceptedOfferObj.offered_quantity_kg,
-          agreed_price_per_kg: acceptedOfferObj.offered_buying_price_per_kg,
-          total_contract_value: acceptedOfferObj.estimated_offer_value,
-          contract_status: "active",
-          fulfillment_status: "pending_fulfillment",
-          contract_start_date: new Date().toISOString().split("T")[0],
-          fulfillment_date: "2026-12-31",
-          created_at: new Date().toISOString(),
-        };
-        setContracts((prev) => [newContract, ...prev]);
+      setError("");
+      try {
+        const res = await request(`/farmer/contracts/offers/${offerId}/accept/`, {
+          method: "POST",
+          body: { signature },
+        });
+        await loadBiddings();
+        return { success: true, data: res?.contract || res?.data };
+      } catch (err) {
+        const msg = err?.message || "Failed to accept offer.";
+        setError(msg);
+        throw err;
+      } finally {
+        setIsSaving(false);
       }
-
-      setIsSaving(false);
-      return { success: true };
     },
-    []
+    [request, loadBiddings]
   );
 
   const declineOffer = useCallback(
-    async (offerId) => {
+    async (offerId, reason = "") => {
       setIsSaving(true);
-      const targetId = Number(offerId);
-      setBiddings((prev) =>
-        prev.map((b) => ({
-          ...b,
-          offers: (b.offers || []).map((o) =>
-            Number(o.offer_id) === targetId ? { ...o, offer_status: "declined" } : o
-          ),
-        }))
-      );
-      setIsSaving(false);
-      return { success: true };
+      setError("");
+      try {
+        const res = await request(`/farmer/contracts/offers/${offerId}/decline/`, {
+          method: "POST",
+          body: { reason },
+        });
+        await loadBiddings();
+        return { success: true, data: res?.offer || res?.data };
+      } catch (err) {
+        const msg = err?.message || "Failed to decline offer.";
+        setError(msg);
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
     },
-    []
+    [request, loadBiddings]
   );
 
   // =========================================================
   // OPPORTUNITIES
   // =========================================================
 
-  const loadOpportunities = useCallback(async () => {
-    setIsLoading(false);
-    return opportunities;
-  }, [opportunities]);
+  const loadOpportunities = useCallback(
+    async (filters = {}) => {
+      setIsLoading(true);
+      setError("");
+      try {
+        const queryParams = new URLSearchParams();
+        if (filters.search) queryParams.append("search", filters.search);
+        if (filters.productType) queryParams.append("product_type", filters.productType);
+        if (filters.riceVariety) queryParams.append("rice_variety", filters.riceVariety);
+        if (filters.sortBy) queryParams.append("sortBy", filters.sortBy);
+        const qs = queryParams.toString();
+        const url = `/farmer/contracts/opportunities/${qs ? `?${qs}` : ""}`;
+        const res = await request(url, { method: "GET" });
+        const list = res?.opportunities || res?.data || [];
+        setOpportunities(list);
+        return list;
+      } catch (err) {
+        const msg = err?.message || "Failed to load purchasing opportunities.";
+        setError(msg);
+        return [];
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [request]
+  );
 
   const loadOpportunityDetails = useCallback(
-    async (postingId) => {
-      const opp = opportunities.find((o) => Number(o.posting_id) === Number(postingId));
-      if (opp) setSelectedOpportunity(opp);
-      return opp;
+    async (oppId) => {
+      setIsLoading(true);
+      setError("");
+      try {
+        const res = await request(`/farmer/contracts/opportunities/${oppId}/`, {
+          method: "GET",
+        });
+        const opp = res?.opportunity || res?.data;
+        setSelectedOpportunity(opp);
+        return opp;
+      } catch (err) {
+        const msg = err?.message || "Failed to load opportunity details.";
+        setError(msg);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
     },
-    [opportunities]
+    [request]
   );
 
   const submitApplication = useCallback(
     async (postingId, payload) => {
       setIsSaving(true);
-      const opp = opportunities.find((o) => Number(o.posting_id) === Number(postingId));
-      const newApp = {
-        application_id: Date.now(),
-        posting_id: Number(postingId),
-        posting_code: opp?.posting_code || `OPP-${postingId}`,
-        business_name: opp?.business_name || "Partner Rice Mill",
-        miller_name: opp?.miller_name || "Miller Manager",
-        organization_name: opp?.organization_name || "",
-        rice_variety: opp?.rice_variety || "RC 222 (Tubigan 18)",
-        quantity_to_commit_kg: Number(payload.quantity_to_commit_kg || 5000),
-        offered_price_per_kg: Number(payload.offered_price_per_kg || opp?.buying_price_per_kg || 23),
-        application_date: new Date().toISOString().split("T")[0],
-        application_status: "submitted",
-        remarks: payload.remarks || "",
-        created_at: new Date().toISOString(),
-      };
-
-      setApplications((prev) => [newApp, ...prev]);
-      setOpportunities((prev) =>
-        prev.map((o) =>
-          Number(o.posting_id) === Number(postingId) ? { ...o, has_active_application: true } : o
-        )
-      );
-
-      setIsSaving(false);
-      return { success: true, data: newApp };
+      setError("");
+      try {
+        const bodyData = {
+          opportunity_id: postingId,
+          farm_product_id: payload.farm_product_id,
+          quantity_to_commit_kg: payload.quantity_to_commit_kg,
+          proposed_selling_price_per_kg: payload.proposed_selling_price_per_kg || payload.offered_price_per_kg,
+          expected_availability_date: payload.expected_availability_date,
+          additional_notes: payload.additional_notes || payload.remarks,
+          farmer_signature: payload.farmer_signature,
+        };
+        const res = await request("/farmer/contracts/opportunities/apply/", {
+          method: "POST",
+          body: bodyData,
+        });
+        await loadOpportunities();
+        await loadApplications();
+        return { success: true, data: res?.application || res?.data };
+      } catch (err) {
+        const msg = err?.message || "Failed to submit contract application.";
+        setError(msg);
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
     },
-    [opportunities]
+    [request, loadOpportunities, loadApplications]
   );
 
   // =========================================================
   // CURRENT CONTRACTS
   // =========================================================
 
-  const loadContracts = useCallback(async () => {
-    setIsLoading(false);
-    return contracts;
-  }, [contracts]);
+  const loadContracts = useCallback(
+    async (filters = {}) => {
+      setIsLoading(true);
+      setError("");
+      try {
+        const queryParams = new URLSearchParams();
+        if (filters.search) queryParams.append("search", filters.search);
+        if (filters.status) queryParams.append("status", filters.status);
+        if (filters.sortBy) queryParams.append("sortBy", filters.sortBy);
+        const qs = queryParams.toString();
+        const url = `/farmer/contracts/current/${qs ? `?${qs}` : ""}`;
+        const res = await request(url, { method: "GET" });
+        const list = res?.contracts || res?.data || [];
+        setContracts(list);
+        return list;
+      } catch (err) {
+        const msg = err?.message || "Failed to load current contracts.";
+        setError(msg);
+        return [];
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [request]
+  );
 
   const loadContractDetails = useCallback(
     async (contractId) => {
-      const c = contracts.find((item) => Number(item.contract_id) === Number(contractId));
-      if (c) setSelectedContract(c);
-      return c;
+      setIsLoading(true);
+      setError("");
+      try {
+        const res = await request(`/farmer/contracts/current/${contractId}/`, {
+          method: "GET",
+        });
+        const ctr = res?.contract || res?.data;
+        setSelectedContract(ctr);
+        return ctr;
+      } catch (err) {
+        const msg = err?.message || "Failed to load contract details.";
+        setError(msg);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
     },
-    [contracts]
+    [request]
   );
 
-  const signContract = useCallback(async (contractId) => {
-    setIsSaving(true);
-    const targetId = Number(contractId);
-    setContracts((prev) =>
-      prev.map((c) =>
-        Number(c.contract_id) === targetId ? { ...c, is_signed_by_farmer: true } : c
-      )
-    );
-    setIsSaving(false);
-    return { success: true };
-  }, []);
+  const signContract = useCallback(
+    async (contractId, signature = "") => {
+      setIsSaving(true);
+      setError("");
+      try {
+        const res = await request(`/farmer/contracts/current/${contractId}/sign/`, {
+          method: "POST",
+          body: { signature },
+        });
+        await loadContracts();
+        return { success: true, data: res?.contract || res?.data };
+      } catch (err) {
+        const msg = err?.message || "Failed to sign contract.";
+        setError(msg);
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [request, loadContracts]
+  );
 
-  const requestVoid = useCallback(async (contractId, reason = "") => {
-    setIsSaving(true);
-    const targetId = Number(contractId);
-    setContracts((prev) =>
-      prev.map((c) =>
-        Number(c.contract_id) === targetId
-          ? { ...c, contract_status: "void_requested", void_reason: reason }
-          : c
-      )
-    );
-    setIsSaving(false);
-    return { success: true };
-  }, []);
+  const requestVoid = useCallback(
+    async (contractId, reason = "", remarks = "") => {
+      setIsSaving(true);
+      setError("");
+      try {
+        let reasonStr = "";
+        let remarksStr = "";
+        if (typeof reason === "object" && reason !== null) {
+          reasonStr = reason.reason || reason.void_reason || "";
+          remarksStr = reason.remarks || reason.void_remarks || "";
+        } else {
+          reasonStr = String(reason || "");
+          remarksStr = String(remarks || "");
+        }
+        const res = await request(`/farmer/contracts/current/${contractId}/void-request/`, {
+          method: "POST",
+          body: { reason: reasonStr, remarks: remarksStr },
+        });
+        await loadContracts();
+        return { success: true, data: res?.contract || res?.data };
+      } catch (err) {
+        const msg = err?.message || "Failed to submit void request.";
+        setError(msg);
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [request, loadContracts]
+  );
 
   // =========================================================
   // MESSAGES

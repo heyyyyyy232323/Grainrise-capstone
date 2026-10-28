@@ -434,7 +434,7 @@ export default function FarmerContractApplicationDetailsModal({
 
 
   const canCancel =
-    status === "pending";
+    status === "pending" || status === "under_review";
 
 
   const businessName =

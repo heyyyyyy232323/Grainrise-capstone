@@ -228,6 +228,8 @@ export default function useRealtimeMessages({
 
       const message = {
         ...raw,
+        is_mine: isMine !== undefined ? isMine : raw.is_mine,
+        sender_type: raw.sender_type || (isMine ? "farmer" : "other"),
         sender_name: isMine ? "You" : raw.sender_name || active?.name || "",
         replied_message: raw.replied_message
           ? {
