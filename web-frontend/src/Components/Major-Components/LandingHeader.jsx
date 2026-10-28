@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ShieldCheck, HelpCircle, LogIn, Users, Moon, Sun, Menu, X } from 'lucide-react';
 import logoImg from '../../assets/Logo.png';
 import { translations, useLanguagePreference } from '../../lib/translations';
+import useToast from '../hooks/useToast';
+import Toast from '../Modals/Toast';
 
 const GrainRiseLogo = () => (
   <div className="flex items-center">
@@ -14,6 +16,7 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [language, setLanguage] = useLanguagePreference();
+  const { toasts, showToast, removeToast } = useToast();
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
@@ -78,10 +81,42 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
       localStorage.setItem('theme', 'light');
     }
     setIsDarkMode(nextIsDark);
+
+    showToast({
+      type: 'success',
+      title: nextIsDark ? (language === 'tl' ? 'Dark mode na' : 'Dark mode enabled') : (language === 'tl' ? 'Light mode na' : 'Light mode enabled'),
+      message: nextIsDark ? (language === 'tl' ? 'Nakabukas na ang dark mode.' : 'Dark mode is now active.') : (language === 'tl' ? 'Nakabukas na ang light mode.' : 'Light mode is now active.'),
+      duration: 2200,
+    });
+  };
+
+  const handleLanguageChange = (nextLanguage) => {
+    if (nextLanguage === language) return;
+    setLanguage(nextLanguage);
+    showToast({
+      type: 'success',
+      title: nextLanguage === 'tl' ? 'Wika na-update' : 'Language updated',
+      message: nextLanguage === 'tl' ? 'Nakapili na ang Tagalog.' : 'English is now selected.',
+      duration: 2200,
+    });
   };
 
   return (
     <>
+      {toasts.length > 0 && toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          isOpen={true}
+          type={toast.type}
+          title={toast.title}
+          message={toast.message}
+          duration={3000}
+          onClose={() => removeToast(toast.id)}
+          position="top-right"
+          containerClassName="top-24"
+          zIndex={12}
+        />
+      ))}
       <div className="bg-[#00580c] dark:bg-[#0d1a11] text-white dark:text-emerald-300 text-[11px] sm:text-xs py-1 px-6 sm:px-12 border-b border-emerald-900/30">
         <div className="max-w-[1240px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-1.5 font-medium">
@@ -151,14 +186,14 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
             <div className="flex items-center rounded-lg border border-gray-200 dark:border-white/15 bg-white/70 dark:bg-[#0f1c16] overflow-hidden">
               <button
                 type="button"
-                onClick={() => setLanguage('en')}
+                onClick={() => handleLanguageChange('en')}
                 className={`px-2 py-1 text-[10px] font-semibold ${language === 'en' ? 'bg-emerald-700 text-white' : 'text-gray-700 dark:text-gray-200'}`}
               >
                 EN
               </button>
               <button
                 type="button"
-                onClick={() => setLanguage('tl')}
+                onClick={() => handleLanguageChange('tl')}
                 className={`px-2 py-1 text-[10px] font-semibold ${language === 'tl' ? 'bg-emerald-700 text-white' : 'text-gray-700 dark:text-gray-200'}`}
               >
                 TL
@@ -192,8 +227,8 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
 
           <div className="flex md:hidden items-center gap-2">
             <div className="flex items-center rounded-lg border border-gray-200 dark:border-white/15 bg-white/70 dark:bg-[#0f1c16] overflow-hidden text-[10px] font-semibold">
-              <button type="button" onClick={() => setLanguage('en')} className={`px-1.5 py-1 ${language === 'en' ? 'bg-emerald-700 text-white' : 'text-gray-700 dark:text-gray-200'}`}>EN</button>
-              <button type="button" onClick={() => setLanguage('tl')} className={`px-1.5 py-1 ${language === 'tl' ? 'bg-emerald-700 text-white' : 'text-gray-700 dark:text-gray-200'}`}>TL</button>
+              <button type="button" onClick={() => handleLanguageChange('en')} className={`px-1.5 py-1 ${language === 'en' ? 'bg-emerald-700 text-white' : 'text-gray-700 dark:text-gray-200'}`}>EN</button>
+              <button type="button" onClick={() => handleLanguageChange('tl')} className={`px-1.5 py-1 ${language === 'tl' ? 'bg-emerald-700 text-white' : 'text-gray-700 dark:text-gray-200'}`}>TL</button>
             </div>
             <button
               type="button"
@@ -214,7 +249,7 @@ export default function LandingHeader({ scrollTo: customScrollTo }) {
         </div>
 
         {menuOpen && (
-          <div className="md:hidden border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#101d16] -mx-6 sm:-mx-12 px-6 sm:px-12 py-4 flex flex-col gap-3 shadow-xl">
+          <div className="md:hidden relative z-10 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#101d16] -mx-6 sm:-mx-12 px-6 sm:px-12 py-4 flex flex-col gap-3 shadow-xl">
             <button
               onClick={() => scrollTo('hero')}
               className="text-left text-sm font-medium py-2 text-gray-800 dark:text-gray-200 hover:text-emerald-700"

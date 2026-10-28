@@ -167,6 +167,8 @@ export const ToastNotification = ({
   onClose,
   position = "top-right",
   className = "",
+  containerClassName = "",
+  zIndex = 20,
 }) => {
   useEffect(() => {
     if (isOpen && duration && duration > 0 && onClose) {
@@ -190,7 +192,8 @@ export const ToastNotification = ({
 
   return (
     <div
-      className={`${isFixed ? `fixed ${POSITION_STYLES[position] || POSITION_STYLES["top-right"]} z-[9999]` : "relative"} max-w-xs w-[calc(100vw-2rem)] pointer-events-none transition-all duration-300 ease-out`}
+      className={`${isFixed ? `fixed ${POSITION_STYLES[position] || POSITION_STYLES["top-right"]}` : "relative"} ${containerClassName} max-w-xs w-[calc(100vw-2rem)] pointer-events-none transition-all duration-300 ease-out`}
+      style={{ zIndex }}
     >
       <div
         role="alert"
@@ -288,9 +291,12 @@ export const ToastNotification = ({
   );
 };
 
-const ToastCollection = ({ toasts = [], removeToast }) => {
+const ToastCollection = ({ toasts = [], removeToast, containerClassName = "", zIndex = 9999 }) => {
   const toastContainer = (
-    <div className="fixed top-20 right-5 z-[9999] flex flex-col gap-2 pointer-events-none">
+    <div
+      className={`fixed top-20 right-5 flex flex-col gap-2 pointer-events-none ${containerClassName}`}
+      style={{ zIndex }}
+    >
       {toasts.map((toast) => (
         <ToastNotification
           key={toast.id}

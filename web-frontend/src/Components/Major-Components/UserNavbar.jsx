@@ -23,6 +23,8 @@ import {
 
 import { translations, useLanguagePreference } from "../../lib/translations";
 import useAuth from "../hooks/useAuth";
+import useToast from "../hooks/useToast";
+import Toast from "../Modals/Toast";
 import useAdminNotifications from "../hooks/AccountAdmin/useAdminNotifications";
 import useFarmerNotifications from "../hooks/Farmer/UseFarmerNotifications";
 import useEncoderNotifications from "../hooks/MillerEncoder/useEncoderNotifications";
@@ -788,6 +790,7 @@ const UserNavbar = ({
   ] = useState(false);
 
   const [language, setLanguage] = useLanguagePreference();
+  const { toasts, showToast, removeToast } = useToast();
 
   const languageOptions = [
     { code: "en", label: "English", flag: "🇺🇸" },
@@ -1035,10 +1038,35 @@ const UserNavbar = ({
           // Ignore unavailable localStorage.
         }
 
+        const isTagalog = language === "tl";
+        showToast({
+          type: "success",
+          title: next
+            ? (isTagalog ? "Dark mode na" : "Dark mode enabled")
+            : (isTagalog ? "Light mode na" : "Light mode enabled"),
+          message: next
+            ? (isTagalog ? "Nakabukas na ang dark mode." : "Dark mode is now active.")
+            : (isTagalog ? "Nakabukas na ang light mode." : "Light mode is now active."),
+          duration: 2200,
+        });
 
         return next;
       }
     );
+  };
+
+  const handleLanguageChange = (nextLanguage) => {
+    if (nextLanguage === language) return;
+
+    const nextLabel = nextLanguage === "tl" ? "Tagalog" : "English";
+
+    setLanguage(nextLanguage);
+    showToast({
+      type: "success",
+      title: language === "tl" ? "Binago ang wika" : "Language updated",
+      message: `Language set to ${nextLabel}.`,
+      duration: 2200,
+    });
   };
 
 
@@ -1878,7 +1906,22 @@ const UserNavbar = ({
   // =========================================================
 
   return (
-    <header className="dark-readable-navbar h-18.25 w-full bg-white border-b border-gray-200 flex items-center gap-2 sm:gap-4 px-4 sm:px-6 z-30">
+    <>
+      {toasts.length > 0 && toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          isOpen={true}
+          type={toast.type}
+          title={toast.title}
+          message={toast.message}
+          duration={3000}
+          onClose={() => removeToast(toast.id)}
+          position="top-right"
+          zIndex={20}
+        />
+      ))}
+
+      <header className="dark-readable-navbar h-18.25 w-full bg-white border-b border-gray-200 flex items-center gap-2 sm:gap-4 px-4 sm:px-6 z-30">
 
       {/* =====================================================
           SIDEBAR TOGGLE
@@ -2444,7 +2487,7 @@ const UserNavbar = ({
                         <button
                           key={option.code}
                           type="button"
-                          onClick={() => setLanguage(option.code)}
+                          onClick={() => handleLanguageChange(option.code)}
                           className={`flex h-6 min-w-[46px] items-center justify-center gap-1 px-1.5 text-[9px] font-semibold leading-none tracking-tight transition ${
                             isActive ? "bg-[#0B7A2A] text-white" : "bg-white text-gray-600 hover:bg-gray-100"
                           }`}
@@ -2556,6 +2599,7 @@ const UserNavbar = ({
       </div>
 
     </header>
+    </>
   );
 };
 
