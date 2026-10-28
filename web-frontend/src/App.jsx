@@ -158,6 +158,7 @@ import BranchManagerNewsArticle from "./Users/WarehouseAccounts/BranchManager/Wa
 
 import WarehouseDriverDashboard from "./Users/WarehouseAccounts/WarehouseDriver/WarehouseDriverDashboard";
 import DriverMyDuties from "./Users/WarehouseAccounts/WarehouseDriver/DriverMyDuties";
+import WarehouseDriverLiveTracking from "./Users/WarehouseAccounts/WarehouseDriver/WarehouseDriverLiveTracking";
 import DriverAssignedHistory from "./Users/WarehouseAccounts/WarehouseDriver/DriverAssignedHistory";
 import DriverMessages from "./Users/WarehouseAccounts/WarehouseDriver/DriverMessages";
 import DriverPaymentSubmission from "./Users/WarehouseAccounts/WarehouseDriver/DriverPaymentSubmission";
@@ -942,6 +943,11 @@ function App() {
             <Route
               path="/warehouse-driver/my-duties"
               element={<DriverMyDuties />}
+            />
+
+            <Route
+              path="/warehouse-driver/live-tracking"
+              element={<WarehouseDriverLiveTracking />}
             />
 
             <Route

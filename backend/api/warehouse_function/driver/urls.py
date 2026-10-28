@@ -1,5 +1,47 @@
 from django.urls import include, path
+from .views import (
+    driver_delivery_complete_view,
+    driver_duties_list_view,
+    driver_buyer_group_view,
+    driver_live_tracking_exit_view,
+    driver_live_tracking_ping_view,
+    driver_live_tracking_start_view,
+    driver_messages_conversations_view,
+    driver_messages_send_view,
+    driver_messages_thread_view,
+    driver_messages_typing_view,
+    driver_payment_submissions_list_view,
+    driver_payment_submit_view,
+    driver_reimbursement_requester_view,
+    driver_reimbursement_submit_view,
+    driver_reimbursement_history_view,
+    driver_reimbursement_categories_view,
+    driver_fulfillment_history_view,
+    driver_fulfillment_variants_view,
+    driver_vehicle_assigned_history_view,
+)
 
 urlpatterns = [
     path("notifications/", include("api.warehouse_function.driver.notifications.urls")),
+    path("duties/", driver_duties_list_view, name="warehouse-driver-duties"),
+    path("live-tracking/group/", driver_buyer_group_view, name="warehouse-driver-live-tracking-group"),
+    path("live-tracking/start/", driver_live_tracking_start_view, name="warehouse-driver-live-tracking-start"),
+    path("live-tracking/ping/", driver_live_tracking_ping_view, name="warehouse-driver-live-tracking-ping"),
+    path("live-tracking/exit/", driver_live_tracking_exit_view, name="warehouse-driver-live-tracking-exit"),
+    path("delivery/complete/", driver_delivery_complete_view, name="warehouse-driver-delivery-complete"),
+    path("messages/conversations/", driver_messages_conversations_view, name="warehouse-driver-messages-conversations"),
+    path("messages/thread/", driver_messages_thread_view, name="warehouse-driver-messages-thread"),
+    path("messages/send/", driver_messages_send_view, name="warehouse-driver-messages-send"),
+    path("messages/typing/", driver_messages_typing_view, name="warehouse-driver-messages-typing"),
+    path("payments/submissions/", driver_payment_submissions_list_view, name="warehouse-driver-payment-submissions"),
+    path("payments/submit/", driver_payment_submit_view, name="warehouse-driver-payment-submit"),
+    path("reimbursements/requester/", driver_reimbursement_requester_view, name="warehouse-driver-reimbursement-requester"),
+    path("reimbursements/submit/", driver_reimbursement_submit_view, name="warehouse-driver-reimbursement-submit"),
+    path("reimbursements/history/", driver_reimbursement_history_view, name="warehouse-driver-reimbursement-history"),
+    path("reimbursements/categories/", driver_reimbursement_categories_view, name="warehouse-driver-reimbursement-categories"),
+    path("fulfillment-history/", driver_fulfillment_history_view, name="warehouse-driver-fulfillment-history"),
+    path("fulfillment-history/variants/", driver_fulfillment_variants_view, name="warehouse-driver-fulfillment-variants"),
+    path("vehicle-assigned-history/", driver_vehicle_assigned_history_view, name="warehouse-driver-vehicle-assigned-history"),
 ]
+
+

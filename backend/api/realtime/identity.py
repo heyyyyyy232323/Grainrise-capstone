@@ -103,6 +103,36 @@ def authenticate_token(token):
     if farmer:
         return get_identity(int(farmer["user_id"]), ROLE_FARMER)
 
+    try:
+        from api.warehouse_function.warehouse_auth import get_authenticated_warehouse_driver_user
+        wh_driver = get_authenticated_warehouse_driver_user(shim)
+        if wh_driver:
+            return {
+                "user_id": int(wh_driver["user_id"]),
+                "role": ROLE_WAREHOUSE,
+                "supplier_ids": [],
+                "warehouse_ids": [int(wh_driver["warehouse_profile_id"])],
+                "driver_id": int(wh_driver["driver_id"]),
+            }
+    except Exception:
+        pass
+
+    try:
+        from api.utils import decode_access_token
+        decoded = decode_access_token(token)
+        if decoded and decoded.get("auth_source") == "grainrise":
+            role = decoded.get("role")
+            sub = decoded.get("sub")
+            if role == "retailer" and sub:
+                return {
+                    "user_id": int(sub),
+                    "role": "retailer",
+                    "supplier_ids": [],
+                    "warehouse_ids": [],
+                }
+    except Exception:
+        pass
+
     return None
 
 
