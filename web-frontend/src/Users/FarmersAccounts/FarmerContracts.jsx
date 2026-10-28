@@ -4,6 +4,7 @@ import {
 
 import Breadcrumbs from "../../Components/Minor-Components/Breadcrumbs";
 import Tabs from "../../Components/Minor-Components/Tabs";
+import { translations, useLanguagePreference } from "../../lib/translations";
 
 import FarmerContractsApplications from "./FarmerContractsApplications";
 import FarmerContractsOffers from "./FarmerContractsOffers";
@@ -12,34 +13,32 @@ import FarmerContractsCurrent from "./FarmerContractsCurrent";
 
 
 // ============================================================
-// TABS
-// ============================================================
-
-const CONTRACT_TABS = [
-  {
-    id: "applications",
-    label: "Applications",
-  },
-  {
-    id: "offers",
-    label: "Offers",
-  },
-  {
-    id: "opportunities",
-    label: "Opportunities",
-  },
-  {
-    id: "current",
-    label: "Current Contracts",
-  },
-];
-
-
-// ============================================================
 // COMPONENT
 // ============================================================
 
 export default function FarmerContracts() {
+  const [language] = useLanguagePreference();
+  const t = translations[language]?.farmer ?? translations.en.farmer;
+
+  const CONTRACT_TABS = [
+    {
+      id: "applications",
+      label: t.contracts.tabs.applications,
+    },
+    {
+      id: "offers",
+      label: t.contracts.tabs.offers,
+    },
+    {
+      id: "opportunities",
+      label: t.contracts.tabs.opportunities,
+    },
+    {
+      id: "current",
+      label: t.contracts.tabs.current,
+    },
+  ];
+
   const [
     activeTab,
     setActiveTab,
@@ -86,11 +85,11 @@ export default function FarmerContracts() {
           items={[
             {
               label:
-                "Business",
+                t.sidebar.business,
             },
             {
               label:
-                "Contracts",
+                t.contracts.title,
             },
           ]}
         />
@@ -104,7 +103,7 @@ export default function FarmerContracts() {
             text-slate-900
           "
         >
-          Contracts
+          {t.contracts.title}
         </h2>
 
 
@@ -114,7 +113,7 @@ export default function FarmerContracts() {
             text-slate-500
           "
         >
-          Manage your contracts and related activities in one place.
+          {t.contracts.subtitle}
         </p>
       </div>
 

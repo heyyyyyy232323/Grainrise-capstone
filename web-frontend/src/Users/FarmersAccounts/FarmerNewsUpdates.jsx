@@ -24,6 +24,7 @@ import Toast from "../../Components/Modals/Toast";
 import useToast from "../../Components/hooks/useToast";
 import useFetchLatestNews from "../../Components/hooks/NewsUpdates/useFetchLatestNews";
 import useNewsUpdates from "../../Components/hooks/NewsUpdates/useNewsUpdates";
+import { translations, useLanguagePreference } from "../../lib/translations";
 
 
 // ============================================================
@@ -289,6 +290,8 @@ const getCategoryLabel = (
 // ============================================================
 
 export default function FarmerNewsUpdates() {
+  const [language] = useLanguagePreference();
+  const t = translations[language]?.farmer ?? translations.en.farmer;
 
   const navigate =
     useNavigate();
@@ -741,24 +744,23 @@ export default function FarmerNewsUpdates() {
             items={[
               {
                 label:
-                  "Resources",
+                  t.sidebar.resources || "Resources",
               },
               {
                 label:
-                  "News & Updates",
+                  t.newsUpdates.title,
               },
             ]}
           />
 
 
           <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-extrabold tracking-[-0.03em] text-slate-900">
-            News & Updates
+            {t.newsUpdates.title}
           </h2>
 
 
           <p className="text-sm text-slate-500">
-            Stay informed with the latest agricultural news,
-            market updates, advisories, and programs.
+            {t.newsUpdates.subtitle || "Stay informed with the latest agricultural news, market updates, advisories, and programs."}
           </p>
         </div>
 
@@ -773,7 +775,7 @@ export default function FarmerNewsUpdates() {
             className={isFetching ? "animate-spin" : ""}
           />
           <span>
-            {isFetching ? "Fetching..." : "Fetch Latest News"}
+            {isFetching ? t.newsUpdates.fetching : t.newsUpdates.fetchLatest}
           </span>
         </button>
 
@@ -800,7 +802,7 @@ export default function FarmerNewsUpdates() {
             onChange={
               handleSearchChange
             }
-            placeholder="Search news and updates"
+            placeholder={t.newsUpdates.search}
             className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-green-600 focus:border-green-600 outline-none bg-white h-[38px]"
           />
 
@@ -813,13 +815,16 @@ export default function FarmerNewsUpdates() {
 
             <Dropdown
               options={
-                yearOptions
+                yearOptions.map((item) => ({
+                  ...item,
+                  label: item.value === "" ? t.newsUpdates.allYears : item.label,
+                }))
               }
               value={year}
               onChange={
                 handleYearChange
               }
-              placeholder="Year"
+              placeholder={t.newsUpdates.year}
             />
 
           </div>
@@ -829,13 +834,16 @@ export default function FarmerNewsUpdates() {
 
             <Dropdown
               options={
-                MONTH_OPTIONS
+                MONTH_OPTIONS.map((item) => ({
+                  ...item,
+                  label: item.value === "" ? t.newsUpdates.allMonths : item.label,
+                }))
               }
               value={month}
               onChange={
                 handleMonthChange
               }
-              placeholder="Month"
+              placeholder={t.newsUpdates.month}
             />
 
           </div>
@@ -845,13 +853,16 @@ export default function FarmerNewsUpdates() {
 
             <Dropdown
               options={
-                CATEGORY_OPTIONS
+                CATEGORY_OPTIONS.map((item) => ({
+                  ...item,
+                  label: item.value === "" ? t.newsUpdates.allCategories : item.label,
+                }))
               }
               value={category}
               onChange={
                 handleCategoryChange
               }
-              placeholder="News Category"
+              placeholder={t.newsUpdates.category}
             />
 
           </div>
@@ -859,7 +870,10 @@ export default function FarmerNewsUpdates() {
 
           <SortByDropdown
             options={
-              SORT_OPTIONS
+              SORT_OPTIONS.map((item) => ({
+                ...item,
+                label: item.value === "latest" ? t.newsUpdates.latestFirst : t.newsUpdates.oldestFirst,
+              }))
             }
             value={sortBy}
             onChange={
@@ -898,7 +912,7 @@ export default function FarmerNewsUpdates() {
         <div className="border border-slate-200 rounded-xl bg-white px-5 py-10 text-center shadow-sm">
 
           <p className="text-sm font-medium text-slate-500">
-            Loading News & Updates...
+            {t.newsUpdates.loading}
           </p>
 
         </div>

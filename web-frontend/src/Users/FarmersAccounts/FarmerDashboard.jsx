@@ -26,6 +26,7 @@ import { jsPDF } from "jspdf";
 import Breadcrumbs from "../../Components/Minor-Components/Breadcrumbs";
 import KPICard from "../../Components/Graphs/KPICard";
 import useFarmerDashboard from "../../Components/hooks/Farmer/useFarmerDashboard";
+import { translations, useLanguagePreference } from "../../lib/translations";
 
 // ============================================================
 // STYLING & RISK CONFIGURATIONS (MATCHING MILLER ENCODER UI)
@@ -349,6 +350,8 @@ const EmptyChartState = ({ message }) => (
 
 export default function FarmerDashboard() {
   const navigate = useNavigate();
+  const [language] = useLanguagePreference();
+  const t = translations[language]?.farmer ?? translations.en.farmer;
 
   const {
     kpis,
@@ -393,7 +396,7 @@ export default function FarmerDashboard() {
   const kpiMetrics = useMemo(
     () => [
       {
-        title: "AVAILABLE MILLERS",
+        title: t.dashboard.kpis.availableMillers.toUpperCase(),
         value: isLoading ? "—" : kpis.available_millers,
         footer: "Millers available in the system",
         tone: "success",
@@ -402,7 +405,7 @@ export default function FarmerDashboard() {
         shortcutLabel: "View available miller opportunities",
       },
       {
-        title: "CONTRACTED MILLERS",
+        title: t.dashboard.kpis.contractedMillers.toUpperCase(),
         value: isLoading ? "—" : kpis.contracted_millers,
         footer: "Millers with active contracts",
         tone: "neutral",
@@ -411,7 +414,7 @@ export default function FarmerDashboard() {
         shortcutLabel: "View current contracts with millers",
       },
       {
-        title: "REGISTERED HARVEST AREA",
+        title: t.dashboard.kpis.registeredHarvestArea.toUpperCase(),
         value: isLoading ? "—" : formatArea(kpis.registered_harvest_area_ha),
         footer: "Registered area currently planted",
         tone: "success",
@@ -420,7 +423,7 @@ export default function FarmerDashboard() {
         shortcutLabel: "View farms with planted and growing crops",
       },
       {
-        title: "POTENTIAL CROPPING AREA",
+        title: t.dashboard.kpis.potentialCroppingArea.toUpperCase(),
         value: isLoading ? "—" : formatArea(kpis.potential_cropping_area_ha),
         footer: "Total area available for cropping",
         tone: "warning",
@@ -429,7 +432,7 @@ export default function FarmerDashboard() {
         shortcutLabel: "View farms available for cropping",
       },
     ],
-    [isLoading, kpis]
+    [isLoading, kpis, t]
   );
 
   // ==========================================================
@@ -758,9 +761,9 @@ export default function FarmerDashboard() {
       ====================================================== */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-1">
-          <Breadcrumbs items={[{ label: "Main" }, { label: "Dashboard" }]} />
+          <Breadcrumbs items={[{ label: t.sidebar.main }, { label: t.sidebar.dashboard }]} />
           <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-extrabold tracking-[-0.03em] text-slate-900">
-            {farmerUser?.first_name ? `Welcome, ${farmerUser.first_name}` : "Farmer Dashboard"}
+            {farmerUser?.first_name ? `Welcome, ${farmerUser.first_name}` : t.dashboard.title}
           </h2>
           <p className="text-sm text-slate-500">
             {isLoading ? "Loading dashboard data..." : `Last Updated: Today · ${formattedTime}`}

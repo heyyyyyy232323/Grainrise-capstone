@@ -6,6 +6,7 @@ import POSCartCard from "../../Components/Minor-Components/POSCartCard";
 import POSPaymentProofModal from "../../Components/Modals/MillerSales/POSPaymentProofModal";
 import POSSalesReceiptModal from "../../Components/Modals/MillerSales/POSSalesReceiptModal";
 import useFarmerPointOfSale from "../../Components/hooks/Farmer/useFarmerPointOfSale";
+import { translations, useLanguagePreference } from "../../lib/translations";
 
 const METHODS = { Cash: "cash", GCash: "gcash", "Bank Transfer": "bank" };
 const money = (value) => Number(value || 0).toLocaleString("en-PH", {
@@ -13,6 +14,9 @@ const money = (value) => Number(value || 0).toLocaleString("en-PH", {
 });
 
 export default function FarmerPointOfSale() {
+  const [language] = useLanguagePreference();
+  const t = translations[language]?.farmer ?? translations.en.farmer;
+
   const {
     products, paymentAccounts, paymentMethods, isLoadingProducts, isCheckingOut,
     error, loadProducts, checkout, clearError,
@@ -60,11 +64,11 @@ export default function FarmerPointOfSale() {
     ? { ...item, quantity: Math.min(Number(value), item.stockAvailable), rawQuantity: String(value) } : item).filter((item) => Number(item.quantity) > 0));
   const submit = async ({ paymentProofImage = null, referenceNo = null, credentialsId = null, confirmed = false } = {}) => {
     setCheckoutError("");
-    if (!cart.length) return setCheckoutError("Add at least one product before checking out.");
+    if (!cart.length) return setCheckoutError(t.pointOfSale.addProductPrompt);
     const invalid = cart.find((item) => !/^(?:\d+\.?\d*|\.\d+)$/.test(String(item.rawQuantity)) ||
       Number(item.rawQuantity) <= 0 || Number(item.rawQuantity) > item.stockAvailable);
-    if (invalid) return setCheckoutError(`Enter a valid quantity for ${invalid.name} (up to ${invalid.stockAvailable} ${invalid.stockAvailable === 1 ? "kg" : "kg"}).`);
-    if (method === "Cash" && paid < total) return setCheckoutError(`Amount paid must be at least ₱${money(total)}.`);
+    if (invalid) return setCheckoutError(t.pointOfSale.validQuantity.replace("{name}", invalid.name).replace("{max}", invalid.stockAvailable));
+    if (method === "Cash" && paid < total) return setCheckoutError(t.pointOfSale.minimumAmount.replace("{amount}", money(total)));
     const result = await checkout({
       items: cart.map((item) => ({ farm_product_id: item.productId, quantity_kg: Number(item.rawQuantity) })),
       payment_method: METHODS[method] || method.toLowerCase(),
@@ -88,13 +92,15 @@ export default function FarmerPointOfSale() {
   };
 
   return <div className="w-full">
-    <Breadcrumbs items={[{ label: "Farmer", path: "/farmer/dashboard" }, { label: "Point of Sale" }]} />
+    <Breadcrumbs items={[{ label: t.sidebar?.farm || t.sidebar.farm, path: "/farmer/dashboard" }, { label: t.pointOfSale.title }]} />
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <div><h1 className="text-2xl font-bold text-gray-900">Point of Sale</h1>
-        <p className="text-sm text-slate-500">Sell available farm products by their actual unit.</p></div>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-[clamp(2rem,3vw,2.5rem)] font-extrabold tracking-[-0.03em] text-slate-900">{t.pointOfSale.title}</h1>
+        <p className="text-sm text-slate-500">{t.pointOfSale.subtitle}</p>
+      </div>
       <button type="button" onClick={async () => { setRefreshing(true); await loadProducts(); setRefreshing(false); }}
         className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold" disabled={refreshing}>
-        <RefreshCw className={refreshing ? "animate-spin" : ""} size={14} /> Refresh Stock
+        <RefreshCw className={refreshing ? "animate-spin" : ""} size={14} /> {t.pointOfSale.refreshStock}
       </button>
     </div>
     {(error || checkoutError) && <div className="mb-4 flex gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
@@ -102,32 +108,32 @@ export default function FarmerPointOfSale() {
     <div className="flex flex-col gap-6 lg:flex-row">
       <section className="min-w-0 flex-1">
         <div className="relative mb-5"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search product code, variant, or product name"
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.pointOfSale.searchPlaceholder}
             className="w-full rounded-lg border border-slate-200 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-emerald-600" /></div>
-        {isLoadingProducts ? <div className="py-16 text-center text-sm text-slate-500">Loading products...</div> :
+        {isLoadingProducts ? <div className="py-16 text-center text-sm text-slate-500">{t.pointOfSale.loadingProducts}</div> :
           filtered.length ? <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">{filtered.map((p) =>
             <POSProductCard key={p.id} image={p.image} name={p.name} sku={p.sku} price={p.price} unitLabel={p.unitLabel}
               stockAvailable={p.stockAvailable} stockUnit={p.stockUnit} onAddToCart={() => add(p)} />)}</div> :
-          <div className="flex flex-col items-center py-16 text-slate-400"><ShoppingBag size={40} /><p className="mt-2 text-sm">No products available.</p></div>}
+          <div className="flex flex-col items-center py-16 text-slate-400"><ShoppingBag size={40} /><p className="mt-2 text-sm">{t.pointOfSale.noProducts}</p></div>}
       </section>
       <aside className="w-full shrink-0 rounded-xl border border-slate-200 bg-white shadow-sm lg:w-[390px]">
-        <div className="border-b p-4"><h2 className="font-bold text-slate-900">Current Sale</h2><p className="text-xs text-slate-500">{cart.length} product{cart.length === 1 ? "" : "s"}</p></div>
+        <div className="border-b p-4"><h2 className="font-bold text-slate-900">{t.pointOfSale.currentSale}</h2><p className="text-xs text-slate-500">{cart.length} {t.pointOfSale.productsLabel}</p></div>
         <div className="max-h-[390px] space-y-3 overflow-y-auto p-4">{cart.length ? cart.map((item) =>
           <POSCartCard key={item.id} name={item.name} price={item.price} unitLabel={item.unitLabel} quantity={item.quantity}
             rawQuantity={item.rawQuantity} maxQuantity={item.stockAvailable} allowDecimal onQuantityChange={(qty) => updateQuantity(item.id, qty)}
             onRawQuantityChange={(raw) => setCart((items) => items.map((x) => x.id === item.id ? { ...x, rawQuantity: raw } : x))}
             onRemove={() => setCart((items) => items.filter((x) => x.id !== item.id))} />) :
-          <p className="py-8 text-center text-sm text-slate-400">Your cart is empty.</p>}</div>
-        <div className="space-y-3 border-t p-4"><div className="flex justify-between text-sm"><span>Subtotal</span><b>₱{money(total)}</b></div>
-          <div className="flex justify-between font-bold"><span>Total</span><span>₱{money(total)}</span></div>
+          <p className="py-8 text-center text-sm text-slate-400">{t.pointOfSale.emptyCart}</p>}</div>
+        <div className="space-y-3 border-t p-4"><div className="flex justify-between text-sm"><span>{t.pointOfSale.subtotal}</span><b>₱{money(total)}</b></div>
+          <div className="flex justify-between font-bold"><span>{t.pointOfSale.total}</span><span>₱{money(total)}</span></div>
           <select value={method} onChange={(e) => setMethod(e.target.value)} className="w-full rounded-lg border p-2 text-sm">
             {paymentMethods.map((m) => <option key={m}>{m}</option>)}</select>
           {method === "Cash" ? <><input type="number" min="0" step="0.01" value={cash} onChange={(e) => setCash(e.target.value)}
-            placeholder="Amount paid" className="w-full rounded-lg border p-2 text-sm" /><div className="flex justify-between rounded-lg bg-emerald-50 p-3 text-sm"><b>Change</b><b>₱{money(change)}</b></div></> :
-            <p className="rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800">{account ? `Pay to ${account.provider_name || method}. Capture proof to continue.` : `No active ${method} account is configured.`}</p>}
-          <div className="flex gap-2"><button type="button" onClick={() => { setCart([]); setCash(""); }} className="flex-1 rounded-lg border p-2 text-sm">Clear Cart</button>
-            <button type="button" disabled={!cart.length || isCheckingOut} onClick={() => method === "Cash" ? submit() : account ? setProofOpen(true) : setCheckoutError(`No active ${method} account is configured.`)}
-              className="flex-1 rounded-lg bg-emerald-700 p-2 text-sm font-semibold text-white disabled:opacity-40">{isCheckingOut ? "Processing..." : method === "Cash" ? "Complete Transaction" : "Capture Proof & Pay"}</button></div>
+            placeholder={t.pointOfSale.amountPaid} className="w-full rounded-lg border p-2 text-sm" /><div className="flex justify-between rounded-lg bg-emerald-50 p-3 text-sm"><b>{t.pointOfSale.change}</b><b>₱{money(change)}</b></div></> :
+            <p className="rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800">{account ? `${t.pointOfSale.payTo} ${account.provider_name || method}. Capture proof to continue.` : t.pointOfSale.noActiveAccount.replace("{method}", method)}</p>}
+          <div className="flex gap-2"><button type="button" onClick={() => { setCart([]); setCash(""); }} className="flex-1 rounded-lg border p-2 text-sm">{t.pointOfSale.clearCart}</button>
+            <button type="button" disabled={!cart.length || isCheckingOut} onClick={() => method === "Cash" ? submit() : account ? setProofOpen(true) : setCheckoutError(t.pointOfSale.noActiveAccount.replace("{method}", method))}
+              className="flex-1 rounded-lg bg-emerald-700 p-2 text-sm font-semibold text-white disabled:opacity-40">{isCheckingOut ? t.pointOfSale.processing : method === "Cash" ? t.pointOfSale.completeTransaction : t.pointOfSale.captureProofAndPay}</button></div>
         </div>
       </aside>
     </div>

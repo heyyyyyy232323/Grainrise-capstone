@@ -12,6 +12,7 @@ import Dropdown from "../../Components/Minor-Components/Dropdown";
 import SortByDropdown from "../../Components/Minor-Components/SortByDropdown";
 import FarmerContractApplicationDetailsModal from "../../Components/Modals/FarmerContractApplicationDetailsModal";
 import FarmerContractCancelApplicationModal from "../../Components/Modals/FarmerContractCancelApplicationModal";
+import { translations, useLanguagePreference } from "../../lib/translations";
 
 const MONTHS = [
   { value: "1", label: "January" },
@@ -115,6 +116,9 @@ const formatCurrency = (value) => {
 
 
 export default function FarmerContractsApplications() {
+  const [language] = useLanguagePreference();
+  const t = translations[language]?.farmer ?? translations.en.farmer;
+
   const {
     applications,
     selectedApplication,
@@ -319,7 +323,7 @@ export default function FarmerContractsApplications() {
                 event.target.value
               )
             }
-            placeholder="Search applications"
+            placeholder={t.contracts.filter.searchApplications}
             className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-4 text-sm outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
           />
 
@@ -331,15 +335,15 @@ export default function FarmerContractsApplications() {
           <div className="w-36">
             <Dropdown
               options={[
-                { label: "All Status", value: "" },
-                { label: "Pending", value: "pending" },
-                { label: "Under Review", value: "under_review" },
-                { label: "Declined", value: "declined" },
-                { label: "Cancelled", value: "cancelled" },
+                { label: t.contracts.filter.allStatus, value: "" },
+                { label: t.contracts.filter.pending, value: "pending" },
+                { label: t.contracts.filter.underReview, value: "under_review" },
+                { label: t.contracts.filter.declined, value: "declined" },
+                { label: t.contracts.filter.cancelled, value: "cancelled" },
               ]}
               value={statusFilter}
               onChange={setStatusFilter}
-              placeholder="Status"
+              placeholder={t.contracts.filter.status}
             />
           </div>
 
@@ -347,7 +351,7 @@ export default function FarmerContractsApplications() {
           <div className="w-28">
             <Dropdown
               options={[
-                { label: "All Years", value: "" },
+                { label: t.contracts.filter.allYears, value: "" },
                 ...years.map((year) => ({
                   label: String(year),
                   value: String(year),
@@ -355,7 +359,7 @@ export default function FarmerContractsApplications() {
               ]}
               value={yearFilter}
               onChange={setYearFilter}
-              placeholder="Year"
+              placeholder={t.contracts.filter.year}
             />
           </div>
 
@@ -363,7 +367,7 @@ export default function FarmerContractsApplications() {
           <div className="w-32">
             <Dropdown
               options={[
-                { label: "All Months", value: "" },
+                { label: t.contracts.filter.allMonths, value: "" },
                 ...MONTHS.map((m) => ({
                   label: m.label,
                   value: m.value,
@@ -371,7 +375,7 @@ export default function FarmerContractsApplications() {
               ]}
               value={monthFilter}
               onChange={setMonthFilter}
-              placeholder="Month"
+              placeholder={t.contracts.filter.month}
             />
           </div>
 
@@ -379,8 +383,8 @@ export default function FarmerContractsApplications() {
           <div className="w-36">
             <SortByDropdown
               options={[
-                { label: "Newest", value: "newest" },
-                { label: "Oldest", value: "oldest" },
+                { label: t.contracts.filter.newest, value: "newest" },
+                { label: t.contracts.filter.oldest, value: "oldest" },
               ]}
               value={sortBy}
               onChange={setSortBy}
@@ -396,7 +400,7 @@ export default function FarmerContractsApplications() {
 
       {isLoading && applications.length === 0 && (
         <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
-          Loading applications...
+          {t.contracts.empty.loading}
         </div>
       )}
 
@@ -409,12 +413,11 @@ export default function FarmerContractsApplications() {
         applications.length === 0 && (
           <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
             <p className="font-semibold text-slate-700">
-              No Applications Available
+              {t.contracts.empty.noApplications}
             </p>
 
             <p className="mt-1 text-sm text-slate-500">
-              Your submitted contract applications
-              will appear here.
+              {t.contracts.empty.noApplicationsDesc}
             </p>
           </div>
         )}

@@ -19,7 +19,7 @@ const AdminLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [language, setLanguage] = useLanguagePreference();
+  const [language] = useLanguagePreference();
 
   const navigate = useNavigate();
   const { request } = useApi();
@@ -103,11 +103,6 @@ const AdminLogin = () => {
               alt="GrainRise Logo"
               className="h-12 object-contain"
             />
-          </div>
-
-          <div className="mb-4 flex justify-end gap-2 text-[10px] font-semibold">
-            <button type="button" onClick={() => setLanguage('en')} className={`px-2 py-1 rounded ${language === 'en' ? 'bg-emerald-700 text-white' : 'bg-gray-100 text-gray-700'}`}>EN</button>
-            <button type="button" onClick={() => setLanguage('tl')} className={`px-2 py-1 rounded ${language === 'tl' ? 'bg-emerald-700 text-white' : 'bg-gray-100 text-gray-700'}`}>TL</button>
           </div>
 
           <form className="space-y-3" onSubmit={handleSubmit}>

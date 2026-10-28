@@ -15,6 +15,7 @@ import {
 import useFarmerMessages from "../../Components/hooks/Farmer/useFarmerMessages";
 import { ArticleMessageContent } from "../../Components/Minor-Components/ArticleAttachmentCard";
 import ProfanityWarningModal from "../../Components/Modals/ProfanityWarningModal";
+import { translations, useLanguagePreference } from "../../lib/translations";
 
 // ============================================================
 // HELPERS
@@ -85,7 +86,7 @@ function formatFullTimestamp(value) {
 // THREAD ITEM COMPONENT
 // ============================================================
 
-function ThreadItem({ thread, selected, onSelect }) {
+function ThreadItem({ thread, selected, onSelect, t }) {
   const unread = Number(thread.unread_count || 0);
 
   return (
@@ -117,15 +118,15 @@ function ThreadItem({ thread, selected, onSelect }) {
         </div>
 
         <p className="mt-0.5 truncate text-xs text-slate-500">
-          {thread.subtitle || thread.role || "Miller Partner"}
+          {thread.subtitle || thread.role || t.messages.millerPartner}
         </p>
 
         <div className="mt-1 flex items-center justify-between gap-2">
           <p className="truncate text-xs text-slate-500">
             {thread.is_sender_me ? (
-              <span className="font-medium text-slate-600">You: </span>
+                <span className="font-medium text-slate-600">{t.messages.you} </span>
             ) : null}
-            {thread.latest_message || "No messages yet"}
+              {thread.latest_message || t.messages.noMessagesYet}
           </p>
 
           {unread > 0 && (
@@ -144,6 +145,9 @@ function ThreadItem({ thread, selected, onSelect }) {
 // ============================================================
 
 export default function FarmerMessages() {
+  const [language] = useLanguagePreference();
+  const t = translations[language]?.farmer ?? translations.en.farmer;
+
   const {
     threads,
     activeThread,
@@ -218,7 +222,7 @@ export default function FarmerMessages() {
       targetState.participantType ||
       (targetState.supplierId ? "supplier" : "");
     const pId = targetState.participant_id || targetState.supplierId;
-    const pName = targetState.name || targetState.millerName || "Miller Partner";
+    const pName = targetState.name || targetState.millerName || t.messages.millerPartner;
     const pRole = targetState.role || "Miller / Supplier";
 
     if (!pType || !pId) return;
@@ -333,12 +337,12 @@ export default function FarmerMessages() {
     <div className="space-y-6">
       {/* ── Breadcrumbs & Title ────────────────────────────────────────── */}
       <div className="space-y-1">
-        <Breadcrumbs items={[{ label: "Business" }, { label: "Messages" }]} />
-        <h2 className="text-[clamp(1.75rem,2.5vw,2.25rem)] font-bold tracking-tight text-slate-900">
-          Messages
+        <Breadcrumbs items={[{ label: t.messages.business }, { label: t.messages.messages }]} />
+        <h2 className="text-[clamp(2rem,3vw,2.5rem)] font-extrabold tracking-[-0.03em] text-slate-900">
+          {t.messages.title || t.messages.messages}
         </h2>
         <p className="text-sm text-slate-500">
-          View and manage your conversations with Miller partners and grain buyers in one place.
+          {t.messages.subtitle}
         </p>
       </div>
 
@@ -360,7 +364,7 @@ export default function FarmerMessages() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search Miller or conversation..."
+                  placeholder={t.messages.searchPlaceholder}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/70 py-2.5 pl-9 pr-3 text-xs text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#0B5D1E] focus:bg-white focus:ring-1 focus:ring-[#0B5D1E]"
                 />
               </div>
@@ -371,7 +375,7 @@ export default function FarmerMessages() {
               {isThreadsLoading && threads.length === 0 ? (
                 <div className="flex min-h-52 flex-col items-center justify-center p-6 text-center">
                   <Loader2 size={22} className="animate-spin text-[#0B5D1E]" />
-                  <p className="mt-3 text-xs text-slate-500">Loading conversations...</p>
+                  <p className="mt-3 text-xs text-slate-500">{t.messages.loadingConversations}</p>
                 </div>
               ) : threadsError ? (
                 <div className="p-4 text-center">
@@ -383,10 +387,10 @@ export default function FarmerMessages() {
                     <MessageCircle size={20} />
                   </div>
                   <p className="mt-3 text-sm font-semibold text-slate-600">
-                    No conversations found
+                    {t.messages.noConversationsFound}
                   </p>
                   <p className="mt-1 text-xs leading-5 text-slate-400">
-                    Conversations with registered Millers and buyers will appear here once initiated.
+                    {t.messages.conversationsDescription}
                   </p>
                 </div>
               ) : (
@@ -396,6 +400,7 @@ export default function FarmerMessages() {
                     thread={thread}
                     selected={thread.thread_id === activeKey}
                     onSelect={() => handleSelectThread(thread)}
+                    t={t}
                   />
                 ))
               )}
@@ -414,10 +419,10 @@ export default function FarmerMessages() {
                     <MessageCircle size={25} />
                   </div>
                   <h3 className="mt-4 text-base font-bold text-slate-800">
-                    Select a conversation
+                    {t.messages.selectConversation}
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Choose a contact from the left to view messages and discuss contracts and deliveries.
+                    {t.messages.selectConversationDescription}
                   </p>
                 </div>
               </div>
@@ -433,7 +438,7 @@ export default function FarmerMessages() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="truncate text-sm font-bold text-slate-900">
-                          {activeThread.name || "Miller Partner"}
+                          {activeThread.name || t.messages.millerPartner}
                         </h3>
                         {activeThread.role && (
                           <span className="inline-block rounded-md border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
@@ -442,7 +447,7 @@ export default function FarmerMessages() {
                         )}
                       </div>
                       <p className="mt-0.5 truncate text-xs text-slate-500">
-                        {activeThread.subtitle || "Direct Message"}
+                            {activeThread.subtitle || t.messages.directMessage}
                       </p>
                     </div>
                   </div>
@@ -457,7 +462,7 @@ export default function FarmerMessages() {
                       size={13}
                       className={isMessagesLoading ? "animate-spin" : ""}
                     />
-                    Refresh
+                    {t.messages.refresh}
                   </button>
                 </div>
 
@@ -467,7 +472,7 @@ export default function FarmerMessages() {
                     <div className="flex h-full min-h-64 items-center justify-center">
                       <div className="text-center">
                         <Loader2 size={25} className="mx-auto animate-spin text-[#0B5D1E]" />
-                        <p className="mt-3 text-xs text-slate-500">Loading conversation...</p>
+                        <p className="mt-3 text-xs text-slate-500">{t.messages.loadingConversation}</p>
                       </div>
                     </div>
                   ) : messagesError && messages.length === 0 ? (
@@ -479,10 +484,13 @@ export default function FarmerMessages() {
                       <div className="max-w-sm text-center">
                         <UserRound size={29} className="mx-auto text-slate-300" />
                         <p className="mt-3 text-sm font-semibold text-slate-600">
-                          Start the conversation
+                          {t.messages.startConversation}
                         </p>
                         <p className="mt-1 text-xs leading-5 text-slate-400">
-                          Send a message to start chatting with {activeThread.name}.
+                          {t.messages.startConversationDescription.replace(
+                            "{name}",
+                            activeThread.name || t.messages.millerPartner
+                          )}
                         </p>
                       </div>
                     </div>
@@ -560,11 +568,11 @@ export default function FarmerMessages() {
                                         className="inline-flex items-center gap-1 text-slate-400"
                                       >
                                         <Loader2 size={10} className="animate-spin text-emerald-600" />
-                                        <span className="text-[10px] text-slate-400">Sending...</span>
+                                        <span className="text-[10px] text-slate-400">{t.messages.sending}</span>
                                       </span>
                                     ) : (
                                       <span
-                                        title={message.is_seen ? `Seen at ${formatFullTimestamp(message.seen_at)}` : "Sent"}
+                                        title={message.is_seen ? `Seen at ${formatFullTimestamp(message.seen_at)}` : t.messages.sent}
                                         className="inline-flex items-center"
                                       >
                                         <CheckCheck
@@ -583,7 +591,7 @@ export default function FarmerMessages() {
                                       textareaRef.current?.focus();
                                     }}
                                     className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-slate-400 hover:text-slate-600 cursor-pointer"
-                                    title="Reply to this message"
+                                    title={t.messages.replyToMessage}
                                   >
                                     <CornerUpLeft size={12} />
                                   </button>
@@ -608,7 +616,7 @@ export default function FarmerMessages() {
                       <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400" />
                     </span>
                     <span className="truncate">
-                      {activeThread.name || "Participant"} is typing...
+                      {activeThread.name || t.messages.participant} {t.messages.typing}
                     </span>
                   </div>
                 )}
@@ -627,8 +635,8 @@ export default function FarmerMessages() {
                       <CornerUpLeft size={14} className="text-emerald-600 shrink-0" />
                       <span className="font-semibold shrink-0">
                         {replyingTo.sender_type === "farmer"
-                          ? "Replying to yourself"
-                          : `Replying to ${activeThread.name}`}:
+                          ? `${t.messages.replyingToYourself}:`
+                          : `${t.messages.replyingTo} ${activeThread.name}:`}
                       </span>
                       <span className="truncate italic text-emerald-700">
                         {replyingTo.message_content || replyingTo.message_text}
@@ -639,7 +647,7 @@ export default function FarmerMessages() {
                       type="button"
                       onClick={() => setReplyingTo(null)}
                       className="p-1 text-emerald-600 hover:text-emerald-900 rounded-md transition cursor-pointer"
-                      title="Cancel reply"
+                      title={t.messages.cancelReply}
                     >
                       <X size={14} />
                     </button>
@@ -661,13 +669,13 @@ export default function FarmerMessages() {
                           clearSendError();
                         }}
                         onKeyDown={handleMessageKeyDown}
-                        placeholder="Write a message to Miller partner..."
+                        placeholder={t.messages.writeMessagePlaceholder}
                         className="max-h-32 min-h-[48px] w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-5 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#0B5D1E] focus:ring-1 focus:ring-[#0B5D1E]"
                       />
 
                       <div className="mt-1 flex justify-between gap-3 px-1">
                         <p className="text-[10px] text-slate-400">
-                          Enter to send • Shift + Enter for a new line
+                          {t.messages.sendHint}
                         </p>
                         <p
                           className={`text-[10px] ${
@@ -685,7 +693,7 @@ export default function FarmerMessages() {
                       className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#0B5D1E] px-4 text-sm font-normal text-white transition hover:bg-[#094d19] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer shadow-xs"
                     >
                       <Send size={16} />
-                      <span className="hidden sm:inline">Send</span>
+                      <span className="hidden sm:inline">{t.messages.send}</span>
                     </button>
                   </div>
                 </form>
