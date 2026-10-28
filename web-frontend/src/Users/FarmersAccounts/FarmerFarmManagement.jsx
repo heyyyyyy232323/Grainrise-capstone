@@ -355,19 +355,43 @@ const FarmCard = ({
       "
     >
 
-      {/* FARM NUMBER */}
+      {/* FARM NUMBER & STATUS */}
 
-      <p
-        className="
-          text-xs
-          font-bold
-          uppercase
-          tracking-wide
-          text-green-700
-        "
-      >
-        Farm #{farm.farm_id}
-      </p>
+      <div className="flex items-center justify-between">
+        <p
+          className="
+            text-xs
+            font-bold
+            uppercase
+            tracking-wide
+            text-green-700
+          "
+        >
+          Farm #{farm.farm_id || farm.farm_profile_id}
+        </p>
+
+        <span
+          className={`
+            inline-flex
+            items-center
+            rounded-full
+            border
+            px-2.5
+            py-0.5
+            text-xs
+            font-semibold
+            ${
+              String(farm.farm_status || farm.status || "").toLowerCase() === "inactive"
+                ? "border-slate-300 bg-slate-100 text-slate-600"
+                : "border-green-200 bg-green-50 text-green-700"
+            }
+          `}
+        >
+          {String(farm.farm_status || farm.status || "").toLowerCase() === "inactive"
+            ? "Inactive"
+            : "Active"}
+        </span>
+      </div>
 
 
       {/* FARM NAME */}
@@ -507,7 +531,7 @@ const FarmCard = ({
           onClick={
             () =>
               onViewDetails(
-                farm.farm_id
+                farm.farm_id || farm.farm_profile_id
               )
           }
           className="
@@ -834,6 +858,10 @@ export default function FarmerFarmManagement() {
         setSuccessMessage(
           "Farm added successfully."
         );
+
+        await loadFarms(
+          filters
+        ).catch(() => {});
       } catch {
         // Keep modal open.
       }

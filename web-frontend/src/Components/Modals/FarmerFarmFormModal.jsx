@@ -10,7 +10,6 @@ import {
 import {
   AlertCircle,
   Loader2,
-  X,
 } from "lucide-react";
 
 import useFarmAddress from "../hooks/Farmer/useFarmAddress";
@@ -1127,40 +1126,6 @@ export default function FarmerFarmFormModal({
             </p>
 
           </div>
-
-
-          <button
-            type="button"
-            onClick={
-              handleClose
-            }
-            disabled={
-              isSaving
-            }
-            aria-label="Close modal"
-            className="
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-full
-              border
-              border-slate-200
-              text-slate-400
-              transition
-              hover:bg-slate-50
-              hover:text-slate-700
-              disabled:cursor-not-allowed
-              disabled:opacity-50
-            "
-          >
-            <X
-              size={18}
-            />
-          </button>
-
         </div>
 
 
@@ -2081,38 +2046,28 @@ export default function FarmerFarmFormModal({
             "
           >
 
-            {
-              !isEdit &&
-              (
-                <button
-                  type="button"
-                  onClick={
-                    handleClear
-                  }
-                  disabled={
-                    isSaving
-                  }
-                  className="
-                    rounded-lg
-                    border
-                    border-slate-300
-                    bg-white
-                    px-4
-                    py-2.5
-                    text-sm
-                    font-semibold
-                    text-slate-600
-                    transition
-                    hover:bg-slate-50
-                    disabled:cursor-not-allowed
-                    disabled:opacity-50
-                  "
-                >
-                  Clear
-                </button>
-              )
-            }
-
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={isSaving}
+              className="
+                rounded-lg
+                border
+                border-slate-300
+                bg-white
+                px-4
+                py-2.5
+                text-sm
+                font-semibold
+                text-slate-700
+                transition
+                hover:bg-slate-50
+                disabled:cursor-not-allowed
+                disabled:opacity-50
+              "
+            >
+              Cancel
+            </button>
 
             <button
               type="submit"

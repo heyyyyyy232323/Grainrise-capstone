@@ -5,24 +5,9 @@ from . import auth_views
 from .admin_auth import admin_views
 from . import partnership_inquiry
 from . import support_views
-from api.farmer_function.pos.views import history as farmer_pos_history
 
 
 urlpatterns = [
-
-    # ========================================================
-    # FARMER POINT OF SALE
-    # ========================================================
-    path(
-        "farmer/pos/",
-        include("api.farmer_function.pos.urls"),
-    ),
-    # Compatibility route used by the Farmer Transaction History page.
-    path(
-        "farmer/transaction-history/pos/",
-        farmer_pos_history,
-        name="farmer-transaction-history-pos",
-    ),
 
     # ========================================================
     # API HEALTH

@@ -656,10 +656,12 @@ export default function FarmerFarmDetails() {
     useNavigate();
 
 
-  const {
-    farmId,
-  } =
+  const routeParams =
     useParams();
+
+  const farmId =
+    routeParams.farmId ||
+    routeParams.id;
 
 
   const {

@@ -1,73 +1,164 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import useAuth from "../useAuth";
 
-const SAMPLE_DASHBOARD = {
-  kpis: {
-    available_millers: 8,
-    contracted_millers: 2,
-    registered_harvest_area_ha: 10.5,
-    potential_cropping_area_ha: 12.0,
-  },
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1")
+    ? "http://127.0.0.1:8000"
+    : "")
+).replace(/\/$/, "") + "/api";
 
-  palay_market_price_trend: [
-    { period_start: "2026-05-01", average_price_per_kg: 21.5, minimum_price_per_kg: 20.0, maximum_price_per_kg: 22.5, record_count: 14 },
-    { period_start: "2026-06-01", average_price_per_kg: 22.0, minimum_price_per_kg: 21.0, maximum_price_per_kg: 23.0, record_count: 18 },
-    { period_start: "2026-07-01", average_price_per_kg: 22.8, minimum_price_per_kg: 21.5, maximum_price_per_kg: 23.5, record_count: 22 },
-    { period_start: "2026-08-01", average_price_per_kg: 23.4, minimum_price_per_kg: 22.0, maximum_price_per_kg: 24.2, record_count: 25 },
-    { period_start: "2026-09-01", average_price_per_kg: 24.1, minimum_price_per_kg: 23.0, maximum_price_per_kg: 25.0, record_count: 30 },
-    { period_start: "2026-10-01", average_price_per_kg: 23.8, minimum_price_per_kg: 22.5, maximum_price_per_kg: 24.5, record_count: 28 },
-  ],
+const getStoredToken = () => {
+  return (
+    localStorage.getItem("grainrise_token") ||
+    localStorage.getItem("access_token") ||
+    ""
+  );
+};
 
-  yield_history: [
-    { crop_cycle_id: 1, farm_id: 1, actual_yield_kg: 9200, crop_cycle_name: "2025 Dry Season" },
-    { crop_cycle_id: 2, farm_id: 1, actual_yield_kg: 10500, crop_cycle_name: "2025 Wet Season" },
-    { crop_cycle_id: 3, farm_id: 1, actual_yield_kg: 9800, crop_cycle_name: "2026 Dry Season" },
-    { crop_cycle_id: 4, farm_id: 1, actual_yield_kg: 11200, crop_cycle_name: "2026 Wet Season" },
-  ],
+const INITIAL_KPIS = {
+  available_millers: 0,
+  contracted_millers: 0,
+  registered_harvest_area_ha: 0,
+  potential_cropping_area_ha: 0,
+  total_farm_area_ha: 0,
+};
 
+const INITIAL_DASHBOARD = {
+  kpis: INITIAL_KPIS,
+  palay_market_price_trend: [],
+  yield_history: [],
   climate_outlook: {
-    available: true,
-    climate_forecast_run_id: 1,
-    farm_id: 1,
-    location_source: "farm",
-    location: "Cabanatuan City, Nueva Ecija",
-    latitude: 15.4859,
-    longitude: 120.9673,
-    forecast_generated_at: "2026-10-27T08:00:00Z",
-    series: [
-      { label: "Jun", rainfall_mm: 180, temperature_c: 28.5 },
-      { label: "Jul", rainfall_mm: 240, temperature_c: 28.0 },
-      { label: "Aug", rainfall_mm: 260, temperature_c: 27.5 },
-      { label: "Sep", rainfall_mm: 195, temperature_c: 27.8 },
-      { label: "Oct", rainfall_mm: 140, temperature_c: 28.2 },
-      { label: "Nov", rainfall_mm: 75, temperature_c: 27.0 },
-    ],
+    available: false,
+    location: "",
+    source: "",
+    series: [],
   },
+  shelf_health: {
+    risk_level: "LOW",
+    explanation: "",
+    recommended_actions: [],
+  },
+  farm_health: {
+    risk_level: "LOW",
+    crop_status: "Available for Planting",
+    explanation: "",
+    irrigation_advisory: "",
+    fertilizer_advisory: "",
+    recommended_actions: [],
+  },
+  farms: [],
+  selected_farm: null,
+  current_crop: null,
 };
 
 export default function useFarmerDashboard() {
-  const { user } = useAuth();
+  const { user, token: authToken } = useAuth();
   const farmerUserId = user?.id || user?.user_id || null;
 
-  const [dashboard, setDashboard] = useState(SAMPLE_DASHBOARD);
-  const [isLoading, setIsLoading] = useState(false);
+  const [dashboard, setDashboard] = useState(INITIAL_DASHBOARD);
+  const [selectedFarmId, setSelectedFarmId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  const refreshDashboard = useCallback(async () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 300);
-    return SAMPLE_DASHBOARD;
+  const loadDashboardData = useCallback(
+    async (farmIdToFetch = selectedFarmId, isForceRefresh = false) => {
+      const activeToken = authToken || getStoredToken();
+      if (!activeToken) {
+        setIsLoading(false);
+        return;
+      }
+
+      if (isForceRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+      setError("");
+
+      try {
+        const queryParams = new URLSearchParams();
+        if (farmIdToFetch) {
+          queryParams.append("farm_id", farmIdToFetch);
+        }
+
+        const endpoint = isForceRefresh
+          ? `${API_BASE_URL}/farmer/dashboard/refresh/`
+          : `${API_BASE_URL}/farmer/dashboard/?${queryParams.toString()}`;
+
+        const method = isForceRefresh ? "POST" : "GET";
+        const headers = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${activeToken}`,
+        };
+        const body = isForceRefresh && farmIdToFetch ? JSON.stringify({ farm_id: farmIdToFetch }) : undefined;
+
+        const response = await fetch(endpoint, {
+          method,
+          headers,
+          body,
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.message || `Server returned status ${response.status}`);
+        }
+
+        const resJson = await response.json();
+        if (resJson.success && resJson.data) {
+          setDashboard(resJson.data);
+          if (resJson.data.selected_farm?.farm_profile_id && !farmIdToFetch) {
+            setSelectedFarmId(resJson.data.selected_farm.farm_profile_id);
+          }
+        } else {
+          throw new Error(resJson.message || "Failed to load dashboard records.");
+        }
+      } catch (err) {
+        console.error("Farmer Dashboard Load Error:", err);
+        setError(err.message || "Unable to load dashboard data. Please try again.");
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [authToken, selectedFarmId]
+  );
+
+  // Initial load or load when selectedFarmId changes
+  useEffect(() => {
+    loadDashboardData(selectedFarmId, false);
+  }, [selectedFarmId]);
+
+  const refreshDashboard = useCallback(
+    async (options = {}) => {
+      const force = options?.force === true;
+      return loadDashboardData(selectedFarmId, force);
+    },
+    [loadDashboardData, selectedFarmId]
+  );
+
+  const handleSelectFarm = useCallback((newFarmId) => {
+    const val = newFarmId ? Number(newFarmId) : null;
+    setSelectedFarmId(val);
   }, []);
 
   return {
     dashboard,
-    kpis: dashboard.kpis,
-    palayMarketPriceTrend: dashboard.palay_market_price_trend,
-    yieldHistory: dashboard.yield_history,
-    climateOutlook: dashboard.climate_outlook,
+    kpis: dashboard.kpis || INITIAL_KPIS,
+    palayMarketPriceTrend: dashboard.palay_market_price_trend || [],
+    yieldHistory: dashboard.yield_history || [],
+    climateOutlook: dashboard.climate_outlook || INITIAL_DASHBOARD.climate_outlook,
+    shelfHealth: dashboard.shelf_health || INITIAL_DASHBOARD.shelf_health,
+    farmHealth: dashboard.farm_health || INITIAL_DASHBOARD.farm_health,
+    farms: dashboard.farms || [],
+    selectedFarm: dashboard.selected_farm || null,
+    selectedFarmId,
+    setSelectedFarmId: handleSelectFarm,
+    currentCrop: dashboard.current_crop || null,
     isLoading,
     isRefreshing,
     error,
