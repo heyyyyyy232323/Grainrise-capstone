@@ -8,6 +8,7 @@ import AdminLogin from "./Login/AdminLogin";
 import ForgotPassword from "./Login/ForgotPassword";
 import ChangePassword from "./Login/ChangePassword";
 import CompleteProfile from "./Login/CompleteProfile";
+import DashboardPreview from "./DashboardPreview";
 
 import WarehouseEncoderLayout from "./Components/Major-Components/MainPageLayout";
 import AdminProtectedRoute, { ProtectedRoute } from "./Components/Major-Components/AdminProtectedRoute";
@@ -347,6 +348,7 @@ function App() {
         <Route path="/public/announcements/:id" element={<PublicArticlePreview />} />
 
         <Route path="/" element={<LandingPage />} />
+        <Route path="/dashboard-preview" element={<DashboardPreview />} />
         <Route path="/login" element={<Login />} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -493,7 +495,6 @@ function App() {
               element={<UserAccountProfile />}
             />
           </Route>
-
 
 
           {/* ==================================================

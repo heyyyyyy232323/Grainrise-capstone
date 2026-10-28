@@ -4,7 +4,7 @@
 
 Django>=5.2,<5.3
 djangorestframework>=3.14.0
-django-cors-headers>=4.0.0
+django-cors-headers>=4.8.0
 
 # ============================================
 # Database
@@ -57,6 +57,7 @@ gunicorn
 # ============================================
 
 channels>=4.1,<5
+autobahn<24
 daphne>=4.1
 channels-redis>=4.2
 websockets>=13.0

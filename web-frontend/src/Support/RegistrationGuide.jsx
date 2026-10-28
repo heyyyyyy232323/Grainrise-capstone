@@ -9,13 +9,13 @@ import {
   Lock,
   Check,
   ChevronDown,
-  ChevronUp,
   ShieldCheck,
   AlertCircle,
   Building2,
   Warehouse,
   ShoppingBag,
   ClipboardCheck,
+  Tractor,
 } from 'lucide-react';
 import LandingFooter from '../Components/Major-Components/LandingFooter';
 import LandingHeader from '../Components/Major-Components/LandingHeader';
@@ -60,9 +60,25 @@ export default function RegistrationGuide() {
 
   const roles = [
     {
+      id: 'farmer',
+      icon: <Tractor size={20} />,
+      badge: 'Primary Producer',
+      title: 'Farmer',
+      bestFor: 'Individuals who own, manage, or operate rice farms.',
+      provide: [
+        'Personal and contact information',
+        'Farm information and location',
+        'Farm area & cropping details',
+        'Rice variety or crop details',
+        'Applicable farmer verification documents',
+      ],
+      access: 'Farm management, forecasting, inventory, contracts, selling, and other farmer operations.',
+    },
+    {
       id: 'miller',
       icon: <Building2 size={20} />,
-      title: 'Miller',
+      badge: 'Processing & Sourcing',
+      title: 'Supplier / Miller',
       bestFor: 'Rice millers and suppliers involved in processing, sourcing, and distribution.',
       provide: [
         'Personal and contact information',
@@ -75,6 +91,7 @@ export default function RegistrationGuide() {
     {
       id: 'warehouse',
       icon: <Warehouse size={20} />,
+      badge: 'Storage & Fulfillment',
       title: 'Warehouse Manager',
       bestFor: 'Organizations or managers responsible for rice storage and warehouse operations.',
       provide: [
@@ -88,6 +105,7 @@ export default function RegistrationGuide() {
     {
       id: 'retailer',
       icon: <ShoppingBag size={20} />,
+      badge: 'Commercial Reseller',
       title: 'Retailer',
       bestFor: 'Rice retailers purchasing products for resale to customers.',
       provide: [
@@ -266,11 +284,14 @@ export default function RegistrationGuide() {
             </p>
           </div>
 
-          <div className="rg-roles-grid">
+          <div className="rg-roles-grid rg-roles-grid--2x2">
             {roles.map((role) => (
               <div key={role.id} className="rg-role-card">
                 <div className="rg-role-card__header">
                   <div className="rg-role-card__icon">{role.icon}</div>
+                  {role.badge && (
+                    <span className="rg-role-card__badge">{role.badge}</span>
+                  )}
                 </div>
                 <h3 className="rg-role-card__title">{role.title}</h3>
                 <p className="rg-role-card__best">

@@ -13,12 +13,20 @@ from api.warehouse_function.warehouse_auth import warehouse_sales_required
 from .selectors import (
     get_pos_checkout_receipt,
     get_seller_and_branch_context,
+    get_warehouse_online_order_detail,
+    get_warehouse_sales_dashboard_data,
+    list_in_store_sales,
+    list_online_sales,
     list_pos_payment_accounts,
     list_pos_products,
+    list_warehouse_online_orders,
 )
 from .services import (
+    OnlineOrderError,
     POSValidationError,
+    approve_warehouse_online_order,
     check_duplicate_pos_payment_reference,
+    decline_warehouse_online_order,
     normalize_reference_no,
     process_pos_checkout,
 )
@@ -213,3 +221,198 @@ def pos_receipt_detail_view(request, reference_no):
         return JsonResponse({"detail": "Receipt not found for this transaction reference."}, status=404)
 
     return JsonResponse({"receipt": receipt_data}, status=200)
+
+
+# ============================================================
+# WAREHOUSE SALES HISTORY VIEWS
+# ============================================================
+
+@csrf_exempt
+@require_GET
+@warehouse_sales_required
+def in_store_sales_history_view(request):
+    """
+    GET /api/warehouse/sales/history/in-store/
+    Returns completed in-store sales transactions for the authenticated Warehouse branch.
+    Supports query parameters: search, start_date, end_date, sort_by.
+    """
+    warehouse_profile_id = request.grainrise_warehouse_profile_id
+    search = request.GET.get("search", "").strip() or None
+    start_date = request.GET.get("start_date", "").strip() or None
+    end_date = request.GET.get("end_date", "").strip() or None
+    sort_by = request.GET.get("sort_by", "date-desc").strip()
+
+    sales = list_in_store_sales(
+        warehouse_profile_id=warehouse_profile_id,
+        search=search,
+        start_date=start_date,
+        end_date=end_date,
+        sort_by=sort_by,
+    )
+    return JsonResponse({"sales": sales, "total_count": len(sales)}, status=200)
+
+
+@csrf_exempt
+@require_GET
+@warehouse_sales_required
+def online_sales_history_view(request):
+    """
+    GET /api/warehouse/sales/history/online/
+    Returns online sales transactions for the authenticated Warehouse branch.
+    Supports query parameters: search, start_date, end_date, sort_by.
+    """
+    warehouse_profile_id = request.grainrise_warehouse_profile_id
+    search = request.GET.get("search", "").strip() or None
+    start_date = request.GET.get("start_date", "").strip() or None
+    end_date = request.GET.get("end_date", "").strip() or None
+    sort_by = request.GET.get("sort_by", "date-desc").strip()
+
+    sales = list_online_sales(
+        warehouse_profile_id=warehouse_profile_id,
+        search=search,
+        start_date=start_date,
+        end_date=end_date,
+        sort_by=sort_by,
+    )
+    return JsonResponse({"sales": sales, "total_count": len(sales)}, status=200)
+
+
+# ============================================================
+# WAREHOUSE ONLINE ORDERS VIEWS
+# ============================================================
+
+@csrf_exempt
+@require_GET
+@warehouse_sales_required
+def online_orders_list_view(request):
+    """
+    GET /api/warehouse/sales/online-orders/
+    Fetch actual warehouse_online_customer orders for the authenticated Warehouse branch.
+    Supports query parameters: search, start_date, end_date, status.
+    """
+    warehouse_profile_id = request.grainrise_warehouse_profile_id
+    search = request.GET.get("search")
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+    status_filter = request.GET.get("status")
+
+    data = list_warehouse_online_orders(
+        warehouse_profile_id=warehouse_profile_id,
+        search=search,
+        start_date=start_date,
+        end_date=end_date,
+        status_filter=status_filter,
+    )
+    return JsonResponse(data, status=200)
+
+
+@csrf_exempt
+@require_GET
+@warehouse_sales_required
+def online_order_detail_view(request, order_id: int):
+    """
+    GET /api/warehouse/sales/online-orders/<order_id>/
+    Fetch single online order detail for the authenticated Warehouse branch.
+    """
+    warehouse_profile_id = request.grainrise_warehouse_profile_id
+    detail = get_warehouse_online_order_detail(warehouse_profile_id, order_id)
+    if not detail:
+        return JsonResponse({"detail": "Online order not found."}, status=404)
+    return JsonResponse({"order": detail}, status=200)
+
+
+@csrf_exempt
+@require_POST
+@warehouse_sales_required
+def online_order_approve_view(request, order_id: int):
+    """
+    POST /api/warehouse/sales/online-orders/<order_id>/approve/
+    Validate stock in kilograms, atomically deduct stock, and update status to 'Forwarded to Logistics'.
+    """
+    warehouse_profile_id = request.grainrise_warehouse_profile_id
+    warehouse_employee_id = request.grainrise_warehouse_employee_id
+
+    try:
+        result = approve_warehouse_online_order(
+            warehouse_profile_id=warehouse_profile_id,
+            online_order_id=order_id,
+            warehouse_employee_id=warehouse_employee_id,
+        )
+    except OnlineOrderError as exc:
+        return JsonResponse({"detail": exc.message, "code": exc.code}, status=exc.status_code)
+    except Exception as exc:
+        return JsonResponse(
+            {"detail": f"An unexpected error occurred while approving the order: {str(exc)}", "code": "server_error"},
+            status=500,
+        )
+
+    return JsonResponse(
+        {
+            "message": result.get("message", "Order approved and forwarded to logistics successfully."),
+            "order": result,
+        },
+        status=200,
+    )
+
+
+@csrf_exempt
+@require_POST
+@warehouse_sales_required
+def online_order_decline_view(request, order_id: int):
+    """
+    POST /api/warehouse/sales/online-orders/<order_id>/decline/
+    Require reason, update status to 'Declined', and save message addressed to buyer in messages table.
+    """
+    warehouse_profile_id = request.grainrise_warehouse_profile_id
+    warehouse_employee_id = request.grainrise_warehouse_employee_id
+    sender_user_id = getattr(request, "grainrise_owner_user_id", None)
+
+    try:
+        body = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except Exception:
+        body = {}
+
+    reason = body.get("reason") or request.POST.get("reason")
+
+    try:
+        result = decline_warehouse_online_order(
+            warehouse_profile_id=warehouse_profile_id,
+            online_order_id=order_id,
+            decline_reason=reason,
+            sender_user_id=sender_user_id,
+            warehouse_employee_id=warehouse_employee_id,
+        )
+    except OnlineOrderError as exc:
+        return JsonResponse({"detail": exc.message, "code": exc.code}, status=exc.status_code)
+    except Exception as exc:
+        return JsonResponse(
+            {"detail": f"An unexpected error occurred while declining the order: {str(exc)}", "code": "server_error"},
+            status=500,
+        )
+
+    return JsonResponse(
+        {
+            "message": result.get("message", "Order has been declined successfully."),
+            "order": result,
+        },
+        status=200,
+    )
+
+
+@csrf_exempt
+@require_GET
+@warehouse_sales_required
+def sales_dashboard_view(request):
+    """
+    GET /api/warehouse/sales/dashboard/
+    Returns live sales dashboard data for the authenticated Warehouse branch:
+    - KPIs (Today's Sales, Month Sales, Potential Sales, Pending Online Orders)
+    - Sales Trend (Week and Month series)
+    - Sales Distribution (In-Store vs Online)
+    - Recent Activities
+    - Top Selling Products
+    """
+    warehouse_profile_id = request.grainrise_warehouse_profile_id
+    data = get_warehouse_sales_dashboard_data(warehouse_profile_id)
+    return JsonResponse(data, status=200)
+

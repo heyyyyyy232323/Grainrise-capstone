@@ -1463,7 +1463,7 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 
 .lp-ecosystem__flow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   width: 100%;
   max-width: min(1680px, 94vw);
@@ -1516,7 +1516,8 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 
 .lp-flow-arrow {
   color: #374151;
-  margin-bottom: 28px;
+  height: 58px;
+  margin-bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1946,38 +1947,38 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
 
 .lp-stakeholders__grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 28px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
 }
 
 .lp-stakeholder-card {
   background: #ffffff;
   border-radius: 16px;
-  border: 1px solid rgba(0, 88, 12, 0.12);
-  padding: 34px 30px;
+  border: 1.2px solid #bbf7d0;
+  padding: 32px 24px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   text-align: left;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 2px 10px rgba(0, 88, 12, 0.03);
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   cursor: pointer;
 }
 
 .lp-stakeholder-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 10px 24px rgba(0, 88, 12, 0.08);
-  border-color: #86efac;
+  box-shadow: 0 10px 24px rgba(0, 88, 12, 0.09);
+  border-color: #22c55e;
 }
 
 .lp-stakeholder-card__icon {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   color: #00580C;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .lp-stakeholder-card__title {
@@ -2036,7 +2037,14 @@ html:not(.light) .lp-root .lp-mobile-app__glow--2 {
   box-shadow: 0 5px 14px rgba(0, 88, 12, 0.28);
 }
 
-@media (max-width: 700px) {
+@media (max-width: 1080px) {
+  .lp-stakeholders__grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (max-width: 640px) {
   .lp-stakeholders__grid {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -3403,9 +3411,9 @@ html {
     padding-right: env(safe-area-inset-right, 0px);
   }
 
-  /* Stakeholders: 3 clean columns on tablet */
+  /* Stakeholders: 2x2 clean grid on tablet */
   .lp-stakeholders__grid {
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(2, 1fr) !important;
     gap: 16px !important;
   }
 
@@ -3960,9 +3968,9 @@ html {
     gap: 16px !important;
   }
 
-  /* Stakeholders: 3 columns */
+  /* Stakeholders: 2x2 grid */
   .lp-stakeholders__grid {
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(2, 1fr) !important;
     gap: 18px !important;
   }
 

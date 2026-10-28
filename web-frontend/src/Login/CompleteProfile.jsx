@@ -304,10 +304,10 @@ const CompleteProfile = () => {
   const roleTitle = isMiller
     ? "Miller / Supplier"
     : isWarehouse
-    ? "Warehouse Manager"
-    : isRetailer
-    ? "Retailer"
-    : "Partner";
+      ? "Warehouse Manager"
+      : isRetailer
+        ? "Retailer"
+        : "Partner";
 
   const roleRoutes = {
     retailer: "/retailer/point-of-sale",
@@ -345,8 +345,8 @@ const CompleteProfile = () => {
         title: isWarehouse
           ? "Warehouse Facility Details"
           : isMiller
-          ? "Milling Facility Details"
-          : "Business Details",
+            ? "Milling Facility Details"
+            : "Business Details",
         shortTitle: "Business",
         icon: Building2,
       },
@@ -633,7 +633,7 @@ const CompleteProfile = () => {
             if (draft.officialEmail !== undefined) setOfficialEmail(draft.officialEmail);
             if (draft.officialContact !== undefined) setOfficialContact(draft.officialContact);
           }
-        } catch (e) {}
+        } catch (e) { }
       } catch (err) {
         console.error("Failed to load profile status:", err);
       } finally {
@@ -747,7 +747,7 @@ const CompleteProfile = () => {
     };
     try {
       localStorage.setItem("grainrise_profile_draft", JSON.stringify(draftData));
-    } catch (e) {}
+    } catch (e) { }
 
     // Send partial save to server silently
     try {
@@ -1064,7 +1064,7 @@ const CompleteProfile = () => {
     } catch (err) {
       setErrorMessage(
         err?.message ||
-          "Failed to complete profile. Please review the provided details and try again."
+        "Failed to complete profile. Please review the provided details and try again."
       );
     } finally {
       setIsSubmitting(false);
@@ -1089,7 +1089,6 @@ const CompleteProfile = () => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src={Logo} alt="GrainRise" className="h-9 w-auto" />
-            <span className="text-lg font-bold tracking-tight text-slate-900">GrainRise</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-[#08511f] border border-emerald-200">
@@ -1144,24 +1143,22 @@ const CompleteProfile = () => {
                         }
                       }}
                       disabled={!isCompleted && !isActive}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                        isCompleted
+                      className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${isCompleted
                           ? "bg-[#08511f] text-white cursor-pointer hover:bg-emerald-800 shadow-xs"
                           : isActive
-                          ? "bg-white border-2 border-[#08511f] text-[#08511f] ring-4 ring-emerald-100 shadow-xs"
-                          : "bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed"
-                      }`}
+                            ? "bg-white border-2 border-[#08511f] text-[#08511f] ring-4 ring-emerald-100 shadow-xs"
+                            : "bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed"
+                        }`}
                     >
                       {isCompleted ? <Check size={16} className="stroke-[2.5]" /> : idx + 1}
                     </button>
                     <span
-                      className={`text-[11px] font-semibold mt-1.5 text-center hidden sm:block ${
-                        isActive
+                      className={`text-[11px] font-semibold mt-1.5 text-center hidden sm:block ${isActive
                           ? "text-[#08511f] font-bold"
                           : isCompleted
-                          ? "text-slate-700"
-                          : "text-slate-400"
-                      }`}
+                            ? "text-slate-700"
+                            : "text-slate-400"
+                        }`}
                     >
                       {s.shortTitle}
                     </span>
@@ -1233,11 +1230,10 @@ const CompleteProfile = () => {
                       onChange={(e) => setNewPassword(e.target.value)}
                       onBlur={() => markTouched("newPassword")}
                       placeholder="Enter your new password"
-                      className={`w-full pl-3.5 pr-10 py-2.5 text-sm rounded-xl border outline-none transition ${
-                        touched.newPassword && validationErrors.newPassword
+                      className={`w-full pl-3.5 pr-10 py-2.5 text-sm rounded-xl border outline-none transition ${touched.newPassword && validationErrors.newPassword
                           ? "border-red-400 bg-red-50/30 focus:border-red-500"
                           : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                      }`}
+                        }`}
                     />
                     <button
                       type="button"
@@ -1290,11 +1286,10 @@ const CompleteProfile = () => {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       onBlur={() => markTouched("confirmPassword")}
                       placeholder="Re-enter your new password"
-                      className={`w-full pl-3.5 pr-10 py-2.5 text-sm rounded-xl border outline-none transition ${
-                        touched.confirmPassword && validationErrors.confirmPassword
+                      className={`w-full pl-3.5 pr-10 py-2.5 text-sm rounded-xl border outline-none transition ${touched.confirmPassword && validationErrors.confirmPassword
                           ? "border-red-400 bg-red-50/30 focus:border-red-500"
                           : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                      }`}
+                        }`}
                     />
                     <button
                       type="button"
@@ -1307,9 +1302,8 @@ const CompleteProfile = () => {
                   </div>
                   {confirmPassword && (
                     <p
-                      className={`mt-1 text-xs font-medium ${
-                        pwCriteria.matches ? "text-emerald-600" : "text-red-600"
-                      }`}
+                      className={`mt-1 text-xs font-medium ${pwCriteria.matches ? "text-emerald-600" : "text-red-600"
+                        }`}
                     >
                       {pwCriteria.matches ? "✓ Passwords match" : "✗ Passwords do not match"}
                     </p>
@@ -1353,13 +1347,12 @@ const CompleteProfile = () => {
                       onPaste={handleFirstNamePaste}
                       onBlur={() => markTouched("firstName")}
                       placeholder="e.g. Carl"
-                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none pr-9 transition ${
-                        (touched.firstName || firstName) && validationErrors.firstName
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none pr-9 transition ${(touched.firstName || firstName) && validationErrors.firstName
                           ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-1 focus:ring-red-400"
                           : firstName && !validationErrors.firstName
-                          ? "border-emerald-400 bg-emerald-50/20 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                      }`}
+                            ? "border-emerald-400 bg-emerald-50/20 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                            : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                        }`}
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                       {(touched.firstName || firstName) && validationErrors.firstName ? (
@@ -1400,13 +1393,12 @@ const CompleteProfile = () => {
                       onPaste={handleMiddleInitialPaste}
                       onBlur={() => markTouched("middleInitial")}
                       placeholder="e.g. R"
-                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none pr-9 transition uppercase ${
-                        (touched.middleInitial || middleInitial) && validationErrors.middleInitial
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none pr-9 transition uppercase ${(touched.middleInitial || middleInitial) && validationErrors.middleInitial
                           ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-1 focus:ring-red-400"
                           : middleInitial && !validationErrors.middleInitial
-                          ? "border-emerald-400 bg-emerald-50/20 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                      }`}
+                            ? "border-emerald-400 bg-emerald-50/20 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                            : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                        }`}
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                       {(touched.middleInitial || middleInitial) && validationErrors.middleInitial ? (
@@ -1447,13 +1439,12 @@ const CompleteProfile = () => {
                       onPaste={handleLastNamePaste}
                       onBlur={() => markTouched("lastName")}
                       placeholder="e.g. Gamilla"
-                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none pr-9 transition ${
-                        (touched.lastName || lastName) && validationErrors.lastName
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none pr-9 transition ${(touched.lastName || lastName) && validationErrors.lastName
                           ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-1 focus:ring-red-400"
                           : lastName && !validationErrors.lastName
-                          ? "border-emerald-400 bg-emerald-50/20 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                      }`}
+                            ? "border-emerald-400 bg-emerald-50/20 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                            : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                        }`}
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                       {(touched.lastName || lastName) && validationErrors.lastName ? (
@@ -1515,13 +1506,12 @@ const CompleteProfile = () => {
                         markTouched("gender");
                       }}
                       onBlur={() => markTouched("gender")}
-                      className={`w-full appearance-none px-3.5 py-2.5 text-sm rounded-xl border bg-white pr-9 outline-none transition cursor-pointer ${
-                        touched.gender && validationErrors.gender
+                      className={`w-full appearance-none px-3.5 py-2.5 text-sm rounded-xl border bg-white pr-9 outline-none transition cursor-pointer ${touched.gender && validationErrors.gender
                           ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-1 focus:ring-red-400"
                           : gender && !validationErrors.gender
-                          ? "border-emerald-400 bg-emerald-50/20 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                      }`}
+                            ? "border-emerald-400 bg-emerald-50/20 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                            : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                        }`}
                     >
                       <option value="">Select Gender</option>
                       {GENDER_OPTIONS.map((g) => (
@@ -1566,13 +1556,12 @@ const CompleteProfile = () => {
                       onPaste={handleEmailPaste}
                       onBlur={() => markTouched("personalEmail")}
                       placeholder="e.g. name@domain.com"
-                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none pr-9 transition ${
-                        (touched.personalEmail || personalEmail) && validationErrors.personalEmail
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none pr-9 transition ${(touched.personalEmail || personalEmail) && validationErrors.personalEmail
                           ? "border-red-400 bg-red-50/20 focus:border-red-500 focus:ring-1 focus:ring-red-400"
                           : personalEmail && !validationErrors.personalEmail
-                          ? "border-emerald-400 bg-emerald-50/20 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                          : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                      }`}
+                            ? "border-emerald-400 bg-emerald-50/20 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                            : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
+                        }`}
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                       {(touched.personalEmail || personalEmail) && validationErrors.personalEmail ? (
@@ -1604,13 +1593,12 @@ const CompleteProfile = () => {
                     </span>
                   </div>
                   <div
-                    className={`flex items-center rounded-xl border overflow-hidden transition bg-white ${
-                      (touched.contactNumber || contactNumber) && validationErrors.contactNumber
+                    className={`flex items-center rounded-xl border overflow-hidden transition bg-white ${(touched.contactNumber || contactNumber) && validationErrors.contactNumber
                         ? "border-red-400 ring-1 ring-red-400 bg-red-50/10"
                         : contactNumber && !validationErrors.contactNumber
-                        ? "border-emerald-400 ring-1 ring-emerald-400 bg-emerald-50/10"
-                        : "border-slate-300 focus-within:border-[#08511f] focus-within:ring-1 focus-within:ring-[#08511f]"
-                    }`}
+                          ? "border-emerald-400 ring-1 ring-emerald-400 bg-emerald-50/10"
+                          : "border-slate-300 focus-within:border-[#08511f] focus-within:ring-1 focus-within:ring-[#08511f]"
+                      }`}
                   >
                     <span className="px-3.5 py-2.5 text-sm font-semibold text-slate-600 bg-slate-50 border-r border-slate-200 select-none whitespace-nowrap">
                       +63
@@ -1724,8 +1712,8 @@ const CompleteProfile = () => {
                         address.loading.municipalities
                           ? "Loading cities/municipalities..."
                           : !address.province
-                          ? "Select Province First"
-                          : "Select Municipality/City"
+                            ? "Select Province First"
+                            : "Select Municipality/City"
                       }
                       options={address.municipalityOptions}
                       value={address.municipality}
@@ -1762,8 +1750,8 @@ const CompleteProfile = () => {
                         address.loading.barangays
                           ? "Loading barangays..."
                           : !address.municipality
-                          ? "Select Municipality First"
-                          : "Select Barangay"
+                            ? "Select Municipality First"
+                            : "Select Barangay"
                       }
                       options={address.barangayOptions}
                       value={address.barangay}
@@ -1806,14 +1794,13 @@ const CompleteProfile = () => {
                         address.loading.postalCode
                           ? "Loading..."
                           : !address.municipality
-                          ? "Select Municipality First"
-                          : "4-digit postal code"
+                            ? "Select Municipality First"
+                            : "4-digit postal code"
                       }
-                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                        touched.postalCode && validationErrors.postalCode
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${touched.postalCode && validationErrors.postalCode
                           ? "border-red-400 bg-red-50/30 focus:border-red-500"
                           : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                      }`}
+                        }`}
                     />
                     {touched.postalCode && validationErrors.postalCode && (
                       <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.postalCode}</p>
@@ -1836,11 +1823,10 @@ const CompleteProfile = () => {
                       onChange={(e) => setStreetAddress(e.target.value)}
                       onBlur={() => markTouched("streetAddress")}
                       placeholder="Building #, Street name, Industrial park / Compound"
-                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                        touched.streetAddress && validationErrors.streetAddress
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${touched.streetAddress && validationErrors.streetAddress
                           ? "border-red-400 bg-red-50/30 focus:border-red-500"
                           : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                      }`}
+                        }`}
                     />
                     {touched.streetAddress && validationErrors.streetAddress && (
                       <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.streetAddress}</p>
@@ -1863,11 +1849,10 @@ const CompleteProfile = () => {
                       }}
                       onBlur={() => markTouched("province")}
                       placeholder="e.g. Isabela, Bulacan"
-                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                        touched.province && validationErrors.province
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${touched.province && validationErrors.province
                           ? "border-red-400 bg-red-50/30 focus:border-red-500"
                           : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                      }`}
+                        }`}
                     />
                     {touched.province && validationErrors.province && (
                       <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.province}</p>
@@ -1888,11 +1873,10 @@ const CompleteProfile = () => {
                       }}
                       onBlur={() => markTouched("municipality")}
                       placeholder="e.g. Santiago City"
-                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                        touched.municipality && validationErrors.municipality
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${touched.municipality && validationErrors.municipality
                           ? "border-red-400 bg-red-50/30 focus:border-red-500"
                           : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                      }`}
+                        }`}
                     />
                     {touched.municipality && validationErrors.municipality && (
                       <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.municipality}</p>
@@ -1913,11 +1897,10 @@ const CompleteProfile = () => {
                       }}
                       onBlur={() => markTouched("barangay")}
                       placeholder="e.g. San Roque"
-                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                        touched.barangay && validationErrors.barangay
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${touched.barangay && validationErrors.barangay
                           ? "border-red-400 bg-red-50/30 focus:border-red-500"
                           : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                      }`}
+                        }`}
                     />
                     {touched.barangay && validationErrors.barangay && (
                       <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.barangay}</p>
@@ -1937,11 +1920,10 @@ const CompleteProfile = () => {
                       onChange={handlePostalCodeChange}
                       onBlur={() => markTouched("postalCode")}
                       placeholder="e.g. 3311"
-                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                        touched.postalCode && validationErrors.postalCode
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${touched.postalCode && validationErrors.postalCode
                           ? "border-red-400 bg-red-50/30 focus:border-red-500"
                           : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                      }`}
+                        }`}
                     />
                     {touched.postalCode && validationErrors.postalCode && (
                       <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.postalCode}</p>
@@ -1959,11 +1941,10 @@ const CompleteProfile = () => {
                       onChange={(e) => setStreetAddress(e.target.value)}
                       onBlur={() => markTouched("streetAddress")}
                       placeholder="Building #, Street name, Industrial park / Compound"
-                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                        touched.streetAddress && validationErrors.streetAddress
+                      className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${touched.streetAddress && validationErrors.streetAddress
                           ? "border-red-400 bg-red-50/30 focus:border-red-500"
                           : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                      }`}
+                        }`}
                     />
                     {touched.streetAddress && validationErrors.streetAddress && (
                       <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.streetAddress}</p>
@@ -1999,11 +1980,10 @@ const CompleteProfile = () => {
                     onChange={(e) => setBusinessName(e.target.value)}
                     onBlur={() => markTouched("businessName")}
                     placeholder="e.g. Golden Grains Warehouse Inc."
-                    className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                      touched.businessName && validationErrors.businessName
+                    className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${touched.businessName && validationErrors.businessName
                         ? "border-red-400 bg-red-50/30 focus:border-red-500"
                         : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                    }`}
+                      }`}
                   />
                   {touched.businessName && validationErrors.businessName && (
                     <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.businessName}</p>
@@ -2035,11 +2015,10 @@ const CompleteProfile = () => {
                     onChange={(e) => setOfficialEmail(e.target.value)}
                     onBlur={() => markTouched("officialEmail")}
                     placeholder="e.g. contact@goldengrains.ph"
-                    className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                      touched.officialEmail && validationErrors.officialEmail
+                    className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${touched.officialEmail && validationErrors.officialEmail
                         ? "border-red-400 bg-red-50/30 focus:border-red-500"
                         : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                    }`}
+                      }`}
                   />
                   {touched.officialEmail && validationErrors.officialEmail && (
                     <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.officialEmail}</p>
@@ -2057,11 +2036,10 @@ const CompleteProfile = () => {
                     onChange={(e) => setOfficialContact(e.target.value)}
                     onBlur={() => markTouched("officialContact")}
                     placeholder="e.g. 09171234567 or landline"
-                    className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${
-                      touched.officialContact && validationErrors.officialContact
+                    className={`w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition ${touched.officialContact && validationErrors.officialContact
                         ? "border-red-400 bg-red-50/30 focus:border-red-500"
                         : "border-slate-300 focus:border-[#08511f] focus:ring-1 focus:ring-[#08511f]"
-                    }`}
+                      }`}
                   />
                   {touched.officialContact && validationErrors.officialContact && (
                     <p className="mt-1 text-xs text-red-600 font-medium">{validationErrors.officialContact}</p>

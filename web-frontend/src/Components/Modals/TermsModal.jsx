@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, FileText } from "lucide-react";
+import { X, FileText, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
 
 export default function TermsModal({ isOpen, onClose }) {
   const [mounted, setMounted] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -30,7 +31,7 @@ export default function TermsModal({ isOpen, onClose }) {
 
   const modalJSX = (
     <div
-      className="fixed inset-0 flex items-center justify-center p-3 sm:p-6"
+      className="fixed inset-0 flex items-center justify-center p-2 sm:p-4 md:p-6"
       style={{
         position: "fixed",
         top: 0,
@@ -56,10 +57,11 @@ export default function TermsModal({ isOpen, onClose }) {
       />
 
       <div
-        className="relative w-full max-w-[640px] bg-white rounded-2xl flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+        className={`relative w-full ${
+          isMaximized ? "w-[96vw] max-w-none h-[94vh]" : "max-w-[840px] h-[88vh]"
+        } bg-white rounded-2xl flex flex-col overflow-hidden shadow-2xl transition-all duration-200`}
         style={{
-          maxHeight: "calc(100vh - 3rem)",
-          height: "88vh",
+          maxHeight: "calc(100vh - 2rem)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -77,13 +79,34 @@ export default function TermsModal({ isOpen, onClose }) {
                 Last Updated: September 2026
               </span>
             </div>
-            <button
-              className="ml-auto w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
-              onClick={onClose}
-              aria-label="Close"
-            >
-              <X size={18} />
-            </button>
+            <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+              <a
+                href="/terms-and-conditions"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-md transition-colors"
+                title="Open full page in new tab"
+              >
+                <ExternalLink size={12} />
+                Full Page
+              </a>
+              <button
+                type="button"
+                className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
+                onClick={() => setIsMaximized((prev) => !prev)}
+                title={isMaximized ? "Restore size" : "Maximize screen"}
+                aria-label={isMaximized ? "Restore size" : "Maximize screen"}
+              >
+                {isMaximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+              </button>
+              <button
+                className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
+                onClick={onClose}
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
           <h2 className="text-xl font-bold text-gray-900 font-['Outfit']">Terms of Service</h2>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">

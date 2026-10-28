@@ -52,10 +52,20 @@ def send_grainrise_email(
     gmail_client_secret = (os.getenv("GMAIL_API_CLIENT_SECRET") or "").strip()
     gmail_refresh_token = (os.getenv("GMAIL_API_REFRESH_TOKEN") or "").strip()
 
+    missing_gmail_creds = []
+    if not gmail_client_id:
+        missing_gmail_creds.append("GMAIL_API_CLIENT_ID")
+    if not gmail_client_secret:
+        missing_gmail_creds.append("GMAIL_API_CLIENT_SECRET")
+    if not gmail_refresh_token:
+        missing_gmail_creds.append("GMAIL_API_REFRESH_TOKEN")
+
+    gmail_issue: str | None = None
+
     # ========================================================
     # 1. GMAIL REST API (HTTPS PORT 443)
     # ========================================================
-    if gmail_client_id and gmail_client_secret and gmail_refresh_token:
+    if not missing_gmail_creds:
         try:
             # 1a) Exchange long-lived refresh token for short-lived access token
             token_body = urllib.parse.urlencode(
@@ -127,12 +137,28 @@ def send_grainrise_email(
                     f"Gmail API returned HTTP {response.status}: {response_body}"
                 )
 
-        except Exception as exc:
+        except urllib.error.HTTPError as exc:
+            err_body = ""
+            try:
+                err_body = exc.read().decode("utf-8", errors="replace")
+            except Exception:
+                pass
+            gmail_issue = f"Gmail API HTTP {exc.code} error: {err_body or exc.reason}"
             logger.warning(
                 "Gmail API delivery to %s failed (%s); attempting SMTP fallback.",
                 recipient,
-                exc,
+                gmail_issue,
             )
+        except Exception as exc:
+            gmail_issue = f"Gmail API error: {exc}"
+            logger.warning(
+                "Gmail API delivery to %s failed (%s); attempting SMTP fallback.",
+                recipient,
+                gmail_issue,
+            )
+    else:
+        gmail_issue = f"Gmail API not configured (missing environment variables: {', '.join(missing_gmail_creds)})"
+        logger.info(gmail_issue)
 
     # ========================================================
     # 2. STANDARD DJANGO EMAIL BACKEND (SMTP / LOCAL)
@@ -153,7 +179,7 @@ def send_grainrise_email(
         return True, None
 
     except (smtplib.SMTPException, OSError, TimeoutError, Exception) as exc:
-        err_msg = f"Failed to deliver email to {recipient}: {exc}"
+        err_msg = f"Failed to deliver email to {recipient}: [SMTP] {exc}. [{gmail_issue}]"
         logger.error(err_msg)
         return False, err_msg
 

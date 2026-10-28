@@ -106,7 +106,7 @@ export default function LandingPage() {
   }, [hash]);
 
   const ECOSYSTEM_STEPS = [
-    { icon: <Tractor size={22} strokeWidth={1.8} />, label: 'Farm' },
+    { icon: <Tractor size={22} strokeWidth={1.8} />, label: 'Farmer' },
     { icon: <Truck size={22} strokeWidth={1.8} />, label: 'Millers' },
     { icon: <Warehouse size={22} strokeWidth={1.8} />, label: 'Warehouse' },
     { icon: <ClipboardCheck size={22} strokeWidth={1.8} />, label: 'Inventory' },
@@ -165,6 +165,12 @@ export default function LandingPage() {
       icon: <ShoppingCart size={24} strokeWidth={1.8} />,
       title: 'Retailer Portal',
       desc: 'Manage rice sourcing, orders, inventory replenishment, deliveries, and transaction records.',
+      action: () => navigate('/login'),
+    },
+    {
+      icon: <Tractor size={24} strokeWidth={1.8} />,
+      title: 'Farmer Portal',
+      desc: 'Manage farm production, climate-informed planning, inventory, contracts, and supply opportunities.',
       action: () => navigate('/login'),
     },
   ];
@@ -261,6 +267,7 @@ export default function LandingPage() {
 
         {/* ── ECOSYSTEM (Fade Up Effect) ─── */}
         <AnimatedSection className="lp-ecosystem" id="ecosystem" animation="fade-up">
+          <span className="lp-ecosystem__badge">How it works</span>
           <h2 className="lp-section-headline lp-section-headline--center">
             Connected Supply Chain Ecosystem
           </h2>

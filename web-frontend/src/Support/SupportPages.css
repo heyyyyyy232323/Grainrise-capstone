@@ -2240,11 +2240,16 @@ html:not(.light) .legal-page-root .legal-page-note a {
   flex-direction: column;
 }
 
-/* Role cards 3-column grid */
+/* Role cards 3-column grid (default) */
 .rg-roles-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+}
+
+/* Role cards 2x2 grid (Figma design with 4 roles) */
+.rg-roles-grid--2x2 {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .rg-role-card {
@@ -2283,16 +2288,18 @@ html:not(.light) .legal-page-root .legal-page-note a {
   flex-shrink: 0;
 }
 
-.rg-role-badge {
+.rg-role-badge,
+.rg-role-card__badge {
   display: inline-flex;
   align-items: center;
   background-color: #eaf7ed;
   color: #15803d;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   padding: 4px 12px;
   border-radius: 9999px;
   border: 1px solid #d1f0da;
+  white-space: nowrap;
 }
 
 .rg-role-card__title {
@@ -2542,6 +2549,9 @@ html:not(.light) .legal-page-root .legal-page-note a {
   .rg-roles-grid {
     grid-template-columns: 1fr;
   }
+  .rg-roles-grid--2x2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
   .rg-stages-grid {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -2551,6 +2561,7 @@ html:not(.light) .legal-page-root .legal-page-note a {
   .rg-getting-started-grid,
   .rg-prepare-grid,
   .rg-roles-grid,
+  .rg-roles-grid--2x2,
   .rg-checklist-grid {
     grid-template-columns: 1fr;
   }
@@ -3002,7 +3013,8 @@ html:not(.light) .support-page-root .rg-role-card__icon {
   border-color: rgba(167, 243, 208, 0.15) !important;
 }
 
-html:not(.light) .support-page-root .rg-role-badge {
+html:not(.light) .support-page-root .rg-role-badge,
+html:not(.light) .support-page-root .rg-role-card__badge {
   background-color: rgba(167, 243, 208, 0.1) !important;
   color: #a7f3d0 !important;
   border-color: rgba(167, 243, 208, 0.2) !important;
