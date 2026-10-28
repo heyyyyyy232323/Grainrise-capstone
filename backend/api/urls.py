@@ -194,6 +194,13 @@ urlpatterns = [
             "api.warehouse_function.urls"
         ),
     ),
+    path(
+        "warehouse-finance/",
+        include(
+            "api.warehouse_function.urls"
+        ),
+    ),
+
 
     # MILLER EMPLOYEE FUNCTIONS
 

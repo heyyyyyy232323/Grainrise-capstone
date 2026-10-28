@@ -308,15 +308,34 @@ const UserNavbar = ({
     (authenticatedUser?.role === "supplier_employee" &&
       authenticatedUser?.position === "procurement");
 
+  const isWarehouseFinance =
+    propRole === "warehouse_finance" ||
+    role === "warehouse_finance" ||
+    location.pathname.startsWith("/warehouse-finance") ||
+    (authenticatedUser?.account_type === "warehouse_employee" &&
+      authenticatedUser?.position === "finance") ||
+    (authenticatedUser?.role === "warehouse_employee" &&
+      authenticatedUser?.position === "finance");
+
   const isFinance =
     propRole === "supplier_finance" ||
     propRole === "miller_finance" ||
     role === "supplier_finance" ||
     role === "miller_finance" ||
+    isWarehouseFinance ||
     (authenticatedUser?.account_type === "supplier_employee" &&
       authenticatedUser?.position === "finance") ||
     (authenticatedUser?.role === "supplier_employee" &&
       authenticatedUser?.position === "finance");
+
+  const isWarehouseSales =
+    propRole === "warehouse_sales" ||
+    role === "warehouse_sales" ||
+    location.pathname.startsWith("/warehouse-sales") ||
+    (authenticatedUser?.account_type === "warehouse_employee" &&
+      (authenticatedUser?.position === "sales" || authenticatedUser?.position === "seller")) ||
+    (authenticatedUser?.role === "warehouse_employee" &&
+      (authenticatedUser?.position === "sales" || authenticatedUser?.position === "seller"));
 
   const isSales =
     propRole === "supplier_sales" ||
@@ -325,6 +344,7 @@ const UserNavbar = ({
     role === "supplier_sales" ||
     role === "miller_sales" ||
     role === "warehouse_sales" ||
+    isWarehouseSales ||
     (authenticatedUser?.account_type === "supplier_employee" &&
       (authenticatedUser?.position === "sales" ||
         authenticatedUser?.position === "seller")) ||
@@ -590,6 +610,10 @@ const UserNavbar = ({
   } = useFinanceNotifications({
     enabled:
       isFinance,
+    baseUrl:
+      isWarehouseFinance
+        ? "/warehouse/finance/notifications"
+        : "/miller-employees/finance/notifications",
   });
 
 
@@ -627,6 +651,10 @@ const UserNavbar = ({
   } = useSalesNotifications({
     enabled:
       isSales,
+    baseUrl:
+      isWarehouseSales
+        ? "/warehouse/sales/notifications"
+        : "/miller-employees/sales/notifications",
   });
 
 
@@ -770,39 +798,35 @@ const UserNavbar = ({
       }
 
 
-      const interval =
-        window.setInterval(
-          () => {
-            const refreshCount =
-              isAdmin
-                ? loadUnreadCount
-                : isFarmer
-                  ? loadFarmerUnreadCount
-                  : isEncoder
-                    ? loadEncoderUnseenCount
-                    : isProcurement
-                      ? loadProcurementUnseenCount
-                      : isFinance
-                        ? loadFinanceUnseenCount
-                        : isSales
-                          ? loadSalesUnseenCount
-                          : loadLogisticsUnseenCount;
+      const getRefreshCount = () => {
+        return isAdmin
+          ? loadUnreadCount
+          : isFarmer
+            ? loadFarmerUnreadCount
+            : isEncoder
+              ? loadEncoderUnseenCount
+              : isProcurement
+                ? loadProcurementUnseenCount
+                : isFinance
+                  ? loadFinanceUnseenCount
+                  : isSales
+                    ? loadSalesUnseenCount
+                    : loadLogisticsUnseenCount;
+      };
 
+      const triggerRefresh = () => {
+        const refreshCount = getRefreshCount();
+        if (refreshCount) {
+          refreshCount().catch(() => {});
+        }
+      };
 
-            refreshCount().catch(
-              () => {
-                // Error stored by hook.
-              }
-            );
-          },
-          60000
-        );
-
+      const interval = window.setInterval(triggerRefresh, 15000);
+      window.addEventListener("focus", triggerRefresh);
 
       return () => {
-        window.clearInterval(
-          interval
-        );
+        window.clearInterval(interval);
+        window.removeEventListener("focus", triggerRefresh);
       };
     },
     [
@@ -1639,7 +1663,7 @@ const UserNavbar = ({
           const targetPath =
             result?.targetPath ||
             item?.action_url ||
-            "/miller-finance/dashboard";
+            (isWarehouseFinance ? "/warehouse-finance/dashboard" : "/miller-finance/dashboard");
 
           navigate(
             targetPath
@@ -1665,7 +1689,9 @@ const UserNavbar = ({
           const targetPath =
             result?.targetPath ||
             item?.action_url ||
-            "/miller-sales/dashboard";
+            (isWarehouseSales
+              ? "/warehouse-sales/dashboard"
+              : "/miller-sales/dashboard");
 
           navigate(
             targetPath
@@ -1948,7 +1974,8 @@ const UserNavbar = ({
 
                 {
                   usesDatabaseNotifications &&
-                  isLoadingDatabaseNotifications ? (
+                  isLoadingDatabaseNotifications &&
+                  effectiveNotifications.length === 0 ? (
 
                     <div className="flex items-center justify-center py-8">
 

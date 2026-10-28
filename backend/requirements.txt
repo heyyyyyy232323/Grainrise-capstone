@@ -57,6 +57,7 @@ gunicorn
 # ============================================
 
 channels>=4.1,<5
+autobahn<24
 daphne>=4.1
 channels-redis>=4.2
 websockets>=13.0

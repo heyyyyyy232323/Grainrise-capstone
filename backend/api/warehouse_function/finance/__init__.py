@@ -1,0 +1,3 @@
+"""
+Warehouse Finance module package.
+"""

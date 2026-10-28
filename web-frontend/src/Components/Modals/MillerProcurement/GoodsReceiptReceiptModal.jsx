@@ -98,7 +98,7 @@ export default function GoodsReceiptReceiptModal({
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
     doc.setTextColor(11, 93, 30); // #0B5D1E
-    doc.text(sanitizePdfText(receipt.business_name || "GrainRise Miller"), pageWidth / 2, y, {
+    doc.text(sanitizePdfText(receipt.business_name || "GrainRise"), pageWidth / 2, y, {
       align: "center",
     });
     y += 6.5;
@@ -150,14 +150,14 @@ export default function GoodsReceiptReceiptModal({
     const boxStartY = y;
     const rowHeight = 9.2;
     const rows = [
-      ["Batch No.", sanitizePdfText(receipt.batch_no), false],
+      ["Batch No.", sanitizePdfText(receipt.batch_no || receipt.batchNo), false],
       [
         "Reference No.",
         sanitizePdfText(receipt.receiving_reference_no || receipt.reference_no),
         false,
       ],
-      ["Product Variant", sanitizePdfText(receipt.variant), false],
-      ["Supplier", sanitizePdfText(receipt.supplier), false],
+      ["Product Variant", sanitizePdfText(receipt.variant || receipt.product_name), false],
+      ["Supplier", sanitizePdfText(receipt.supplier || receipt.supplier_name), false],
       [
         "Order Quantity",
         formatQuantityForPdf(receipt.original_order_quantity || receipt.ordered_quantity),
@@ -171,19 +171,23 @@ export default function GoodsReceiptReceiptModal({
       ],
       [
         "Unit Cost / Price per kg",
-        formatCurrencyForPdf(receipt.price_per_kg || receipt.unit_price),
+        formatCurrencyForPdf(receipt.price_per_kg || receipt.unit_price || receipt.unitPrice),
         false,
       ],
-      ["Amount to Pay", formatCurrencyForPdf(receipt.amount_to_pay), true],
+      [
+        "Amount to Pay",
+        formatCurrencyForPdf(receipt.amount_to_pay || receipt.payable || receipt.total || receipt.total_price),
+        true,
+      ],
     ];
 
     if (isPaid) {
       rows.push(
-        ["Requested Date", sanitizePdfText(receipt.requested_date || receipt.requested_at_formatted), false],
-        ["Paid Date", sanitizePdfText(receipt.paid_date || receipt.paid_at_formatted), false],
+        ["Requested Date", sanitizePdfText(receipt.requested_date || receipt.requested_at_formatted || receipt.requested_at), false],
+        ["Paid Date", sanitizePdfText(receipt.paid_date || receipt.paid_at_formatted || receipt.paid_at), false],
         ["Paid By", sanitizePdfText(receipt.paid_by), false],
         ["Payment Method", sanitizePdfText(receipt.payment_method), false],
-        ["Payment Reference", sanitizePdfText(receipt.payment_reference || receipt.payment_reference_id), false]
+        ["Payment Reference", sanitizePdfText(receipt.payment_reference || receipt.payment_reference_id || receipt.payment_reference_number), false]
       );
     }
 
@@ -247,7 +251,11 @@ export default function GoodsReceiptReceiptModal({
     );
 
     const cleanRefNo = String(
-      receipt.receiving_reference_no || receipt.reference_no || "goods_receipt"
+      receipt.receiving_reference_no ||
+        receipt.reference_no ||
+        receipt.payment_reference ||
+        receipt.payment_reference_id ||
+        "goods_receipt"
     ).replace(/[^\w.-]/g, "_");
     const filename = `${cleanRefNo}.pdf`;
     doc.save(filename);
@@ -302,15 +310,15 @@ export default function GoodsReceiptReceiptModal({
             <div class="row"><span class="label">Received Quantity:</span><span class="value">${receipt.total_received || "—"}</span></div>
             <div class="row"><span class="label">Quantity to Pay (Received Good):</span><span class="value">${receipt.received_good || "—"}</span></div>
             <div class="row"><span class="label">Unit Cost / Price per kg:</span><span class="value">${receipt.price_per_kg || receipt.unit_price || "—"}</span></div>
-            <div class="row amount-row"><span class="label">Amount to Pay:</span><span class="value">${receipt.amount_to_pay || "—"}</span></div>
+            <div class="row amount-row"><span class="label">Amount to Pay:</span><span class="value">${receipt.amount_to_pay || receipt.payable || receipt.total || "—"}</span></div>
             ${
               isPaid
                 ? `
-            <div class="row"><span class="label">Requested Date:</span><span class="value">${receipt.requested_date || receipt.requested_at_formatted || "—"}</span></div>
-            <div class="row"><span class="label">Paid Date:</span><span class="value">${receipt.paid_date || receipt.paid_at_formatted || "—"}</span></div>
+            <div class="row"><span class="label">Requested Date:</span><span class="value">${receipt.requested_date || receipt.requested_at_formatted || receipt.requested_at || "—"}</span></div>
+            <div class="row"><span class="label">Paid Date:</span><span class="value">${receipt.paid_date || receipt.paid_at_formatted || receipt.paid_at || "—"}</span></div>
             <div class="row"><span class="label">Paid By:</span><span class="value">${receipt.paid_by || "—"}</span></div>
             <div class="row"><span class="label">Payment Method:</span><span class="value">${receipt.payment_method || "—"}</span></div>
-            <div class="row"><span class="label">Payment Reference:</span><span class="value">${receipt.payment_reference || receipt.payment_reference_id || "—"}</span></div>
+            <div class="row"><span class="label">Payment Reference:</span><span class="value">${receipt.payment_reference || receipt.payment_reference_id || receipt.payment_reference_number || "—"}</span></div>
             `
                 : ""
             }
@@ -354,7 +362,7 @@ export default function GoodsReceiptReceiptModal({
           {/* Header centered */}
           <div className="text-center pb-2 border-b border-slate-100">
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              {receipt.business_name || "GrainRise Miller"}
+              {receipt.business_name || "GrainRise"}
             </h1>
             <h2 className="text-xs sm:text-sm text-slate-500 font-medium mt-1 max-w-md mx-auto leading-relaxed">
               {receipt.business_address}
@@ -372,13 +380,13 @@ export default function GoodsReceiptReceiptModal({
 
           {/* Details in left-label/right-value rows */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 space-y-0.5">
-            <ReceiptRow label="Batch No." value={receipt.batch_no} />
+            <ReceiptRow label="Batch No." value={receipt.batch_no || receipt.batchNo} />
             <ReceiptRow
               label="Reference No."
               value={receipt.receiving_reference_no || receipt.reference_no}
             />
-            <ReceiptRow label="Product Variant" value={receipt.variant} />
-            <ReceiptRow label="Supplier" value={receipt.supplier} />
+            <ReceiptRow label="Product Variant" value={receipt.variant || receipt.product_name} />
+            <ReceiptRow label="Supplier" value={receipt.supplier || receipt.supplier_name} />
             <ReceiptRow
               label="Order Quantity"
               value={receipt.original_order_quantity || receipt.ordered_quantity}
@@ -390,11 +398,11 @@ export default function GoodsReceiptReceiptModal({
             />
             <ReceiptRow
               label="Unit Cost / Price per kg"
-              value={receipt.price_per_kg || receipt.unit_price}
+              value={receipt.price_per_kg || receipt.unit_price || receipt.unitPrice}
             />
             <ReceiptRow
               label="Amount to Pay"
-              value={receipt.amount_to_pay}
+              value={receipt.amount_to_pay || receipt.payable || receipt.total}
               isAmount={true}
             />
 
@@ -407,17 +415,17 @@ export default function GoodsReceiptReceiptModal({
                 </div>
                 <ReceiptRow
                   label="Requested Date"
-                  value={receipt.requested_date || receipt.requested_at_formatted}
+                  value={receipt.requested_date || receipt.requested_at_formatted || receipt.requested_at}
                 />
                 <ReceiptRow
                   label="Paid Date"
-                  value={receipt.paid_date || receipt.paid_at_formatted}
+                  value={receipt.paid_date || receipt.paid_at_formatted || receipt.paid_at}
                 />
                 <ReceiptRow label="Paid By" value={receipt.paid_by} />
                 <ReceiptRow label="Payment Method" value={receipt.payment_method} />
                 <ReceiptRow
                   label="Payment Reference"
-                  value={receipt.payment_reference || receipt.payment_reference_id}
+                  value={receipt.payment_reference || receipt.payment_reference_id || receipt.payment_reference_number}
                 />
               </>
             )}

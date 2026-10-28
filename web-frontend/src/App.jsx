@@ -105,6 +105,7 @@ import WarehouseExpenses from "./Users/WarehouseAccounts/WarehouseFinance/Wareho
 import WarehouseTaxes from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseTaxes";
 import WarehouseReimburse from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseReimburse";
 import WarehouseFinancePaymentHistory from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseFinancePaymentHistory";
+import WarehouseFinanceReport from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseFinanceReport";
 import WarehouseFinanceDashboard from "./Users/WarehouseAccounts/WarehouseFinance/WarehouseFinanceDashboard";
 
 
@@ -685,6 +686,11 @@ function App() {
             />
 
             <Route
+              path="/warehouse-finance/payment-history/report"
+              element={<WarehouseFinanceReport />}
+            />
+
+            <Route
               path="/warehouse-finance/profile"
               element={<UserAccountProfile />}
             />
@@ -731,6 +737,15 @@ function App() {
             <Route
               path="/warehouse-manager/order-approval"
               element={<OrderApproval />}
+            />
+
+            <Route
+              path="/warehouse-manager/payables"
+              element={<WarehousePayables />}
+            />
+            <Route
+              path="/warehouse-manager/payables-management"
+              element={<WarehousePayables />}
             />
 
             <Route
