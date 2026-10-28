@@ -167,6 +167,8 @@ export const ToastNotification = ({
   onClose,
   position = "top-right",
   className = "",
+  containerClassName = "",
+  zIndex = 20,
 }) => {
   useEffect(() => {
     if (isOpen && duration && duration > 0 && onClose) {
@@ -188,7 +190,8 @@ export const ToastNotification = ({
 
   return (
     <div
-      className={`fixed ${POSITION_STYLES[position] || POSITION_STYLES["top-right"]} z-[9999] max-w-xs w-[calc(100vw-2rem)] pointer-events-none transition-all duration-300 ease-out`}
+      className={`fixed ${POSITION_STYLES[position] || POSITION_STYLES["top-right"]} ${containerClassName} max-w-xs w-[calc(100vw-2rem)] pointer-events-none transition-all duration-300 ease-out`}
+      style={{ zIndex }}
     >
       <div
         role="alert"
