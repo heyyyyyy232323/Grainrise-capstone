@@ -21,5 +21,12 @@ urlpatterns = [
         "sales/",
         include("api.warehouse_function.sales.urls"),
     ),
+    path(
+        "logistics/",
+        include("api.warehouse_function.logistics.urls"),
+    ),
+    path(
+        "driver/",
+        include("api.warehouse_function.driver.urls"),
+    ),
 ]
-
