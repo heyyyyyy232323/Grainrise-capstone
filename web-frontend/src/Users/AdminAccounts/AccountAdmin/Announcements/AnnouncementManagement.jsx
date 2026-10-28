@@ -787,6 +787,7 @@ const AnnouncementManagement = () => {
           >
             <option value="">All Audiences</option>
             <option value="all">General (All)</option>
+            <option value="farmer">Farmer</option>
             <option value="miller">Miller</option>
             <option value="warehouse">Warehouse</option>
             <option value="retailer">Retailer</option>

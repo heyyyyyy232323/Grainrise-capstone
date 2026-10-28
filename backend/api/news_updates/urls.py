@@ -27,6 +27,12 @@ urlpatterns = [
         name="admin-fetch-latest-news",
     ),
 
+    path(
+        "fetch-latest/",
+        admin_views.user_fetch_latest_news,
+        name="user-fetch-latest-news",
+    ),
+
 
     # Admin article list
     path(

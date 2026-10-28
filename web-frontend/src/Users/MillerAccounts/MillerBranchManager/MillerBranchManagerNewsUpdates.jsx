@@ -7,48 +7,6 @@ import useToast from "../../../Components/hooks/useToast";
 import Toast from "../../../Components/Modals/Toast";
 import useFetchLatestNews from "../../../Components/hooks/NewsUpdates/useFetchLatestNews";
 
-export const MILLER_NEWS_DATA = [
-  {
-    id: 1,
-    category: "MARKET UPDATES",
-    categoryColor: "bg-emerald-100 text-emerald-700 border border-emerald-200",
-    date: "August 20, 2026 · 10:00 AM",
-    isoDate: "2026-08-20",
-    title: "Palay Buying Prices Show Stable Movement This Month",
-    description:
-      "Recent market analysis indicate stable palay buying prices across selected agricultural areas, providing a predictable revenue stream for local producers...",
-    likes: 24,
-    comments: 8,
-    source: "Department of Agriculture",
-  },
-  {
-    id: 2,
-    category: "ADVISORY & BEST PRACTICES",
-    categoryColor: "bg-blue-100 text-blue-700 border border-blue-200",
-    date: "August 17, 2026 · 08:15 AM",
-    isoDate: "2026-08-17",
-    title: "El Niño Preparations: Water Management Strategies for Q4",
-    description:
-      "With projected rainfall deficits approaching in the final quarter, experts recommend immediate implementation of efficient irrigation scheduling and soil...",
-    likes: 56,
-    comments: 12,
-    source: "PAGASA",
-  },
-  {
-    id: 3,
-    category: "GRANT PROGRAMS & SUPPORT",
-    categoryColor: "bg-amber-100 text-amber-700 border border-amber-200",
-    date: "August 10, 2026 · 02:30 PM",
-    isoDate: "2026-08-10",
-    title: "New Fertilizer Discount Vouchers Available for Registration",
-    description:
-      "Eligible registered farmers can now apply for the Q3 fertilizer discount voucher program through the centralized portal to offset rising input costs for the...",
-    likes: 112,
-    comments: 45,
-    source: "National Agri Board",
-  },
-];
-
 const CATEGORY_OPTIONS = [
   { value: "all", label: "News Category" },
   { value: "MARKET UPDATES", label: "Market Updates" },
@@ -65,14 +23,14 @@ const SORT_OPTIONS = [
 export default function MillerBranchManagerNewsUpdates() {
   const navigate = useNavigate();
   const { toasts, showToast, removeToast } = useToast();
-  const [articles, setArticles] = useState(MILLER_NEWS_DATA);
+  const [articles, setArticles] = useState([]);
 
   // Fetch Latest News Hook
   const { fetchLatestNews, isFetching } = useFetchLatestNews({
     showToast,
     onNewsFetched: (fetched) => {
       if (fetched && fetched.length > 0) {
-        setArticles((prev) => {
+        setArticles(() => {
           const formatted = fetched.map((item, idx) => ({
             id: item.news_id || item.id || `fetched-${idx}`,
             category: (item.category || "Market Updates").toUpperCase(),
@@ -87,7 +45,7 @@ export default function MillerBranchManagerNewsUpdates() {
             comments: item.comments_count || 0,
             source: item.source_name || "GrainRise News",
           }));
-          return [...formatted, ...prev.filter(p => !formatted.some(f => f.id === p.id))];
+          return formatted;
         });
       }
     },
@@ -459,7 +417,7 @@ export default function MillerBranchManagerNewsUpdates() {
       {/* ── Pagination ───────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between border-t border-gray-200 pt-4">
         <p className="text-sm text-gray-500">
-          Showing 1-{filtered.length} of {MILLER_NEWS_DATA.length} articles
+          Showing 1-{filtered.length} of {articles.length} articles
         </p>
         <div className="flex gap-1">
           <button type="button" className="px-3 py-1 border border-gray-200 text-gray-400 rounded-md text-sm cursor-not-allowed">

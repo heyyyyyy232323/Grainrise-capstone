@@ -1,718 +1,39 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-import {
-  useNavigate,
-  useParams,
-} from "react-router-dom";
-
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
-  ExternalLink,
   Heart,
-  MessageSquare,
-  Send,
   Share2,
+  Send,
+  Flag,
+  Edit2,
   Trash2,
-  X,
+  MessageSquare,
+  CornerDownRight,
+  AlertCircle,
+  Megaphone,
+  Newspaper,
 } from "lucide-react";
-
 import Breadcrumbs from "../../Components/Minor-Components/Breadcrumbs";
-
-import useNewsUpdates from "../../Components/hooks/NewsUpdates/useNewsUpdates";
-
-
-const CATEGORY_LABELS = {
-  market_updates:
-    "MARKET UPDATES",
-
-  advisory_best_practices:
-    "ADVISORY & BEST PRACTICES",
-
-  grant_programs_support:
-    "GRANT PROGRAMS & SUPPORT",
-
-  weather_climate:
-    "WEATHER & CLIMATE",
-
-  policy_regulation:
-    "POLICY & REGULATION",
-
-  supply_chain:
-    "SUPPLY CHAIN",
-
-  general_agriculture:
-    "GENERAL AGRICULTURE",
-};
-
-
-const CATEGORY_STYLES = {
-  market_updates:
-    "bg-yellow-100 text-yellow-700",
-
-  advisory_best_practices:
-    "bg-blue-100 text-blue-700",
-
-  grant_programs_support:
-    "bg-green-100 text-green-700",
-
-  weather_climate:
-    "bg-cyan-100 text-cyan-700",
-
-  policy_regulation:
-    "bg-purple-100 text-purple-700",
-
-  supply_chain:
-    "bg-orange-100 text-orange-700",
-
-  general_agriculture:
-    "bg-slate-100 text-slate-700",
-};
-
-
-const getCategoryLabel = (
-  value
-) =>
-  CATEGORY_LABELS[value] ||
-  String(
-    value ||
-    "GENERAL AGRICULTURE"
-  )
-    .replaceAll("_", " ")
-    .toUpperCase();
-
-
-const getCategoryStyle = (
-  value
-) =>
-  CATEGORY_STYLES[value] ||
-  CATEGORY_STYLES
-    .general_agriculture;
-
-
-const formatDate = (
-  value
-) => {
-  if (!value) {
-    return "Date unavailable";
-  }
-
-  const date =
-    new Date(value);
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return String(value);
-  }
-
-  return date.toLocaleString(
-    "en-PH",
-    {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }
-  );
-};
-
-
-const getAuthorName = (
-  comment
-) =>
-  comment?.author_name ||
-  comment?.username ||
-  "GrainRise User";
-
-
-const getInitial = (
-  value
-) =>
-  String(value || "U")
-    .trim()
-    .charAt(0)
-    .toUpperCase() || "U";
-
-
-const visibleReplies = (
-  comment
-) =>
-  Array.isArray(
-    comment?.replies
-  )
-    ? comment.replies.filter(
-        (reply) =>
-          reply?.comment_status !==
-          "hidden"
-      )
-    : [];
-
-
-const countInteractions = (
-  comments
-) =>
-  comments.reduce(
-    (
-      total,
-      comment
-    ) => {
-      const root =
-        comment.comment_status ===
-        "active"
-          ? 1
-          : 0;
-
-      const replies =
-        visibleReplies(
-          comment
-        ).filter(
-          (reply) =>
-            reply.comment_status ===
-            "active"
-        ).length;
-
-      return (
-        total +
-        root +
-        replies
-      );
-    },
-    0
-  );
-
-
-// ============================================================
-// REPLY
-// ============================================================
-
-function ReplyRow({
-  reply,
-  saving,
-  onDelete,
-}) {
-  const id =
-    reply.comment_id ??
-    reply.id;
-
-  const author =
-    getAuthorName(
-      reply
-    );
-
-  const deleted =
-    reply.comment_status ===
-    "deleted";
-
-  return (
-    <div
-      className="
-        ml-4
-        mt-3
-        flex
-        gap-3
-        border-l-2
-        border-green-100
-        pl-4
-      "
-    >
-      <div
-        className="
-          flex
-          h-8
-          w-8
-          shrink-0
-          items-center
-          justify-center
-          rounded-full
-          bg-slate-100
-          text-xs
-          font-bold
-          text-slate-600
-        "
-      >
-        {getInitial(author)}
-      </div>
-
-      <div
-        className="
-          min-w-0
-          flex-1
-        "
-      >
-        <div
-          className="
-            flex
-            flex-wrap
-            items-center
-            justify-between
-            gap-2
-          "
-        >
-          <div
-            className="
-              flex
-              items-center
-              gap-2
-            "
-          >
-            <span
-              className="
-                text-sm
-                font-semibold
-                text-gray-800
-              "
-            >
-              {author}
-            </span>
-
-            <span
-              className="
-                rounded-full
-                bg-green-100
-                px-2
-                py-0.5
-                text-[9px]
-                font-semibold
-                uppercase
-                text-green-700
-              "
-            >
-              Farmer
-            </span>
-          </div>
-
-          <span
-            className="
-              text-[11px]
-              text-gray-400
-            "
-          >
-            {formatDate(
-              reply.created_at
-            )}
-          </span>
-        </div>
-
-
-        <p
-          className={`
-            mt-1
-            break-words
-            text-sm
-            leading-6
-
-            ${
-              deleted
-                ? "italic text-gray-400"
-                : "text-gray-700"
-            }
-          `}
-        >
-          {
-            deleted
-              ? "This reply was deleted."
-              : reply.comment_text
-          }
-        </p>
-
-
-        {reply.is_mine &&
-          !deleted && (
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() =>
-              onDelete(id)
-            }
-            className="
-              mt-2
-              flex
-              items-center
-              gap-1
-              text-xs
-              font-medium
-              text-red-400
-              hover:text-red-600
-              disabled:opacity-50
-            "
-          >
-            <Trash2
-              size={12}
-            />
-
-            Delete
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-
-// ============================================================
-// COMMENT
-// ============================================================
-
-function CommentRow({
-  comment,
-  saving,
-  replyingTo,
-  replyText,
-  setReplyText,
-  onReplyToggle,
-  onReplySubmit,
-  onDelete,
-}) {
-  const id =
-    comment.comment_id ??
-    comment.id;
-
-  const author =
-    getAuthorName(
-      comment
-    );
-
-  const deleted =
-    comment.comment_status ===
-    "deleted";
-
-  const replies =
-    visibleReplies(
-      comment
-    );
-
-  const replying =
-    replyingTo === id;
-
-
-  return (
-    <div
-      className="
-        border-b
-        border-slate-100
-        py-5
-        first:pt-0
-        last:border-b-0
-      "
-    >
-      <div
-        className="
-          flex
-          gap-3
-        "
-      >
-        <div
-          className="
-            flex
-            h-9
-            w-9
-            shrink-0
-            items-center
-            justify-center
-            rounded-full
-            bg-green-100
-            text-sm
-            font-bold
-            text-green-700
-          "
-        >
-          {getInitial(author)}
-        </div>
-
-
-        <div
-          className="
-            min-w-0
-            flex-1
-          "
-        >
-          <div
-            className="
-              flex
-              flex-wrap
-              items-center
-              justify-between
-              gap-2
-            "
-          >
-            <div
-              className="
-                flex
-                flex-wrap
-                items-center
-                gap-2
-              "
-            >
-              <span
-                className="
-                  text-sm
-                  font-semibold
-                  text-gray-800
-                "
-              >
-                {author}
-              </span>
-
-              <span
-                className="
-                  rounded-full
-                  bg-green-100
-                  px-2
-                  py-0.5
-                  text-[9px]
-                  font-semibold
-                  uppercase
-                  text-green-700
-                "
-              >
-                Farmer
-              </span>
-
-              {comment.is_mine && (
-                <span
-                  className="
-                    text-[10px]
-                    text-gray-400
-                  "
-                >
-                  You
-                </span>
-              )}
-            </div>
-
-            <span
-              className="
-                text-[11px]
-                text-gray-400
-              "
-            >
-              {formatDate(
-                comment.created_at
-              )}
-            </span>
-          </div>
-
-
-          <p
-            className={`
-              mt-1
-              break-words
-              text-sm
-              leading-6
-
-              ${
-                deleted
-                  ? "italic text-gray-400"
-                  : "text-gray-700"
-              }
-            `}
-          >
-            {
-              deleted
-                ? "This comment was deleted."
-                : comment.comment_text
-            }
-          </p>
-
-
-          {!deleted && (
-            <div
-              className="
-                mt-2
-                flex
-                items-center
-                gap-4
-              "
-            >
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() =>
-                  onReplyToggle(id)
-                }
-                className="
-                  text-xs
-                  font-medium
-                  text-gray-400
-                  hover:text-green-700
-                "
-              >
-                Reply
-              </button>
-
-
-              {comment.is_mine && (
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() =>
-                    onDelete(id)
-                  }
-                  className="
-                    flex
-                    items-center
-                    gap-1
-                    text-xs
-                    font-medium
-                    text-red-400
-                    hover:text-red-600
-                  "
-                >
-                  <Trash2
-                    size={12}
-                  />
-
-                  Delete
-                </button>
-              )}
-            </div>
-          )}
-
-
-          {replying &&
-            !deleted && (
-            <div
-              className="
-                mt-3
-                flex
-                gap-2
-              "
-            >
-              <input
-                autoFocus
-                value={
-                  replyText
-                }
-                onChange={(
-                  event
-                ) =>
-                  setReplyText(
-                    event.target.value
-                  )
-                }
-                onKeyDown={(
-                  event
-                ) => {
-                  if (
-                    event.key ===
-                    "Enter"
-                  ) {
-                    event.preventDefault();
-
-                    onReplySubmit(id);
-                  }
-
-                  if (
-                    event.key ===
-                    "Escape"
-                  ) {
-                    onReplyToggle(id);
-                  }
-                }}
-                placeholder={`Reply to ${author}...`}
-                className="
-                  min-w-0
-                  flex-1
-                  rounded-lg
-                  border
-                  border-gray-200
-                  px-3
-                  py-2
-                  text-sm
-                  outline-none
-                  focus:border-green-600
-                  focus:ring-1
-                  focus:ring-green-600
-                "
-              />
-
-              <button
-                type="button"
-                disabled={
-                  saving ||
-                  !replyText.trim()
-                }
-                onClick={() =>
-                  onReplySubmit(id)
-                }
-                className="
-                  rounded-lg
-                  bg-green-700
-                  px-3
-                  py-2
-                  text-xs
-                  font-semibold
-                  text-white
-                  hover:bg-green-800
-                  disabled:opacity-50
-                "
-              >
-                Send
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  onReplyToggle(id)
-                }
-                className="
-                  rounded-lg
-                  p-2
-                  text-gray-400
-                  hover:bg-gray-100
-                "
-              >
-                <X size={16} />
-              </button>
-            </div>
-          )}
-
-
-          {replies.map(
-            (reply) => (
-              <ReplyRow
-                key={
-                  reply.comment_id ??
-                  reply.id
-                }
-                reply={reply}
-                saving={saving}
-                onDelete={onDelete}
-              />
-            )
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-// ============================================================
-// PAGE
-// ============================================================
-
-const FALLBACK_ARTICLE_DETAILS = {
+import RichArticleContent, {
+  resolveMediaUrl,
+} from "../../Components/Minor-Components/RichArticleContent";
+import ReportCommentModal from "../../Components/Modals/NewsUpdates/ReportCommentModal";
+import ProfanityWarningModal from "../../Components/Modals/NewsUpdates/ProfanityWarningModal";
+import ShareArticleModal from "../../Components/Modals/NewsUpdates/ShareArticleModal";
+import useToast from "../../Components/hooks/useToast";
+import Toast from "../../Components/Modals/Toast";
+import useApi from "../../Components/hooks/useApi";
+
+const FALLBACK_ARTICLES = {
   101: {
-    news_id: 101,
     id: 101,
     title: "DA Announces Adjusted Palay Procurement Support Price for 2026 Wet Season",
-    source_name: "Department of Agriculture",
-    category_code: "Government & Policy",
-    published_at: "2026-10-24T08:00:00Z",
-    created_at: "2026-10-24T08:00:00Z",
-    reaction_count: 42,
-    comment_count: 2,
-    is_liked: false,
-    description: "The Department of Agriculture has updated palay procurement floor prices to support local rice producers facing elevated fertilizer costs.",
-    article_body: `QUEZON CITY — The Department of Agriculture (DA) today announced adjusted palay support floor prices across key rice-producing regions in Luzon and the Visayas.
+    source: "Department of Agriculture",
+    category: "GOVERNMENT & POLICY",
+    category_color: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+    date: "2026-10-24T08:00:00Z",
+    content: `QUEZON CITY — The Department of Agriculture (DA) today announced adjusted palay support floor prices across key rice-producing regions in Luzon and the Visayas.
 
 The updated pricing guidelines aim to guarantee equitable returns for smallholder farmers during peak harvesting weeks while maintaining stable milled rice retail supplies in urban centers.
 
@@ -721,36 +42,26 @@ Local agricultural cooperatives and National Food Authority buying stations have
 Farmers are encouraged to verify moisture content levels prior to delivery to qualify for Grade 1 incentives.`,
   },
   102: {
-    news_id: 102,
     id: 102,
     title: "High-Yielding RC 222 (Tubigan 18) Seed Distribution Underway in Central Luzon",
-    source_name: "PhilRice Extension",
-    category_code: "Crops & Agronomy",
-    published_at: "2026-10-20T10:30:00Z",
-    created_at: "2026-10-20T10:30:00Z",
-    reaction_count: 29,
-    comment_count: 1,
-    is_liked: false,
-    description: "PhilRice launches certified inbred seed distribution across Nueva Ecija, Isabela, and Tarlac cooperatives.",
-    article_body: `SCIENCE CITY OF MUÑOZ — Certified inbred seeds of RC 222 (Tubigan 18) are being distributed to participating farmer associations across Central Luzon.
+    source: "PhilRice Extension",
+    category: "CROPS & AGRONOMY",
+    category_color: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+    date: "2026-10-20T10:30:00Z",
+    content: `SCIENCE CITY OF MUÑOZ — Certified inbred seeds of RC 222 (Tubigan 18) are being distributed to participating farmer associations across Central Luzon.
 
 RC 222 is renowned for its high yield potential of up to 10 metric tons per hectare under optimal irrigated lowland conditions, along with moderate resistance to bacterial leaf blight.
 
 Beneficiaries will also receive agronomic support materials and technical guidance through local agricultural extension offices.`,
   },
   103: {
-    news_id: 103,
     id: 103,
     title: "PAGASA Releases Favorable Fourth-Quarter Climate and Rainfall Outlook for Rice Growers",
-    source_name: "Agri-Weather Desk",
-    category_code: "Climate & Weather",
-    published_at: "2026-10-18T14:15:00Z",
-    created_at: "2026-10-18T14:15:00Z",
-    reaction_count: 35,
-    comment_count: 3,
-    is_liked: false,
-    description: "Near-average rainfall projected for the remainder of the cropping year with low typhoon probability.",
-    article_body: `WEATHER BUREAU — Weather forecast models indicate near-normal rainfall distribution throughout November and December across major river basins in Luzon.
+    source: "Agri-Weather Desk",
+    category: "CLIMATE & WEATHER",
+    category_color: "bg-blue-100 text-blue-700 border border-blue-200",
+    date: "2026-10-18T14:15:00Z",
+    content: `WEATHER BUREAU — Weather forecast models indicate near-normal rainfall distribution throughout November and December across major river basins in Luzon.
 
 Neutral ENSO conditions are expected to persist, reducing the risk of intense typhoons during late-crop maturity.
 
@@ -758,1156 +69,926 @@ Farmers with irrigated lots are advised to schedule fertilization before mid-Nov
   },
 };
 
-const FALLBACK_COMMENTS = [
-  {
-    comment_id: 1,
-    user_name: "Eduardo Santos (Miller)",
-    comment_text: "We welcome this support price adjustment as it gives farmers clarity before milling season starts.",
-    created_at: "2026-10-24T10:30:00Z",
-    replies: [],
-  },
-  {
-    comment_id: 2,
-    user_name: "Maria Ramos (Agri Officer)",
-    comment_text: "Local buying stations in Cabanatuan and Isabela are already calibrated and open from 8 AM to 5 PM daily.",
-    created_at: "2026-10-24T11:45:00Z",
-    replies: [],
-  },
-];
-
 export default function FarmerNewsArticle() {
-  const {
-    id,
-  } = useParams();
+  const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { toasts, showToast, removeToast } = useToast();
+  const { request } = useApi();
 
-  const navigate =
-    useNavigate();
+  const isAnnouncement =
+    searchParams.get("type") === "announcement" || String(id).startsWith("announcement");
+  const cleanId = String(id).replace(/^(announcement|news)-/, "");
 
+  const [article, setArticle] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const {
-    selectedArticle: rawArticle,
-    isArticleLoading,
-    articleError,
+  // Interaction states
+  const [isLiked, setIsLiked] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
 
-    comments: rawComments,
-    isCommentsLoading,
-    commentsError,
+  // Comment input
+  const [newCommentText, setNewCommentText] = useState("");
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
-    isSaving,
-    actionError,
+  // Inline Reply state
+  const [replyingToId, setReplyingToId] = useState(null);
+  const [replyText, setReplyText] = useState("");
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
 
-    loadNewsArticle,
-    loadNewsComments,
-    toggleNewsLike,
-    addNewsComment,
-    deleteNewsComment,
-    clearSelectedArticle,
-  } = useNewsUpdates();
+  // Inline Edit state: { id, isReply, text }
+  const [editingItem, setEditingItem] = useState(null);
+  const [editText, setEditText] = useState("");
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
-  const selectedArticle = useMemo(() => {
-    if (rawArticle) return rawArticle;
-    const targetId = Number(id);
-    return FALLBACK_ARTICLE_DETAILS[targetId] || FALLBACK_ARTICLE_DETAILS[101];
-  }, [rawArticle, id]);
+  // Modals
+  const [reportingComment, setReportingComment] = useState(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [profanityModal, setProfanityModal] = useState({
+    isOpen: false,
+    message: "",
+    matches: [],
+    detectedWords: [],
+  });
 
-  const comments = useMemo(() => {
-    if (rawComments && rawComments.length > 0) return rawComments;
-    return FALLBACK_COMMENTS;
-  }, [rawComments]);
+  // Load article & comments
+  const loadArticleData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (isAnnouncement) {
+        const res = await request(`/announcements/${cleanId}/user-detail/`, {
+          method: "GET",
+        });
 
+        if (res && res.data) {
+          const art = res.data.article || res.data || {};
+          const artSlug = art.slug || cleanId;
+          if (art.slug && cleanId !== art.slug && /^\d+$/.test(String(cleanId))) {
+            window.history.replaceState(
+              null,
+              "",
+              `/farmer/news-updates/${art.slug}?type=announcement`
+            );
+          }
+          setArticle({
+            id: art.announcement_id || cleanId,
+            slug: artSlug,
+            item_type: "announcement",
+            title: art.title,
+            content: art.content || "",
+            image_url: art.image_url,
+            category: art.category || "Announcement from the admin",
+            category_color: "bg-indigo-100 text-indigo-700 border border-indigo-200",
+            source: art.source_name || "GrainRise Admin",
+            date: art.date_published || art.created_at || "",
+          });
+          setIsLiked(Boolean(art.is_liked));
+          setLikeCount(art.reaction_count || 0);
+          setComments(art.comments || []);
+        } else if (res && res.error) {
+          throw new Error(res.error);
+        }
+      } else {
+        // News article
+        const [artRes, commRes] = await Promise.all([
+          request(`/news/${cleanId}/`, { method: "GET" }),
+          request(`/news/${cleanId}/comments/?limit=50`, { method: "GET" }),
+        ]);
 
-  const [
-    commentText,
-    setCommentText,
-  ] = useState("");
-
-  const [
-    replyingTo,
-    setReplyingTo,
-  ] = useState(null);
-
-  const [
-    replyText,
-    setReplyText,
-  ] = useState("");
-
-  const [
-    shareMessage,
-    setShareMessage,
-  ] = useState("");
-
-
-  // =========================================================
-  // LOAD
-  // =========================================================
-
-  useEffect(() => {
-    if (!id) {
-      return undefined;
-    }
-
-    loadNewsArticle(id)
-      .catch(() => {});
-
-    loadNewsComments(
-      id,
-      {
-        limit: 100,
-        offset: 0,
-      }
-    ).catch(() => {});
-
-
-    return () => {
-      clearSelectedArticle();
-    };
-
-  }, [
-    id,
-    loadNewsArticle,
-    loadNewsComments,
-    clearSelectedArticle,
-  ]);
-
-
-  // =========================================================
-  // ARTICLE BODY
-  // =========================================================
-
-  const paragraphs =
-    useMemo(
-      () => {
-        const body =
-          selectedArticle
-            ?.article_body;
-
-        if (!body) {
-          return [];
+        if (artRes && artRes.data) {
+          const art = artRes.data.article || artRes.data || {};
+          const artSlug = art.slug || cleanId;
+          if (art.slug && cleanId !== art.slug && /^\d+$/.test(String(cleanId))) {
+            window.history.replaceState(
+              null,
+              "",
+              `/farmer/news-updates/${art.slug}?type=news`
+            );
+          }
+          setArticle({
+            id: art.news_id || cleanId,
+            slug: artSlug,
+            item_type: "news",
+            title: art.title,
+            content: art.article_body || art.description || "",
+            image_url: art.image_url,
+            category: (art.category_code || "General Agriculture")
+              .replace("_", " ")
+              .toUpperCase(),
+            category_color: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+            source: art.source_name || "GrainRise News",
+            date: art.published_at || art.first_fetched_at || "",
+          });
+          setIsLiked(Boolean(art.is_liked || art.has_liked));
+          setLikeCount(art.reaction_count || 0);
+        } else if (FALLBACK_ARTICLES[cleanId]) {
+          const fb = FALLBACK_ARTICLES[cleanId];
+          setArticle({
+            ...fb,
+            slug: cleanId,
+            item_type: "news",
+            image_url: null,
+          });
+          setIsLiked(false);
+          setLikeCount(24);
+        } else if (artRes && artRes.error) {
+          throw new Error(artRes.error);
         }
 
-        return String(body)
-          .split(
-            /\n\s*\n/
-          )
-          .map(
-            (item) =>
-              item.trim()
-          )
-          .filter(Boolean);
-      },
-      [
-        selectedArticle
-          ?.article_body,
-      ]
-    );
-
-
-  // =========================================================
-  // DISCUSSION
-  //
-  // IMPORTANT:
-  //
-  // NO role filtering here.
-  //
-  // The backend already determines which discussion this
-  // authenticated user may see.
-  // =========================================================
-
-  const discussionComments =
-    useMemo(
-      () =>
-        comments.filter(
-          (comment) =>
-            comment?.comment_status !==
-            "hidden"
-        ),
-      [
-        comments,
-      ]
-    );
-
-
-  const interactionCount =
-    useMemo(
-      () =>
-        countInteractions(
-          discussionComments
-        ),
-      [
-        discussionComments,
-      ]
-    );
-
-
-  const reactionCount =
-    Number(
-      selectedArticle
-        ?.reaction_count || 0
-    );
-
-
-  // =========================================================
-  // REFRESH
-  // =========================================================
-
-  const refresh =
-    async () => {
-      await Promise.all([
-        loadNewsArticle(id),
-
-        loadNewsComments(
-          id,
-          {
-            limit: 100,
-            offset: 0,
-          }
-        ),
-      ]);
-    };
-
-
-  // =========================================================
-  // LIKE
-  // =========================================================
-
-  const handleLike =
-    async () => {
-      if (
-        isSaving ||
-        !id
-      ) {
-        return;
+        if (commRes && commRes.data) {
+          const commList =
+            commRes.data.comments ||
+            commRes.data.items ||
+            [];
+          setComments(commList);
+        }
       }
-
-      try {
-        await toggleNewsLike(
-          id
-        );
-
-      } catch (error) {
-        console.error(
-          error
-        );
+    } catch (err) {
+      console.error("Failed to load article:", err);
+      if (FALLBACK_ARTICLES[cleanId]) {
+        const fb = FALLBACK_ARTICLES[cleanId];
+        setArticle({
+          ...fb,
+          slug: cleanId,
+          item_type: "news",
+          image_url: null,
+        });
+        setIsLiked(false);
+        setLikeCount(24);
+        setComments([]);
+      } else {
+        setError(err?.message || "Failed to load article.");
       }
-    };
+    } finally {
+      setIsLoading(false);
+    }
+  }, [cleanId, isAnnouncement, request]);
 
+  useEffect(() => {
+    loadArticleData();
+  }, [loadArticleData]);
 
-  // =========================================================
-  // COMMENT
-  // =========================================================
+  // Like / Unlike action
+  const handleLikeToggle = async () => {
+    const prevLiked = isLiked;
+    const prevCount = likeCount;
 
-  const handleComment =
-    async () => {
-      const text =
-        commentText.trim();
+    setIsLiked(!prevLiked);
+    setLikeCount(prevLiked ? Math.max(0, prevCount - 1) : prevCount + 1);
 
-      if (
-        !text ||
-        isSaving
-      ) {
-        return;
+    try {
+      const endpoint = isAnnouncement
+        ? `/announcements/${cleanId}/reaction/`
+        : `/news/${cleanId}/reaction/`;
+
+      const res = await request(endpoint, {
+        method: "POST",
+      });
+
+      if (res && res.data) {
+        const resData = res.data;
+        if (resData.is_liked !== undefined) setIsLiked(resData.is_liked);
+        if (resData.reaction_count !== undefined) setLikeCount(resData.reaction_count);
+      } else if (res && res.error) {
+        setIsLiked(prevLiked);
+        setLikeCount(prevCount);
+        showToast({
+          type: "error",
+          title: "Error",
+          message: res.error || "Could not update reaction.",
+        });
       }
+    } catch (err) {
+      console.error("Like toggle failed:", err);
+      setIsLiked(prevLiked);
+      setLikeCount(prevCount);
+      showToast({
+        type: "error",
+        title: "Error",
+        message: "Could not update reaction.",
+      });
+    }
+  };
 
-      try {
-        await addNewsComment(
-          id,
-          text
-        );
+  // Helper to handle profanity / restriction errors
+  const handleApiError = (errData, fallbackMsg) => {
+    const code = errData?.code;
+    const msg = errData?.message || errData?.error || fallbackMsg;
 
-        setCommentText("");
-
-        await refresh();
-
-      } catch (error) {
-        console.error(
-          error
-        );
-      }
-    };
-
-
-  // =========================================================
-  // REPLY
-  // =========================================================
-
-  const handleReplyToggle = (
-    commentId
-  ) => {
     if (
-      replyingTo ===
-      commentId
+      code === "PROFANITY_DETECTED" ||
+      code === "profanity_detected" ||
+      errData?.blocked ||
+      msg?.toLowerCase().includes("prohibited") ||
+      msg?.toLowerCase().includes("inappropriate")
     ) {
-      setReplyingTo(null);
-      setReplyText("");
+      setProfanityModal({
+        isOpen: true,
+        message:
+          msg ||
+          "Your comment contains a prohibited word. Please remove it before submitting.",
+        detectedWords: errData?.detected_words || [],
+        matches: errData?.matches || [],
+      });
       return;
     }
 
-    setReplyingTo(
-      commentId
-    );
+    if (
+      code === "commenting_restricted" ||
+      msg?.toLowerCase().includes("restricted")
+    ) {
+      showToast({
+        type: "error",
+        title: "Commenting Restricted",
+        message: msg || "Your commenting ability is temporarily restricted.",
+      });
+      return;
+    }
 
-    setReplyText("");
+    showToast({
+      type: "error",
+      title: "Error",
+      message: msg,
+    });
   };
 
+  // Submit Root Comment
+  const handlePostComment = async (e) => {
+    e.preventDefault();
+    const trimmed = newCommentText.trim();
+    if (!trimmed) return;
 
-  const handleReplySubmit =
-    async (
-      parentCommentId
-    ) => {
-      const text =
-        replyText.trim();
+    setIsSubmittingComment(true);
+    try {
+      const endpoint = isAnnouncement
+        ? `/announcements/${cleanId}/comments/`
+        : `/news/${cleanId}/comments/`;
 
-      if (
-        !text ||
-        isSaving
-      ) {
-        return;
+      const res = await request(endpoint, {
+        method: "POST",
+        body: { comment_text: trimmed },
+      });
+
+      if (res && res.data && res.success !== false && !res.data?.blocked && !res?.blocked) {
+        setNewCommentText("");
+        showToast({
+          type: "success",
+          title: "Success",
+          message: "Comment posted.",
+        });
+        loadArticleData();
+      } else {
+        handleApiError(res?.data || res, "Unable to post comment.");
       }
+    } catch (err) {
+      console.error("Error posting comment:", err);
+      handleApiError(err?.data, err?.message || "Failed to post comment.");
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
 
-      try {
-        await addNewsComment(
-          id,
-          text,
-          parentCommentId
-        );
+  // Submit Reply
+  const handlePostReply = async (parentCommentId) => {
+    const trimmed = replyText.trim();
+    if (!trimmed) return;
 
-        setReplyingTo(null);
+    setIsSubmittingReply(true);
+    try {
+      const endpoint = isAnnouncement
+        ? `/announcements/comments/${parentCommentId}/replies/`
+        : `/news/${cleanId}/comments/`;
+
+      const payload = isAnnouncement
+        ? { comment_text: trimmed }
+        : { comment_text: trimmed, parent_comment_id: parentCommentId };
+
+      const res = await request(endpoint, {
+        method: "POST",
+        body: payload,
+      });
+
+      if (res && res.data && res.success !== false && !res.data?.blocked && !res?.blocked) {
+        setReplyingToId(null);
         setReplyText("");
-
-        await refresh();
-
-      } catch (error) {
-        console.error(
-          error
-        );
+        showToast({
+          type: "success",
+          title: "Success",
+          message: "Reply posted.",
+        });
+        loadArticleData();
+      } else {
+        handleApiError(res?.data || res, "Unable to post reply.");
       }
-    };
+    } catch (err) {
+      console.error("Error posting reply:", err);
+      handleApiError(err?.data, err?.message || "Failed to post reply.");
+    } finally {
+      setIsSubmittingReply(false);
+    }
+  };
 
+  // Edit Comment / Reply
+  const handleSaveEdit = async () => {
+    if (!editingItem) return;
+    const trimmed = editText.trim();
+    if (!trimmed) return;
 
-  // =========================================================
-  // DELETE
-  // =========================================================
-
-  const handleDelete =
-    async (
-      commentId
-    ) => {
-      if (
-        !commentId ||
-        isSaving
-      ) {
-        return;
+    setIsSubmittingEdit(true);
+    try {
+      let endpoint = "";
+      if (isAnnouncement) {
+        endpoint = editingItem.isReply
+          ? `/announcements/replies/${editingItem.id}/`
+          : `/announcements/comments/${editingItem.id}/`;
+      } else {
+        endpoint = `/news/comments/${editingItem.id}/`;
       }
 
-      try {
-        await deleteNewsComment(
-          commentId
-        );
+      const res = await request(endpoint, {
+        method: "PATCH",
+        body: { comment_text: trimmed },
+      });
 
-        await refresh();
-
-      } catch (error) {
-        console.error(
-          error
-        );
+      if (res && res.data && res.success !== false && !res.data?.blocked && !res?.blocked) {
+        setEditingItem(null);
+        setEditText("");
+        showToast({
+          type: "success",
+          title: "Success",
+          message: "Comment updated.",
+        });
+        loadArticleData();
+      } else {
+        handleApiError(res?.data || res, "Unable to save edits.");
       }
-    };
+    } catch (err) {
+      console.error("Error updating comment:", err);
+      handleApiError(err?.data, err?.message || "Failed to update.");
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  };
 
+  // Delete Comment / Reply
+  const handleDeleteComment = async (itemId, isReply = false) => {
+    if (!window.confirm("Are you sure you want to delete this comment?")) return;
 
-  // =========================================================
-  // SHARE
-  // =========================================================
-
-  const handleShare =
-    async () => {
-      try {
-        if (
-          navigator.share
-        ) {
-          await navigator.share({
-            title:
-              selectedArticle.title,
-
-            text:
-              selectedArticle.description ||
-              selectedArticle.title,
-
-            url:
-              window.location.href,
-          });
-
-          return;
-        }
-
-        await navigator.clipboard
-          .writeText(
-            window.location.href
-          );
-
-        setShareMessage(
-          "Link copied."
-        );
-
-        setTimeout(
-          () =>
-            setShareMessage(""),
-          2000
-        );
-
-      } catch (error) {
-        if (
-          error?.name !==
-          "AbortError"
-        ) {
-          console.error(
-            error
-          );
-        }
+    try {
+      let endpoint = "";
+      if (isAnnouncement) {
+        endpoint = isReply
+          ? `/announcements/replies/${itemId}/`
+          : `/announcements/comments/${itemId}/`;
+      } else {
+        endpoint = `/news/comments/${itemId}/`;
       }
-    };
 
+      const res = await request(endpoint, {
+        method: "DELETE",
+      });
 
-  // =========================================================
-  // LOADING
-  // =========================================================
+      if (res && (res.data || res.success)) {
+        showToast({
+          type: "success",
+          title: "Success",
+          message: "Comment deleted.",
+        });
+        loadArticleData();
+      } else {
+        showToast({
+          type: "error",
+          title: "Error",
+          message: res?.error || "Failed to delete comment.",
+        });
+      }
+    } catch (err) {
+      console.error("Error deleting comment:", err);
+      showToast({
+        type: "error",
+        title: "Error",
+        message: err?.message || "Unable to delete.",
+      });
+    }
+  };
 
-  if (
-    isArticleLoading &&
-    !selectedArticle
-  ) {
-    return (
-      <div
-        className="
-          py-16
-          text-center
-          text-sm
-          text-gray-500
-        "
-      >
-        Loading news article...
-      </div>
-    );
-  }
+  // Report Comment
+  const handleReportComment = async (reason) => {
+    if (!reportingComment) return;
 
+    const commentId = reportingComment.comment_id || reportingComment.id;
+    const targetType = isAnnouncement ? "announcement" : "news";
 
-  if (
-    articleError &&
-    !selectedArticle
-  ) {
-    return (
-      <div
-        className="
-          rounded-xl
-          border
-          border-red-200
-          bg-red-50
-          p-6
-          text-red-600
-        "
-      >
-        {articleError}
-      </div>
-    );
-  }
+    const res = await request("/news/report-comment/", {
+      method: "POST",
+      body: {
+        comment_id: commentId,
+        comment_type: targetType,
+        reason,
+        title: article?.title,
+      },
+    });
 
+    if (res && res.data) {
+      showToast({
+        type: "success",
+        title: "Success",
+        message: "Report submitted. Thank you for helping keep GrainRise safe.",
+      });
+    } else {
+      throw new Error(res?.error || "Unable to submit comment report.");
+    }
+  };
 
-  if (!selectedArticle) {
-    return null;
-  }
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    } catch {
+      return dateStr;
+    }
+  };
 
-
-  const category =
-    selectedArticle
-      .category_code ||
-    "general_agriculture";
-
-  const image =
-    selectedArticle
-      .image_url;
-
-  const externalUrl =
-    selectedArticle
-      .article_url;
-
+  const totalCommentCount = comments.reduce(
+    (acc, c) =>
+      acc +
+      (c.comment_status !== "deleted" ? 1 : 0) +
+      (c.replies?.filter((r) => r.comment_status !== "deleted").length || 0),
+    0
+  );
 
   return (
-    <div
-      className="
-        space-y-6
-      "
-    >
-      <Breadcrumbs
-        items={[
-          {
-            label:
-              "Resources",
-          },
-          {
-            label:
-              "News & Updates",
-            path:
-              "/farmer/news-updates",
-          },
-          {
-            label:
-              selectedArticle
-                .title
-                ?.slice(
-                  0,
-                  40
-                ),
-          },
-        ]}
-      />
+    <div className="space-y-6 pb-12">
+      <Toast toasts={toasts} removeToast={removeToast} />
 
-
-      <button
-        type="button"
-        onClick={() =>
-          navigate(
-            "/farmer/news-updates"
-          )
-        }
-        className="
-          flex
-          items-center
-          gap-2
-          text-sm
-          font-medium
-          text-gray-500
-          hover:text-green-700
-        "
-      >
-        <ArrowLeft
-          size={16}
+      {/* ── Breadcrumbs & Back ────────────────────────────────────────────── */}
+      <div className="space-y-3">
+        <Breadcrumbs
+          items={[
+            { label: "Resources" },
+            { label: "News & Updates", path: "/farmer/news-updates" },
+            { label: article ? article.title.slice(0, 45) + "…" : "Article" },
+          ]}
         />
 
-        Back to News &amp; Updates
-      </button>
-
-
-      {/* =====================================================
-          ARTICLE
-      ===================================================== */}
-
-      <article
-        className="
-          mx-auto
-          max-w-5xl
-          overflow-hidden
-          rounded-2xl
-          border
-          border-slate-200
-          bg-white
-          shadow-sm
-        "
-      >
-        <div
-          className="
-            border-b
-            border-slate-100
-            px-7
-            pb-4
-            pt-7
-          "
+        <button
+          type="button"
+          onClick={() => navigate("/farmer/news-updates")}
+          className="flex items-center gap-2 text-sm text-gray-500 hover:text-emerald-700 transition font-medium cursor-pointer"
         >
-          <div
-            className="
-              mb-3
-              flex
-              flex-wrap
-              items-center
-              gap-3
-            "
-          >
-            <span
-              className={`
-                rounded-md
-                px-2.5
-                py-1
-                text-[11px]
-                font-bold
+          <ArrowLeft size={16} />
+          <span>Back to News &amp; Updates</span>
+        </button>
+      </div>
 
-                ${getCategoryStyle(
-                  category
-                )}
-              `}
-            >
-              {getCategoryLabel(
-                category
-              )}
-            </span>
-
-            <span
-              className="
-                text-xs
-                text-gray-500
-              "
-            >
-              {
-                selectedArticle
-                  .source_name ||
-                "Unknown Source"
-              }
-
-              {" · "}
-
-              {formatDate(
-                selectedArticle
-                  .published_at
-              )}
-            </span>
-          </div>
-
-          <h1
-            className="
-              text-2xl
-              font-extrabold
-              leading-snug
-              text-gray-900
-              md:text-3xl
-            "
-          >
-            {selectedArticle.title}
-          </h1>
+      {isLoading ? (
+        <div className="bg-white border border-slate-200 rounded-2xl p-16 text-center space-y-3 shadow-xs">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-r-transparent" />
+          <p className="text-sm font-semibold text-slate-500">Loading article...</p>
         </div>
-
-
-        {image && (
-          <div
-            className="
-              h-56
-              overflow-hidden
-              bg-slate-100
-              md:h-80
-            "
-          >
-            <img
-              src={image}
-              alt={
-                selectedArticle.title
-              }
-              className="
-                h-full
-                w-full
-                object-cover
-              "
-            />
-          </div>
-        )}
-
-
-        <div
-          className="
-            px-7
-            py-6
-          "
-        >
-          {paragraphs.length >
-          0 ? (
-            paragraphs.map(
-              (
-                paragraph,
-                index
-              ) => (
-                <p
-                  key={index}
-                  className="
-                    mb-5
-                    text-sm
-                    leading-7
-                    text-gray-700
-                    last:mb-0
-                    md:text-base
-                  "
+      ) : error ? (
+        <div className="bg-white border border-red-200 rounded-2xl p-10 text-center space-y-3 shadow-xs">
+          <AlertCircle size={32} className="mx-auto text-red-500" />
+          <h3 className="text-base font-bold text-slate-800">Article Unavailable</h3>
+          <p className="text-xs text-slate-500">{error}</p>
+        </div>
+      ) : article ? (
+        <>
+          {/* ── Article Card ─────────────────────────────────────────────────── */}
+          <div className="max-w-5xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-7 pt-7 pb-4 border-b border-slate-100">
+              <div className="flex flex-wrap items-center gap-3 mb-3">
+                <span
+                  className={`text-[11px] font-bold px-2.5 py-1 rounded-md ${article.category_color}`}
                 >
-                  {paragraph}
-                </p>
-              )
-            )
-          ) : (
-            <>
-              <p
-                className="
-                  text-sm
-                  leading-7
-                  text-gray-700
-                  md:text-base
-                "
-              >
-                {
-                  selectedArticle
-                    .description ||
-                  "No article summary available."
-                }
-              </p>
-
-              <div
-                className="
-                  mt-5
-                  rounded-xl
-                  border
-                  border-slate-200
-                  bg-slate-50
-                  p-4
-                  text-sm
-                  text-slate-600
-                "
-              >
-                The complete article text is not available
-                from the current news source feed.
+                  {article.category}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {article.source} &nbsp;·&nbsp; {formatDate(article.date)}
+                </span>
               </div>
-            </>
-          )}
+              <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 leading-snug">
+                {article.title}
+              </h1>
+            </div>
 
-
-          {externalUrl && (
-            <a
-              href={
-                externalUrl
+            {/* Featured Image or Clean Placeholder */}
+            {(() => {
+              const resolvedImageUrl = resolveMediaUrl(article.image_url);
+              if (resolvedImageUrl && !imageError) {
+                return (
+                  <div className="w-full bg-slate-900/5 flex items-center justify-center border-b border-slate-100 overflow-hidden py-3 sm:py-6 px-4">
+                    <img
+                      src={resolvedImageUrl}
+                      alt={article.title}
+                      className="max-h-[520px] w-auto max-w-full h-auto object-contain rounded-xl shadow-xs"
+                      onError={() => setImageError(true)}
+                    />
+                  </div>
+                );
               }
-              target="_blank"
-              rel="noopener noreferrer"
-              className="
-                mt-6
-                inline-flex
-                items-center
-                gap-2
-                text-sm
-                font-semibold
-                text-green-700
-              "
-            >
-              Read Original Article
+              return (
+                <div className="w-full py-8 sm:py-12 bg-gradient-to-br from-amber-50/60 via-slate-50 to-emerald-50/30 border-b border-slate-100 flex flex-col items-center justify-center text-center px-4 select-none">
+                  <div
+                    className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-2.5 shadow-2xs ${
+                      isAnnouncement
+                        ? "bg-amber-100/90 text-amber-800 border border-amber-200"
+                        : "bg-emerald-100/90 text-emerald-800 border border-emerald-200"
+                    }`}
+                  >
+                    {isAnnouncement ? <Megaphone size={24} /> : <Newspaper size={24} />}
+                  </div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    {isAnnouncement ? "Official Admin Announcement" : "GrainRise News"}
+                  </span>
+                  <span className="text-[11px] text-slate-400 mt-0.5">
+                    Verified supply chain advisory
+                  </span>
+                </div>
+              );
+            })()}
 
-              <ExternalLink
-                size={15}
-              />
-            </a>
-          )}
-        </div>
+            <div className="px-7 py-6">
+              <RichArticleContent content={article.content} />
+            </div>
 
-
-        <div
-          className="
-            flex
-            items-center
-            justify-between
-            border-t
-            border-slate-100
-            px-7
-            py-4
-          "
-        >
-          <div
-            className="
-              flex
-              gap-5
-            "
-          >
-            <button
-              type="button"
-              onClick={
-                handleLike
-              }
-              disabled={
-                isSaving
-              }
-              className={`
-                flex
-                items-center
-                gap-2
-                text-sm
-                font-medium
-
-                ${
-                  selectedArticle
-                    .is_liked
-                    ? "text-green-700"
-                    : "text-gray-500"
-                }
-              `}
-            >
-              <Heart
-                size={18}
-                fill={
-                  selectedArticle
-                    .is_liked
-                    ? "currentColor"
-                    : "none"
-                }
-              />
-
-              {reactionCount}{" "}
-              {
-                reactionCount === 1
-                  ? "Like"
-                  : "Likes"
-              }
-            </button>
-
-
-            <span
-              className="
-                flex
-                items-center
-                gap-2
-                text-sm
-                text-gray-500
-              "
-            >
-              <MessageSquare
-                size={17}
-              />
-
-              {interactionCount}{" "}
-
-              {
-                interactionCount === 1
-                  ? "Comment"
-                  : "Comments"
-              }
-            </span>
-          </div>
-
-
-          <div
-            className="
-              flex
-              items-center
-              gap-2
-            "
-          >
-            {shareMessage && (
-              <span
-                className="
-                  text-xs
-                  text-green-700
-                "
+            {/* Interaction Footer (Like & Share ONLY; Bookmark REMOVED) */}
+            <div className="px-7 py-4 border-t border-slate-100 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={handleLikeToggle}
+                className={`flex items-center gap-2 text-sm font-semibold transition cursor-pointer ${
+                  isLiked ? "text-emerald-700" : "text-gray-500 hover:text-emerald-700"
+                }`}
               >
-                {shareMessage}
-              </span>
-            )}
-
-            <button
-              type="button"
-              onClick={
-                handleShare
-              }
-              className="
-                rounded-lg
-                p-2
-                text-gray-400
-                hover:bg-gray-50
-              "
-            >
-              <Share2
-                size={18}
-              />
-            </button>
-          </div>
-        </div>
-      </article>
-
-
-      {/* =====================================================
-          FARMER DISCUSSION
-      ===================================================== */}
-
-      <section
-        className="
-          mx-auto
-          max-w-5xl
-          rounded-2xl
-          border
-          border-slate-200
-          bg-white
-          px-7
-          py-6
-          shadow-sm
-        "
-      >
-        <div
-          className="
-            mb-5
-          "
-        >
-          <div
-            className="
-              flex
-              items-center
-              gap-2
-            "
-          >
-            <h2
-              className="
-                font-bold
-                text-gray-900
-              "
-            >
-              Farmer Discussion
-            </h2>
-
-            <span
-              className="
-                rounded-full
-                bg-green-100
-                px-2.5
-                py-1
-                text-[10px]
-                font-semibold
-                text-green-700
-              "
-            >
-              {interactionCount} Interactions
-            </span>
-          </div>
-
-          <p
-            className="
-              mt-1
-              text-xs
-              text-gray-500
-            "
-          >
-            Comments and replies in this discussion are
-            visible only among GrainRise farmers.
-          </p>
-        </div>
-
-
-        {actionError && (
-          <div
-            className="
-              mb-4
-              rounded-lg
-              border
-              border-red-200
-              bg-red-50
-              p-3
-              text-sm
-              text-red-700
-            "
-          >
-            {actionError}
-          </div>
-        )}
-
-
-        <div
-          className="
-            mb-6
-            flex
-            gap-3
-          "
-        >
-          <div
-            className="
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-full
-              bg-green-700
-              text-sm
-              font-bold
-              text-white
-            "
-          >
-            Y
-          </div>
-
-
-          <div
-            className="
-              flex
-              flex-1
-              gap-2
-            "
-          >
-            <input
-              value={
-                commentText
-              }
-              onChange={(
-                event
-              ) =>
-                setCommentText(
-                  event.target.value
-                )
-              }
-              onKeyDown={(
-                event
-              ) => {
-                if (
-                  event.key ===
-                  "Enter"
-                ) {
-                  event.preventDefault();
-
-                  handleComment();
-                }
-              }}
-              placeholder="Write a comment to other farmers..."
-              className="
-                min-w-0
-                flex-1
-                rounded-xl
-                border
-                border-gray-200
-                px-4
-                py-2.5
-                text-sm
-                outline-none
-                focus:border-green-600
-              "
-            />
-
-            <button
-              type="button"
-              disabled={
-                isSaving ||
-                !commentText.trim()
-              }
-              onClick={
-                handleComment
-              }
-              className="
-                flex
-                items-center
-                gap-1.5
-                rounded-xl
-                bg-green-700
-                px-4
-                py-2.5
-                text-sm
-                font-semibold
-                text-white
-                hover:bg-green-800
-                disabled:opacity-50
-              "
-            >
-              <Send
-                size={14}
-              />
-
-              Post Comment
-            </button>
-          </div>
-        </div>
-
-
-        {commentsError && (
-          <div
-            className="
-              mb-4
-              rounded-lg
-              border
-              border-red-200
-              bg-red-50
-              p-3
-              text-sm
-              text-red-700
-            "
-          >
-            {commentsError}
-          </div>
-        )}
-
-
-        {isCommentsLoading ? (
-          <div
-            className="
-              py-10
-              text-center
-              text-sm
-              text-gray-400
-            "
-          >
-            Loading Farmer discussion...
-          </div>
-        ) : discussionComments.length ===
-          0 ? (
-          <div
-            className="
-              rounded-xl
-              border
-              border-dashed
-              border-slate-200
-              py-10
-              text-center
-            "
-          >
-            <MessageSquare
-              size={28}
-              className="
-                mx-auto
-                text-gray-300
-              "
-            />
-
-            <p
-              className="
-                mt-2
-                text-sm
-                font-medium
-                text-gray-500
-              "
-            >
-              No Farmer comments yet.
-            </p>
-
-            <p
-              className="
-                mt-1
-                text-xs
-                text-gray-400
-              "
-            >
-              Be the first farmer to start the discussion.
-            </p>
-          </div>
-        ) : (
-          <div>
-            {discussionComments.map(
-              (comment) => (
-                <CommentRow
-                  key={
-                    comment.comment_id ??
-                    comment.id
-                  }
-                  comment={
-                    comment
-                  }
-                  saving={
-                    isSaving
-                  }
-                  replyingTo={
-                    replyingTo
-                  }
-                  replyText={
-                    replyText
-                  }
-                  setReplyText={
-                    setReplyText
-                  }
-                  onReplyToggle={
-                    handleReplyToggle
-                  }
-                  onReplySubmit={
-                    handleReplySubmit
-                  }
-                  onDelete={
-                    handleDelete
-                  }
+                <Heart
+                  size={18}
+                  className={isLiked ? "fill-emerald-700 text-emerald-700" : ""}
                 />
-              )
-            )}
+                <span>{likeCount} Likes</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(true)}
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer shadow-2xs"
+              >
+                <Share2 size={15} />
+                <span>Share</span>
+              </button>
+            </div>
           </div>
-        )}
-      </section>
+
+          {/* ── Comments Section ────────────────────────────────────────────── */}
+          <div className="max-w-5xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm px-7 py-6 space-y-6">
+            <h3 className="font-bold text-gray-900 text-base flex items-center gap-2">
+              <MessageSquare size={18} />
+              <span>Comments ({totalCommentCount})</span>
+            </h3>
+
+            {/* Root Comment Form */}
+            <form onSubmit={handlePostComment} className="flex gap-3">
+              <div className="w-9 h-9 rounded-full bg-[#0B5D1E] text-white flex items-center justify-center shrink-0 font-bold text-sm shadow-xs">
+                F
+              </div>
+              <div className="flex-1 flex gap-2">
+                <input
+                  type="text"
+                  value={newCommentText}
+                  onChange={(e) => setNewCommentText(e.target.value)}
+                  placeholder="Write a comment..."
+                  className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-1 focus:ring-[#0B5D1E] outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={isSubmittingComment || !newCommentText.trim()}
+                  className="bg-[#0B5D1E] hover:bg-[#094d19] text-white rounded-xl px-4 py-2.5 text-sm font-semibold flex items-center gap-1.5 transition disabled:opacity-50 cursor-pointer shadow-xs"
+                >
+                  <Send size={14} />
+                  <span>{isSubmittingComment ? "Posting..." : "Post"}</span>
+                </button>
+              </div>
+            </form>
+
+            {/* Comments Tree */}
+            <div className="space-y-6 divide-y divide-gray-100">
+              {comments.length === 0 ? (
+                <p className="text-xs text-gray-400 italic pt-2">
+                  No comments yet. Be the first to share your thoughts!
+                </p>
+              ) : (
+                comments.map((c) => {
+                  const commentId = c.comment_id || c.id;
+                  const isDeleted = c.comment_status === "deleted";
+                  const commentText = c.comment_text || c.comment_content || "";
+                  const author = c.author_name || c.author || "User";
+                  const dateStr = formatDate(c.created_at || c.date);
+                  const isMine = Boolean(c.is_mine);
+
+                  return (
+                    <div key={commentId} className="pt-4 first:pt-0 space-y-3">
+                      {/* Root Comment */}
+                      <div className="rounded-xl p-3.5 bg-slate-50/70 border border-slate-100 space-y-2">
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-xs font-bold text-slate-800">
+                            {author}{" "}
+                            {isMine && (
+                              <span className="text-[10px] text-emerald-700 font-semibold">
+                                (You)
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-[11px] text-slate-400">{dateStr}</span>
+                        </div>
+
+                        {editingItem?.id === commentId && !editingItem.isReply ? (
+                          <div className="space-y-2 pt-1">
+                            <textarea
+                              rows={2}
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              className="w-full rounded-lg border border-slate-300 p-2 text-xs text-slate-800 outline-none focus:border-emerald-600"
+                            />
+                            <div className="flex gap-2 justify-end">
+                              <button
+                                type="button"
+                                onClick={() => setEditingItem(null)}
+                                className="px-3 py-1 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isSubmittingEdit || !editText.trim()}
+                                onClick={handleSaveEdit}
+                                className="px-3 py-1 rounded-lg bg-emerald-700 text-xs font-bold text-white hover:bg-emerald-800 disabled:opacity-50 cursor-pointer"
+                              >
+                                {isSubmittingEdit ? "Saving..." : "Save"}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p
+                            className={`text-xs text-slate-700 ${
+                              isDeleted ? "italic text-slate-400" : ""
+                            }`}
+                          >
+                            {commentText}
+                          </p>
+                        )}
+
+                        {/* Facebook-style Inline Actions */}
+                        {!isDeleted && (
+                          <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 pt-1 border-t border-slate-100/80">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReplyingToId(
+                                  replyingToId === commentId ? null : commentId
+                                );
+                                setReplyText("");
+                              }}
+                              className="hover:text-emerald-700 transition cursor-pointer"
+                            >
+                              Reply
+                            </button>
+
+                            {isMine ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingItem({
+                                      id: commentId,
+                                      isReply: false,
+                                    });
+                                    setEditText(commentText);
+                                  }}
+                                  className="flex items-center gap-1 hover:text-emerald-700 transition cursor-pointer"
+                                >
+                                  <Edit2 size={11} />
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteComment(commentId, false)}
+                                  className="flex items-center gap-1 hover:text-red-600 text-red-500 transition cursor-pointer"
+                                >
+                                  <Trash2 size={11} />
+                                  <span>Delete</span>
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setReportingComment(c)}
+                                className="flex items-center gap-1 hover:text-red-600 transition cursor-pointer"
+                              >
+                                <Flag size={11} />
+                                <span>Report</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Reply Input Box */}
+                      {replyingToId === commentId && (
+                        <div className="ml-6 sm:ml-8 flex gap-2 items-center bg-white border border-slate-200 rounded-xl p-2 animate-in fade-in duration-100">
+                          <CornerDownRight size={14} className="text-slate-400 ml-1 shrink-0" />
+                          <input
+                            type="text"
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handlePostReply(commentId)}
+                            placeholder={`Reply to ${author}...`}
+                            className="flex-1 text-xs text-slate-800 outline-none px-2 py-1"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setReplyingToId(null)}
+                            className="text-xs text-slate-400 hover:text-slate-600 px-2 py-1 cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSubmittingReply || !replyText.trim()}
+                            onClick={() => handlePostReply(commentId)}
+                            className="bg-[#0B5D1E] hover:bg-[#094d19] text-white rounded-lg px-3 py-1 text-xs font-bold transition disabled:opacity-50 cursor-pointer shadow-2xs"
+                          >
+                            {isSubmittingReply ? "Replying..." : "Reply"}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Replies List */}
+                      {c.replies && c.replies.length > 0 && (
+                        <div className="ml-6 sm:ml-8 space-y-2 border-l-2 border-emerald-100 pl-3">
+                          {c.replies.map((r) => {
+                            const replyId = r.reply_id || r.comment_id || r.id;
+                            const rDeleted = r.comment_status === "deleted";
+                            const rText = r.reply_content || r.comment_text || "";
+                            const rAuthor = r.author_name || r.author || "User";
+                            const rDate = formatDate(r.created_at || r.date);
+                            const rIsMine = Boolean(r.is_mine);
+
+                            return (
+                              <div
+                                key={replyId}
+                                className="rounded-xl p-3 bg-white border border-slate-100 space-y-1.5 shadow-2xs"
+                              >
+                                <div className="flex justify-between items-baseline">
+                                  <span className="text-[11px] font-bold text-slate-800">
+                                    {rAuthor}{" "}
+                                    {rIsMine && (
+                                      <span className="text-[10px] text-emerald-700 font-semibold">
+                                        (You)
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400">{rDate}</span>
+                                </div>
+
+                                {editingItem?.id === replyId && editingItem.isReply ? (
+                                  <div className="space-y-2 pt-1">
+                                    <textarea
+                                      rows={2}
+                                      value={editText}
+                                      onChange={(e) => setEditText(e.target.value)}
+                                      className="w-full rounded-lg border border-slate-300 p-2 text-xs text-slate-800 outline-none focus:border-emerald-600"
+                                    />
+                                    <div className="flex gap-2 justify-end">
+                                      <button
+                                        type="button"
+                                        onClick={() => setEditingItem(null)}
+                                        className="px-3 py-1 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                                      >
+                                        Cancel
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={isSubmittingEdit || !editText.trim()}
+                                        onClick={handleSaveEdit}
+                                        className="px-3 py-1 rounded-lg bg-emerald-700 text-xs font-bold text-white hover:bg-emerald-800 disabled:opacity-50 cursor-pointer"
+                                      >
+                                        {isSubmittingEdit ? "Saving..." : "Save"}
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p
+                                    className={`text-xs text-slate-700 ${
+                                      rDeleted ? "italic text-slate-400" : ""
+                                    }`}
+                                  >
+                                    {rText}
+                                  </p>
+                                )}
+
+                                {/* Inline Actions for Reply */}
+                                {!rDeleted && (
+                                  <div className="flex items-center gap-4 text-[11px] font-semibold text-slate-500 pt-1 border-t border-slate-50">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setReplyingToId(commentId);
+                                        setReplyText(`@${rAuthor} `);
+                                      }}
+                                      className="hover:text-emerald-700 transition cursor-pointer"
+                                    >
+                                      Reply
+                                    </button>
+
+                                    {rIsMine ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingItem({
+                                              id: replyId,
+                                              isReply: true,
+                                            });
+                                            setEditText(rText);
+                                          }}
+                                          className="flex items-center gap-1 hover:text-emerald-700 transition cursor-pointer"
+                                        >
+                                          <Edit2 size={10} />
+                                          <span>Edit</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteComment(replyId, true)}
+                                          className="flex items-center gap-1 hover:text-red-600 text-red-500 transition cursor-pointer"
+                                        >
+                                          <Trash2 size={10} />
+                                          <span>Delete</span>
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => setReportingComment(r)}
+                                        className="flex items-center gap-1 hover:text-red-600 transition cursor-pointer"
+                                      >
+                                        <Flag size={10} />
+                                        <span>Report</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {/* Modals */}
+      <ReportCommentModal
+        isOpen={Boolean(reportingComment)}
+        onClose={() => setReportingComment(null)}
+        comment={reportingComment}
+        articleTitle={article?.title || ""}
+        onSubmitReport={handleReportComment}
+      />
+
+      <ProfanityWarningModal
+        isOpen={profanityModal.isOpen}
+        onClose={() =>
+          setProfanityModal({ isOpen: false, message: "", matches: [], detectedWords: [] })
+        }
+        message={profanityModal.message}
+        matches={profanityModal.matches}
+        detectedWords={profanityModal.detectedWords}
+        type="comment"
+      />
+
+      {article && (
+        <ShareArticleModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          article={article}
+        />
+      )}
     </div>
   );
 }

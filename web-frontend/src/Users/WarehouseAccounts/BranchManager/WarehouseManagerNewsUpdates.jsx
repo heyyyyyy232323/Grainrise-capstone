@@ -4,54 +4,6 @@ import { Search, Heart, MessageSquare, ArrowRight, Calendar, ChevronDown, X } fr
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import { stripHtmlToExcerpt } from "../../../Components/Minor-Components/RichArticleContent";
 
-export const WAREHOUSE_NEWS_DATA = [
-  {
-    id: 1,
-    category: "MARKET UPDATES",
-    categoryColor: "bg-emerald-100 text-emerald-700",
-    date: "August 20, 2026 · 10:00 AM",
-    isoDate: "2026-08-20",
-    year: "2026",
-    month: "August",
-    title: "Palay Buying Prices Show Stable Movement This Month",
-    description:
-      "Recent market analysis indicate stable palay buying prices across selected agricultural areas, providing a predictable revenue stream for local producers...",
-    likes: 24,
-    comments: 8,
-    source: "Department of Agriculture",
-  },
-  {
-    id: 2,
-    category: "ADVISORY & BEST PRACTICES",
-    categoryColor: "bg-blue-100 text-blue-700",
-    date: "August 17, 2026 · 08:15 AM",
-    isoDate: "2026-08-17",
-    year: "2026",
-    month: "August",
-    title: "El Niño Preparations: Water Management Strategies for Q4",
-    description:
-      "With projected rainfall deficits approaching in the final quarter, experts recommend immediate implementation of efficient irrigation scheduling and soil...",
-    likes: 56,
-    comments: 12,
-    source: "PAGASA",
-  },
-  {
-    id: 3,
-    category: "GRANT PROGRAMS & SUPPORT",
-    categoryColor: "bg-amber-100 text-amber-700",
-    date: "August 10, 2026 · 02:30 PM",
-    isoDate: "2026-08-10",
-    year: "2026",
-    month: "August",
-    title: "New Fertilizer Discount Vouchers Available for Registration",
-    description:
-      "Eligible registered farmers can now apply for the Q3 fertilizer discount voucher program through the centralized portal to offset rising input costs for the...",
-    likes: 112,
-    comments: 45,
-    source: "National Agri Board",
-  },
-];
-
 export default function WarehouseManagerNewsUpdates() {
   const navigate = useNavigate();
 
@@ -101,7 +53,7 @@ export default function WarehouseManagerNewsUpdates() {
   };
 
   // Filter & Sort Logic
-  const filtered = WAREHOUSE_NEWS_DATA.filter((news) => {
+  const filtered = [].filter((news) => {
     if (search.trim()) {
       const q = search.toLowerCase();
       if (!news.title.toLowerCase().includes(q) && !news.description.toLowerCase().includes(q)) {
@@ -378,7 +330,7 @@ export default function WarehouseManagerNewsUpdates() {
       {/* ── Pagination ───────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between border-t border-gray-200 pt-4">
         <p className="text-sm text-gray-500">
-          Showing 1-{filtered.length} of {WAREHOUSE_NEWS_DATA.length} articles
+          Showing 0-{filtered.length} of {filtered.length} articles
         </p>
         <div className="flex gap-1">
           <button className="px-3 py-1 border border-gray-200 text-gray-400 rounded-md text-sm cursor-not-allowed">

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import RichArticleContent from "../../../Components/Minor-Components/RichArticleContent";
+import useApi from "../../../Components/hooks/useApi";
 import field1 from "../../../assets/field1.png";
 import field2 from "../../../assets/field2.png";
 
@@ -71,12 +72,15 @@ export default function MillerBranchManagerNewsArticle() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [article, setArticle] = useState(ARTICLES[id] || ARTICLES[1]);
+  const { request } = useApi();
+  const fallbackArticle = ARTICLES[id] || ARTICLES[1];
+  const [article, setArticle] = useState(fallbackArticle);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState((ARTICLES[id] || ARTICLES[1]).likes || 0);
   const [saved, setSaved] = useState(false);
   const [comment, setComment] = useState("");
   const [comments, setComments] = useState((ARTICLES[id] || ARTICLES[1]).comments || []);
+  const [shareMessage, setShareMessage] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -87,13 +91,14 @@ export default function MillerBranchManagerNewsArticle() {
     const fetchRealArticle = async () => {
       try {
         const endpoint = isAnnouncement
-          ? `/api/admin/announcements/public/${encodeURIComponent(cleanId)}/`
-          : `/api/news/public/${encodeURIComponent(cleanId)}/`;
+          ? `/admin/announcements/public/${encodeURIComponent(cleanId)}/`
+          : `/news/${encodeURIComponent(cleanId)}/`;
 
-        const res = await fetch(endpoint, { headers: { Accept: "application/json" } });
-        if (!res.ok) return;
-        const resJson = await res.json();
-        const data = resJson?.data?.article || resJson?.data;
+        const resJson = await request(endpoint, {
+          method: "GET",
+          throwOnError: true,
+        });
+        const data = resJson?.data?.article || resJson?.data || resJson;
         if (data && data.title) {
           setArticle({
             id: data.news_id || data.announcement_id || cleanId,
@@ -113,12 +118,12 @@ export default function MillerBranchManagerNewsArticle() {
           if (data.comments) setComments(data.comments);
         }
       } catch (err) {
-        console.debug("Falling back to local article:", err);
+        console.error("Unable to load Miller news article:", err);
       }
     };
 
     fetchRealArticle();
-  }, [id, searchParams]);
+  }, [id, searchParams, request]);
 
 
   const handleLike = () => {
@@ -141,6 +146,27 @@ export default function MillerBranchManagerNewsArticle() {
     setComment("");
   };
 
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: article.title,
+          text: article.content || article.title,
+          url: window.location.href,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(window.location.href);
+      setShareMessage("Link copied.");
+      setTimeout(() => setShareMessage(""), 2000);
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        console.error("Unable to share Miller news article:", error);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Breadcrumbs
@@ -158,7 +184,7 @@ export default function MillerBranchManagerNewsArticle() {
         <ArrowLeft size={16} /> Back to News &amp; Updates
       </button>
 
-      <div className="max-w-5xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="px-7 pt-7 pb-4 border-b border-slate-100">
           <div className="flex flex-wrap items-center gap-3 mb-3">
             <span className={`text-[11px] font-bold px-2.5 py-1 rounded-md ${article.categoryColor}`}>
@@ -190,20 +216,30 @@ export default function MillerBranchManagerNewsArticle() {
             {likeCount} Likes
           </button>
           <div className="flex items-center gap-3">
+            {shareMessage && (
+              <span className="text-xs text-emerald-700">
+                {shareMessage}
+              </span>
+            )}
             <button
               onClick={() => setSaved((p) => !p)}
               className={`p-2 rounded-lg transition ${saved ? "text-emerald-700 bg-emerald-50" : "text-gray-400 hover:text-gray-600"}`}
             >
               <Bookmark size={18} fill={saved ? "currentColor" : "none"} />
             </button>
-            <button className="p-2 rounded-lg text-gray-400 hover:text-gray-600">
+            <button
+              type="button"
+              onClick={handleShare}
+              className="p-2 rounded-lg text-gray-400 hover:text-gray-600"
+              aria-label="Share article"
+            >
               <Share2 size={18} />
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm px-7 py-6 space-y-6">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm px-7 py-6 space-y-6">
         <h3 className="font-bold text-gray-900 text-base">Comments ({comments.length})</h3>
 
         <div className="flex gap-3">

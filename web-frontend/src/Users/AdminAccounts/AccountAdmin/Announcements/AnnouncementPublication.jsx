@@ -359,6 +359,7 @@ const AnnouncementPublication = () => {
                   Select audience
                 </option>
                 <option value="all" className="text-gray-900">All</option>
+                <option value="farmer" className="text-gray-900">Farmer</option>
                 <option value="miller" className="text-gray-900">Miller</option>
                 <option value="warehouse" className="text-gray-900">Warehouse</option>
                 <option value="retailer" className="text-gray-900">Retailer</option>
