@@ -49,6 +49,23 @@ const normalizeFeed = (payload) => {
 };
 
 
+const normalizeCombinedFeed = (payload) => {
+  const result = normalizeFeed(payload);
+
+  return {
+    ...result,
+    items: result.items.map((item) => ({
+      ...item,
+      news_id: item.item_type === "news" ? item.id : undefined,
+      reaction_count: item.likes,
+      comment_count: item.comments,
+      published_at: item.isoDate || item.date,
+      description: item.description || "",
+    })),
+  };
+};
+
+
 const normalizeArticle = (payload) => {
   const data =
     unwrapData(payload);
@@ -329,12 +346,19 @@ export default function useNewsUpdates() {
         setFeedError("");
 
         try {
+          const useCombinedFeed =
+            filters?.combined === true;
+          const requestFilters = {
+            ...filters,
+          };
+          delete requestFilters.combined;
           const query =
-            buildFeedQuery(filters);
-
+            buildFeedQuery(requestFilters);
           const payload =
             await request(
-              `/news/?${query}`,
+              useCombinedFeed
+                ? `/news/combined-feed/?${query}`
+                : `/news/?${query}`,
               {
                 method: "GET",
                 throwOnError: true,
@@ -342,7 +366,9 @@ export default function useNewsUpdates() {
             );
 
           const result =
-            normalizeFeed(payload);
+            useCombinedFeed
+              ? normalizeCombinedFeed(payload)
+              : normalizeFeed(payload);
 
           setNewsItems(
             result.items
@@ -378,7 +404,7 @@ export default function useNewsUpdates() {
 
   const loadNewsArticle =
     useCallback(
-      async (newsId) => {
+      async (newsId, itemType = "news") => {
         if (!newsId) {
           throw new Error(
             "Invalid news article ID."
@@ -546,9 +572,9 @@ export default function useNewsUpdates() {
         try {
           const payload =
             await request(
-              `/news/${encodeURIComponent(
-                newsId
-              )}/reaction/`,
+              itemType === "announcement"
+                ? `/announcements/${encodeURIComponent(newsId)}/reaction/`
+                : `/news/${encodeURIComponent(newsId)}/reaction/`,
               {
                 method: "POST",
                 throwOnError: true,

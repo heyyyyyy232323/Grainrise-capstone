@@ -340,20 +340,6 @@ export default function FarmerNewsUpdates() {
     toggleNewsLike,
   } = useNewsUpdates();
 
-  const newsItems = useMemo(() => {
-    if (rawNewsItems && rawNewsItems.length > 0) return rawNewsItems;
-    let list = FALLBACK_NEWS_ITEMS;
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      list = list.filter(item => item.title.toLowerCase().includes(q) || item.summary.toLowerCase().includes(q));
-    }
-    if (category) {
-      list = list.filter(item => item.category === category);
-    }
-    return list;
-  }, [rawNewsItems, query, category]);
-
-
   // =========================================================
   // FILTER STATE
   // =========================================================
@@ -388,6 +374,20 @@ export default function FarmerNewsUpdates() {
   ] = useState(
     ""
   );
+
+
+  const newsItems = useMemo(() => {
+    if (rawNewsItems && rawNewsItems.length > 0) return rawNewsItems;
+    let list = FALLBACK_NEWS_ITEMS;
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      list = list.filter(item => item.title.toLowerCase().includes(q) || item.summary.toLowerCase().includes(q));
+    }
+    if (category) {
+      list = list.filter(item => item.category === category);
+    }
+    return list;
+  }, [rawNewsItems, query, category]);
 
 
   const [
@@ -493,6 +493,9 @@ export default function FarmerNewsUpdates() {
 
               sort:
                 sortBy,
+
+              combined:
+                true,
 
               limit:
                 PAGE_SIZE,
@@ -697,7 +700,8 @@ export default function FarmerNewsUpdates() {
   // =========================================================
 
   const handleLike = async (
-    newsId
+    newsId,
+    itemType = "news"
   ) => {
 
     if (
@@ -712,7 +716,8 @@ export default function FarmerNewsUpdates() {
     try {
 
       await toggleNewsLike(
-        newsId
+        newsId,
+        itemType
       );
 
     }
@@ -1073,7 +1078,8 @@ export default function FarmerNewsUpdates() {
                           onClick={
                             () =>
                               handleLike(
-                                newsId
+                                newsId,
+                                news.item_type
                               )
                           }
                           className={`flex items-center gap-1 transition ${
@@ -1153,7 +1159,9 @@ export default function FarmerNewsUpdates() {
                         onClick={
                           () =>
                             navigate(
-                              `/farmer/news-updates/${newsId}`
+                              news.item_type === "announcement"
+                                ? `/public/announcements/${newsId}`
+                                : `/farmer/news-updates/${newsId}`
                             )
                         }
                         className="text-xs font-bold text-green-700 hover:text-green-800 flex items-center gap-1 transition shrink-0"

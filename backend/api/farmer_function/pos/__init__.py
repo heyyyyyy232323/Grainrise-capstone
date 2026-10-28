@@ -1,0 +1,1 @@
+"""Farmer Point of Sale."""

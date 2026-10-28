@@ -888,22 +888,24 @@ def _resolve_announcement_media_url(request, raw_url):
         return rel_url
 
 @api_view(["GET"])
+@news_main_user_required
 def combined_news_feed(request):
     """
-    Feed for Miller Manager:
-    - Announcements FIRST (audience 'miller' or 'all', status 'active')
-    - News articles (audience 'miller_manager', status 'active')
+    Combined feed for authenticated main users:
+    - Announcements for the current role or all users
+    - News articles targeted to the current role
     - Search, Category, Date range, and Sort filters
     """
     from django.db import connection
-    from api.comment_reporting import get_authenticated_user_id
-
-    user_id = get_authenticated_user_id(request) or getattr(request, "grainrise_news_user_id", None) or 0
+    user_id = request.grainrise_news_user_id
+    user_role = request.grainrise_news_user_role
 
     search = (request.query_params.get("search") or "").strip()
     category = (request.query_params.get("category") or "").strip()
     start_date = (request.query_params.get("start_date") or "").strip()
     end_date = (request.query_params.get("end_date") or "").strip()
+    year = (request.query_params.get("year") or "").strip()
+    month = (request.query_params.get("month") or "").strip()
     sort_by = (request.query_params.get("sort") or "latest").strip().lower()
 
     if start_date and end_date and end_date < start_date:
@@ -956,9 +958,9 @@ def combined_news_feed(request):
         if not is_news_category_filter:
             a_conditions = [
                 "a.status = 'active'",
-                "a.audience IN ('miller', 'all')",
+                "a.audience IN (%s, 'all')",
             ]
-            a_params = []
+            a_params = [user_role]
 
             if search:
                 a_conditions.append("(LOWER(a.title) LIKE %s OR LOWER(a.content) LIKE %s)")
@@ -971,6 +973,12 @@ def combined_news_feed(request):
             if end_date:
                 a_conditions.append("DATE(COALESCE(a.date_published, a.created_at)) <= %s")
                 a_params.append(end_date)
+            if year.isdigit():
+                a_conditions.append("EXTRACT(YEAR FROM COALESCE(a.date_published, a.created_at)) = %s")
+                a_params.append(int(year))
+            if month.isdigit() and 1 <= int(month) <= 12:
+                a_conditions.append("EXTRACT(MONTH FROM COALESCE(a.date_published, a.created_at)) = %s")
+                a_params.append(int(month))
 
             a_where = "WHERE " + " AND ".join(a_conditions)
             a_query = f"""
@@ -1022,9 +1030,9 @@ def combined_news_feed(request):
         if not is_announcement_filter:
             n_conditions = [
                 "na.status = 'active'",
-                "EXISTS (SELECT 1 FROM news_article_audiences naa WHERE naa.news_id = na.news_id AND naa.user_role = 'miller_manager')",
+                "EXISTS (SELECT 1 FROM news_article_audiences naa WHERE naa.news_id = na.news_id AND naa.user_role IN (%s, 'all'))",
             ]
-            n_params = []
+            n_params = [user_role]
 
             if search:
                 n_conditions.append("(LOWER(na.title) LIKE %s OR LOWER(COALESCE(na.description, '')) LIKE %s OR LOWER(COALESCE(na.source_name, '')) LIKE %s)")
@@ -1042,6 +1050,12 @@ def combined_news_feed(request):
             if end_date:
                 n_conditions.append("DATE(na.published_at) <= %s")
                 n_params.append(end_date)
+            if year.isdigit():
+                n_conditions.append("EXTRACT(YEAR FROM na.published_at) = %s")
+                n_params.append(int(year))
+            if month.isdigit() and 1 <= int(month) <= 12:
+                n_conditions.append("EXTRACT(MONTH FROM na.published_at) = %s")
+                n_params.append(int(month))
 
             n_where = "WHERE " + " AND ".join(n_conditions)
             n_query = f"""

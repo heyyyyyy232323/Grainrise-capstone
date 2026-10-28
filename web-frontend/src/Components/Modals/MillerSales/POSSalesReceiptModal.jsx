@@ -50,7 +50,12 @@ function ReceiptRow({ label, value, isAmount = false, isMono = false }) {
   );
 }
 
-export default function POSSalesReceiptModal({ isOpen, onClose, receiptData }) {
+export default function POSSalesReceiptModal({
+  isOpen,
+  onClose,
+  receiptData,
+  receiptContextLabel = "GrainRise Miller POS",
+}) {
   const [downloading, setDownloading] = useState(false);
 
   // Prevent background scrolling when modal is open (matches GoodsReceiptReceiptModal.jsx)
@@ -316,7 +321,7 @@ export default function POSSalesReceiptModal({ isOpen, onClose, receiptData }) {
           </div>
 
           <div class="footer-note">
-            This document serves as official proof of sale in GrainRise Miller POS.
+            This document serves as official proof of sale in {receiptContextLabel}.
           </div>
         </body>
       </html>
@@ -502,7 +507,7 @@ export default function POSSalesReceiptModal({ isOpen, onClose, receiptData }) {
       pdf.setFontSize(8.5);
       pdf.setTextColor(148, 163, 184);
       pdf.text(
-        "This document serves as official proof of sale in GrainRise Miller POS.",
+        `This document serves as official proof of sale in ${receiptContextLabel}.`,
         pageWidth / 2,
         y,
         { align: "center" }

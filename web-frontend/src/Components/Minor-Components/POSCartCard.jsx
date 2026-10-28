@@ -11,6 +11,7 @@ export default function CartItemCard({
   onQuantityChange,
   onRawQuantityChange,
   onRemove,
+  allowDecimal = false,
   currency = "₱",
   className = "",
 }) {
@@ -67,11 +68,12 @@ export default function CartItemCard({
     }
 
     // Reject non-numeric characters immediately unless user is testing validation
-    if (!/^\d+$/.test(raw)) {
+    const quantityPattern = allowDecimal ? /^\d*\.?\d*$/ : /^\d+$/;
+    if (!quantityPattern.test(raw) || (allowDecimal && (raw.match(/\./g) || []).length > 1)) {
       return;
     }
 
-    const parsed = parseInt(raw, 10);
+    const parsed = allowDecimal ? parseFloat(raw) : parseInt(raw, 10);
     if (Number.isNaN(parsed)) {
       setInputValue(raw);
       onRawQuantityChange?.(raw);
@@ -93,14 +95,14 @@ export default function CartItemCard({
 
   const handleInputBlur = () => {
     const trimmed = String(inputValue).trim();
-    if (!/^\d+$/.test(trimmed)) {
+    if (!(allowDecimal ? /^\d*\.?\d+$/.test(trimmed) : /^\d+$/.test(trimmed))) {
       const fallback = Math.max(1, hasMax ? Math.min(numericQty || 1, maxQuantity) : numericQty || 1);
       setInputValue(String(fallback));
       onRawQuantityChange?.(String(fallback));
       onQuantityChange?.(fallback);
       return;
     }
-    const parsed = parseInt(trimmed, 10);
+    const parsed = allowDecimal ? parseFloat(trimmed) : parseInt(trimmed, 10);
     if (parsed < 1) {
       // If parent tracks rawQuantity for checkout validation, keep "0", otherwise normalize to 1
       if (onRawQuantityChange) {
@@ -119,7 +121,7 @@ export default function CartItemCard({
   };
 
   const handleKeyDown = (e) => {
-    if (["-", "+", ".", "e", "E"].includes(e.key)) {
+    if (["-", "+", "e", "E"].includes(e.key) || (!allowDecimal && e.key === ".")) {
       e.preventDefault();
     }
   };
@@ -165,7 +167,7 @@ export default function CartItemCard({
 
           <input
             type="text"
-            inputMode="numeric"
+            inputMode={allowDecimal ? "decimal" : "numeric"}
             aria-label={`Quantity for ${name}`}
             value={inputValue}
             onChange={handleInputChange}

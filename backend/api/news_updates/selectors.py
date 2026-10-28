@@ -249,7 +249,7 @@ def _validate_article_access(
 
                     WHERE
                         naa.news_id = na.news_id
-                        AND naa.user_role = %s
+                        AND naa.user_role IN (%s, 'all')
                 )
                     AS has_audience
 

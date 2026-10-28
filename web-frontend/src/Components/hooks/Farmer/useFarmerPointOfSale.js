@@ -1,88 +1,103 @@
 import { useCallback, useState } from "react";
 
-const SAMPLE_POS_PRODUCTS = [
-  {
-    product_id: 1,
-    product_code: "RC222-25KG",
-    product_name: "RC 222 (Tubigan 18)",
-    rice_variety: "RC 222",
-    product_grade: "Grade 1",
-    product_type: "Well-Milled Rice",
-    price_per_kg: 50.0,
-    price_per_sack: 1250.0,
-    sack_weight_kg: 25,
-    available_sacks: 80,
-    status: "in_stock",
-  },
-  {
-    product_id: 2,
-    product_code: "RC160-25KG",
-    product_name: "NSIC Rc 160",
-    rice_variety: "NSIC Rc 160",
-    product_grade: "Grade 2",
-    product_type: "Well-Milled Rice",
-    price_per_kg: 48.0,
-    price_per_sack: 1200.0,
-    sack_weight_kg: 25,
-    available_sacks: 120,
-    status: "in_stock",
-  },
-  {
-    product_id: 3,
-    product_code: "ANG-25KG",
-    product_name: "Angelica Special",
-    rice_variety: "Angelica Special",
-    product_grade: "Premium Aromatic",
-    product_type: "Premium Rice",
-    price_per_kg: 56.0,
-    price_per_sack: 1400.0,
-    sack_weight_kg: 25,
-    available_sacks: 25,
-    status: "in_stock",
-  },
-];
+const API_BASE = (
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  "http://127.0.0.1:8000"
+).replace(/\/$/, "");
 
-const useFarmerPointOfSale = () => {
-  const [products, setProducts] = useState(SAMPLE_POS_PRODUCTS);
+const token = () =>
+  sessionStorage.getItem("grainrise_token") ||
+  localStorage.getItem("grainrise_token") ||
+  localStorage.getItem("access_token") ||
+  "";
+
+const request = async (path, options = {}) => {
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      Accept: "application/json",
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(token() ? { Authorization: `Bearer ${token()}` } : {}),
+      ...(options.headers || {}),
+    },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.detail || data.message || `Request failed (HTTP ${response.status}).`);
+  }
+  return data;
+};
+
+const mapProduct = (p) => ({
+  id: p.product_id || p.farmer_product_id || p.id,
+  productId: p.product_id || p.farmer_product_id || p.id,
+  name: p.product_name || p.productName || p.name || "Unnamed product",
+  sku: p.product_code || p.sku || p.code || "",
+  price: Number(p.price_per_kg ?? p.selling_price_per_kg ?? p.price ?? 0),
+  unitLabel: p.unit_label || p.unit || "Per kg",
+  stockAvailable: Number(
+    p.available_stock_quantity_kg ?? p.stock_available ?? p.available_kg ?? p.quantity ?? 0
+  ),
+  stockUnit: p.stock_unit || "kg",
+  image: p.image || p.image_url || "",
+  category: p.category || p.product_type || "",
+});
+
+export default function useFarmerPointOfSale() {
+  const [products, setProducts] = useState([]);
+  const [paymentAccounts, setPaymentAccounts] = useState([]);
+  // The Farmer POS contract currently exposes no payment-account endpoint.
+  // Keep Cash as the only advertised method until the API returns methods.
+  const [paymentMethods, setPaymentMethods] = useState(["Cash"]);
   const [lastTransaction, setLastTransaction] = useState(null);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [error, setError] = useState("");
 
   const loadProducts = useCallback(async () => {
-    setIsLoadingProducts(false);
-    return products;
-  }, [products]);
+    setIsLoadingProducts(true);
+    setError("");
+    try {
+      const data = await request("/api/farmer/pos/products/");
+      const mapped = (Array.isArray(data.products) ? data.products : []).map(mapProduct);
+      setProducts(mapped);
+      setPaymentAccounts(Array.isArray(data.payment_accounts) ? data.payment_accounts : []);
+      if (Array.isArray(data.payment_methods) && data.payment_methods.length) {
+        setPaymentMethods(data.payment_methods.map((m) => (typeof m === "string" ? m : m.label || m.name)));
+      }
+      return mapped;
+    } catch (err) {
+      setError(err.message || "Unable to load Farmer POS products.");
+      return [];
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  }, []);
 
   const checkout = useCallback(async (payload) => {
     setIsCheckingOut(true);
-    const txn = {
-      transaction_id: Date.now(),
-      transaction_code: `TXN-${Date.now().toString().slice(-6)}`,
-      total_amount: payload.total_amount || 1250,
-      payment_method: payload.payment_method || "Cash",
-      items: payload.items || [],
-      created_at: new Date().toISOString(),
-    };
-    setLastTransaction(txn);
-    setIsCheckingOut(false);
-    return { success: true, data: txn };
+    setError("");
+    try {
+      const data = await request("/api/farmer/pos/checkout/", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      const transaction = data.receipt || data.transaction || data;
+      setLastTransaction(transaction);
+      return { success: true, data: transaction };
+    } catch (err) {
+      setError(err.message || "Unable to complete transaction.");
+      return { success: false, error: err.message };
+    } finally {
+      setIsCheckingOut(false);
+    }
   }, []);
 
-  const clearError = useCallback(() => setError(""), []);
-  const clearLastTransaction = useCallback(() => setLastTransaction(null), []);
-
   return {
-    products,
-    lastTransaction,
-    isLoadingProducts,
-    isCheckingOut,
-    error,
-    loadProducts,
-    checkout,
-    clearError,
-    clearLastTransaction,
+    products, paymentAccounts, paymentMethods, lastTransaction,
+    isLoadingProducts, isCheckingOut, error, loadProducts, checkout,
+    clearError: () => setError(""),
+    clearLastTransaction: () => setLastTransaction(null),
   };
-};
-
-export default useFarmerPointOfSale;
+}
