@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './LandingPage.css';
+import { translations, useLanguagePreference } from './lib/translations';
 
 // Reusable Components
 import LandingHeader from './Components/Major-Components/LandingHeader';
@@ -80,8 +81,11 @@ function AnimatedSection({ children, className = '', id, tag: Tag = 'section', a
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function LandingPage() {
   const [scrollY, setScrollY] = useState(0);
+  const [language] = useLanguagePreference();
   const navigate = useNavigate();
   const { hash } = useLocation();
+  const t = translations[language].landing;
+  const common = translations[language].common;
 
   // Scroll depth tracking for smooth parallax interactions
   useEffect(() => {
@@ -106,71 +110,71 @@ export default function LandingPage() {
   }, [hash]);
 
   const ECOSYSTEM_STEPS = [
-    { icon: <Tractor size={22} strokeWidth={1.8} />, label: 'Farmer' },
-    { icon: <Truck size={22} strokeWidth={1.8} />, label: 'Millers' },
-    { icon: <Warehouse size={22} strokeWidth={1.8} />, label: 'Warehouse' },
-    { icon: <ClipboardCheck size={22} strokeWidth={1.8} />, label: 'Inventory' },
-    { icon: <FileText size={22} strokeWidth={1.8} />, label: 'Orders' },
-    { icon: <Truck size={22} strokeWidth={1.8} />, label: 'Transport' },
-    { icon: <Store size={22} strokeWidth={1.8} />, label: 'Retailers' },
+    { icon: <Tractor size={22} strokeWidth={1.8} />, label: t.ecosystemSteps.farmer },
+    { icon: <Truck size={22} strokeWidth={1.8} />, label: t.ecosystemSteps.millers },
+    { icon: <Warehouse size={22} strokeWidth={1.8} />, label: t.ecosystemSteps.warehouse },
+    { icon: <ClipboardCheck size={22} strokeWidth={1.8} />, label: t.ecosystemSteps.inventory },
+    { icon: <FileText size={22} strokeWidth={1.8} />, label: t.ecosystemSteps.orders },
+    { icon: <Truck size={22} strokeWidth={1.8} />, label: t.ecosystemSteps.transport },
+    { icon: <Store size={22} strokeWidth={1.8} />, label: t.ecosystemSteps.retailers },
   ];
 
   const EXPLORE_FEATURES = [
     {
       icon: <ShoppingBag size={22} strokeWidth={1.8} />,
-      title: 'Procurement & Sourcing',
-      desc: 'Opportunities, bidding, product sourcing, and procurement.',
+      title: t.exploreItems.procurement.title,
+      desc: t.exploreItems.procurement.desc,
     },
     {
       icon: <Package size={22} strokeWidth={1.8} />,
-      title: 'Inventory',
-      desc: 'Stock availability, monitoring, and warehouse inventory.',
+      title: t.exploreItems.inventory.title,
+      desc: t.exploreItems.inventory.desc,
     },
     {
       icon: <CloudSun size={22} strokeWidth={1.8} />,
-      title: 'Climate & Forecasting',
-      desc: 'Climate-informed farming and demand forecasting.',
+      title: t.exploreItems.climate.title,
+      desc: t.exploreItems.climate.desc,
     },
     {
       icon: <FileText size={22} strokeWidth={1.8} />,
-      title: 'Contracts',
-      desc: 'Applications, offers, agreements, and active contracts.',
+      title: t.exploreItems.contracts.title,
+      desc: t.exploreItems.contracts.desc,
     },
     {
       icon: <ClipboardList size={22} strokeWidth={1.8} />,
-      title: 'Orders & Transactions',
-      desc: 'Purchasing, order processing, and transaction records.',
+      title: t.exploreItems.orders.title,
+      desc: t.exploreItems.orders.desc,
     },
     {
       icon: <Truck size={22} strokeWidth={1.8} />,
-      title: 'Delivery & Logistics',
-      desc: 'Fulfillment, delivery coordination, and logistics tracking.',
+      title: t.exploreItems.logistics.title,
+      desc: t.exploreItems.logistics.desc,
     },
   ];
 
   const STAKEHOLDER_CARDS = [
     {
       icon: <Building2 size={24} strokeWidth={1.8} />,
-      title: 'Miller',
-      desc: 'Manage rice procurement, milling operations, supply availability, contracts, orders, and distribution coordination.',
+      title: t.stakeholderCards.miller.title,
+      desc: t.stakeholderCards.miller.desc,
       action: () => navigate('/login'),
     },
     {
       icon: <Warehouse size={24} strokeWidth={1.8} />,
-      title: 'Warehouse Portal',
-      desc: 'Manage warehouse inventory, receiving, storage, fulfillment, distribution activities, and authorized warehouse operations.',
+      title: t.stakeholderCards.warehouse.title,
+      desc: t.stakeholderCards.warehouse.desc,
       action: () => navigate('/login'),
     },
     {
       icon: <ShoppingCart size={24} strokeWidth={1.8} />,
-      title: 'Retailer Portal',
-      desc: 'Manage rice sourcing, orders, inventory replenishment, deliveries, and transaction records.',
+      title: t.stakeholderCards.retailer.title,
+      desc: t.stakeholderCards.retailer.desc,
       action: () => navigate('/login'),
     },
     {
       icon: <Tractor size={24} strokeWidth={1.8} />,
-      title: 'Farmer Portal',
-      desc: 'Manage farm production, climate-informed planning, inventory, contracts, and supply opportunities.',
+      title: t.stakeholderCards.farmer.title,
+      desc: t.stakeholderCards.farmer.desc,
       action: () => navigate('/login'),
     },
   ];
@@ -178,30 +182,30 @@ export default function LandingPage() {
   const HELP_CARDS = [
     {
       icon: <Unlock size={16} strokeWidth={1.8} />,
-      title: 'Login Assistance',
-      desc: 'Recover account access or reset credentials.',
-      linkText: 'Recover Access',
+      title: t.supportCards.loginAssistance.title,
+      desc: t.supportCards.loginAssistance.desc,
+      linkText: t.supportCards.loginAssistance.action,
       action: () => navigate('/login-assistance'),
     },
     {
       icon: <HelpCircle size={16} strokeWidth={1.8} />,
-      title: 'Frequently Asked Questions',
-      desc: 'Find answers about portal access and system use.',
-      linkText: 'Read FAQs',
+      title: t.supportCards.faq.title,
+      desc: t.supportCards.faq.desc,
+      linkText: t.supportCards.faq.action,
       action: () => navigate('/faqs'),
     },
     {
       icon: <FileText size={16} strokeWidth={1.8} />,
-      title: 'Registration Guide',
-      desc: 'Get guidance on registering for GrainRise.',
-      linkText: 'View Guide',
+      title: t.supportCards.guide.title,
+      desc: t.supportCards.guide.desc,
+      linkText: t.supportCards.guide.action,
       action: () => navigate('/registration-guide'),
     },
     {
       icon: <Headphones size={16} strokeWidth={1.8} />,
-      title: 'Contact Support',
-      desc: 'Contact the GrainRise support team.',
-      linkText: 'Contact Desk',
+      title: t.supportCards.support.title,
+      desc: t.supportCards.support.desc,
+      linkText: t.supportCards.support.action,
       action: () => navigate('/contact-support'),
     },
   ];
@@ -220,16 +224,12 @@ export default function LandingPage() {
         <div className="lp-hero__inner">
           <div className="lp-hero__content">
             <h1 className="lp-hero__headline">
-              <span>GrainRise Supply Chain</span><br className="lp-hero__line-break" />
-              <span>Portal</span>
+              <span>{t.headlineLineOne}</span><br className="lp-hero__line-break" />
+              <span>{t.headlineLineTwo}</span>
             </h1>
 
             <p className="lp-hero__sub">
-              A centralized platform connecting supply chain partners,
-              <br className="lp-hero__line-break" />
-              streamlining business operations, and improving visibility across
-              <br className="lp-hero__line-break" />
-              the rice distribution network.
+              {t.subheadline}
             </p>
 
             <div className="lp-hero__ctas">
@@ -239,7 +239,7 @@ export default function LandingPage() {
                 id="hero-partner-btn"
               >
                 <Users size={16} strokeWidth={2} />
-                <span>Partner With Us</span>
+                <span>{t.partnerCTA}</span>
               </button>
               <button
                 className="lp-hero__btn-login"
@@ -247,7 +247,7 @@ export default function LandingPage() {
                 id="hero-login-btn"
               >
                 <LogIn size={16} strokeWidth={2} />
-                <span>Log In</span>
+                <span>{t.loginCTA}</span>
               </button>
             </div>
           </div>
@@ -267,9 +267,9 @@ export default function LandingPage() {
 
         {/* ── ECOSYSTEM (Fade Up Effect) ─── */}
         <AnimatedSection className="lp-ecosystem" id="ecosystem" animation="fade-up">
-          <span className="lp-ecosystem__badge">How it works</span>
+          <span className="lp-ecosystem__badge">{t.howItWorks}</span>
           <h2 className="lp-section-headline lp-section-headline--center">
-            Connected Supply Chain Ecosystem
+            {t.ecosystemTitle}
           </h2>
           <div className="lp-ecosystem__flow">
             {ECOSYSTEM_STEPS.map((step, i) => (
@@ -292,10 +292,10 @@ export default function LandingPage() {
           <div className="lp-explore__inner">
             <div className="lp-explore__header">
               <h2 className="lp-section-headline lp-section-headline--center lp-explore__title">
-                Explore GrainRise
+                {t.exploreTitle}
               </h2>
               <p className="lp-explore__sub">
-                Access the major tools supporting farming, procurement, inventory, forecasting, contracts, and distribution.
+                {t.exploreSub}
               </p>
             </div>
 
@@ -326,10 +326,10 @@ export default function LandingPage() {
           <div className="lp-stakeholders__inner">
             <div className="lp-stakeholders__header">
               <h2 className="lp-stakeholders__title">
-                GrainRise Stakeholders
+                {t.stakeholdersTitle}
               </h2>
               <p className="lp-stakeholders__sub">
-                GrainRise connects authorized millers, warehouse owners, and retailers through a coordinated rice supply chain management system.
+                {t.stakeholdersSub}
               </p>
             </div>
 
@@ -361,11 +361,10 @@ export default function LandingPage() {
           <div className="lp-partner-cta__card">
             <div className="lp-partner-cta__content">
               <h2 className="lp-partner-cta__headline">
-                Partner With GrainRise
+                {t.partnerSectionTitle}
               </h2>
               <p className="lp-partner-cta__sub">
-                Interested in connecting your organization with the GrainRise supply chain network?<br />
-                Send us your partnership details and our team will review your inquiry.
+                {t.partnerSectionSub}
               </p>
               <button
                 className="lp-partner-cta__btn"
@@ -373,7 +372,7 @@ export default function LandingPage() {
                 id="partner-section-cta-btn"
               >
                 <Users size={16} strokeWidth={2} />
-                <span>Partner With Us</span>
+                <span>{t.partnerCTA}</span>
               </button>
             </div>
 
@@ -410,17 +409,17 @@ export default function LandingPage() {
 
           <AnimatedSection className="lp-mobile-app__content-col" animation="slide-right">
             <h2 className="lp-mobile-app__headline">
-              Take GrainRise<br />Anywhere
+              {t.mobileTitle}
             </h2>
             <p className="lp-mobile-app__sub">
-              Manage your operations wherever you are. Access inventory, deliveries, and transactions with the GrainRise mobile app.
+              {t.mobileSub}
             </p>
             <button
               className="lp-btn lp-mobile-app__btn"
               onClick={() => alert("Downloading GrainRise APK...")}
             >
               <Smartphone size={16} strokeWidth={2} />
-              <span>Install on Mobile</span>
+              <span>{common.installOnMobile}</span>
             </button>
           </AnimatedSection>
         </div>
@@ -431,8 +430,7 @@ export default function LandingPage() {
         <div className="lp-help__inner">
           <div className="lp-help__left">
             <h2 className="lp-help__headline">
-              Need Help Accessing<br />
-              GrainRise?
+              {t.helpTitle}
             </h2>
             <img src={headsetImg} alt="GrainRise Support Headset" className="lp-help__img" />
           </div>

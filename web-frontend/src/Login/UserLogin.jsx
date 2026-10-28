@@ -1,6 +1,7 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { translations, useLanguagePreference } from "../lib/translations";
 import TermsModal from "../Components/Modals/TermsModal";
 import PrivacyModal from "../Components/Modals/PrivacyModal";
 
@@ -161,10 +162,26 @@ const UserLogin = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
+  const [language] = useLanguagePreference();
 
   const navigate = useNavigate();
   const { request } = useApi();
   const { login } = useAuth();
+  const text = translations[language].auth.userLogin;
+  const common = translations[language].common;
+  const featureList = language === "tl"
+    ? [
+        "Real-time Inventory Monitoring",
+        "Pagsubaybay sa Order at Delivery",
+        "Analytics at Performance Insights",
+        "Pamamahala ng Warehouse at Supplier",
+      ]
+    : [
+        "Real-time Inventory Monitoring",
+        "Order & Delivery Tracking",
+        "Analytics & Performance Insights",
+        "Warehouse & Supplier Management",
+      ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -174,12 +191,12 @@ const UserLogin = () => {
     }
 
     if (!email.trim()) {
-      setLoginError("Email or contact number is required.");
+      setLoginError(text.emailRequired);
       return;
     }
 
     if (!password) {
-      setLoginError("Password is required.");
+      setLoginError(text.passwordRequired);
       return;
     }
 
@@ -211,7 +228,7 @@ const UserLogin = () => {
           const destination = resolvePostLoginDashboard(response.user);
 
           if (!destination) {
-            setLoginError("No valid dashboard route configured for your account role or position.");
+            setLoginError(text.noDashboard);
             return;
           }
 
@@ -233,7 +250,7 @@ const UserLogin = () => {
       const destination = resolvePostLoginDashboard(response.user);
 
       if (!destination) {
-        setLoginError("No valid dashboard route configured for your account role or position.");
+        setLoginError(text.noDashboard);
         return;
       }
 
@@ -242,7 +259,7 @@ const UserLogin = () => {
     } catch (error) {
       setLoginError(
         error?.message ||
-        "Unable to log in. Please check your credentials."
+        text.loginError
       );
 
     } finally {
@@ -295,7 +312,7 @@ const UserLogin = () => {
                   "
                 >
                   <ArrowLeft size={18} />
-                  Back to Home
+                  {common.backToHome}
                 </span>
               }
               className="self-start !rounded-full w-auto"
@@ -313,17 +330,15 @@ const UserLogin = () => {
                   mb-6
                 "
               >
-                Cultivating the Future of Logistics
+                {language === "tl" ? "Pagtataguyod ng Kinabukasan ng Logistics" : "Cultivating the Future of Logistics"}
               </h1>
 
               <p className="text-white/90 text-lg max-w-md mb-10">
-                Securely access GrainRise to manage inventory, monitor deliveries,
-                and streamline rice supply chain operations through one intelligent
-                platform.
+                {language === "tl" ? "Secure na ma-access ang GrainRise upang pamahalaan ang inventory, subaybayan ang delivery, at i-streamline ang rice supply chain operations sa isang matalinong platform." : "Securely access GrainRise to manage inventory, monitor deliveries, and streamline rice supply chain operations through one intelligent platform."}
               </p>
 
               <ul className="space-y-4">
-                {features.map((feature) => (
+                {featureList.map((feature) => (
                   <li key={feature} className="flex items-center gap-3 text-white">
                     <CheckCircle2 size={20} className="shrink-0" />
                     <span>{feature}</span>
@@ -374,7 +389,7 @@ const UserLogin = () => {
               icon={
                 <span className="flex items-center gap-2 px-2 text-sm font-medium whitespace-nowrap">
                   <ArrowLeft size={18} />
-                  Back to Home
+                  {common.backToHome}
                 </span>
               }
               className="!rounded-full w-auto !py-2 !px-4 shadow-sm"
@@ -409,13 +424,13 @@ const UserLogin = () => {
 
             {/* Subtitle directly under logo on both Desktop & Mobile */}
             <p className="text-center text-gray-600 dark:text-gray-300 text-sm mb-6 sm:mb-8 max-w-sm mx-auto leading-relaxed">
-              Sign in to continue managing your rice supply chain operations.
+              {text.subtitle}
             </p>
 
             <form className="space-y-5" onSubmit={handleSubmit}>
               <CustomTextbox
-                label="Email or Contact Number"
-                placeholder="youremail@example.com or 09XXXXXXXXX"
+                label={text.emailLabel}
+                placeholder={text.emailPlaceholder}
                 type="text"
                 value={email}
                 onChange={(e) => {
@@ -429,8 +444,8 @@ const UserLogin = () => {
 
               <div className="relative">
                 <CustomTextbox
-                  label="Password"
-                  placeholder="Enter your password"
+                  label={text.passwordLabel}
+                  placeholder={text.passwordPlaceholder}
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => {
@@ -460,14 +475,14 @@ const UserLogin = () => {
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
                   />
-                  Remember Me
+                  {common.rememberMe}
                 </label>
 
                 <Link
                   to="/forgot-password"
                   className="text-green-700 font-medium hover:underline"
                 >
-                  Forgot Password?
+                  {common.forgotPassword}
                 </Link>
               </div>
 
@@ -476,35 +491,35 @@ const UserLogin = () => {
               )}
 
               <CustomGreenButton
-                text={isLoggingIn ? "Logging In..." : "Log In"}
+                text={isLoggingIn ? text.loggingIn : text.signIn}
                 type="submit"
                 className="w-full !py-3"
               />
             </form>
 
             <p className="text-center text-sm text-gray-700 mt-6">
-              Don’t have an account?{" "}
+              {text.noAccount}{" "}
               <Link to="/partner-with-us" className="text-green-700 font-semibold hover:underline">
-                Register
+                {common.register}
               </Link>
             </p>
 
             <p className="text-center text-xs text-gray-500 mt-4">
-              By signing in, you agree to our{" "}
+              {text.termsIntro}{" "}
               <button
                 type="button"
                 onClick={() => setIsTermsModalOpen(true)}
                 className="text-green-700 font-semibold hover:underline cursor-pointer inline p-0 bg-transparent border-0"
               >
-                Terms and Conditions
+                {text.termsLink}
               </button>{" "}
-              and acknowledge our{" "}
+              {language === "tl" ? "at kinikilala namin ang aming" : "and acknowledge our"}{" "}
               <button
                 type="button"
                 onClick={() => setIsPrivacyModalOpen(true)}
                 className="text-green-700 font-semibold hover:underline cursor-pointer inline p-0 bg-transparent border-0"
               >
-                Privacy Policy.
+                {text.privacyLink}
               </button>
             </p>
           </div>
