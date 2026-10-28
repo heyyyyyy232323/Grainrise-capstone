@@ -760,6 +760,17 @@ def approve_warehouse_online_order(
                 [online_order_id, warehouse_profile_id],
             )
 
+    try:
+        from api.warehouse_function.logistics.notifications.services import notify_warehouse_flc_order_forwarded
+        notify_warehouse_flc_order_forwarded(
+            warehouse_profile_id=warehouse_profile_id,
+            identifier=batch_no or f"Order #{online_order_id}",
+            product_name=product_name,
+            quantity=float(ordered_quantity),
+        )
+    except Exception as notif_err:
+        logger.warning("Failed to trigger warehouse FLC notification for forwarded order: %s", notif_err)
+
     return {
         "online_order_id": online_order_id,
         "batch_no": batch_no,

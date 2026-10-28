@@ -12,6 +12,7 @@ from .selectors import (
 from .services import (
     mark_all_warehouse_logistics_notifications_seen,
     mark_warehouse_logistics_notification_as_seen,
+    sync_warehouse_logistics_activity_notifications,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,11 @@ def list_notifications_view(request):
     status_filter = request.query_params.get("status", None)
 
     try:
+        try:
+            sync_warehouse_logistics_activity_notifications(warehouse_profile_ids)
+        except Exception as sync_err:
+            logger.warning("Notification sync error: %s", sync_err)
+
         notifications = list_warehouse_logistics_notifications(
             warehouse_profile_ids=warehouse_profile_ids,
             limit=limit,

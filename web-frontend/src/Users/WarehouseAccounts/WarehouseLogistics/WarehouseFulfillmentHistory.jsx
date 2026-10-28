@@ -1,107 +1,800 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
+import {
+  Search,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  X,
+  UserCheck,
+  AlertCircle,
+  RefreshCw,
+  Loader2,
+  Image as ImageIcon,
+} from "lucide-react";
 import Breadcrumbs from "../../../Components/Minor-Components/Breadcrumbs";
 import SectionedTableCard from "../../../Components/Minor-Components/SectionedTableCard";
-import SearchFilter from "../../../Components/Minor-Components/SearchFilter";
-import DateRangePicker from "../../../Components/Minor-Components/DateRangePicker";
-import SortByDropdown from "../../../Components/Minor-Components/SortByDropdown";
+import useApi from "../../../Components/hooks/useApi";
+import useToast from "../../../Components/hooks/useToast";
+import Toast from "../../../Components/Minor-Components/Toast";
+
+// ─── Filter & Sort Configurations ──────────────────────────────────────────
 
 const SORT_OPTIONS = [
-  { value: "variant-asc",  label: "Variant (A-Z)"                },
-  { value: "code-asc",     label: "Product Code (A-Z)"           },
-  { value: "qty-asc",      label: "Stock Quantity (Low to High)" },
-  { value: "exp-asc",      label: "Expiration Date (Nearest)"    },
+  { value: "variant-asc", label: "Variant (A-Z)" },
+  { value: "variant-desc", label: "Variant (Z-A)" },
+  { value: "customer-asc", label: "Customer Name (A-Z)" },
+  { value: "customer-desc", label: "Customer Name (Z-A)" },
+  { value: "delivered-desc", label: "Delivered Qty (Highest)" },
+  { value: "delivered-asc", label: "Delivered Qty (Lowest)" },
+  { value: "passed-desc", label: "Passed QC (Highest)" },
+  { value: "passed-asc", label: "Passed QC (Lowest)" },
+  { value: "failed-desc", label: "Failed QC (Highest)" },
+  { value: "failed-asc", label: "Failed QC (Lowest)" },
+  { value: "payable-desc", label: "Payable (Highest)" },
+  { value: "payable-asc", label: "Payable (Lowest)" },
 ];
 
-const sampleFulfill = Array.from({ length: 52 }, (_, i) => ({
-  id: `f-${i + 1}`,
-  variant: "Dinorado",
-  customer: "Retailer A",
-  delivered: "400 kg",
-  passed: "300 kg",
-  failed: "100 kg",
-}));
+// ─── Photo URL Resolver ───────────────────────────────────────────────────────
+const resolvePhotoUrl = (photoPath) => {
+  if (!photoPath) return null;
+  const path = String(photoPath).trim();
+  if (
+    path.startsWith("http://") ||
+    path.startsWith("https://") ||
+    path.startsWith("//") ||
+    path.startsWith("data:") ||
+    path.startsWith("blob:")
+  ) {
+    return path;
+  }
+  let clean = path.replace(/^\/+/, "");
+  while (clean.startsWith("media/")) {
+    clean = clean.slice(6);
+  }
+  const backendBase = (
+    import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"
+  ).replace(/\/$/, "");
+  return `${backendBase}/media/${clean}`;
+};
 
-export default function FulfillmentHistory() {
+// ─── Modal Detail Row Sub-Component ───────────────────────────────────────────
+function ModalDetailRow({ label, value, isBadge = false, badgeStyle = "", children }) {
+  return (
+    <div className="flex items-start justify-between gap-3 py-1.5 text-xs sm:text-sm">
+      <span className="text-slate-500 font-medium shrink-0 pt-0.5">{label}:</span>
+      {children ? (
+        <div className="text-right flex-1 flex justify-end">{children}</div>
+      ) : isBadge ? (
+        <span
+          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold capitalize ${badgeStyle}`}
+        >
+          {value}
+        </span>
+      ) : (
+        <span className="font-semibold text-slate-800 text-right break-words max-w-[65%]">
+          {value || "N/A"}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ─── Custom Dropdown ──────────────────────────────────────────────────────────
+function CustomDropdown({ label, options, value, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find((opt) => opt.value === value);
+  const displayLabel = selectedOption ? selectedOption.label : label;
+
+  return (
+    <div className="relative w-full sm:w-auto" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex items-center gap-2 border border-gray-200 bg-white px-3.5 py-2 rounded-xl text-sm font-medium text-slate-800 hover:bg-gray-50 transition-colors cursor-pointer h-[38px] justify-between w-full sm:w-auto min-w-[140px]"
+      >
+        <span>{displayLabel}</span>
+        {isOpen ? (
+          <ChevronUp size={16} className="text-slate-500" />
+        ) : (
+          <ChevronDown size={16} className="text-slate-500" />
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full mt-1.5 left-0 bg-white border border-gray-100 rounded-2xl shadow-xl p-1.5 z-30 w-52 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
+          <div className="space-y-0.5">
+            {options.map((opt) => {
+              const isSelected = value === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.value);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full text-left px-3.5 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
+                    isSelected
+                      ? "bg-[#EAF5ED] text-[#0B5D1E] font-semibold"
+                      : "text-slate-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+export default function WarehouseFulfillmentHistory() {
+  const { request } = useApi();
+  const { toasts, showToast, removeToast } = useToast();
+
+  // Data & Loading States
+  const [records, setRecords] = useState([]);
+  const [variantsList, setVariantsList] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
+
+  // Filters & Pagination
   const [query, setQuery] = useState("");
-  const [qcStatusFilter, setQcStatusFilter] = useState("QC Status");
-  const [sortBy, setSortBy] = useState("date-desc");
+  const [variantFilter, setVariantFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("variant-asc");
+  const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
+  const [tempDateRange, setTempDateRange] = useState({ startDate: "", endDate: "" });
   const [page, setPage] = useState(1);
 
+  // Date Range Picker Dropdown
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const dateRef = useRef(null);
+
+  // View Details Modal State
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+
+  // Outside click listener for Date Range Picker
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dateRef.current && !dateRef.current.contains(e.target)) {
+        setShowDatePicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Fetch Variants for Filter
+  const fetchVariants = useCallback(async () => {
+    try {
+      const res = await request("/warehouse/logistics/fulfillment-history/variants/");
+      if (res && res.success && Array.isArray(res.variants)) {
+        setVariantsList(res.variants);
+      }
+    } catch (err) {
+      console.warn("Could not fetch warehouse fulfillment variants:", err);
+    }
+  }, [request]);
+
+  useEffect(() => {
+    fetchVariants();
+  }, [fetchVariants]);
+
+  // Fetch Fulfillment History from Backend (on mount and on manual refresh)
+  const fetchFulfillmentHistory = useCallback(async () => {
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const res = await request("/warehouse/logistics/fulfillment-history/");
+
+      if (res && res.success) {
+        setRecords(res.fulfillments || []);
+      } else {
+        throw new Error(res?.message || "Failed to load fulfillment history.");
+      }
+    } catch (err) {
+      console.error("Error fetching fulfillment history:", err);
+      setFetchError(err.message || "Failed to load fulfillment history.");
+      setRecords([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [request]);
+
+  useEffect(() => {
+    fetchFulfillmentHistory();
+  }, [fetchFulfillmentHistory]);
+
+  // Date Range Picker Handlers with Start/End Validation
+  const handleStartDateChange = (val) => {
+    setTempDateRange((prev) => {
+      const next = { ...prev, startDate: val };
+      if (next.endDate && val > next.endDate) {
+        next.endDate = "";
+      }
+      return next;
+    });
+  };
+
+  const handleEndDateChange = (val) => {
+    if (tempDateRange.startDate && val < tempDateRange.startDate) {
+      showToast("End Date cannot be earlier than Start Date.", "error");
+      return;
+    }
+    setTempDateRange((prev) => ({ ...prev, endDate: val }));
+  };
+
+  const handleDateApply = () => {
+    if (!tempDateRange.startDate && tempDateRange.endDate) {
+      showToast("Please specify a Start Date.", "error");
+      return;
+    }
+    if (
+      tempDateRange.startDate &&
+      tempDateRange.endDate &&
+      tempDateRange.startDate > tempDateRange.endDate
+    ) {
+      showToast("End Date cannot be earlier than Start Date.", "error");
+      return;
+    }
+    setDateRange(tempDateRange);
+    setPage(1);
+    setShowDatePicker(false);
+  };
+
+  const handleDateReset = () => {
+    setTempDateRange({ startDate: "", endDate: "" });
+    setDateRange({ startDate: "", endDate: "" });
+    setPage(1);
+    setShowDatePicker(false);
+  };
+
+  // Open / Close View Details Modal
+  const handleOpenViewDetails = (row) => {
+    setSelectedRecord(row);
+    setIsViewModalOpen(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setSelectedRecord(null);
+    setPhotoPreview(null);
+  };
+
+  // Variant Dropdown Options
+  const variantOptions = useMemo(() => {
+    const opts = [{ value: "all", label: "All Variants" }];
+    const unique = new Set(variantsList);
+    unique.forEach((v) => {
+      opts.push({ value: v, label: v });
+    });
+    return opts;
+  }, [variantsList]);
+
+  // Table Columns Definition (Exactly as Miller)
   const columns = [
-    { key: "variant", label: "Variant" },
-    { key: "customer", label: "Customer" },
-    { key: "delivered", label: "Delivered (kg)" },
-    { key: "passed", label: "Passed QC (kg)" },
-    { key: "failed", label: "Failed QC (kg)" },
-    { key: "action", label: "Action", headerClassName: "text-center", cellClassName: "!text-center !pr-3" },
+    { key: "variant", label: "Variant", width: "18%" },
+    { key: "customer", label: "Customer Name", width: "22%" },
+    { key: "delivered", label: "Delivered (kg)", width: "16%" },
+    { key: "passed", label: "Passed QC (kg)", width: "16%" },
+    { key: "failed", label: "Failed QC (kg)", width: "16%" },
+    {
+      key: "action",
+      label: "Action",
+      width: "12%",
+      headerClassName: "text-center",
+      cellClassName: "!text-center",
+    },
   ];
 
-  const filtered = useMemo(() => {
+  // Blazingly fast in-memory filtering & sorting
+  const filteredRecords = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return sampleFulfill.filter((r) => {
-      if (q !== "" && !`${r.variant} ${r.customer}`.toLowerCase().includes(q)) return false;
-      if (qcStatusFilter === "QC Status" || qcStatusFilter === "All") return true;
 
-      const status = r.passed === "0 kg" ? "Failed" : r.failed === "0 kg" ? "Passed" : "Partial";
-      return status === qcStatusFilter;
+    let result = records.filter((r) => {
+      const matchesQuery =
+        q === "" ||
+        [
+          r.receiving_reference_no,
+          r.reference_no,
+          r.batch_no,
+          r.variant,
+          r.product_name,
+          r.product_code,
+          r.customer,
+          r.customer_name,
+          r.buyer_name,
+          r.assigned_driver,
+          r.driver_name,
+          r.plate_number,
+        ]
+          .filter(Boolean)
+          .some((val) => String(val).toLowerCase().includes(q));
+
+      const matchesVariant =
+        variantFilter === "all" ||
+        String(r.variant || r.product_name || "").toLowerCase() === variantFilter.toLowerCase();
+
+      const itemDate = r.isoDate || (r.received_at ? r.received_at.slice(0, 10) : "");
+      const matchesStart = !dateRange.startDate || itemDate >= dateRange.startDate;
+      const matchesEnd = !dateRange.endDate || itemDate <= dateRange.endDate;
+
+      return matchesQuery && matchesVariant && matchesStart && matchesEnd;
     });
-  }, [query, qcStatusFilter]);
 
+    // Instant in-memory sorting
+    result.sort((a, b) => {
+      if (sortBy === "variant-asc") {
+        return (a.variant || "").localeCompare(b.variant || "");
+      }
+      if (sortBy === "variant-desc") {
+        return (b.variant || "").localeCompare(a.variant || "");
+      }
+      if (sortBy === "customer-asc") {
+        return (a.customer || "").localeCompare(b.customer || "");
+      }
+      if (sortBy === "customer-desc") {
+        return (b.customer || "").localeCompare(a.customer || "");
+      }
+      if (sortBy === "delivered-desc") {
+        return (b.total_received || 0) - (a.total_received || 0);
+      }
+      if (sortBy === "delivered-asc") {
+        return (a.total_received || 0) - (b.total_received || 0);
+      }
+      if (sortBy === "passed-desc") {
+        return (b.received_good || 0) - (a.received_good || 0);
+      }
+      if (sortBy === "passed-asc") {
+        return (a.received_good || 0) - (b.received_good || 0);
+      }
+      if (sortBy === "failed-desc") {
+        return (b.received_bad || 0) - (a.received_bad || 0);
+      }
+      if (sortBy === "failed-asc") {
+        return (a.received_bad || 0) - (b.received_bad || 0);
+      }
+      if (sortBy === "payable-desc") {
+        return (b.payables || 0) - (a.payables || 0);
+      }
+      if (sortBy === "payable-asc") {
+        return (a.payables || 0) - (b.payables || 0);
+      }
+      return 0;
+    });
+
+    return result;
+  }, [records, query, variantFilter, dateRange, sortBy]);
+
+  // Client Pagination on Filtered Results
   const itemsPerPage = 10;
-  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
-  const startIndex = (page - 1) * itemsPerPage;
-  const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / itemsPerPage));
+  const safePage = Math.min(page, totalPages);
+  const startIndex = (safePage - 1) * itemsPerPage;
+  const paginated = filteredRecords.slice(startIndex, startIndex + itemsPerPage);
   const sections = useMemo(() => [{ rows: paginated }], [paginated]);
 
   return (
-    <div>
-      <Breadcrumbs items={[{ label: "Records", path: "/warehouse-logistics/dashboard" }, { label: "Fulfillment History" }]} />
+    <div className="space-y-6">
+      <Breadcrumbs
+        items={[
+          { label: "Records", path: "/warehouse-logistics/dashboard" },
+          { label: "Fulfillment History" },
+        ]}
+      />
 
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Fulfillment History</h1>
-        <p className="text-sm text-slate-500 mt-1">View completed fulfillment and delivery records.</p>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+          Fulfillment History
+        </h1>
+        <p className="text-sm text-slate-500 mt-1">
+          View completed fulfillment and delivery records.
+        </p>
       </div>
 
-      <div className="mt-4 mb-4 -mx-4 md:mx-0">
-        <div className="px-4 md:px-0">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex-1 min-w-[200px] max-w-xl">
-              <SearchFilter
-                onSearch={(v) => { setQuery(v); setPage(1); }}
-                placeholder="Search order no., batch no., product, or customer"
-              />
-            </div>
-            <div className="flex-none">
-              <select
-                value={qcStatusFilter}
-                onChange={(e) => { setQcStatusFilter(e.target.value); setPage(1); }}
-                className="px-3.5 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:ring-1 focus:ring-emerald-500 outline-none min-w-[120px] h-[38px]"
-              >
-                <option value="QC Status">QC Status</option>
-                <option value="All">All Statuses</option>
-                <option value="Partial">Partial</option>
-                <option value="Passed">Passed</option>
-                <option value="Failed">Failed</option>
-              </select>
-            </div>
-            <div className="flex-none">
-              <DateRangePicker onDateChange={() => {}} />
-            </div>
-            <div className="flex-none">
-              <SortByDropdown value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} />
-            </div>
-          </div>
+      {/* ── Filter Toolbar ────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        {/* 1. Search Filter */}
+        <div className="relative min-w-[220px] max-w-xs flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search order no., batch no., product, or customer"
+            className="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none bg-white placeholder-gray-400 text-gray-700 h-[38px]"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                setPage(1);
+              }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+            >
+              <X size={15} />
+            </button>
+          )}
         </div>
+
+        {/* 2. Date Range Picker */}
+        <div className="relative w-full sm:w-auto" ref={dateRef}>
+          <button
+            type="button"
+            onClick={() => setShowDatePicker((prev) => !prev)}
+            className={`flex items-center gap-2 border border-gray-200 bg-white px-3.5 py-2 rounded-xl text-sm font-medium text-slate-800 hover:bg-gray-50 w-full sm:w-auto justify-between transition-colors cursor-pointer h-[38px] ${
+              dateRange.startDate ? "border-emerald-500 text-emerald-700 bg-emerald-50/40" : ""
+            }`}
+          >
+            <span>
+              {dateRange.startDate
+                ? `${dateRange.startDate} - ${dateRange.endDate || "..."}`
+                : "Date Range"}
+            </span>
+            <Calendar
+              size={16}
+              className={dateRange.startDate ? "text-emerald-600" : "text-gray-500"}
+            />
+          </button>
+
+          {showDatePicker && (
+            <div className="absolute top-full mt-2 left-0 sm:left-auto bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-20 w-64">
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={tempDateRange.startDate}
+                    onChange={(e) => handleStartDateChange(e.target.value)}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    min={tempDateRange.startDate || undefined}
+                    value={tempDateRange.endDate}
+                    onChange={(e) => handleEndDateChange(e.target.value)}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-600"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleDateReset}
+                    className="flex-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDateApply}
+                    className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-[#0B5D1E] hover:bg-[#084b18] rounded transition-colors cursor-pointer"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 3. Variants Filter Dropdown */}
+        <CustomDropdown
+          label="All Variants"
+          options={variantOptions}
+          value={variantFilter}
+          onChange={(v) => {
+            setVariantFilter(v);
+            setPage(1);
+          }}
+        />
+
+        {/* 4. Sort Dropdown */}
+        <CustomDropdown
+          label="Sort By"
+          options={SORT_OPTIONS}
+          value={sortBy}
+          onChange={(v) => {
+            setSortBy(v);
+            setPage(1);
+          }}
+        />
+
+        {/* 5. Refresh Button */}
+        <button
+          type="button"
+          onClick={fetchFulfillmentHistory}
+          disabled={loading}
+          className="flex items-center gap-1.5 border border-gray-200 bg-white px-3 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-gray-50 transition cursor-pointer h-[38px]"
+          title="Refresh fulfillment records"
+        >
+          <RefreshCw size={14} className={loading ? "animate-spin text-emerald-600" : ""} />
+          <span className="hidden sm:inline">Refresh</span>
+        </button>
       </div>
 
+      {/* Error Banner */}
+      {fetchError && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-medium text-rose-700 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={16} className="text-rose-600 shrink-0" />
+            <span>{fetchError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={fetchFulfillmentHistory}
+            className="flex items-center gap-1 font-bold underline hover:text-rose-900 cursor-pointer"
+          >
+            <RefreshCw size={12} /> Retry
+          </button>
+        </div>
+      )}
+
+      {/* Table Card */}
       <SectionedTableCard
         columns={columns}
         sections={sections}
-        currentPage={page}
+        currentPage={safePage}
         totalPages={totalPages}
         onPageChange={setPage}
-        footerLabel={`Showing ${startIndex + 1}-${Math.min(startIndex + itemsPerPage, filtered.length)} of ${filtered.length} fulfillment records`}
+        onViewDetails={handleOpenViewDetails}
+        viewDetailsLabel="View Details"
+        emptyStateTitle={loading ? "Loading fulfillment records..." : "No records found"}
+        emptyStateDescription={
+          loading
+            ? "Fetching fulfillment records from server..."
+            : "No fulfillment records match the selected filters or search criteria."
+        }
+        footerLabel={`Showing ${
+          filteredRecords.length === 0 ? 0 : startIndex + 1
+        }-${Math.min(startIndex + itemsPerPage, filteredRecords.length)} of ${
+          filteredRecords.length
+        } fulfillment records`}
       />
+
+      {/* ── View Details Modal (Matching Sales Order Approval UI) ──────────── */}
+      {isViewModalOpen && selectedRecord && (
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className="relative w-full max-w-md sm:max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header: Receiving Reference No. as Title, Top-right X only, NO backdrop dismissal */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0 bg-slate-50/50">
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                    {selectedRecord.receiving_reference_no || selectedRecord.reference_no}
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">Order Fulfillment Details</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleCloseViewModal}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                  aria-label="Close modal"
+                  title="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-90px)] space-y-4">
+                {/* ── SECTION 1 — ONLINE ORDER INFORMATION ───────────────────── */}
+                <div className="space-y-1">
+                  <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
+                    <span>Online Order Information</span>
+                    <span className="inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase bg-blue-100 text-blue-700">
+                      Retailer
+                    </span>
+                  </div>
+
+                  <ModalDetailRow label="Batch No." value={selectedRecord.batch_no} />
+                  <ModalDetailRow
+                    label="Customer Name (Retailer)"
+                    value={selectedRecord.customer_name || selectedRecord.customer}
+                  />
+                  <ModalDetailRow
+                    label="Variant"
+                    value={selectedRecord.variant || selectedRecord.product_name}
+                  />
+                  <ModalDetailRow
+                    label="Ordered Quantity"
+                    value={selectedRecord.ordered_quantity_formatted}
+                  />
+                  <ModalDetailRow
+                    label="Selling Unit Price"
+                    value={selectedRecord.selling_unit_price_formatted || selectedRecord.unit_cost_formatted}
+                  />
+                  <ModalDetailRow label="Total Amount">
+                    <span className="text-base font-extrabold text-[#0B5D1E]">
+                      {selectedRecord.total_amount_formatted || selectedRecord.total_price_formatted}
+                    </span>
+                  </ModalDetailRow>
+                  <ModalDetailRow
+                    label="Expected Arrival Date"
+                    value={selectedRecord.expected_arrival_date_formatted}
+                  />
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-slate-100 pt-2" />
+
+                {/* ── SECTION 2 — DELIVERY ASSIGNEE INFORMATION ───────────────── */}
+                <div className="space-y-1">
+                  <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+                    Delivery Assignee Information
+                  </div>
+
+                  <ModalDetailRow label="Assigned Driver">
+                    <div className="flex items-center gap-1.5 font-semibold text-slate-800 text-right">
+                      <UserCheck size={14} className="text-emerald-600 shrink-0" />
+                      <span>{selectedRecord.assigned_driver || "Unassigned"}</span>
+                    </div>
+                  </ModalDetailRow>
+                  <ModalDetailRow
+                    label="Vehicle Model"
+                    value={selectedRecord.assigned_vehicle_model || selectedRecord.vehicle_model}
+                  />
+                  <ModalDetailRow
+                    label="Plate Number"
+                    value={selectedRecord.plate_number}
+                  />
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-slate-100 pt-2" />
+
+                {/* ── SECTION 3 — RECEIVING INFORMATION ───────────────────────── */}
+                <div className="space-y-1">
+                  <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+                    Receiving Information
+                  </div>
+
+                  <ModalDetailRow
+                    label="Receiving Reference No."
+                    value={selectedRecord.receiving_reference_no}
+                  />
+                  <ModalDetailRow
+                    label="Total Received"
+                    value={selectedRecord.total_received_formatted || selectedRecord.delivered}
+                  />
+                  <ModalDetailRow
+                    label="Passed QC"
+                    value={selectedRecord.received_good_formatted || selectedRecord.passed}
+                  />
+                  <ModalDetailRow
+                    label="Failed QC"
+                    value={selectedRecord.received_bad_formatted || selectedRecord.failed}
+                  />
+                  <ModalDetailRow
+                    label="Quantity to Pay (received_good only)"
+                    value={selectedRecord.quantity_to_pay_formatted || selectedRecord.passed}
+                  />
+                  <ModalDetailRow
+                    label="Payable Amount"
+                    value={selectedRecord.payables_formatted}
+                  />
+                  <ModalDetailRow
+                    label="Payment Status"
+                    value={selectedRecord.status}
+                    isBadge={true}
+                    badgeStyle={
+                      String(selectedRecord.status).toLowerCase() === "paid"
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                        : "bg-amber-100 text-amber-800 border border-amber-200"
+                    }
+                  />
+                  <ModalDetailRow
+                    label="Received Date"
+                    value={selectedRecord.received_at_formatted}
+                  />
+
+                  {/* Receiving Proof: Centered without stretching */}
+                  <div className="pt-3">
+                    <span className="block text-xs font-semibold text-slate-600 mb-2">
+                      Receiving Proof:
+                    </span>
+                    {selectedRecord.proof_url || selectedRecord.proof ? (
+                      <div className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center p-2">
+                        <img
+                          src={resolvePhotoUrl(selectedRecord.proof_url || selectedRecord.proof)}
+                          alt="Receiving proof"
+                          className="max-h-56 max-w-full h-auto w-auto object-contain rounded-lg cursor-pointer transition-transform duration-200 group-hover:scale-102"
+                          onClick={() =>
+                            setPhotoPreview(resolvePhotoUrl(selectedRecord.proof_url || selectedRecord.proof))
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPhotoPreview(resolvePhotoUrl(selectedRecord.proof_url || selectedRecord.proof))
+                          }
+                          className="absolute bottom-3 right-3 rounded-lg bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-xs opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                        >
+                          View Full Image
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
+                        No receiving proof attached.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      )}
+
+      {/* ── Photo Preview Lightbox ────────────────────────────────────────── */}
+      {photoPreview && (
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150"
+            onClick={() => setPhotoPreview(null)}
+          >
+            <div
+              className="relative max-w-3xl max-h-[90vh] bg-transparent"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setPhotoPreview(null)}
+                className="absolute -top-10 right-0 text-white/80 hover:text-white p-1 rounded-full cursor-pointer"
+                title="Close preview"
+              >
+                <X size={24} />
+              </button>
+              <img
+                src={photoPreview}
+                alt="Receiving proof preview"
+                className="max-h-[85vh] max-w-full object-contain rounded-xl shadow-2xl"
+              />
+            </div>
+          </div>,
+          document.body
+        )
+      )}
+
+      {/* Toast Notifications */}
+      <Toast toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }

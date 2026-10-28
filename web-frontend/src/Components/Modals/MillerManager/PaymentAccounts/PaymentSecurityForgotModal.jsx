@@ -17,6 +17,7 @@ export default function PaymentSecurityForgotModal({
   onClose,
   userInfo,
   onResetSuccess,
+  apiBase = "/miller/payment-accounts",
 }) {
   const { request } = useApi();
 
@@ -81,7 +82,7 @@ export default function PaymentSecurityForgotModal({
     setSuccessMessage("");
     try {
       const res = await request(
-        "/miller/payment-accounts/security/forgot-password/request-otp/",
+        `${apiBase}/security/forgot-password/request-otp/`,
         { method: "POST" }
       );
       if (res && (res.success || res.ok)) {
@@ -151,7 +152,7 @@ export default function PaymentSecurityForgotModal({
     setIsSubmitting(true);
     try {
       const res = await request(
-        "/miller/payment-accounts/security/forgot-password/reset/",
+        `${apiBase}/security/forgot-password/reset/`,
         {
           method: "POST",
           body: {

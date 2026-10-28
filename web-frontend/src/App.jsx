@@ -76,11 +76,13 @@ import WarehousePOS from "./Users/WarehouseAccounts/WarehouseSales/WarehousePOS"
 // ============================================================
 
 import DeliveryManagement from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseDeliveryManagement";
+import WarehouseVehicleAssigneeManagement from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseVehicleAssigneeManagement";
 import ProductReturns from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseProductReturns";
 import AssignedHistory from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseAssignedHistory";
 import FulfillmentHistory from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseFulfillmentHistory";
 import Reimbursement from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseReimbursement";
 import ReimbursementHistory from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseReimbursementHistory";
+import WarehouseLogisticsOnlinePaymentAccounts from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseLogisticsOnlinePaymentAccounts";
 import WarehouseLogisticsDashboard from "./Users/WarehouseAccounts/WarehouseLogistics/WarehouseLogisticsDashboard";
 
 
@@ -156,6 +158,7 @@ import BranchManagerNewsArticle from "./Users/WarehouseAccounts/BranchManager/Wa
 
 import WarehouseDriverDashboard from "./Users/WarehouseAccounts/WarehouseDriver/WarehouseDriverDashboard";
 import DriverMyDuties from "./Users/WarehouseAccounts/WarehouseDriver/DriverMyDuties";
+import WarehouseDriverLiveTracking from "./Users/WarehouseAccounts/WarehouseDriver/WarehouseDriverLiveTracking";
 import DriverAssignedHistory from "./Users/WarehouseAccounts/WarehouseDriver/DriverAssignedHistory";
 import DriverMessages from "./Users/WarehouseAccounts/WarehouseDriver/DriverMessages";
 import DriverPaymentSubmission from "./Users/WarehouseAccounts/WarehouseDriver/DriverPaymentSubmission";
@@ -589,8 +592,18 @@ function App() {
             />
 
             <Route
+              path="/warehouse-logistics/vehicle-assignee-management"
+              element={<WarehouseVehicleAssigneeManagement />}
+            />
+
+            <Route
               path="/warehouse-logistics/product-returns"
               element={<ProductReturns />}
+            />
+
+            <Route
+              path="/warehouse-logistics/payment-accounts"
+              element={<WarehouseLogisticsOnlinePaymentAccounts />}
             />
 
             <Route
@@ -616,6 +629,15 @@ function App() {
             <Route
               path="/warehouse-logistics/profile"
               element={<UserAccountProfile />}
+            />
+
+            <Route
+              path="/warehouse-logistics/vehicle-management"
+              element={<WarehouseVehicleAssigneeManagement />}
+            />
+            <Route
+              path="/warehouse-logistics/vehicles"
+              element={<WarehouseVehicleAssigneeManagement />}
             />
           </Route>
 
@@ -921,6 +943,11 @@ function App() {
             <Route
               path="/warehouse-driver/my-duties"
               element={<DriverMyDuties />}
+            />
+
+            <Route
+              path="/warehouse-driver/live-tracking"
+              element={<WarehouseDriverLiveTracking />}
             />
 
             <Route
