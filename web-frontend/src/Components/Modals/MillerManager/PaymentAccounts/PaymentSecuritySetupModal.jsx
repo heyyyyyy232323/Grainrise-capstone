@@ -19,6 +19,7 @@ export default function PaymentSecuritySetupModal({
   onClose,
   userInfo,
   onSetupSuccess,
+  apiBase = "/miller/payment-accounts",
 }) {
   const { request } = useApi();
 
@@ -78,7 +79,7 @@ export default function PaymentSecuritySetupModal({
     setSuccessMessage("");
     try {
       const res = await request(
-        "/miller/payment-accounts/security/send-setup-otp/",
+        `${apiBase}/security/send-setup-otp/`,
         { method: "POST" }
       );
       if (res && (res.success || res.ok)) {
@@ -156,7 +157,7 @@ export default function PaymentSecuritySetupModal({
     setIsSubmitting(true);
     try {
       const res = await request(
-        "/miller/payment-accounts/security/setup-password/",
+        `${apiBase}/security/setup-password/`,
         {
           method: "POST",
           body: {

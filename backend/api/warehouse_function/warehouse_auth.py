@@ -867,3 +867,80 @@ def get_authenticated_warehouse_employee(request, required_position=None):
         "status": row[7],
         "email": row[10] or "",
     }
+
+
+def warehouse_payment_security_user_required(view_func):
+    """
+    Authenticate either a Warehouse Manager or a Warehouse Employee (FLC, Driver, Finance, etc.)
+    for Payment Security and Online Payment Account operations.
+    Sets:
+    - request.grainrise_warehouse_id = user_id or warehouse_employee_id
+    - request.grainrise_is_employee = True / False
+    - request.grainrise_warehouse_profile_id = warehouse_profile_id
+    - request.grainrise_warehouse_employee_id = warehouse_employee_id (if employee)
+    - request.grainrise_employee_name = employee name
+    - request.grainrise_employee_email = employee email
+    """
+    @wraps(view_func)
+    def wrapped_view(request, *args, **kwargs):
+        payload = authorization_payload(request)
+        if not payload or payload.get("auth_source") != "grainrise":
+            return JsonResponse({"success": False, "message": "Authentication required. Please sign in again."}, status=401)
+
+        role = payload.get("role")
+        account_type = payload.get("account_type")
+
+        # 1. Warehouse Manager
+        if role == "warehouse_manager" and account_type == "main_user":
+            manager = get_authenticated_warehouse_manager(request)
+            if not manager:
+                return JsonResponse({"success": False, "message": "Warehouse Manager authentication required."}, status=401)
+            request.grainrise_warehouse = manager
+            request.grainrise_warehouse_id = manager["user_id"]
+            request.grainrise_is_employee = False
+            request.grainrise_warehouse_profile_id = manager["warehouse_profile_id"]
+            request.grainrise_warehouse_profile_ids = manager["warehouse_profile_ids"]
+            request.grainrise_warehouse_employee_id = None
+            return view_func(request, *args, **kwargs)
+
+        # 2. Warehouse Employee (FLC, Driver, Finance, etc.)
+        if (
+            role in ("warehouse_employee", "warehouse_logistics", "warehouse_flc", "warehouse_driver", "warehouse_finance")
+            or account_type == "warehouse_employee"
+            or payload.get("organization_type") == "warehouse"
+        ):
+            raw_emp_id = payload.get("sub")
+            try:
+                emp_id = int(raw_emp_id)
+            except (TypeError, ValueError):
+                return JsonResponse({"success": False, "message": "Invalid token subject."}, status=401)
+
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT we.warehouse_employee_id, we.warehouse_profile_id, we.first_name, we.last_name, we.email, we.position, we.status
+                    FROM warehouse_employees we
+                    WHERE we.warehouse_employee_id = %s
+                    LIMIT 1
+                    """,
+                    [emp_id],
+                )
+                emp_row = cursor.fetchone()
+
+            if not emp_row or str(emp_row[6] or "").strip().lower() != "active":
+                return JsonResponse({"success": False, "message": "Active employee account required."}, status=401)
+
+            request.grainrise_warehouse = None
+            request.grainrise_warehouse_id = emp_row[0]
+            request.grainrise_is_employee = True
+            request.grainrise_warehouse_profile_id = emp_row[1]
+            request.grainrise_warehouse_profile_ids = [emp_row[1]]
+            request.grainrise_warehouse_employee_id = emp_row[0]
+            request.grainrise_employee_name = f"{emp_row[2]} {emp_row[3]}".strip()
+            request.grainrise_employee_email = emp_row[4]
+            return view_func(request, *args, **kwargs)
+
+        return JsonResponse({"success": False, "message": "Authorized user required."}, status=401)
+
+    return wrapped_view
+

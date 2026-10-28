@@ -29,4 +29,8 @@ urlpatterns = [
         "driver/",
         include("api.warehouse_function.driver.urls"),
     ),
+    path(
+        "payment-accounts/",
+        include("api.warehouse_function.online_payment_accounts.urls"),
+    ),
 ]

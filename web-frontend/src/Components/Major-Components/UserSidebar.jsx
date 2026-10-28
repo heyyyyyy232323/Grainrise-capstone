@@ -313,6 +313,11 @@ export const getUserSidebarConfig = (role = "admin") => {
               path: "/warehouse-logistics/delivery-management",
             },
             {
+              label: "Vehicle Assignment",
+              icon: Car,
+              path: "/warehouse-logistics/vehicle-assignee-management",
+            },
+            {
               label: "Product Returns",
               icon: CornerUpLeft,
               path: "/warehouse-logistics/product-returns",
@@ -337,6 +342,11 @@ export const getUserSidebarConfig = (role = "admin") => {
         {
           title: "FINANCE",
           items: [
+            {
+              label: "Online Payment Accounts",
+              icon: CreditCard,
+              path: "/warehouse-logistics/payment-accounts",
+            },
             {
               label: "Reimbursement",
               icon: Wallet,

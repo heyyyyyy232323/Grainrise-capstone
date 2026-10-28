@@ -966,6 +966,25 @@ export default function MillerLogisticsOnlinePaymentAccounts() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// GCASH AUTO-PREFIX HELPER
+// ─────────────────────────────────────────────────────────────
+const formatGCashNumber = (val) => {
+  if (!val) return "09";
+  let digits = val.replace(/\D/g, "");
+  if (digits.startsWith("639")) {
+    digits = "09" + digits.slice(3);
+  } else if (digits.startsWith("9")) {
+    digits = "09" + digits.slice(1);
+  } else if (!digits.startsWith("09")) {
+    digits = "09" + digits.replace(/^0+/, "");
+  }
+  if (digits.length < 2) {
+    digits = "09";
+  }
+  return digits.slice(0, 11);
+};
+
+// ─────────────────────────────────────────────────────────────
 // SUB-MODAL 1: ADD PAYMENT ACCOUNT MODAL
 // Exact UI/UX styled after AddBranchAccountModal with "Proceed to Verification"
 // ─────────────────────────────────────────────────────────────
@@ -1210,7 +1229,11 @@ function AddPaymentAccountModal({ isOpen, onClose, userInfo, onProceedToVerifica
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setAccountType("bank")}
+                onClick={() => {
+                  setAccountType("bank");
+                  if (accountNumber === "09") setAccountNumber("");
+                  setErrorMessage("");
+                }}
                 className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs sm:text-sm font-semibold transition cursor-pointer ${
                   accountType === "bank"
                     ? "border-emerald-600 bg-emerald-50 text-emerald-800"
@@ -1225,7 +1248,7 @@ function AddPaymentAccountModal({ isOpen, onClose, userInfo, onProceedToVerifica
                 type="button"
                 onClick={() => {
                   setAccountType("gcash");
-                  setAccountNumber((prev) => prev.replace(/\D/g, "").slice(0, 11));
+                  setAccountNumber((prev) => formatGCashNumber(prev));
                   setErrorMessage("");
                 }}
                 className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs sm:text-sm font-semibold transition cursor-pointer ${
@@ -1333,10 +1356,15 @@ function AddPaymentAccountModal({ isOpen, onClose, userInfo, onProceedToVerifica
               onChange={(e) => {
                 let val = e.target.value;
                 if (accountType === "gcash") {
-                  val = val.replace(/\D/g, "").slice(0, 11);
+                  val = formatGCashNumber(val);
                 }
                 setAccountNumber(val);
                 setErrorMessage("");
+              }}
+              onFocus={() => {
+                if (accountType === "gcash" && (!accountNumber || !accountNumber.startsWith("09"))) {
+                  setAccountNumber("09");
+                }
               }}
               placeholder={accountType === "gcash" ? "09XXXXXXXXX" : "e.g. 1234567890"}
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition font-mono"
