@@ -90,7 +90,9 @@ export const isEmployeeAccount = (user, payload = null) => {
     "fulfillment & logistics",
     "fulfillment and logistics",
     "logistics",
+    "flc",
     "driver",
+    "delivery_driver",
     "branch_manager",
     "branch manager",
   ];
@@ -109,6 +111,7 @@ export const isEmployeeAccount = (user, payload = null) => {
     "warehouse_encoder",
     "warehouse_sales",
     "warehouse_logistics",
+    "warehouse_flc",
     "warehouse_procurement",
     "warehouse_finance",
     "warehouse_driver",

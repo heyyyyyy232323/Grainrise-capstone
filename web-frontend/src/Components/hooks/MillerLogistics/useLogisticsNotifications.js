@@ -9,6 +9,7 @@ const BASE_URL = "/miller-employees/logistics/notifications";
 
 const useLogisticsNotifications = ({
   enabled = true,
+  baseUrl = BASE_URL,
 } = {}) => {
   const { request } = useApi();
 
@@ -34,7 +35,7 @@ const useLogisticsNotifications = ({
 
       try {
         const response = await request(
-          `${BASE_URL}/?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`,
+          `${baseUrl}/?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`,
           {
             method: "GET",
             throwOnError: true,
@@ -63,7 +64,7 @@ const useLogisticsNotifications = ({
         setIsLoading(false);
       }
     },
-    [enabled, request]
+    [enabled, request, baseUrl]
   );
 
   // =========================================================
@@ -86,7 +87,7 @@ const useLogisticsNotifications = ({
     }
 
     try {
-      const response = await request(`${BASE_URL}/?limit=1`, {
+      const response = await request(`${baseUrl}/?limit=1`, {
         method: "GET",
         throwOnError: true,
       });
@@ -98,7 +99,7 @@ const useLogisticsNotifications = ({
       // Silently fail badge refresh
       return 0;
     }
-  }, [enabled, request]);
+  }, [enabled, request, baseUrl]);
 
   // =========================================================
   // INITIAL LOAD
@@ -127,7 +128,7 @@ const useLogisticsNotifications = ({
 
       try {
         const response = await request(
-          `${BASE_URL}/${notificationId}/seen/`,
+          `${baseUrl}/${notificationId}/seen/`,
           {
             method: "POST",
             body: {},
@@ -174,7 +175,7 @@ const useLogisticsNotifications = ({
         setIsUpdating(false);
       }
     },
-    [enabled, request]
+    [enabled, request, baseUrl]
   );
 
   // =========================================================
@@ -187,7 +188,7 @@ const useLogisticsNotifications = ({
     setError("");
 
     try {
-      await request(`${BASE_URL}/mark-all-seen/`, {
+      await request(`${baseUrl}/mark-all-seen/`, {
         method: "POST",
         body: {},
         throwOnError: true,
@@ -211,7 +212,7 @@ const useLogisticsNotifications = ({
     } finally {
       setIsUpdating(false);
     }
-  }, [enabled, request]);
+  }, [enabled, request, baseUrl]);
 
   // =========================================================
   // OPEN NOTIFICATION
@@ -219,7 +220,7 @@ const useLogisticsNotifications = ({
   const openNotification = useCallback(
     async (item) => {
       const notificationId = item?.notification_id || item?.id;
-      const targetPath = item?.action_url || "/miller-logistics/delivery-management";
+      const targetPath = item?.action_url || (baseUrl.includes("/warehouse/") ? "/warehouse-logistics/delivery-management" : "/miller-logistics/delivery-management");
 
       if (!notificationId) {
         return { targetPath };

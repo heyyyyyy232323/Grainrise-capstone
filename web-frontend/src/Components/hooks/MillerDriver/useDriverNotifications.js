@@ -9,6 +9,7 @@ const BASE_URL = "/miller-employees/driver/notifications";
 
 const useDriverNotifications = ({
   enabled = true,
+  baseUrl = BASE_URL,
 } = {}) => {
   const { request } = useApi();
 
@@ -34,7 +35,7 @@ const useDriverNotifications = ({
 
       try {
         const response = await request(
-          `${BASE_URL}/?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`,
+          `${baseUrl}/?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`,
           {
             method: "GET",
             throwOnError: true,
@@ -63,7 +64,7 @@ const useDriverNotifications = ({
         setIsLoading(false);
       }
     },
-    [enabled, request]
+    [enabled, request, baseUrl]
   );
 
   // =========================================================
@@ -86,7 +87,7 @@ const useDriverNotifications = ({
     }
 
     try {
-      const response = await request(`${BASE_URL}/?limit=1`, {
+      const response = await request(`${baseUrl}/?limit=1`, {
         method: "GET",
         throwOnError: true,
       });
@@ -98,7 +99,7 @@ const useDriverNotifications = ({
       // Silently fail badge refresh
       return 0;
     }
-  }, [enabled, request]);
+  }, [enabled, request, baseUrl]);
 
   // =========================================================
   // INITIAL LOAD
@@ -127,7 +128,7 @@ const useDriverNotifications = ({
 
       try {
         const response = await request(
-          `${BASE_URL}/${notificationId}/seen/`,
+          `${baseUrl}/${notificationId}/seen/`,
           {
             method: "POST",
             body: {},
@@ -170,7 +171,7 @@ const useDriverNotifications = ({
         setIsUpdating(false);
       }
     },
-    [enabled, request]
+    [enabled, request, baseUrl]
   );
 
   // =========================================================
@@ -183,7 +184,7 @@ const useDriverNotifications = ({
     setError("");
 
     try {
-      await request(`${BASE_URL}/mark-all-seen/`, {
+      await request(`${baseUrl}/mark-all-seen/`, {
         method: "POST",
         body: {},
         throwOnError: true,
@@ -207,7 +208,7 @@ const useDriverNotifications = ({
     } finally {
       setIsUpdating(false);
     }
-  }, [enabled, request]);
+  }, [enabled, request, baseUrl]);
 
   // =========================================================
   // OPEN NOTIFICATION
@@ -215,7 +216,7 @@ const useDriverNotifications = ({
   const openNotification = useCallback(
     async (item) => {
       const notificationId = item?.notification_id || item?.id;
-      const targetPath = item?.action_url || "/miller-driver/my-duties";
+      const targetPath = item?.action_url || (baseUrl.includes("/warehouse/") ? "/warehouse-driver/my-duties" : "/miller-driver/my-duties");
 
       if (!notificationId) {
         return { targetPath };

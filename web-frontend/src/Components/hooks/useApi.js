@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { isTokenValid } from "./useAuth";
 
 
 const API_BASE_URL = (
@@ -223,15 +224,36 @@ const useApi = () => {
               normalizedEndpoint.includes("/auth/admin/login");
 
             if (!isLoginEndpoint) {
-              try {
-                localStorage.removeItem("grainrise_token");
-                localStorage.removeItem("grainrise_user");
-                localStorage.removeItem("access_token");
-                sessionStorage.clear();
-              } catch {}
-              window.dispatchEvent(
-                new Event("grainrise_unauthorized")
-              );
+              const tokenActive = isTokenValid(authToken);
+              const isAuthEndpoint =
+                normalizedEndpoint === "/auth/profile" ||
+                normalizedEndpoint === "/auth/profile/" ||
+                normalizedEndpoint === "/auth/profile-status" ||
+                normalizedEndpoint === "/auth/profile-status/";
+
+              const detailMsg = String(
+                payload?.detail || payload?.message || ""
+              ).toLowerCase();
+              const isTokenSpecificError =
+                payload?.code === "token_not_valid" ||
+                detailMsg.includes("token is invalid") ||
+                detailMsg.includes("token expired") ||
+                detailMsg.includes("signature has expired") ||
+                detailMsg.includes("authentication credentials were not provided");
+
+              // Only evict the session if the token is genuinely invalid, missing, or rejected by core auth checks.
+              // Prevents valid sessions from being logged out due to unrelated or role-mismatched API 401 responses.
+              if (!authToken || !tokenActive || isAuthEndpoint || isTokenSpecificError) {
+                try {
+                  localStorage.removeItem("grainrise_token");
+                  localStorage.removeItem("grainrise_user");
+                  localStorage.removeItem("access_token");
+                  sessionStorage.clear();
+                } catch {}
+                window.dispatchEvent(
+                  new Event("grainrise_unauthorized")
+                );
+              }
             }
           }
 

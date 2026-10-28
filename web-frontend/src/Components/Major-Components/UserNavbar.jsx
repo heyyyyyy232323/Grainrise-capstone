@@ -351,13 +351,35 @@ const UserNavbar = ({
       (authenticatedUser?.position === "sales" ||
         authenticatedUser?.position === "seller"));
 
+  const isWarehouseLogistics =
+    propRole === "warehouse_logistics" ||
+    propRole === "warehouse_flc" ||
+    role === "warehouse_logistics" ||
+    role === "warehouse_flc" ||
+    location.pathname.startsWith("/warehouse-logistics") ||
+    (authenticatedUser?.account_type === "warehouse_employee" &&
+      (authenticatedUser?.position === "fulfillment_logistics_coordinator" ||
+        authenticatedUser?.position === "fulfillment & logistics" ||
+        authenticatedUser?.position === "fulfillment and logistics" ||
+        authenticatedUser?.position === "logistics" ||
+        authenticatedUser?.position === "flc")) ||
+    (authenticatedUser?.role === "warehouse_employee" &&
+      (authenticatedUser?.position === "fulfillment_logistics_coordinator" ||
+        authenticatedUser?.position === "fulfillment & logistics" ||
+        authenticatedUser?.position === "fulfillment and logistics" ||
+        authenticatedUser?.position === "logistics" ||
+        authenticatedUser?.position === "flc"));
+
   const isLogistics =
     propRole === "supplier_logistics" ||
     propRole === "miller_logistics" ||
     propRole === "warehouse_logistics" ||
+    propRole === "warehouse_flc" ||
     role === "supplier_logistics" ||
     role === "miller_logistics" ||
     role === "warehouse_logistics" ||
+    role === "warehouse_flc" ||
+    isWarehouseLogistics ||
     (authenticatedUser?.account_type === "supplier_employee" &&
       (authenticatedUser?.position === "logistics" ||
         authenticatedUser?.position === "fulfillment_logistics_coordinator")) ||
@@ -365,11 +387,24 @@ const UserNavbar = ({
       (authenticatedUser?.position === "logistics" ||
         authenticatedUser?.position === "fulfillment_logistics_coordinator"));
 
+  const isWarehouseDriver =
+    propRole === "warehouse_driver" ||
+    role === "warehouse_driver" ||
+    location.pathname.startsWith("/warehouse-driver") ||
+    (authenticatedUser?.account_type === "warehouse_employee" &&
+      (authenticatedUser?.position === "driver" ||
+        authenticatedUser?.position === "delivery_driver")) ||
+    (authenticatedUser?.role === "warehouse_employee" &&
+      (authenticatedUser?.position === "driver" ||
+        authenticatedUser?.position === "delivery_driver")) ||
+    (authenticatedUser?.role === "warehouse_driver");
+
   const isDriver =
     propRole === "miller_driver" ||
     propRole === "warehouse_driver" ||
     role === "miller_driver" ||
     role === "warehouse_driver" ||
+    isWarehouseDriver ||
     (authenticatedUser?.account_type === "supplier_employee" &&
       (authenticatedUser?.position === "driver" ||
         authenticatedUser?.position === "delivery_driver")) ||
@@ -691,6 +726,10 @@ const UserNavbar = ({
   } = useLogisticsNotifications({
     enabled:
       isLogistics,
+    baseUrl:
+      isWarehouseLogistics
+        ? "/warehouse/logistics/notifications"
+        : "/miller-employees/logistics/notifications",
   });
 
   // =========================================================
@@ -703,11 +742,16 @@ const UserNavbar = ({
     isLoading: isLoadingDriverNotifications,
     isUpdating: isUpdatingDriverNotifications,
     error: driverNotificationError,
+    loadUnseenCount: loadDriverUnseenCount,
     refreshNotifications: refreshDriverNotifications,
     openNotification: openDriverNotification,
     markAllAsRead: markAllDriverNotificationsAsRead,
   } = useDriverNotifications({
     enabled: isDriver,
+    baseUrl:
+      isWarehouseDriver
+        ? "/warehouse/driver/notifications"
+        : "/miller-employees/driver/notifications",
   });
 
 
@@ -798,7 +842,8 @@ const UserNavbar = ({
         !isProcurement &&
         !isFinance &&
         !isSales &&
-        !isLogistics
+        !isLogistics &&
+        !isDriver
       ) {
         return undefined;
       }
@@ -817,7 +862,9 @@ const UserNavbar = ({
                   ? loadFinanceUnseenCount
                   : isSales
                     ? loadSalesUnseenCount
-                    : loadLogisticsUnseenCount;
+                    : isLogistics
+                      ? loadLogisticsUnseenCount
+                      : loadDriverUnseenCount;
       };
 
       const triggerRefresh = () => {
@@ -843,6 +890,8 @@ const UserNavbar = ({
       isFinance,
       isSales,
       isLogistics,
+      isDriver,
+      loadDriverUnseenCount,
       loadUnreadCount,
       loadFarmerUnreadCount,
       loadEncoderUnseenCount,
@@ -1723,7 +1772,9 @@ const UserNavbar = ({
           const targetPath =
             result?.targetPath ||
             item?.action_url ||
-            "/miller-logistics/delivery-management";
+            (isWarehouseLogistics
+              ? "/warehouse-logistics/dashboard"
+              : "/miller-logistics/delivery-management");
 
           navigate(
             targetPath
@@ -1749,7 +1800,9 @@ const UserNavbar = ({
           const targetPath =
             result?.targetPath ||
             item?.action_url ||
-            "/miller-driver/my-duties";
+            (isWarehouseDriver
+              ? "/warehouse-driver/dashboard"
+              : "/miller-driver/my-duties");
 
           navigate(
             targetPath

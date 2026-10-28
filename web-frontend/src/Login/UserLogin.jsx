@@ -111,11 +111,13 @@ export const resolvePostLoginDashboard = (user) => {
       position === "fulfillment & logistics" ||
       position === "fulfillment and logistics" ||
       position === "logistics" ||
-      role === "warehouse_logistics"
+      position === "flc" ||
+      role === "warehouse_logistics" ||
+      role === "warehouse_flc"
     ) {
       return "/warehouse-logistics/dashboard";
     }
-    if (position === "driver" || role === "warehouse_driver") {
+    if (position === "driver" || position === "delivery_driver" || role === "warehouse_driver") {
       return "/warehouse-driver/dashboard";
     }
     if (position === "branch_manager" || position === "branch manager" || role === "branch_manager") {
@@ -140,6 +142,7 @@ export const resolvePostLoginDashboard = (user) => {
     warehouse_encoder: "/warehouse-encoder/dashboard",
     warehouse_sales: "/warehouse-sales/dashboard",
     warehouse_logistics: "/warehouse-logistics/dashboard",
+    warehouse_flc: "/warehouse-logistics/dashboard",
     warehouse_procurement: "/warehouse-procurement/dashboard",
     warehouse_finance: "/warehouse-finance/dashboard",
     warehouse_driver: "/warehouse-driver/dashboard",
